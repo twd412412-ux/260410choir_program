@@ -1134,8 +1134,27 @@ function grouped(arr,fn,byKey){
   var e=Object.entries(m);if(byKey)e.sort(function(a,b){return a[0]-b[0]});else e.sort(function(a,b){return b[1]-a[1]});
   return e.map(function(x){return{label:String(x[0]),value:x[1]}});
 }
+// [수정] 통계에서 단원 이름만 깔끔하게 추출하기
 function memCounts(){
-  var m={};allSongs.forEach(function(s){if(s.members)s.members.split(/[,，、\s]+/).forEach(function(x){var t=x.trim();if(t)m[t]=(m[t]||0)+1})});
+  var m = {};
+  // 🚫 통계에서 사람 이름으로 치지 않을 '무시할 단어' 목록 (소문자로 작성)
+  // 필요한 단어가 있으면 여기에 쉼표로 계속 추가하시면 됩니다!
+  var ignore = ['solo', '솔로', '성가곡', '찬양단', '특송', '합창', '독창', '중창', '피아노', '반주', '지휘', '대원',];
+  
+  allSongs.forEach(function(s){
+    if(s.members){
+      // 1. 쉼표, 띄어쓰기, 콜론(:), 세미콜론(;), 괄호 등으로 1차로 쪼갭니다.
+      s.members.split(/[,，、;/:()[\]<>\s]+/).forEach(function(x){
+        // 2. 남은 특수기호 찌꺼기를 싹 지우고 순수 글자만 남깁니다.
+        var t = x.replace(/[^가-힣a-zA-Z0-9]/g, '').trim();
+        
+        // 3. 빈 글자가 아니고, 2글자 이상이며, 무시할 단어(ignore)가 아닐 때만 카운트!
+        if(t && t.length >= 2 && !ignore.includes(t.toLowerCase())){
+          m[t] = (m[t]||0) + 1;
+        }
+      });
+    }
+  });
   return Object.entries(m).sort(function(a,b){return b[1]-a[1]}).map(function(x){return{label:x[0],value:x[1]}});
 }
 function barChart(id,data,unit){
@@ -1257,12 +1276,24 @@ function buildYearOptions(){
   });
 }
 // ==================== 자동완성 ====================
+// [수정] 곡 추가할 때 단원 이름 자동완성에도 찌꺼기 안 뜨게 하기
 function getSuggestData(type){
   var map={};
+  var ignore = ['solo', '솔로', '성가곡', '찬양단', '특송', '합창', '독창', '중창', '피아노', '반주', '지휘', '대원'];
+
   if(type==='loc'){
     allSongs.forEach(function(s){if(s.location)map[s.location]=(map[s.location]||0)+1});
   }else if(type==='mem'){
-    allSongs.forEach(function(s){if(s.members)s.members.split(/[,，、;]+/).forEach(function(m){var t=m.trim();if(t)map[t]=(map[t]||0)+1})});
+    allSongs.forEach(function(s){
+      if(s.members){
+        s.members.split(/[,，、;/:()[\]<>\s]+/).forEach(function(x){
+          var t = x.replace(/[^가-힣a-zA-Z0-9]/g, '').trim();
+          if(t && t.length >= 2 && !ignore.includes(t.toLowerCase())){
+            map[t]=(map[t]||0)+1;
+          }
+        });
+      }
+    });
   }else if(type==='pia'){
     allSongs.forEach(function(s){if(s.pianist)map[s.pianist]=(map[s.pianist]||0)+1});
   }
