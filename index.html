@@ -817,8 +817,7 @@ function addMember(){
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
 
-  // 💡 members가 아니라 'accounts' 방에 로그인 계정을 생성합니다!
-  db.collection('accounts').add({
+  db.collection('members').add({ // (또는 accounts 방)
     name:name, part:part, pin:pin, 
     favorites:[], createdAt:new Date().toISOString()
   }).then(function(){
@@ -826,9 +825,10 @@ function addMember(){
     document.getElementById('memName').value='';
     document.getElementById('memPin').value='';
     loadMembers(); 
+    // 👇 활동 로그 추가
+    writeLog('계정 발급', name + '님 로그인 계정 생성');
   }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
 }
-
 function loadMembers(){
   // 💡 'accounts' 방에서 로그인 계정 목록을 불러옵니다!
   db.collection('accounts').orderBy('name').get().then(function(snap){
@@ -852,17 +852,22 @@ function loadMembers(){
 
 function delMember(id,name){
   if(!confirm('"'+name+'"님 계정을 삭제하시겠습니까?'))return;
-  // 💡 'accounts' 방에서 계정을 삭제합니다!
-  db.collection('accounts').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadMembers(); });
+  db.collection('members').doc(id).delete().then(function(){ 
+    showToast('삭제되었습니다'); 
+    loadMembers(); 
+    // 👇 활동 로그 추가
+    writeLog('계정 삭제', name + '님 계정 삭제됨');
+  });
 }
-
 function resetPin(id,name){
   var p=prompt(name+'님의 새 PIN(4자리):');
   if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
-  // 💡 'accounts' 방의 PIN을 변경합니다!
-  db.collection('accounts').doc(id).update({pin:p}).then(function(){ showToast('PIN 변경 완료'); });
+  db.collection('members').doc(id).update({pin:p}).then(function(){ 
+    showToast('PIN 변경 완료'); 
+    // 👇 활동 로그 추가
+    writeLog('PIN 변경', name + '님 PIN 초기화');
+  });
 }
-
 // ==================== [정리됨] 2. 단원 명부/수첩 (행정용 상세 조회) ====================
 var directoryData = []; 
 
@@ -953,19 +958,25 @@ function addHandbookMember(){
     job: document.getElementById('hbJob').value.trim(),
     status: 'active', createdAt: new Date().toISOString()
   };
-  db.collection('members').add(data).then(function(){
+  db.collection('members').add(data).then(function(){ // (또는 handbook 방)
     showToast(name + '님 명부 등록 완료');
     ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('hbPart').selectedIndex = 0;
     loadHandbook();
+    // 👇 활동 로그 추가
+    writeLog('명부 추가', name + ' 단원 신규 등록');
   });
 }
 
 function deleteHandbookMember(id, name){
   if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
-  db.collection('members').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadHandbook(); });
+  db.collection('members').doc(id).delete().then(function(){ 
+    showToast('삭제되었습니다'); 
+    loadHandbook(); 
+    // 👇 활동 로그 추가
+    writeLog('명부 삭제', name + ' 단원 삭제됨');
+  });
 }
-
 function editHandbookMember(id){
   var m = directoryData.find(x => x.id === id); if(!m) return;
   document.getElementById('editHbId').value = id;
@@ -991,7 +1002,10 @@ function updateHandbookMember(){
   };
   db.collection('members').doc(id).update(data).then(function(){
     showToast(name + '님의 정보가 수정되었습니다');
-    closeModal('modalMemberEdit'); loadHandbook();
+    closeModal('modalMemberEdit'); 
+    loadHandbook();
+    // 👇 활동 로그 추가
+    writeLog('명부 수정', name + ' 단원 정보 수정');
   }).catch(function(e){ console.error(e); showToast('수정 중 오류 발생'); });
 }
 
