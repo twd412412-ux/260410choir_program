@@ -1,0 +1,18 @@
+{
+  "name": "광주교회 찬양대",
+  "short_name": "찬양대",
+  "description": "광주교회 찬양대 곡 관리 웹앱",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F0F7FF",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%232563EB'/><text x='256' y='340' font-size='280' text-anchor='middle' fill='white' font-family='Arial'>♪</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

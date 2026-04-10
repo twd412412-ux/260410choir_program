@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#2563EB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<title>광주교회 찬양대</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--p:#2563EB;--pd:#1D4ED8;--pl:#DBEAFE;--bg:#F0F7FF;--sf:#FFFFFF;--tx:#1E293B;--ts:#64748B;--bd:#E2E8F0;--dg:#EF4444;--sc:#22C55E;--wn:#F59E0B;--sh:0 1px 3px rgba(0,0,0,.1);--r:12px}
+.dark{--p:#60A5FA;--pd:#3B82F6;--pl:#1E3A5F;--bg:#0F172A;--sf:#1E293B;--tx:#F1F5F9;--ts:#94A3B8;--bd:#334155;--sh:0 1px 3px rgba(0,0,0,.3)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:70px;transition:background .3s,color .3s}
+.hidden{display:none!important}
+.header{background:var(--p);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.3)}
+.header-title{font-size:18px;font-weight:700}
+.header-actions{display:flex;gap:8px}
+.icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
+.notice-banner{background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.user-bar{background:var(--pl);padding:8px 16px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.user-bar-name{font-weight:700;color:var(--pd)}.dark .user-bar-name{color:var(--p)}
+.search-section{padding:12px 16px;background:var(--sf);border-bottom:1px solid var(--bd)}
+.search-wrap{position:relative}.search-wrap::before{content:'🔍';position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px}
+.search-box{width:100%;padding:10px 14px 10px 38px;border:2px solid var(--bd);border-radius:var(--r);font-size:15px;background:var(--bg);color:var(--tx);outline:none}
+.search-box:focus{border-color:var(--p)}
+.filter-row{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.filter-label{font-size:12px;font-weight:700;color:var(--ts);min-width:32px}
+.filter-select{flex:1;padding:7px 10px;border-radius:8px;font-size:13px;border:1.5px solid var(--bd);background:var(--bg);color:var(--tx);outline:none;max-width:220px}
+.day-row{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.day-chip{padding:5px 10px;border-radius:16px;font-size:12px;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer;user-select:none;transition:all .2s}
+.day-chip.on{background:var(--p);color:#fff;border-color:var(--p)}
+.result-count{padding:8px 16px;font-size:13px;color:var(--ts);font-weight:600}
+.card-list{padding:8px 16px}
+.song-card{background:var(--sf);border-radius:var(--r);padding:14px;margin-bottom:8px;box-shadow:var(--sh);cursor:pointer;border-left:4px solid var(--p);transition:transform .15s}
+.song-card:active{transform:scale(.98)}
+.song-card-title{font-size:15px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.song-card-meta{font-size:12px;color:var(--ts);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.meta-tag{background:var(--pl);color:var(--pd);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}.dark .meta-tag{color:var(--p)}
+.bk-star{background:none;border:none;font-size:18px;cursor:pointer;padding:2px}
+.admin-actions{display:none;gap:2px}
+.admin-mode .admin-actions{display:flex}
+.chongmu-mode .admin-actions{display:flex}
+.chongmu-mode .admin-btn-del{display:none!important}
+.admin-btn{background:none;border:none;cursor:pointer;font-size:15px;padding:2px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:flex-end}
+.modal-overlay.active{display:flex}
+.modal-center{align-items:center}
+.modal-content{background:var(--sf);width:100%;max-width:500px;max-height:85vh;border-radius:20px 20px 0 0;padding:20px;overflow-y:auto;animation:slideUp .3s}
+.modal-center .modal-content{border-radius:20px;max-height:70vh}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
+.modal-title{font-size:18px;font-weight:700}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--ts)}
+.detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
+.detail-label{width:80px;font-weight:700;color:var(--ts);flex-shrink:0}
+.detail-value{flex:1;color:var(--tx)}
+.form-group{margin-bottom:12px}
+.form-label{display:block;font-size:13px;font-weight:700;color:var(--ts);margin-bottom:4px}
+.form-input,.form-sel{width:100%;padding:10px 12px;border:2px solid var(--bd);border-radius:8px;font-size:14px;background:var(--bg);color:var(--tx);outline:none}
+.form-input:focus,.form-sel:focus{border-color:var(--p)}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--pd)}
+.btn-d{background:var(--dg);color:#fff}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-bl{width:100%}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px}
+.stat-card{background:var(--sf);border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
+.stat-num{font-size:28px;font-weight:800;color:var(--p)}
+.stat-lbl{font-size:13px;color:var(--ts);margin-top:2px}
+.chart-card{background:var(--sf);border-radius:var(--r);padding:16px;margin:0 16px 10px;box-shadow:var(--sh)}
+.chart-title{font-size:15px;font-weight:700;margin-bottom:12px}
+.cal-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+.cal-nav-title{font-size:16px;font-weight:700}
+.cal-nav button{background:var(--pl);border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--p)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:0 8px}
+.cal-hdr{text-align:center;font-size:11px;font-weight:700;color:var(--ts);padding:6px 0}
+.cal-cell{min-height:60px;padding:2px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;font-size:11px;background:var(--sf);overflow:hidden}
+.cal-cell:hover{background:var(--pl)}
+.cal-cell.today{background:var(--pl)}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default}
+.cal-cell .cal-date{font-size:12px;font-weight:600;padding:2px 4px}
+.cal-cell.today .cal-date{background:var(--p);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-bar{display:block;padding:1px 3px;margin:1px 0;border-radius:3px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.cal-dot{display:inline-block;width:5px;height:5px;background:var(--p);border-radius:50%;margin:0 1px}
+.log-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.log-time{font-size:11px;color:var(--ts)}
+.log-action{font-weight:600;margin-top:2px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:6px 0 env(safe-area-inset-bottom,6px);z-index:100}
+.nav-item{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--ts);cursor:pointer;padding:4px 8px;gap:2px}
+.nav-item.active{color:var(--p);font-weight:700}
+.nav-icon{font-size:20px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:300;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.dark .toast{background:#F1F5F9;color:#1E293B}
+.loading{text-align:center;padding:40px;color:var(--ts)}
+.spinner{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.color-opts{display:flex;gap:6px;flex-wrap:wrap}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.color-dot.sel{border-color:var(--tx)}
+.admin-tab{padding:5px 12px;border-radius:20px;font-size:12px;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer}
+.admin-tab.on{background:var(--p);color:#fff;border-color:var(--p)}
+@media(min-width:500px){body{max-width:500px;margin:0 auto}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">♪ 광주교회 찬양대</div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="openUserModal()">👤</button>
+    <button class="icon-btn" id="btnDark" onclick="toggleDark()">🌙</button>
+    <button class="icon-btn" id="btnLock" onclick="openAdminLogin()">🔒</button>
+  </div>
+</div>
+
+<div class="notice-banner hidden" id="noticeBanner"><span>📢</span><span id="noticeText"></span></div>
+
+<div class="user-bar hidden" id="userBar">
+  <span>👤 <span class="user-bar-name" id="userBarName"></span></span>
+  <button class="btn btn-sm" onclick="logoutUser()" style="background:transparent;color:var(--p);border:1px solid var(--p);padding:4px 10px">로그아웃</button>
+</div>
+
+<!-- PAGE: 곡목록 -->
+<div id="pageSongs">
+  <div class="search-section">
+    <div class="search-wrap"><input class="search-box" id="searchInput" type="text" placeholder="곡명, 단원, 반주자 검색..."></div>
+    <div class="filter-row"><span class="filter-label">정렬</span><select class="filter-select" id="sortSel" onchange="doFilter()"><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="name-asc">곡명 가나다순</option><option value="name-desc">곡명 역순</option><option value="most-sung">많이 부른 곡</option><option value="least-recent">오래 안 부른 곡</option></select></div>
+    <div class="filter-row"><span class="filter-label">연도</span><select class="filter-select" id="yearSel" onchange="doFilter()"><option value="all">전체</option></select></div>
+    <div class="filter-row"><span class="filter-label">분류</span><select class="filter-select" id="catSel" onchange="doFilter()"><option value="all">전체</option></select></div>
+    <div class="day-row"><span class="filter-label">요일</span><div class="day-chip on" data-d="all" onclick="toggleDay('all')">전체</div><div class="day-chip" data-d="일" onclick="toggleDay('일')">일</div><div class="day-chip" data-d="월" onclick="toggleDay('월')">월</div><div class="day-chip" data-d="화" onclick="toggleDay('화')">화</div><div class="day-chip" data-d="수" onclick="toggleDay('수')">수</div><div class="day-chip" data-d="목" onclick="toggleDay('목')">목</div><div class="day-chip" data-d="금" onclick="toggleDay('금')">금</div><div class="day-chip" data-d="토" onclick="toggleDay('토')">토</div></div>
+  </div>
+  <div class="result-count" id="resultCount"></div>
+  <div class="card-list" id="songList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
+</div>
+
+<!-- PAGE: 즐겨찾기 -->
+<div id="pageFavorites" class="hidden">
+  <div style="padding:12px 16px"><h2 style="font-size:18px;font-weight:700">⭐ 즐겨찾기</h2></div>
+  <div class="result-count" id="favCount"></div>
+  <div class="card-list" id="favList"></div>
+</div>
+
+<!-- PAGE: 캘린더 -->
+<div id="pageCalendar" class="hidden">
+  <div class="cal-nav"><button onclick="calPrev()">◀</button><span class="cal-nav-title" id="calTitle"></span><button onclick="calNext()">▶</button></div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div style="padding:12px 16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:8px" id="calEvtTitle">일정</h3><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
+</div>
+
+<!-- PAGE: 통계 -->
+<div id="pageStats" class="hidden">
+  <div style="padding:12px 16px 0"><h2 style="font-size:18px;font-weight:700">📊 통계</h2></div>
+  <div class="stat-grid" id="statGrid"></div>
+  <div class="chart-card"><div class="chart-title">📊 연도별 곡 수</div><div id="chYear"></div></div>
+  <div class="chart-card"><div class="chart-title">🎤 단원별 참여 TOP 10</div><div id="chMember"></div></div>
+  <div class="chart-card"><div class="chart-title">🎹 반주자별 횟수</div><div id="chPianist"></div></div>
+  <div class="chart-card"><div class="chart-title">📁 카테고리별 분포</div><div id="chCat"></div></div>
+</div>
+<!-- PAGE: 관리자 -->
+<div class="tab-page hidden" id="pageAdmin"><div style="padding:16px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
+    <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
+    <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
+    <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
+    <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
+    <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
+    <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
+  </div>
+
+  <div class="admin-sub" id="subAddSong">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎵 새 곡 추가</h3>
+    <div class="form-group"><label class="form-label">곡명 *</label><input class="form-input" id="addSongName" placeholder="곡 제목"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">연도 *</label><input class="form-input" id="addYear" type="number" placeholder="2026"></div><div class="form-group"><label class="form-label">월 *</label><input class="form-input" id="addMonth" type="number" placeholder="1~12"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">일</label><input class="form-input" id="addDay" type="number"></div><div class="form-group"><label class="form-label">요일</label><select class="form-sel" id="addDow"><option value="">선택</option><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option></select></div></div>
+    <div class="form-group"><label class="form-label">카테고리</label><input class="form-input" id="addCat" placeholder="예: 주일예배, 교구집회"></div>
+    <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 연제, 성가"></div>
+    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실"></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)"></div>
+    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR"></div>
+    <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
+  </div>
+
+  <div class="admin-sub hidden" id="subMembers">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">👥 단원 관리</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>소프라노</option><option>알토</option><option>테너</option><option>베이스</option><option>지휘</option><option>반주</option></select></div></div>
+    <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
+    <button class="btn btn-p btn-bl" onclick="addMember()" style="margin-bottom:20px">단원 등록</button>
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 단원</h4>
+    <div id="memberList"></div>
+  </div>
+
+  <div class="admin-sub hidden" id="subNotice">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📢 공지사항 관리</h3>
+    <div class="form-group"><label class="form-label">공지 내용</label><input class="form-input" id="noticeInput" placeholder="상단에 표시할 공지사항"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-p" onclick="saveNotice()">저장</button><button class="btn btn-d" onclick="delNotice()">삭제</button></div>
+    <div style="margin-top:16px"><h4 style="font-size:14px;font-weight:700;margin-bottom:4px">현재 공지</h4><div id="curNotice" style="font-size:14px;color:var(--ts)">없음</div></div>
+  </div>
+
+  <div class="admin-sub hidden" id="subSchedule">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
+    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="schDate" type="date"></div>
+    <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
+    <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
+    <div class="form-group"><label class="form-label">메모</label><input class="form-input" id="schMemo" placeholder="추가 메모"></div>
+    <div class="form-group"><label class="form-label">색상</label><div class="color-opts" id="colorOpts"></div></div>
+    <button class="btn btn-p btn-bl" onclick="addSchedule()" style="margin-bottom:20px">일정 추가</button>
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 일정</h4>
+    <div id="schList"></div>
+  </div>
+
+  <div class="admin-sub hidden" id="subLogs">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📝 활동 로그</h3>
+    <div id="logList"></div>
+  </div>
+
+  <div class="admin-sub hidden" id="subExport">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">💾 데이터 백업</h3>
+    <p style="font-size:13px;color:var(--ts);margin-bottom:16px">전체 곡 데이터를 CSV로 다운로드합니다.</p>
+    <button class="btn btn-p btn-bl" onclick="exportCSV()">CSV 다운로드</button>
+  </div>
+</div></div>
+
+<!-- MODAL: 곡 상세 -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="detailTitle"></span><button class="modal-close" onclick="closeModal('modalDetail')">✕</button></div>
+    <div id="detailBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" style="flex:1" onclick="shareSong()">📤 공유</button>
+      <button class="btn" style="flex:1;background:var(--pl);color:var(--pd)" onclick="toggleBkDetail()">⭐ 즐겨찾기</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px" id="detailAdmin">
+      <button class="btn btn-sm btn-p" style="flex:1" onclick="editFromDetail()">✏️ 수정</button>
+      <button class="btn btn-sm btn-d" style="flex:1" id="detailDelBtn" onclick="delFromDetail()">🗑️ 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 관리자 로그인 -->
+<div class="modal-overlay modal-center" id="modalAdmin">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">🔒 관리자 로그인</span><button class="modal-close" onclick="closeModal('modalAdmin')">✕</button></div>
+    <div class="form-group"><label class="form-label">권한 선택</label><select class="form-sel" id="roleSelect"><option value="admin">관리자 (전체 권한)</option><option value="chongmu">총무부 (곡 수정 + 일정)</option></select></div>
+    <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="adminPw" type="password" placeholder="비밀번호 입력" onkeypress="if(event.key==='Enter')checkAdminPw()"></div>
+    <button class="btn btn-p btn-bl" onclick="checkAdminPw()">로그인</button>
+  </div>
+</div>
+
+<!-- MODAL: 사용자 -->
+<div class="modal-overlay modal-center" id="modalUser">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">👤 내 프로필</span><button class="modal-close" onclick="closeModal('modalUser')">✕</button></div>
+    <div id="userModalBody"></div>
+  </div>
+</div>
+
+<!-- MODAL: 곡 수정 -->
+<div class="modal-overlay" id="modalEdit">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">✏️ 곡 수정</span><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
+    <div class="form-group"><label class="form-label">곡명</label><input class="form-input" id="editName"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">연도</label><input class="form-input" id="editYear" type="number"></div><div class="form-group"><label class="form-label">월</label><input class="form-input" id="editMonth" type="number"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">일</label><input class="form-input" id="editDay" type="number"></div><div class="form-group"><label class="form-label">요일</label><select class="form-sel" id="editDow"><option value="">선택</option><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option></select></div></div>
+    <div class="form-group"><label class="form-label">카테고리</label><input class="form-input" id="editCat"></div>
+    <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="editSub"></div>
+    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc"></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem"></div>
+    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia"></div>
+    <button class="btn btn-p btn-bl" onclick="saveEdit()">저장</button>
+  </div>
+</div>
+
+<!-- MODAL: 일정 상세 -->
+<div class="modal-overlay modal-center" id="modalSchDetail">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="schDetailTitle">📅 일정</span><button class="modal-close" onclick="closeModal('modalSchDetail')">✕</button></div>
+    <div id="schDetailBody"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
+  <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐겨찾기</div>
+  <div class="nav-item" data-t="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>일정</div>
+  <div class="nav-item hidden" data-t="stats" id="navStats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>통계</div>
+  <div class="nav-item hidden" data-t="admin" id="navAdmin" onclick="switchTab('admin')"><span class="nav-icon">⚙️</span>관리</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+// ==================== Firebase ====================
+firebase.initializeApp({
+  apiKey:"AIzaSyCykDS-jje9UeLYzDJabtCeQEFUyGeLZ0o",
+  authDomain:"choir-project-f3b67.firebaseapp.com",
+  projectId:"choir-project-f3b67",
+  storageBucket:"choir-project-f3b67.firebasestorage.app",
+  messagingSenderId:"493401753336",
+  appId:"1:493401753336:web:5c69b98f1b5445e3099d0d"
+});
+var db = firebase.firestore();
+
+// ==================== 전역 변수 ====================
+var allSongs=[], filteredSongs=[], currentTab='songs';
+var adminRole=null; // null, 'admin', 'chongmu'
+var currentUser=null, currentDetailSong=null;
+var calYear, calMonth, allSchedules=[], allMembers=[];
+var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
+var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
+var activeDays=[];
+var COLORS=['#2563EB','#7C3AED','#059669','#DC2626','#D97706','#EC4899','#0891B2','#4F46E5','#16A34A','#EA580C'];
+var selColor=COLORS[0];
+var toastTimer=null;
+
+// ==================== 토스트 ====================
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
+
+// ==================== 다크모드 ====================
+function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.documentElement.classList.add('dark');document.getElementById('btnDark').textContent='☀️'}}
+function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
+
+// ==================== PWA ====================
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){})}
+
+// ==================== 모달 ====================
+function openModal(id){document.getElementById(id).classList.add('active')}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+document.addEventListener('click',function(e){if(e.target.classList.contains('modal-overlay')&&e.target.classList.contains('active'))e.target.classList.remove('active')});
+
+// ==================== 탭 전환 ====================
+function switchTab(tab){
+  if((tab==='admin'||tab==='stats')&&!adminRole)return;
+  currentTab=tab;
+  ['pageSongs','pageFavorites','pageCalendar','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
+
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
+  var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(p)p.classList.remove('hidden');
+  if(tab==='favorites')renderFav();
+  if(tab==='calendar')renderCal();
+  if(tab==='stats')renderStats();
+  if(tab==='admin'){loadMembers();loadLogs();loadSchAdmin();updateAdminTabs()}
+}
+function switchAdminTab(sub){
+  document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
+  document.querySelectorAll('[data-at]').forEach(function(el){el.classList.toggle('on',el.dataset.at===sub)});
+  var el=document.getElementById('sub'+sub.charAt(0).toUpperCase()+sub.slice(1));
+  if(el)el.classList.remove('hidden');
+  if(sub==='logs')loadLogs();
+  if(sub==='members')loadMembers();
+  if(sub==='schedule')loadSchAdmin();
+}
+function updateAdminTabs(){
+  var tabs=document.getElementById('adminTabRow');if(!tabs)return;
+  tabs.querySelectorAll('[data-at]').forEach(function(t){
+    var k=t.dataset.at;
+    if(adminRole==='chongmu'){t.style.display=(k==='addSong'||k==='schedule')?'':'none'}
+    else{t.style.display=''}
+  });
+}
+
+// ==================== 관리자 로그인 ====================
+function openAdminLogin(){
+  if(adminRole){
+    adminRole=null;
+    document.body.classList.remove('admin-mode','chongmu-mode');
+    document.getElementById('navAdmin').classList.add('hidden');
+    document.getElementById('navStats').classList.add('hidden');
+    document.getElementById('btnLock').textContent='🔒';
+    showToast('관리자 모드 종료');
+    if(currentTab==='admin'||currentTab==='stats')switchTab('songs');
+    renderSongList();return;
+  }
+  openModal('modalAdmin');
+  setTimeout(function(){document.getElementById('adminPw').focus()},300);
+}
+function checkAdminPw(){
+  var role=document.getElementById('roleSelect').value;
+  var pw=document.getElementById('adminPw').value;
+  if(role==='admin'&&pw==='9917'){
+    adminRole='admin';
+    document.body.classList.add('admin-mode');document.body.classList.remove('chongmu-mode');
+    document.getElementById('navAdmin').classList.remove('hidden');
+    document.getElementById('navStats').classList.remove('hidden');
+    document.getElementById('btnLock').textContent='🔓';
+    document.getElementById('adminPw').value='';
+    closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();
+  }else if(role==='chongmu'&&pw==='0412'){
+    adminRole='chongmu';
+    document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode');
+    document.getElementById('navAdmin').classList.remove('hidden');
+    document.getElementById('navStats').classList.remove('hidden');
+    document.getElementById('btnLock').textContent='🔓';
+    document.getElementById('adminPw').value='';
+    closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();
+  }else{showToast('비밀번호가 틀렸습니다')}
+}
+
+// ==================== 사용자 ====================
+function openUserModal(){
+  var b=document.getElementById('userModalBody');
+  if(currentUser){
+    b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+currentUser.name+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+currentUser.part+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div><button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+  }else{
+    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">로그인하면 즐겨찾기가 다른 기기에서도 동기화됩니다.</p><div class="form-group"><label class="form-label">이름 선택</label><select class="form-sel" id="userNameSel"><option value="">등록된 단원 선택...</option></select></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 로그인 없이도 모든 곡 열람 가능</p>';
+    populateUserSel();
+  }
+  openModal('modalUser');
+}
+function populateUserSel(){
+  db.collection('members').orderBy('name').get().then(function(snap){
+    var sel=document.getElementById('userNameSel');if(!sel)return;
+    snap.forEach(function(doc){var d=doc.data();var o=document.createElement('option');o.value=doc.id;o.textContent=d.name+' ('+d.part+')';sel.appendChild(o)});
+  });
+}
+function loginUser(){
+  var sel=document.getElementById('userNameSel');
+  var pin=document.getElementById('userPinInput');
+  if(!sel||!sel.value)return showToast('이름을 선택해주세요');
+  if(!pin||!pin.value)return showToast('PIN을 입력해주세요');
+  db.collection('members').doc(sel.value).get().then(function(doc){
+    if(!doc.exists)return showToast('단원 정보를 찾을 수 없습니다');
+    var data=doc.data();
+    if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
+    currentUser={id:doc.id,name:data.name,part:data.part};
+    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
+    updateUserBar();closeModal('modalUser');
+    showToast(data.name+'님 환영합니다!');renderSongList();
+  });
+}
+function logoutUser(){currentUser=null;localStorage.removeItem('choir_user');updateUserBar();closeModal('modalUser');showToast('로그아웃 되었습니다')}
+function updateUserBar(){
+  var bar=document.getElementById('userBar');
+  if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+currentUser.part+')'}
+  else{bar.classList.add('hidden')}
+}
+function restoreUser(){var s=localStorage.getItem('choir_user');if(s){try{currentUser=JSON.parse(s);updateUserBar()}catch(e){}}}
+function syncFav(){
+  localStorage.setItem('choir_fav',JSON.stringify(favorites));
+  if(currentUser){db.collection('members').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
+}
+
+// ==================== Firestore: 곡 로드 ====================
+function initSongs(){
+  db.collection('songs').onSnapshot(function(snap){
+    allSongs=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
+    });
+    buildFilters();doFilter();
+  },function(err){
+    console.error(err);
+    document.getElementById('songList').innerHTML='<div class="loading">데이터를 불러올 수 없습니다.</div>';
+  });
+}
+
+// ==================== 필터 빌드 ====================
+function buildFilters(){
+  var yMap={};allSongs.forEach(function(s){if(s.year)yMap[s.year]=(yMap[s.year]||0)+1});
+  var yArr=Object.entries(yMap).sort(function(a,b){return b[1]-a[1]});
+  var ySel=document.getElementById('yearSel');var curY=ySel.value;
+  ySel.innerHTML='<option value="all">전체 ('+allSongs.length+'곡)</option>';
+  yArr.forEach(function(e){ySel.innerHTML+='<option value="'+e[0]+'"'+(curY===e[0]?' selected':'')+'>'+e[0]+'년 ('+e[1]+'곡)</option>'});
+
+  var cMap={};allSongs.forEach(function(s){if(s.category)cMap[s.category]=(cMap[s.category]||0)+1});
+  var cArr=Object.entries(cMap).sort(function(a,b){return b[1]-a[1]});
+  var cSel=document.getElementById('catSel');var curC=cSel.value;
+  cSel.innerHTML='<option value="all">전체 ('+allSongs.length+'곡)</option>';
+  cArr.forEach(function(e){cSel.innerHTML+='<option value="'+e[0]+'"'+(curC===e[0]?' selected':'')+'>'+e[0]+' ('+e[1]+'곡)</option>'});
+}
+
+// ==================== 요일 토글 ====================
+function toggleDay(day){
+  if(day==='all'){
+    activeDays=[];
+    document.querySelectorAll('.day-chip').forEach(function(el){el.classList.toggle('on',el.dataset.d==='all')});
+  }else{
+    document.querySelector('.day-chip[data-d="all"]').classList.remove('on');
+    var idx=activeDays.indexOf(day);
+    if(idx>-1)activeDays.splice(idx,1);else activeDays.push(day);
+    if(activeDays.length===0)document.querySelector('.day-chip[data-d="all"]').classList.add('on');
+    document.querySelectorAll('.day-chip').forEach(function(el){if(el.dataset.d!=='all')el.classList.toggle('on',activeDays.indexOf(el.dataset.d)>-1)});
+  }
+  doFilter();
+}
+
+// ==================== 필터 + 정렬 ====================
+function doFilter(){
+  var q=(document.getElementById('searchInput').value||'').toLowerCase().trim();
+  var yV=document.getElementById('yearSel').value;
+  var cV=document.getElementById('catSel').value;
+  var r=allSongs.slice();
+
+  if(q)r=r.filter(function(s){return s.songName.toLowerCase().indexOf(q)>-1||s.members.toLowerCase().indexOf(q)>-1||s.pianist.toLowerCase().indexOf(q)>-1||s.category.toLowerCase().indexOf(q)>-1||s.subCategory.toLowerCase().indexOf(q)>-1||s.location.toLowerCase().indexOf(q)>-1});
+  if(yV!=='all')r=r.filter(function(s){return String(s.year)===yV});
+  if(cV!=='all')r=r.filter(function(s){return s.category===cV});
+  if(activeDays.length>0)r=r.filter(function(s){return activeDays.indexOf(s.dayOfWeek)>-1});
+
+  var sort=document.getElementById('sortSel').value;
+  switch(sort){
+    case'newest':r.sort(function(a,b){return(b.year*10000+b.month*100+(b.day||0))-(a.year*10000+a.month*100+(a.day||0))});break;
+    case'oldest':r.sort(function(a,b){return(a.year*10000+a.month*100+(a.day||0))-(b.year*10000+b.month*100+(b.day||0))});break;
+    case'name-asc':r.sort(function(a,b){return a.songName.localeCompare(b.songName,'ko')});break;
+    case'name-desc':r.sort(function(a,b){return b.songName.localeCompare(a.songName,'ko')});break;
+    case'most-sung':var cm={};allSongs.forEach(function(s){cm[s.songName]=(cm[s.songName]||0)+1});r.sort(function(a,b){return(cm[b.songName]||0)-(cm[a.songName]||0)});break;
+    case'least-recent':r.sort(function(a,b){return(a.year*10000+a.month*100+(a.day||0))-(b.year*10000+b.month*100+(b.day||0))});break;
+  }
+  filteredSongs=r;renderSongList();
+}
+
+// ==================== 곡 목록 렌더링 ====================
+function renderSongList(){
+  var c=document.getElementById('songList');
+  document.getElementById('resultCount').textContent='총 '+filteredSongs.length+'곡';
+  if(filteredSongs.length===0){c.innerHTML='<div style="text-align:center;padding:40px;color:var(--ts)">검색 결과가 없습니다</div>';return}
+  var show=filteredSongs.slice(0,200);
+  c.innerHTML=show.map(function(s){
+    var fav=favorites.indexOf(s.id)>-1;
+    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button><span class="admin-actions"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+s.id+'\')">✏️</button><button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+s.id+'\',\''+s.songName.replace(/'/g,"\\'")+'\')">🗑️</button></span></span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
+  }).join('');
+  if(filteredSongs.length>200)c.innerHTML+='<div style="text-align:center;padding:16px;color:var(--ts);font-size:13px">외 '+(filteredSongs.length-200)+'곡 — 검색으로 좁혀보세요</div>';
+}
+
+// ==================== 즐겨찾기 ====================
+function toggleFav(id){var i=favorites.indexOf(id);if(i>-1){favorites.splice(i,1);showToast('즐겨찾기 제거')}else{favorites.push(id);showToast('즐겨찾기 추가')}syncFav();renderSongList();if(currentTab==='favorites')renderFav()}
+function toggleBkDetail(){if(currentDetailSong)toggleFav(currentDetailSong.id)}
+function renderFav(){
+  var c=document.getElementById('favList');
+  var fs=allSongs.filter(function(s){return favorites.indexOf(s.id)>-1});
+  document.getElementById('favCount').textContent='즐겨찾기 '+fs.length+'곡';
+  if(fs.length===0){c.innerHTML='<div style="text-align:center;padding:40px;color:var(--ts)">⭐ 곡 목록에서 별을 눌러 추가하세요</div>';return}
+  c.innerHTML=fs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+s.songName+'</span><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">⭐</button></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+'</span>'+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+'</div></div>'}).join('');
+}
+
+// ==================== 곡 상세 ====================
+function openDetail(id){
+  var song=allSongs.find(function(s){return s.id===id});if(!song)return;
+  currentDetailSong=song;
+  recentViewed=recentViewed.filter(function(x){return x!==id});recentViewed.unshift(id);
+  if(recentViewed.length>30)recentViewed=recentViewed.slice(0,30);
+  localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
+
+  document.getElementById('detailTitle').textContent=song.songName;
+  document.getElementById('detailAdmin').style.display=adminRole?'flex':'none';
+  document.getElementById('detailDelBtn').style.display=adminRole==='admin'?'':'none';
+
+  var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
+  var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
+
+  var same=allSongs.filter(function(s){return s.songName===song.songName&&s.id!==song.id});
+  if(same.length>0){
+    h+='<div style="margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">🔄 같은 곡 다른 기록 ('+same.length+'건)</div>';
+    h+=same.slice(0,5).map(function(s){return '<div style="padding:6px 0;font-size:13px;color:var(--ts);border-bottom:1px solid var(--bd);cursor:pointer" onclick="openDetail(\''+s.id+'\')">'+s.year+'.'+String(s.month).padStart(2,'0')+' — '+s.category+(s.members?' · '+s.members:'')+'</div>'}).join('');
+    h+='</div>';
+  }
+  document.getElementById('detailBody').innerHTML=h;
+  openModal('modalDetail');
+}
+function shareSong(){
+  if(!currentDetailSong)return;var s=currentDetailSong;
+  var t='🎵 '+s.songName+'\n📅 '+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'\n📁 '+s.category+(s.subCategory?' > '+s.subCategory:'')+'\n📍 '+(s.location||'-')+'\n👤 '+(s.members||'-')+'\n🎹 '+(s.pianist||'-')+'\n\n— 광주교회 찬양대';
+  if(navigator.share){navigator.share({title:s.songName,text:t}).catch(function(){})}
+  else{navigator.clipboard.writeText(t).then(function(){showToast('클립보드에 복사됨')})}
+}
+// ==================== 곡 추가 ====================
+function addNewSong(){
+  var name=document.getElementById('addSongName').value.trim();
+  var year=parseInt(document.getElementById('addYear').value);
+  var month=parseInt(document.getElementById('addMonth').value);
+  if(!name||!year||!month)return showToast('곡명, 연도, 월은 필수입니다');
+  db.collection('songs').add({
+    songName:name,year:year,month:month,
+    day:parseInt(document.getElementById('addDay').value)||null,
+    dayOfWeek:document.getElementById('addDow').value,
+    category:document.getElementById('addCat').value.trim(),
+    subCategory:document.getElementById('addSub').value.trim(),
+    location:document.getElementById('addLoc').value.trim(),
+    members:document.getElementById('addMem').value.trim(),
+    pianist:document.getElementById('addPia').value.trim(),
+    createdAt:new Date().toISOString()
+  }).then(function(){
+    writeLog('곡 추가','"'+name+'" 추가됨');
+    showToast('곡이 추가되었습니다!');
+    ['addSongName','addYear','addMonth','addDay','addCat','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('addDow').selectedIndex=0;
+  }).catch(function(e){console.error(e);showToast('추가 중 오류 발생')});
+}
+
+// ==================== 곡 수정 ====================
+function openEdit(id){
+  var song=allSongs.find(function(s){return s.id===id});if(!song)return;
+  currentDetailSong=song;
+  document.getElementById('editName').value=song.songName;
+  document.getElementById('editYear').value=song.year;
+  document.getElementById('editMonth').value=song.month;
+  document.getElementById('editDay').value=song.day||'';
+  document.getElementById('editDow').value=song.dayOfWeek||'';
+  document.getElementById('editCat').value=song.category;
+  document.getElementById('editSub').value=song.subCategory;
+  document.getElementById('editLoc').value=song.location;
+  document.getElementById('editMem').value=song.members;
+  document.getElementById('editPia').value=song.pianist;
+  closeModal('modalDetail');openModal('modalEdit');
+}
+function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
+function saveEdit(){
+  if(!currentDetailSong)return;
+  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value)||0,month:parseInt(document.getElementById('editMonth').value)||0,day:parseInt(document.getElementById('editDay').value)||null,dayOfWeek:document.getElementById('editDow').value,category:document.getElementById('editCat').value.trim(),subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim()};
+  db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
+    writeLog('곡 수정','"'+data.songName+'" 수정됨');closeModal('modalEdit');showToast('수정되었습니다');
+  }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
+}
+
+// ==================== 곡 삭제 ====================
+function delSong(id,name){
+  if(adminRole!=='admin')return showToast('삭제 권한이 없습니다');
+  if(!confirm('"'+name+'" 삭제하시겠습니까?'))return;
+  db.collection('songs').doc(id).delete().then(function(){
+    writeLog('곡 삭제','"'+name+'" 삭제됨');
+    favorites=favorites.filter(function(x){return x!==id});syncFav();showToast('삭제되었습니다');
+  }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
+}
+function delFromDetail(){if(currentDetailSong){delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
+
+// ==================== 단원 관리 ====================
+function addMember(){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var name=document.getElementById('memName').value.trim();
+  var part=document.getElementById('memPart').value;
+  var pin=document.getElementById('memPin').value.trim();
+  if(!name||!part||!pin)return showToast('이름, 파트, PIN 모두 입력해주세요');
+  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
+  db.collection('members').add({name:name,part:part,pin:pin,favorites:[],recentViewed:[],createdAt:new Date().toISOString()}).then(function(){
+    writeLog('단원 등록','"'+name+'" ('+part+') 등록됨');showToast(name+'님 등록 완료');
+    document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
+  }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
+}
+function loadMembers(){
+  db.collection('members').orderBy('name').get().then(function(snap){
+    allMembers=[];var c=document.getElementById('memberList');if(!c)return;
+    snap.forEach(function(doc){allMembers.push({id:doc.id,name:doc.data().name,part:doc.data().part})});
+    if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">등록된 단원이 없습니다</div>';return}
+    c.innerHTML=allMembers.map(function(m){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)"><div><span style="font-weight:700;font-size:14px">'+m.name+'</span><span class="meta-tag" style="margin-left:6px">'+m.part+'</span></div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin(\''+m.id+'\',\''+m.name+'\')">PIN</button><button class="btn btn-sm btn-d" onclick="delMember(\''+m.id+'\',\''+m.name+'\')">삭제</button></div></div>'}).join('');
+  });
+}
+function delMember(id,name){
+  if(!confirm('"'+name+'"님을 삭제하시겠습니까?'))return;
+  db.collection('members').doc(id).delete().then(function(){writeLog('단원 삭제','"'+name+'" 삭제됨');showToast('삭제되었습니다');loadMembers()});
+}
+function resetPin(id,name){
+  var p=prompt(name+'님의 새 PIN(4자리):');if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
+  db.collection('members').doc(id).update({pin:p}).then(function(){writeLog('PIN 변경','"'+name+'" PIN 변경됨');showToast('PIN 변경 완료')});
+}
+
+// ==================== 공지사항 ====================
+function initNotice(){
+  db.collection('settings').doc('notice').onSnapshot(function(doc){
+    var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText'),cn=document.getElementById('curNotice'),ni=document.getElementById('noticeInput');
+    if(doc.exists&&doc.data().text){var txt=doc.data().text;b.classList.remove('hidden');t.textContent=txt;if(cn)cn.textContent=txt;if(ni&&document.activeElement!==ni)ni.value=txt}
+    else{b.classList.add('hidden');t.textContent='';if(cn)cn.textContent='없음'}
+  });
+}
+function saveNotice(){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var t=document.getElementById('noticeInput').value.trim();if(!t)return showToast('공지 내용을 입력해주세요');
+  db.collection('settings').doc('notice').set({text:t,updatedAt:new Date().toISOString()}).then(function(){writeLog('공지 저장','"'+t.substring(0,30)+'"');showToast('공지 저장 완료')});
+}
+function delNotice(){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!confirm('공지를 삭제하시겠습니까?'))return;
+  db.collection('settings').doc('notice').delete().then(function(){writeLog('공지 삭제','공지사항 삭제됨');document.getElementById('noticeInput').value='';showToast('공지 삭제 완료')});
+}
+
+// ==================== 일정 ====================
+function initSchedules(){
+  db.collection('schedules').onSnapshot(function(snap){
+    allSchedules=[];snap.forEach(function(doc){allSchedules.push({id:doc.id,date:doc.data().date,title:doc.data().title,time:doc.data().time||'',location:doc.data().location||'',songs:doc.data().songs||'',memo:doc.data().memo||'',color:doc.data().color||COLORS[0]})});
+    if(currentTab==='calendar')renderCal();
+  });
+}
+function initColorPicker(){
+  var c=document.getElementById('colorOpts');if(!c)return;
+  c.innerHTML=COLORS.map(function(co,i){return '<div class="color-dot'+(i===0?' sel':'')+'" style="background:'+co+'" onclick="pickColor(\''+co+'\',this)"></div>'}).join('');
+}
+function pickColor(co,el){selColor=co;document.querySelectorAll('.color-dot').forEach(function(d){d.classList.remove('sel')});el.classList.add('sel')}
+
+function addSchedule(){
+  var date=document.getElementById('schDate').value;
+  var title=document.getElementById('schTitle').value.trim();
+  if(!date||!title)return showToast('날짜와 제목은 필수입니다');
+  db.collection('schedules').add({date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,createdAt:new Date().toISOString()}).then(function(){
+    writeLog('일정 추가','"'+title+'" ('+date+')');showToast('일정 추가 완료');
+    ['schDate','schTitle','schTime','schLoc','schSongs','schMemo'].forEach(function(id){document.getElementById(id).value=''});loadSchAdmin();
+  });
+}
+function loadSchAdmin(){
+  var c=document.getElementById('schList');if(!c)return;
+  var sorted=allSchedules.slice().sort(function(a,b){return b.date>a.date?-1:1});
+  if(sorted.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts)">등록된 일정이 없습니다</div>';return}
+  var today=new Date().toISOString().split('T')[0];
+  c.innerHTML=sorted.map(function(s){
+    var past=s.date<today;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);'+(past?'opacity:.5;':'')+'"><div style="flex:1;display:flex;gap:8px;align-items:flex-start"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div><div style="font-weight:700;font-size:14px">'+s.title+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+'</div></div><button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button></div>';
+  }).join('');
+}
+function delSchedule(id,title){
+  if(!confirm('"'+title+'" 삭제하시겠습니까?'))return;
+  db.collection('schedules').doc(id).delete().then(function(){writeLog('일정 삭제','"'+title+'" 삭제됨');showToast('일정 삭제 완료');loadSchAdmin()});
+}
+
+// ==================== 캘린더 ====================
+function initCal(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
+
+function renderCal(){
+  document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
+  var g=document.getElementById('calGrid');
+  var hds=['일','월','화','수','목','금','토'];
+  var h=hds.map(function(x){return '<div class="cal-hdr">'+x+'</div>'}).join('');
+  var fd=new Date(calYear,calMonth,1).getDay();
+  var ld=new Date(calYear,calMonth+1,0).getDate();
+  var now=new Date();
+  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+  for(var i=0;i<fd;i++)h+='<div class="cal-cell empty"></div>';
+  for(var d=1;d<=ld;d++){
+    var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isT=ds===todayStr;
+    var evts=allSchedules.filter(function(s){return s.date===ds});
+    var sngCnt=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d}).length;
+    var cls='cal-cell'+(isT?' today':'');
+    var inner='<div class="cal-date">'+d+'</div>';
+    evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+e.color+'" title="'+e.title+'">'+e.title+'</div>'});
+    if(evts.length>2)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(evts.length-2)+'개</div>';
+    if(sngCnt>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(sngCnt,4);j++)inner+='<span class="cal-dot"></span>';if(sngCnt>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(sngCnt-4)+'</span>';inner+='</div>'}
+    h+='<div class="'+cls+'" onclick="showCalDay(\''+ds+'\','+d+')">'+inner+'</div>';
+  }
+  var total=fd+ld;var rem=total%7===0?0:7-(total%7);
+  for(var i=0;i<rem;i++)h+='<div class="cal-cell empty"></div>';
+  g.innerHTML=h;
+
+  if(calYear===now.getFullYear()&&calMonth===now.getMonth())showCalDay(todayStr,now.getDate());
+  else{document.getElementById('calEvtTitle').textContent='일정';document.getElementById('calEvtList').innerHTML='<div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div>'}
+}
+
+function showCalDay(ds,day){
+  var evts=allSchedules.filter(function(s){return s.date===ds});
+  var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
+  document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
+  var h='';
+  if(evts.length>0)h+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+e.color+'" onclick="openSchDetail(\''+e.id+'\')"><div class="song-card-title"><span>📅 '+e.title+'</span></div><div class="song-card-meta">'+(e.time?'<span>🕐 '+e.time+'</span>':'')+(e.location?'<span>📍 '+e.location+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+e.songs+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+e.memo+'</div>':'')+'</div>'}).join('');
+  if(songs.length>0)h+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>🎵 '+s.songName+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>'}).join('');
+  if(!h)h='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
+  document.getElementById('calEvtList').innerHTML=h;
+}
+
+function openSchDetail(id){
+  var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
+  document.getElementById('schDetailTitle').textContent='📅 '+s.title;
+  document.getElementById('schDetailBody').innerHTML=[['날짜',s.date],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('')+'<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:4px;background:'+s.color+';display:inline-block"></span><span style="font-size:13px;color:var(--ts)">일정 색상</span></div>';
+  openModal('modalSchDetail');
+}
+
+// ==================== 통계 ====================
+function renderStats(){
+  var total=allSongs.length;
+  var unique=[];allSongs.forEach(function(s){if(unique.indexOf(s.songName)===-1)unique.push(s.songName)});
+  var memSet={};allSongs.forEach(function(s){if(s.members)s.members.split(/[,，、\s]+/).forEach(function(m){var t=m.trim();if(t)memSet[t]=1})});
+  var piaSet={};allSongs.forEach(function(s){if(s.pianist)piaSet[s.pianist]=1});
+
+  document.getElementById('statGrid').innerHTML='<div class="stat-card"><div class="stat-num">'+total+'</div><div class="stat-lbl">총 기록 수</div></div><div class="stat-card"><div class="stat-num">'+unique.length+'</div><div class="stat-lbl">고유 곡 수</div></div><div class="stat-card"><div class="stat-num">'+Object.keys(memSet).length+'</div><div class="stat-lbl">참여 단원 수</div></div><div class="stat-card"><div class="stat-num">'+Object.keys(piaSet).length+'</div><div class="stat-lbl">반주자 수</div></div>';
+
+  barChart('chYear',grouped(allSongs,function(s){return s.year},true),'곡');
+  barChart('chMember',memCounts().slice(0,10),'회');
+  barChart('chPianist',grouped(allSongs,function(s){return s.pianist}),'회');
+  barChart('chCat',grouped(allSongs,function(s){return s.category}),'곡');
+}
+function grouped(arr,fn,byKey){
+  var m={};arr.forEach(function(s){var k=fn(s);if(k)m[k]=(m[k]||0)+1});
+  var e=Object.entries(m);if(byKey)e.sort(function(a,b){return a[0]-b[0]});else e.sort(function(a,b){return b[1]-a[1]});
+  return e.map(function(x){return{label:String(x[0]),value:x[1]}});
+}
+function memCounts(){
+  var m={};allSongs.forEach(function(s){if(s.members)s.members.split(/[,，、\s]+/).forEach(function(x){var t=x.trim();if(t)m[t]=(m[t]||0)+1})});
+  return Object.entries(m).sort(function(a,b){return b[1]-a[1]}).map(function(x){return{label:x[0],value:x[1]}});
+}
+function barChart(id,data,unit){
+  var el=document.getElementById(id);
+  if(!data.length){el.innerHTML='<div style="font-size:13px;color:var(--ts)">데이터 없음</div>';return}
+  var mx=Math.max.apply(null,data.map(function(d){return d.value}));
+  el.innerHTML=data.map(function(d){
+    var pct=mx>0?(d.value/mx*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:70px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.label+'">'+d.label+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:var(--p);height:100%;border-radius:4px;transition:width .5s;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:45px;font-size:11px;font-weight:700;color:var(--p)">'+d.value+unit+'</span></div>';
+  }).join('');
+}
+
+// ==================== 활동 로그 ====================
+function writeLog(action,detail){
+  var user=adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'비회원');
+  db.collection('activityLogs').add({action:action,detail:detail,user:user,timestamp:new Date().toISOString()}).catch(function(){});
+}
+function loadLogs(){
+  db.collection('activityLogs').orderBy('timestamp','desc').limit(50).get().then(function(snap){
+    var c=document.getElementById('logList');if(!c)return;
+    if(snap.empty){c.innerHTML='<div style="font-size:13px;color:var(--ts)">활동 로그가 없습니다</div>';return}
+    c.innerHTML='';
+    snap.forEach(function(doc){
+      var d=doc.data();var t=d.timestamp?new Date(d.timestamp):new Date();
+      var ts=t.getFullYear()+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+      var icon=d.action.indexOf('추가')>-1?'➕':d.action.indexOf('수정')>-1||d.action.indexOf('변경')>-1?'✏️':d.action.indexOf('삭제')>-1?'🗑️':d.action.indexOf('등록')>-1?'👤':d.action.indexOf('공지')>-1?'📢':d.action.indexOf('일정')>-1?'📅':'📝';
+      c.innerHTML+='<div class="log-item"><div class="log-time">'+ts+' · '+(d.user||'알 수 없음')+'</div><div class="log-action">'+icon+' '+d.action+': '+d.detail+'</div></div>';
+    });
+  }).catch(function(){
+    var c=document.getElementById('logList');if(c)c.innerHTML='<div style="font-size:13px;color:var(--ts)">로그를 불러올 수 없습니다</div>';
+  });
+}
+
+// ==================== CSV ====================
+function exportCSV(){
+  if(allSongs.length===0)return showToast('데이터가 없습니다');
+  var hd=['곡명','연도','월','일','요일','카테고리','세부분류','장소','참여단원','반주자'];
+  var csv='\uFEFF'+hd.join(',')+'\n';
+  allSongs.forEach(function(s){
+    csv+=[s.songName,s.year,s.month,s.day||'',s.dayOfWeek,s.category,s.subCategory,s.location,s.members,s.pianist].map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(',')+'\n';
+  });
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='광주교회찬양대_'+new Date().toISOString().split('T')[0]+'.csv';a.click();showToast('CSV 다운로드 완료');
+}
+
+// ==================== 검색 ====================
+var sTimer=null;
+document.getElementById('searchInput').addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doFilter,300)});
+
+// ==================== 초기화 ====================
+function init(){
+  initDark();
+  restoreUser();
+  initCal();
+  initSongs();
+  initNotice();
+  initSchedules();
+  initColorPicker();
+}
+init();
+</script>
+</body>
+</html>
