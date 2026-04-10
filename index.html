@@ -903,12 +903,41 @@ function renderHandbook(list) {
   }).join('');
 }
 
+// 현재 선택된 파트 필터를 기억하는 변수
+var selectedHbPart = 'all';
+
+// [수정] 텍스트 검색과 파트 클릭 필터를 동시에 적용
 function filterHandbook() {
   var q = document.getElementById('handbookSearch').value.toLowerCase();
+  
   var filtered = directoryData.filter(function(m) {
-    return m.name.includes(q) || (m.district && m.district.includes(q)) || (m.job && m.job.includes(q));
+    // 1. 이름/교구/직업 텍스트 검색
+    var name = m.name || ""; var dist = m.district || ""; var job = m.job || "";
+    var textMatch = name.toLowerCase().includes(q) || dist.toLowerCase().includes(q) || job.toLowerCase().includes(q);
+
+    // 2. 파트 칩 클릭 필터링
+    var partMatch = true;
+    if (selectedHbPart !== 'all') {
+      if (selectedHbPart === '기타') {
+        // 지정된 8개 파트가 아니거나 파트가 비어있는 모든 사람을 찾음
+        var standardParts = ['S1', 'S2', 'T1', 'T2', '지휘', '반주', '관현악', '임원'];
+        partMatch = !standardParts.includes(m.part || '');
+      } else {
+        partMatch = m.part === selectedHbPart;
+      }
+    }
+
+    return textMatch && partMatch;
   });
+  
   renderHandbook(filtered);
+}
+
+// [신규] 칩을 클릭했을 때 필터를 적용하는 함수
+function toggleHbPart(part) {
+  selectedHbPart = part;
+  updatePartSummary(); // 칩 색상 업데이트 (선택된 것 하이라이트)
+  filterHandbook();    // 명부 목록 다시 그리기
 }
 
 function addHandbookMember(){
@@ -1423,36 +1452,51 @@ function showGuide(){
 }
 showGuide();
   
-  // [신규] 명부에서 파트별 인원수를 요약해서 보여주는 기능
+// [수정] 클릭 가능한 파트 요약 칩 (필터 기능 연결)
 function updatePartSummary() {
   var container = document.getElementById('handbookPartSummary');
   if(!container) return;
 
-  // 파트별 카운터 준비
   var counts = { 'S1': 0, 'S2': 0, 'T1': 0, 'T2': 0, '지휘': 0, '반주': 0, '관현악': 0, '임원': 0 };
   var others = 0;
 
-  // 명부 데이터(directoryData)를 돌면서 인원수 세기
   directoryData.forEach(function(m) {
     if(counts[m.part] !== undefined) counts[m.part]++;
-    else if(m.part) others++; // 오타나 기타 파트
+    else others++; // 기타 파트 또는 비어있는 파트
   });
 
-  // 화면에 그릴 예쁜 버튼(칩) 모양 HTML 만들기
   var html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">';
   
+  // 1. '전체' 칩 추가
+  var allBg = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bg)';
+  var allCol = selectedHbPart === 'all' ? '#fff' : 'var(--ts)';
+  var allBd = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bd)';
+  html += `<span style="background:${allBg}; color:${allCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${allBd}; cursor:pointer;" onclick="toggleHbPart('all')">전체 ${directoryData.length}</span>`;
+
+  // 2. 지정된 파트 칩들
   Object.keys(counts).forEach(function(k) {
-    if(counts[k] > 0) { // 1명 이상 있는 파트만 보여줌
-      html += '<span style="background:var(--pl); color:var(--pd); padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid var(--p)">' + k + ' <span style="color:var(--p); margin-left:2px">' + counts[k] + '</span></span>';
-    }
+    var isZero = counts[k] === 0;
+    var isSelected = selectedHbPart === k;
+
+    // 선택된 상태면 찐파랑(배경) + 흰 글씨, 아니면 원래 색상
+    var bg = isSelected ? 'var(--p)' : (isZero ? 'var(--bg)' : 'var(--pl)');
+    var border = isSelected ? 'var(--p)' : (isZero ? 'var(--bd)' : 'var(--p)');
+    var textCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--pd)');
+    var numCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--p)');
+
+    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${border}; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('${k}')">${k} <span style="color:${numCol}; margin-left:2px">${counts[k]}</span></span>`;
   });
   
+  // 3. '기타' 칩
   if(others > 0) {
-    html += '<span style="background:var(--bd); color:var(--ts); padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600;">기타 ' + others + '</span>';
+    var isSelected = selectedHbPart === '기타';
+    var bg = isSelected ? 'var(--p)' : 'var(--bd)';
+    var textCol = isSelected ? '#fff' : 'var(--ts)';
+    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('기타')">기타 ${others}</span>`;
   }
   
   html += '</div>';
-  container.innerHTML = html; // 화면에 쏙!
+  container.innerHTML = html;
 }
 </script>
 </body>
