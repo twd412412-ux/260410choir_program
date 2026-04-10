@@ -524,7 +524,7 @@ function refreshData(){
 // ==================== 필터 빌드 ====================
 function buildFilters(){
   var yMap={};allSongs.forEach(function(s){if(s.year)yMap[s.year]=(yMap[s.year]||0)+1});
-  var yArr=Object.entries(yMap).sort(function(a,b){return b[1]-a[1]});
+  var yArr=Object.entries(yMap).sort(function(a,b){return b[0]-a[0]});
   var ySel=document.getElementById('yearSel');var curY=ySel.value;
   ySel.innerHTML='<option value="all">전체 ('+allSongs.length+'곡)</option>';
   yArr.forEach(function(e){ySel.innerHTML+='<option value="'+e[0]+'"'+(curY===e[0]?' selected':'')+'>'+e[0]+'년 ('+e[1]+'곡)</option>'});
