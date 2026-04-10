@@ -187,8 +187,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     </div>
     <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="addDow" readonly style="background:var(--pl);font-weight:700"></div>
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
-    <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 연제, 성가"></div>
-    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실" onfocus="showSuggest('addLoc','loc')" oninput="filterSuggest('addLoc','loc')"><div class="suggest-box hidden" id="suggestAddLoc"></div></div>
+    <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 용봉, 연제"></div>
+    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대강당" onfocus="showSuggest('addLoc','loc')" oninput="filterSuggest('addLoc','loc')"><div class="suggest-box hidden" id="suggestAddLoc"></div></div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)" onfocus="showSuggest('addMem','mem')" oninput="filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR" onfocus="showSuggest('addPia','pia')" oninput="filterSuggest('addPia','pia')"><div class="suggest-box hidden" id="suggestAddPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="addYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
