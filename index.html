@@ -176,7 +176,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎵 새 곡 추가</h3>
     <div class="form-group"><label class="form-label">곡명 *</label><input class="form-input" id="addSongName" placeholder="곡 제목"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      <div class="form-group"><label class="form-label">연도 *</label><input class="form-input" id="addYear" type="number" placeholder="2026" onchange="calcDow('add')"></div>
+      <div class="form-group"><label class="form-label">연도 *</label><select class="form-sel" id="addYear" onchange="calcDow('add')"><option value="">선택</option></select></div>
       <div class="form-group"><label class="form-label">월 *</label><select class="form-sel" id="addMonth" onchange="calcDow('add')"><option value="">선택</option><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select></div>
       <div class="form-group"><label class="form-label">일</label><select class="form-sel" id="addDay" onchange="calcDow('add')"><option value="">선택</option></select></div>
     </div>
@@ -270,7 +270,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="modal-header"><span class="modal-title">✏️ 곡 수정</span><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
     <div class="form-group"><label class="form-label">곡명</label><input class="form-input" id="editName"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      <div class="form-group"><label class="form-label">연도</label><input class="form-input" id="editYear" type="number" onchange="calcDow('edit')"></div>
+      <div class="form-group"><label class="form-label">연도</label><select class="form-sel" id="editYear" onchange="calcDow('edit')"><option value="">선택</option></select></div>
       <div class="form-group"><label class="form-label">월</label><select class="form-sel" id="editMonth" onchange="calcDow('edit')"><option value="">선택</option><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select></div>
       <div class="form-group"><label class="form-label">일</label><select class="form-sel" id="editDay" onchange="calcDow('edit')"><option value="">선택</option></select></div>
     </div>
@@ -468,13 +468,11 @@ function loadCache(key,maxAge){
 
 // ==================== Firestore: 곡 로드 (get + 캐시) ====================
 function initSongs(){
-  // 1) 캐시에서 먼저 보여주기 (최대 10분)
   var cached=loadCache('choir_songs',600000);
   if(cached&&cached.length>0){
     allSongs=cached;
-    buildFilters();doFilter();
+    buildFilters();buildCatOptions();buildYearOptions();doFilter();
   }
-  // 2) Firestore에서 최신 데이터 가져오기
   db.collection('songs').get().then(function(snap){
     allSongs=[];
     snap.forEach(function(doc){
@@ -482,7 +480,7 @@ function initSongs(){
       allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
     });
     saveCache('choir_songs',allSongs);
-    buildFilters();doFilter();
+    buildFilters();buildCatOptions();buildYearOptions();doFilter();
   }).catch(function(err){
     console.error(err);
     if(!cached||cached.length===0){
@@ -490,6 +488,7 @@ function initSongs(){
     }
   });
 }
+
 
 // ==================== 데이터 새로고침 ====================
 function refreshData(){
@@ -669,6 +668,7 @@ function openEdit(id){
   var song=allSongs.find(function(s){return s.id===id});if(!song)return;
   currentDetailSong=song;
   document.getElementById('editName').value=song.songName;
+  buildYearOptions();
   document.getElementById('editYear').value=song.year;
   document.getElementById('editMonth').value=song.month||'';
   calcDow('edit');
@@ -1015,7 +1015,23 @@ function buildCatOptions(){
     sel.innerHTML+='<option value="__custom">✏️ 직접 입력</option>';
   });
 }
+function buildYearOptions(){
+  var years=[];
+  allSongs.forEach(function(s){if(s.year&&years.indexOf(s.year)===-1)years.push(s.year)});
+  years.sort(function(a,b){return b-a});
+  var now=new Date().getFullYear();
+  if(years.indexOf(now)===-1)years.unshift(now);
+  if(years.indexOf(now+1)===-1)years.unshift(now+1);
+  years.sort(function(a,b){return b-a});
 
+  ['addYear','editYear'].forEach(function(id){
+    var sel=document.getElementById(id);
+    if(!sel)return;
+    var cur=sel.value;
+    sel.innerHTML='<option value="">선택</option>';
+    years.forEach(function(y){sel.innerHTML+='<option value="'+y+'"'+(String(y)===cur?' selected':'')+'>'+y+'년</option>'});
+  });
+}
 // ==================== 검색 ====================
 var sTimer=null;
 document.getElementById('searchInput').addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doFilter,300)});
@@ -1030,6 +1046,7 @@ function init(){
   initSchedules();
   initColorPicker();
   buildCatOptions();
+  buildYearOptions();
 }
 init();
 </script>
