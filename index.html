@@ -503,7 +503,9 @@ function loginUser(){
   if(!nameInput||!nameInput.value.trim())return showToast('이름을 입력해주세요');
   if(!pin||!pin.value)return showToast('PIN을 입력해주세요');
   var inputName=nameInput.value.trim();
-  db.collection('members').where('name','==',inputName).get().then(function(snap){
+  
+  // 💡 members가 아니라 'accounts' 방에서 계정을 찾습니다!
+  db.collection('accounts').where('name','==',inputName).get().then(function(snap){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
@@ -514,6 +516,7 @@ function loginUser(){
     showToast(data.name+'님 환영합니다!');renderSongList();
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
+
 function logoutUser(){currentUser=null;localStorage.removeItem('choir_user');updateUserBar();closeModal('modalUser');showToast('로그아웃 되었습니다')}
 function updateUserBar(){
   var bar=document.getElementById('userBar');
@@ -521,9 +524,11 @@ function updateUserBar(){
   else{bar.classList.add('hidden')}
 }
 function restoreUser(){var s=localStorage.getItem('choir_user');if(s){try{currentUser=JSON.parse(s);updateUserBar()}catch(e){}}}
+
 function syncFav(){
   localStorage.setItem('choir_fav',JSON.stringify(favorites));
-  if(currentUser){db.collection('members').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
+  // 💡 즐겨찾기도 'accounts' 방에 동기화합니다!
+  if(currentUser){db.collection('accounts').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
 }
 
 // ==================== 캐시 유틸 ====================
@@ -802,8 +807,7 @@ function delSong(id,name){
 }
 function delFromDetail(){if(currentDetailSong){delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
 
-// ==================== [정리됨] 1. 단원 관리 (로그인 계정용) ====================
-// PIN 번호가 있는 '계정'만 관리하는 곳입니다.
+// ==================== 1. 단원 관리 (로그인 계정용 - 'accounts' 방 사용) ====================
 function addMember(){
   if(adminRole!=='admin') return showToast('권한이 없습니다');
   var name=document.getElementById('memName').value.trim();
@@ -812,7 +816,8 @@ function addMember(){
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
 
-  db.collection('members').add({
+  // 💡 members가 아니라 'accounts' 방에 로그인 계정을 생성합니다!
+  db.collection('accounts').add({
     name:name, part:part, pin:pin, 
     favorites:[], createdAt:new Date().toISOString()
   }).then(function(){
@@ -824,11 +829,11 @@ function addMember(){
 }
 
 function loadMembers(){
-  db.collection('members').orderBy('name').get().then(function(snap){
+  // 💡 'accounts' 방에서 로그인 계정 목록을 불러옵니다!
+  db.collection('accounts').orderBy('name').get().then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      // 🔐 PIN이 있는 '계정'만 이 목록에 표시합니다.
       if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
@@ -846,13 +851,15 @@ function loadMembers(){
 
 function delMember(id,name){
   if(!confirm('"'+name+'"님 계정을 삭제하시겠습니까?'))return;
-  db.collection('members').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadMembers(); });
+  // 💡 'accounts' 방에서 계정을 삭제합니다!
+  db.collection('accounts').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadMembers(); });
 }
 
 function resetPin(id,name){
   var p=prompt(name+'님의 새 PIN(4자리):');
   if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').doc(id).update({pin:p}).then(function(){ showToast('PIN 변경 완료'); });
+  // 💡 'accounts' 방의 PIN을 변경합니다!
+  db.collection('accounts').doc(id).update({pin:p}).then(function(){ showToast('PIN 변경 완료'); });
 }
 
 // ==================== [정리됨] 2. 단원 명부/수첩 (행정용 상세 조회) ====================
