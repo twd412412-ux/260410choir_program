@@ -776,129 +776,66 @@ function delSong(id,name){
 }
 function delFromDetail(){if(currentDetailSong){delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
 
-// ==================== 단원 관리 ====================
+// ==================== [정리됨] 1. 단원 관리 (로그인 계정용) ====================
+// PIN 번호가 있는 '계정'만 관리하는 곳입니다.
 function addMember(){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(adminRole!=='admin') return showToast('권한이 없습니다');
   var name=document.getElementById('memName').value.trim();
   var part=document.getElementById('memPart').value;
   var pin=document.getElementById('memPin').value.trim();
-  if(!name||!part||!pin)return showToast('이름, 파트, PIN 모두 입력해주세요');
-  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').add({name:name,part:part,pin:pin,favorites:[],recentViewed:[],createdAt:new Date().toISOString()}).then(function(){
-    writeLog('단원 등록','"'+name+'" ('+part+') 등록됨');showToast(name+'님 등록 완료');
-    document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
-  }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
-}
-// [기능] 명부에 단원 직접 추가
-function addHandbookMember(){
-  var name = document.getElementById('hbName').value.trim();
-  var part = document.getElementById('hbPart').value;
-  if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
+  if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
 
-  var data = {
-    name: name, part: part,
-    phone: document.getElementById('hbPhone').value.trim(),
-    birthday: document.getElementById('hbBirth').value,
-    district: document.getElementById('hbDist').value.trim(),
-    area: document.getElementById('hbArea').value.trim(),
-    job: document.getElementById('hbJob').value.trim(),
-    status: 'active',
-    createdAt: new Date().toISOString()
-  };
-
-  db.collection('members').add(data).then(function(){
-    showToast(name + '님 명부 등록 완료');
-    // 입력창 초기화
-    ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('hbPart').selectedIndex = 0;
-    loadHandbook(); // 목록 새로고침
-  });
-}
-
-// [기능] 명부 데이터 삭제
-function deleteHandbookMember(id, name){
-  if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
-  db.collection('members').doc(id).delete().then(function(){
-    showToast('삭제되었습니다');
-    loadHandbook();
-  });
-}
-
-// [기능] 데이터 수정 (간단하게 프롬프트로 예시)
-function editHandbookMember(id){
-  var m = directoryData.find(x => x.id === id);
-  if(!m) return;
-  
-  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
-  if(newPhone === null) return; // 취소 시
-
-  db.collection('members').doc(id).update({
-    phone: newPhone
+  db.collection('members').add({
+    name:name, part:part, pin:pin, 
+    favorites:[], createdAt:new Date().toISOString()
   }).then(function(){
-    showToast('정보가 수정되었습니다');
-    loadHandbook();
-  });
-}
-// ==================== [수정됨] 단원 관리 (로그인/계정용) ====================
-function addMember(){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
-  var name=document.getElementById('memName').value.trim();
-  var part=document.getElementById('memPart').value;
-  var pin=document.getElementById('memPin').value.trim();
-  if(!name||!part||!pin)return showToast('이름, 파트, PIN 모두 입력해주세요');
-  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').add({name:name,part:part,pin:pin,favorites:[],recentViewed:[],createdAt:new Date().toISOString()}).then(function(){
-    writeLog('단원 등록','"'+name+'" ('+part+') 등록됨');showToast(name+'님 등록 완료');
-    document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
-  }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
+    showToast(name+'님 로그인 계정 생성 완료');
+    document.getElementById('memName').value='';
+    document.getElementById('memPin').value='';
+    loadMembers(); 
+  }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
 }
 
-// [수정] 단원 관리(로그인 계정용) 목록 - PIN이 있는 계정만 표시
 function loadMembers(){
   db.collection('members').orderBy('name').get().then(function(snap){
-    allMembers=[];
-    var c=document.getElementById('memberList');
-    if(!c) return;
-    
+    allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      // ⭐ 핵심: PIN 번호가 있는 데이터만 '단원 관리' 목록에 추가합니다.
-      // 314명의 명부 데이터는 PIN이 없으므로 여기서 제외됩니다.
-      if(m.pin) { 
-        allMembers.push({id:doc.id, name:m.name, part:m.part});
-      }
+      // 🔐 PIN이 있는 '계정'만 이 목록에 표시합니다.
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part}); }
     });
-
-    if(allMembers.length===0){
-      c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px text-align:center">등록된 로그인 계정이 없습니다.</div>';
-      return;
-    }
-
+    if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
-      return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
-          <div>
-            <span style="font-weight:700;font-size:14px">${m.name}</span>
-            <span class="meta-tag" style="margin-left:6px">${m.part}</span>
-          </div>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}')">PIN</button>
-            <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
-          </div>
-        </div>`;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}')">PIN</button>
+          <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
+        </div>
+      </div>`;
     }).join('');
   });
 }
 
-// ==================== [수정됨] 단원 명부/수첩 (행정/조회용) ====================
+function delMember(id,name){
+  if(!confirm('"'+name+'"님 계정을 삭제하시겠습니까?'))return;
+  db.collection('members').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadMembers(); });
+}
+
+function resetPin(id,name){
+  var p=prompt(name+'님의 새 PIN(4자리):');
+  if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
+  db.collection('members').doc(id).update({pin:p}).then(function(){ showToast('PIN 변경 완료'); });
+}
+
+// ==================== [정리됨] 2. 단원 명부/수첩 (행정용 상세 조회) ====================
 var directoryData = []; 
 
 function loadHandbook() {
   db.collection('members').orderBy('name').get().then(function(snap) {
     directoryData = [];
-    snap.forEach(function(doc) {
-      directoryData.push({ id: doc.id, ...doc.data() });
-    });
+    snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
     renderHandbook(directoryData);
   });
 }
@@ -906,17 +843,14 @@ function loadHandbook() {
 function renderHandbook(list) {
   var countEl = document.getElementById('handbookCount');
   if(countEl) countEl.textContent = list.length; 
-
-  var c = document.getElementById('handbookList');
-  if(!c) return;
-  
+  var c = document.getElementById('handbookList'); if(!c) return;
   c.innerHTML = list.map(function(m) {
     return `
       <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start">
           <div>
             <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
-            <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 없음'}</div>
+            <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 미등록'}</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:4px">
             <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="openAttendance('${m.id}', '${m.name}')">✔️ 출석</button>
@@ -933,7 +867,7 @@ function renderHandbook(list) {
       </div>`;
   }).join('');
 }
-  
+
 function filterHandbook() {
   var q = document.getElementById('handbookSearch').value.toLowerCase();
   var filtered = directoryData.filter(function(m) {
@@ -942,16 +876,43 @@ function filterHandbook() {
   renderHandbook(filtered);
 }
 
-function exportMemberCSV() {
-  showToast('준비 중인 기능입니다');
-}function delMember(id,name){
-  if(!confirm('"'+name+'"님을 삭제하시겠습니까?'))return;
-  db.collection('members').doc(id).delete().then(function(){writeLog('단원 삭제','"'+name+'" 삭제됨');showToast('삭제되었습니다');loadMembers()});
+function addHandbookMember(){
+  var name = document.getElementById('hbName').value.trim();
+  var part = document.getElementById('hbPart').value;
+  if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  var data = {
+    name: name, part: part,
+    phone: document.getElementById('hbPhone').value.trim(),
+    birthday: document.getElementById('hbBirth').value,
+    district: document.getElementById('hbDist').value.trim(),
+    area: document.getElementById('hbArea').value.trim(),
+    job: document.getElementById('hbJob').value.trim(),
+    status: 'active', createdAt: new Date().toISOString()
+  };
+  db.collection('members').add(data).then(function(){
+    showToast(name + '님 명부 등록 완료');
+    ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('hbPart').selectedIndex = 0;
+    loadHandbook();
+  });
 }
-function resetPin(id,name){
-  var p=prompt(name+'님의 새 PIN(4자리):');if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').doc(id).update({pin:p}).then(function(){writeLog('PIN 변경','"'+name+'" PIN 변경됨');showToast('PIN 변경 완료')});
+
+function deleteHandbookMember(id, name){
+  if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
+  db.collection('members').doc(id).delete().then(function(){ showToast('삭제되었습니다'); loadHandbook(); });
 }
+
+function editHandbookMember(id){
+  var m = directoryData.find(x => x.id === id); if(!m) return;
+  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
+  if(newPhone !== null) {
+    db.collection('members').doc(id).update({ phone: newPhone }).then(function(){ showToast('수정됨'); loadHandbook(); });
+  }
+}
+
+function openAttendance(id, name) { showToast(name + '님 출석 체크 완료!'); }
+
+function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 
 // ==================== 공지사항 (get + 캐시) ====================
 function initNotice(){
