@@ -114,6 +114,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <button class="icon-btn" onclick="openUserModal()">👤</button>
     <button class="icon-btn" id="btnDark" onclick="toggleDark()">🌙</button>
     <button class="icon-btn" id="btnLock" onclick="openAdminLogin()">🔒</button>
+    <button class="icon-btn" onclick="refreshData()">🔄</button>
   </div>
 </div>
 
@@ -307,7 +308,7 @@ var db = firebase.firestore();
 
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='songs';
-var adminRole=null; // null, 'admin', 'chongmu'
+var adminRole=null;
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, allSchedules=[], allMembers=[];
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
@@ -337,7 +338,6 @@ function switchTab(tab){
   if((tab==='admin'||tab==='stats')&&!adminRole)return;
   currentTab=tab;
   ['pageSongs','pageFavorites','pageCalendar','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
-
   document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
   var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(p)p.classList.remove('hidden');
@@ -446,18 +446,71 @@ function syncFav(){
   if(currentUser){db.collection('members').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
 }
 
-// ==================== Firestore: 곡 로드 ====================
+// ==================== 캐시 유틸 ====================
+function saveCache(key,data){
+  try{localStorage.setItem(key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}
+}
+function loadCache(key,maxAge){
+  try{
+    var c=JSON.parse(localStorage.getItem(key));
+    if(c&&c.data&&(Date.now()-c.ts)<maxAge)return c.data;
+  }catch(e){}
+  return null;
+}
+
+// ==================== Firestore: 곡 로드 (get + 캐시) ====================
 function initSongs(){
-  db.collection('songs').onSnapshot(function(snap){
+  // 1) 캐시에서 먼저 보여주기 (최대 10분)
+  var cached=loadCache('choir_songs',600000);
+  if(cached&&cached.length>0){
+    allSongs=cached;
+    buildFilters();doFilter();
+  }
+  // 2) Firestore에서 최신 데이터 가져오기
+  db.collection('songs').get().then(function(snap){
     allSongs=[];
     snap.forEach(function(doc){
       var d=doc.data();
       allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
     });
+    saveCache('choir_songs',allSongs);
     buildFilters();doFilter();
-  },function(err){
+  }).catch(function(err){
     console.error(err);
-    document.getElementById('songList').innerHTML='<div class="loading">데이터를 불러올 수 없습니다.</div>';
+    if(!cached||cached.length===0){
+      document.getElementById('songList').innerHTML='<div class="loading">데이터를 불러올 수 없습니다.</div>';
+    }
+  });
+}
+
+// ==================== 데이터 새로고침 ====================
+function refreshData(){
+  showToast('새로고침 중...');
+  Promise.all([
+    db.collection('songs').get().then(function(snap){
+      allSongs=[];
+      snap.forEach(function(doc){
+        var d=doc.data();
+        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
+      });
+      saveCache('choir_songs',allSongs);
+      buildFilters();doFilter();
+    }),
+    db.collection('schedules').get().then(function(snap){
+      allSchedules=[];
+      snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0]})});
+      saveCache('choir_schedules',allSchedules);
+      if(currentTab==='calendar')renderCal();
+    }),
+    db.collection('settings').doc('notice').get().then(function(doc){
+      var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
+      if(doc.exists&&doc.data().text){b.classList.remove('hidden');t.textContent=doc.data().text;saveCache('choir_notice',doc.data().text)}
+      else{b.classList.add('hidden');t.textContent='';localStorage.removeItem('choir_notice')}
+    })
+  ]).then(function(){
+    showToast('최신 데이터로 업데이트 완료!');
+  }).catch(function(){
+    showToast('일부 데이터를 불러오지 못했습니다');
   });
 }
 
@@ -569,6 +622,7 @@ function shareSong(){
   if(navigator.share){navigator.share({title:s.songName,text:t}).catch(function(){})}
   else{navigator.clipboard.writeText(t).then(function(){showToast('클립보드에 복사됨')})}
 }
+
 // ==================== 곡 추가 ====================
 function addNewSong(){
   var name=document.getElementById('addSongName').value.trim();
@@ -585,7 +639,11 @@ function addNewSong(){
     members:document.getElementById('addMem').value.trim(),
     pianist:document.getElementById('addPia').value.trim(),
     createdAt:new Date().toISOString()
-  }).then(function(){
+  }).then(function(docRef){
+    // 로컬 캐시에도 즉시 추가
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value)||null,dayOfWeek:document.getElementById('addDow').value,category:document.getElementById('addCat').value.trim(),subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),createdAt:new Date().toISOString()});
+    saveCache('choir_songs',allSongs);
+    buildFilters();doFilter();
     writeLog('곡 추가','"'+name+'" 추가됨');
     showToast('곡이 추가되었습니다!');
     ['addSongName','addYear','addMonth','addDay','addCat','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
@@ -614,6 +672,9 @@ function saveEdit(){
   if(!currentDetailSong)return;
   var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value)||0,month:parseInt(document.getElementById('editMonth').value)||0,day:parseInt(document.getElementById('editDay').value)||null,dayOfWeek:document.getElementById('editDow').value,category:document.getElementById('editCat').value.trim(),subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim()};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
+    // 로컬 캐시도 업데이트
+    var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
+    if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();doFilter()}
     writeLog('곡 수정','"'+data.songName+'" 수정됨');closeModal('modalEdit');showToast('수정되었습니다');
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
@@ -623,6 +684,9 @@ function delSong(id,name){
   if(adminRole!=='admin')return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+name+'" 삭제하시겠습니까?'))return;
   db.collection('songs').doc(id).delete().then(function(){
+    // 로컬 캐시에서도 제거
+    allSongs=allSongs.filter(function(s){return s.id!==id});
+    saveCache('choir_songs',allSongs);buildFilters();doFilter();
     writeLog('곡 삭제','"'+name+'" 삭제됨');
     favorites=favorites.filter(function(x){return x!==id});syncFav();showToast('삭제되었습니다');
   }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
@@ -659,31 +723,61 @@ function resetPin(id,name){
   db.collection('members').doc(id).update({pin:p}).then(function(){writeLog('PIN 변경','"'+name+'" PIN 변경됨');showToast('PIN 변경 완료')});
 }
 
-// ==================== 공지사항 ====================
+// ==================== 공지사항 (get + 캐시) ====================
 function initNotice(){
-  db.collection('settings').doc('notice').onSnapshot(function(doc){
-    var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText'),cn=document.getElementById('curNotice'),ni=document.getElementById('noticeInput');
-    if(doc.exists&&doc.data().text){var txt=doc.data().text;b.classList.remove('hidden');t.textContent=txt;if(cn)cn.textContent=txt;if(ni&&document.activeElement!==ni)ni.value=txt}
-    else{b.classList.add('hidden');t.textContent='';if(cn)cn.textContent='없음'}
-  });
+  var cached=loadCache('choir_notice',600000);
+  var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
+  if(cached){b.classList.remove('hidden');t.textContent=cached}
+
+  db.collection('settings').doc('notice').get().then(function(doc){
+    var cn=document.getElementById('curNotice'),ni=document.getElementById('noticeInput');
+    if(doc.exists&&doc.data().text){
+      var txt=doc.data().text;
+      b.classList.remove('hidden');t.textContent=txt;
+      saveCache('choir_notice',txt);
+      if(cn)cn.textContent=txt;if(ni&&document.activeElement!==ni)ni.value=txt;
+    }else{
+      b.classList.add('hidden');t.textContent='';
+      localStorage.removeItem('choir_notice');
+      if(cn)cn.textContent='없음';
+    }
+  }).catch(function(){});
 }
 function saveNotice(){
   if(adminRole!=='admin')return showToast('권한이 없습니다');
   var t=document.getElementById('noticeInput').value.trim();if(!t)return showToast('공지 내용을 입력해주세요');
-  db.collection('settings').doc('notice').set({text:t,updatedAt:new Date().toISOString()}).then(function(){writeLog('공지 저장','"'+t.substring(0,30)+'"');showToast('공지 저장 완료')});
+  db.collection('settings').doc('notice').set({text:t,updatedAt:new Date().toISOString()}).then(function(){
+    saveCache('choir_notice',t);
+    document.getElementById('noticeBanner').classList.remove('hidden');
+    document.getElementById('noticeText').textContent=t;
+    var cn=document.getElementById('curNotice');if(cn)cn.textContent=t;
+    writeLog('공지 저장','"'+t.substring(0,30)+'"');showToast('공지 저장 완료');
+  });
 }
 function delNotice(){
   if(adminRole!=='admin')return showToast('권한이 없습니다');
   if(!confirm('공지를 삭제하시겠습니까?'))return;
-  db.collection('settings').doc('notice').delete().then(function(){writeLog('공지 삭제','공지사항 삭제됨');document.getElementById('noticeInput').value='';showToast('공지 삭제 완료')});
+  db.collection('settings').doc('notice').delete().then(function(){
+    localStorage.removeItem('choir_notice');
+    document.getElementById('noticeBanner').classList.add('hidden');
+    document.getElementById('noticeText').textContent='';
+    document.getElementById('noticeInput').value='';
+    var cn=document.getElementById('curNotice');if(cn)cn.textContent='없음';
+    writeLog('공지 삭제','공지사항 삭제됨');showToast('공지 삭제 완료');
+  });
 }
 
-// ==================== 일정 ====================
+// ==================== 일정 (get + 캐시) ====================
 function initSchedules(){
-  db.collection('schedules').onSnapshot(function(snap){
-    allSchedules=[];snap.forEach(function(doc){allSchedules.push({id:doc.id,date:doc.data().date,title:doc.data().title,time:doc.data().time||'',location:doc.data().location||'',songs:doc.data().songs||'',memo:doc.data().memo||'',color:doc.data().color||COLORS[0]})});
+  var cached=loadCache('choir_schedules',600000);
+  if(cached&&cached.length>0){allSchedules=cached;if(currentTab==='calendar')renderCal()}
+
+  db.collection('schedules').get().then(function(snap){
+    allSchedules=[];
+    snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0]})});
+    saveCache('choir_schedules',allSchedules);
     if(currentTab==='calendar')renderCal();
-  });
+  }).catch(function(){});
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -695,7 +789,9 @@ function addSchedule(){
   var date=document.getElementById('schDate').value;
   var title=document.getElementById('schTitle').value.trim();
   if(!date||!title)return showToast('날짜와 제목은 필수입니다');
-  db.collection('schedules').add({date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,createdAt:new Date().toISOString()}).then(function(){
+  db.collection('schedules').add({date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,createdAt:new Date().toISOString()}).then(function(docRef){
+    allSchedules.push({id:docRef.id,date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor});
+    saveCache('choir_schedules',allSchedules);
     writeLog('일정 추가','"'+title+'" ('+date+')');showToast('일정 추가 완료');
     ['schDate','schTitle','schTime','schLoc','schSongs','schMemo'].forEach(function(id){document.getElementById(id).value=''});loadSchAdmin();
   });
@@ -712,7 +808,12 @@ function loadSchAdmin(){
 }
 function delSchedule(id,title){
   if(!confirm('"'+title+'" 삭제하시겠습니까?'))return;
-  db.collection('schedules').doc(id).delete().then(function(){writeLog('일정 삭제','"'+title+'" 삭제됨');showToast('일정 삭제 완료');loadSchAdmin()});
+  db.collection('schedules').doc(id).delete().then(function(){
+    allSchedules=allSchedules.filter(function(s){return s.id!==id});
+    saveCache('choir_schedules',allSchedules);
+    writeLog('일정 삭제','"'+title+'" 삭제됨');showToast('일정 삭제 완료');loadSchAdmin();
+    if(currentTab==='calendar')renderCal();
+  });
 }
 
 // ==================== 캘린더 ====================
