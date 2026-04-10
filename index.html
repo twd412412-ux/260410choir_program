@@ -186,6 +186,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실"></div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)"></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR"></div>
+    <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="addYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
+
     <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
   </div>
 
@@ -280,6 +282,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc"></div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem"></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia"></div>
+    <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="editYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
     <button class="btn btn-p btn-bl" onclick="saveEdit()">저장</button>
   </div>
 </div>
@@ -477,7 +480,7 @@ function initSongs(){
     allSongs=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
+      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
     });
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
@@ -498,7 +501,7 @@ function refreshData(){
       allSongs=[];
       snap.forEach(function(doc){
         var d=doc.data();
-        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',createdAt:d.createdAt||''});
+        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
       });
       saveCache('choir_songs',allSongs);
       buildFilters();doFilter();
@@ -614,6 +617,15 @@ function openDetail(id){
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
   var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
 
+  // 유튜브 버튼
+  if(song.youtube){
+    var ytUrl=song.youtube;
+    if(ytUrl.indexOf('http')!==0)ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(ytUrl);
+    h+='<div style="margin-top:12px"><a href="'+ytUrl+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:#FF0000;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">▶ YouTube에서 듣기</a></div>';
+  }else{
+    h+='<div style="margin-top:12px"><a href="https://www.youtube.com/results?search_query='+encodeURIComponent(song.songName+' 찬양')+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:var(--bd);color:var(--ts);padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">🔍 YouTube에서 검색</a></div>';
+  }
+
   var same=allSongs.filter(function(s){return s.songName===song.songName&&s.id!==song.id});
   if(same.length>0){
     h+='<div style="margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">🔄 같은 곡 다른 기록 ('+same.length+'건)</div>';
@@ -623,6 +635,7 @@ function openDetail(id){
   document.getElementById('detailBody').innerHTML=h;
   openModal('modalDetail');
 }
+
 function shareSong(){
   if(!currentDetailSong)return;var s=currentDetailSong;
   var t='🎵 '+s.songName+'\n📅 '+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'\n📁 '+s.category+(s.subCategory?' > '+s.subCategory:'')+'\n📍 '+(s.location||'-')+'\n👤 '+(s.members||'-')+'\n🎹 '+(s.pianist||'-')+'\n\n— 광주교회 찬양대';
@@ -637,6 +650,7 @@ function addNewSong(){
   var month=parseInt(document.getElementById('addMonth').value,10);
   if(!name||isNaN(year)||isNaN(month))return showToast('곡명, 연도, 월은 필수입니다');
   var cat=getCatValue('add');
+  var yt=document.getElementById('addYoutube').value.trim();
   db.collection('songs').add({
     songName:name,year:year,month:month,
     day:parseInt(document.getElementById('addDay').value,10)||null,
@@ -646,15 +660,16 @@ function addNewSong(){
     location:document.getElementById('addLoc').value.trim(),
     members:document.getElementById('addMem').value.trim(),
     pianist:document.getElementById('addPia').value.trim(),
+    youtube:yt,
     createdAt:new Date().toISOString()
   }).then(function(docRef){
-    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value,10)||null,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),createdAt:new Date().toISOString()});
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value,10)||null,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();doFilter();
     writeLog('곡 추가','"'+name+'" 추가됨');
     showToast('곡이 추가되었습니다!');
-    ['addSongName','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
-document.getElementById('addYear').selectedIndex=0;
+    ['addSongName','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('addYear').selectedIndex=0;
     document.getElementById('addMonth').selectedIndex=0;
     document.getElementById('addDay').innerHTML='<option value="">선택</option>';
     document.getElementById('addDow').value='';
@@ -679,7 +694,7 @@ function openEdit(id){
   document.getElementById('editLoc').value=song.location;
   document.getElementById('editMem').value=song.members;
   document.getElementById('editPia').value=song.pianist;
-  // 카테고리 설정
+  document.getElementById('editYoutube').value=song.youtube||'';
   buildCatOptions();
   var catSel=document.getElementById('editCatSel');
   var found=false;
@@ -692,7 +707,8 @@ function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
 function saveEdit(){
   if(!currentDetailSong)return;
   var cat=getCatValue('edit');
-  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim()};
+  var yt=document.getElementById('editYoutube').value.trim();
+  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim(),youtube:yt};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
     var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
     if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();buildCatOptions();doFilter()}
@@ -1050,6 +1066,61 @@ function init(){
   buildYearOptions();
 }
 init();
+// ==================== PWA 설치 안내 ====================
+var deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();deferredPrompt=e;
+  showInstallBanner();
+});
+function showInstallBanner(){
+  if(localStorage.getItem('choir_install_dismissed'))return;
+  var b=document.createElement('div');
+  b.id='installBanner';
+  b.style.cssText='position:fixed;bottom:70px;left:12px;right:12px;background:var(--sf);border:2px solid var(--p);border-radius:16px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:150;display:flex;align-items:center;gap:12px';
+  b.innerHTML='<div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--tx)">📱 홈 화면에 추가</div><div style="font-size:12px;color:var(--ts);margin-top:2px">앱처럼 빠르게 접속하세요!</div></div><button onclick="installApp()" style="background:var(--p);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">설치</button><button onclick="dismissInstall()" style="background:none;border:none;font-size:18px;color:var(--ts);cursor:pointer">✕</button>';
+  document.body.appendChild(b);
+}
+function installApp(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;var b=document.getElementById('installBanner');if(b)b.remove()})}
+}
+function dismissInstall(){
+  localStorage.setItem('choir_install_dismissed','true');
+  var b=document.getElementById('installBanner');if(b)b.remove();
+}
+
+// ==================== 가이드 슬라이드 ====================
+function showGuide(){
+  if(localStorage.getItem('choir_guide_seen'))return;
+  var slides=[
+    {icon:'🎵',title:'곡 목록',desc:'찬양대의 모든 곡을 검색하고\n연도, 분류, 요일로 필터링하세요'},
+    {icon:'⭐',title:'즐겨찾기',desc:'자주 부르는 곡에 별표를 눌러\n즐겨찾기에 저장하세요'},
+    {icon:'📅',title:'일정 캘린더',desc:'연습 일정과 공연 일정을\n한눈에 확인하세요'},
+    {icon:'▶',title:'YouTube 연결',desc:'곡 상세에서 바로\nYouTube로 들을 수 있어요'},
+    {icon:'👤',title:'로그인',desc:'이름과 PIN으로 로그인하면\n즐겨찾기가 동기화됩니다'}
+  ];
+  var idx=0;
+  var ov=document.createElement('div');
+  ov.id='guideOverlay';
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center';
+
+  function renderSlide(){
+    var s=slides[idx];
+    var isLast=idx===slides.length-1;
+    ov.innerHTML='<div style="background:var(--sf);width:90%;max-width:340px;border-radius:20px;padding:32px 24px;text-align:center"><div style="font-size:56px;margin-bottom:16px">'+s.icon+'</div><div style="font-size:20px;font-weight:800;color:var(--tx);margin-bottom:8px">'+s.title+'</div><div style="font-size:14px;color:var(--ts);line-height:1.6;white-space:pre-line;margin-bottom:24px">'+s.desc+'</div><div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px">'+slides.map(function(_,i){return '<div style="width:8px;height:8px;border-radius:50%;background:'+(i===idx?'var(--p)':'var(--bd)')+'"></div>'}).join('')+'</div><div style="display:flex;gap:8px">'+(idx>0?'<button onclick="guideNav(-1)" style="flex:1;padding:10px;border:2px solid var(--bd);border-radius:10px;background:none;color:var(--ts);font-weight:700;font-size:14px;cursor:pointer">이전</button>':'')+'<button onclick="guideNav(1)" style="flex:1;padding:10px;border:none;border-radius:10px;background:var(--p);color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(isLast?'시작하기':'다음')+'</button></div></div>';
+  }
+
+  window.guideNav=function(dir){
+    idx+=dir;
+    if(idx>=slides.length){localStorage.setItem('choir_guide_seen','true');ov.remove();return}
+    if(idx<0)idx=0;
+    renderSlide();
+  };
+
+  renderSlide();
+  document.body.appendChild(ov);
+}
+showGuide();
+
 </script>
 </body>
 </html>
