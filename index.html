@@ -109,7 +109,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 <body>
 
 <div class="header">
-  <div class="header-title">♪ 광주교회 찬양대</div>
+  <div class="header-title">© 2026 광주교회 찬양대 ♪</div>
   <div class="header-actions">
     <button class="icon-btn" onclick="openUserModal()">👤</button>
     <button class="icon-btn" id="btnDark" onclick="toggleDark()">🌙</button>
@@ -133,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="filter-row"><span class="filter-label">연도</span><select class="filter-select" id="yearSel" onchange="doFilter()"><option value="all">전체</option></select></div>
     <div class="filter-row"><span class="filter-label">분류</span><select class="filter-select" id="catSel" onchange="doFilter()"><option value="all">전체</option></select></div>
     <div class="day-row"><span class="filter-label">요일</span><div class="day-chip on" data-d="all" onclick="toggleDay('all')">전체</div><div class="day-chip" data-d="일" onclick="toggleDay('일')">일</div><div class="day-chip" data-d="월" onclick="toggleDay('월')">월</div><div class="day-chip" data-d="화" onclick="toggleDay('화')">화</div><div class="day-chip" data-d="수" onclick="toggleDay('수')">수</div><div class="day-chip" data-d="목" onclick="toggleDay('목')">목</div><div class="day-chip" data-d="금" onclick="toggleDay('금')">금</div><div class="day-chip" data-d="토" onclick="toggleDay('토')">토</div></div>
+    <div style="text-align:right;font-size:9px;color:var(--bd);margin-top:6px">Engineered by JY</div>
   </div>
   <div class="result-count" id="resultCount"></div>
   <div class="card-list" id="songList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
