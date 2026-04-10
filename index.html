@@ -104,6 +104,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .admin-tab{padding:5px 12px;border-radius:20px;font-size:12px;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer}
 .admin-tab.on{background:var(--p);color:#fff;border-color:var(--p)}
 @media(min-width:500px){body{max-width:500px;margin:0 auto}}
+.suggest-box{background:var(--sf);border:1.5px solid var(--bd);border-radius:8px;max-height:150px;overflow-y:auto;margin-top:4px;box-shadow:var(--sh)}
+.suggest-item{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bd)}
+.suggest-item:hover,.suggest-item:active{background:var(--pl)}
+.suggest-item:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -184,9 +188,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="addDow" readonly style="background:var(--pl);font-weight:700"></div>
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 연제, 성가"></div>
-    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실"></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)"></div>
-    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR"></div>
+    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실" onfocus="showSuggest('addLoc','loc')" oninput="filterSuggest('addLoc','loc')"><div class="suggest-box hidden" id="suggestAddLoc"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)" onfocus="showSuggest('addMem','mem')" oninput="filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div></div>
+    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR" onfocus="showSuggest('addPia','pia')" oninput="filterSuggest('addPia','pia')"><div class="suggest-box hidden" id="suggestAddPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="addYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
 
     <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
@@ -280,9 +284,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="editDow" readonly style="background:var(--pl);font-weight:700"></div>
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="editCatSel" onchange="onCatSelect('edit')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="editCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="editSub"></div>
-    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc"></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem"></div>
-    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia"></div>
+    <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc" onfocus="showSuggest('editLoc','loc')" oninput="filterSuggest('editLoc','loc')"><div class="suggest-box hidden" id="suggestEditLoc"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem" onfocus="showSuggest('editMem','mem')" oninput="filterSuggest('editMem','mem')"><div class="suggest-box hidden" id="suggestEditMem"></div></div>
+    <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia" onfocus="showSuggest('editPia','pia')" oninput="filterSuggest('editPia','pia')"><div class="suggest-box hidden" id="suggestEditPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="editYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
     <button class="btn btn-p btn-bl" onclick="saveEdit()">저장</button>
   </div>
@@ -587,10 +591,12 @@ function renderSongList(){
   var show=filteredSongs.slice(0,200);
   c.innerHTML=show.map(function(s){
     var fav=favorites.indexOf(s.id)>-1;
-    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button><span class="admin-actions"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+s.id+'\')">✏️</button><button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+s.id+'\',\''+s.songName.replace(/'/g,"\\'")+'\')">🗑️</button></span></span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
+    var ytIcon=s.youtube?'<span style="color:#FF0000;font-size:14px;margin-right:4px" title="YouTube 링크 있음">▶</span>':'';
+    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+ytIcon+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button><span class="admin-actions"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+s.id+'\')">✏️</button><button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+s.id+'\',\''+s.songName.replace(/'/g,"\\'")+'\')">🗑️</button></span></span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
   }).join('');
   if(filteredSongs.length>200)c.innerHTML+='<div style="text-align:center;padding:16px;color:var(--ts);font-size:13px">외 '+(filteredSongs.length-200)+'곡 — 검색으로 좁혀보세요</div>';
 }
+
 
 // ==================== 즐겨찾기 ====================
 function toggleFav(id){var i=favorites.indexOf(id);if(i>-1){favorites.splice(i,1);showToast('즐겨찾기 제거')}else{favorites.push(id);showToast('즐겨찾기 추가')}syncFav();renderSongList();if(currentTab==='favorites')renderFav()}
@@ -1050,6 +1056,68 @@ function buildYearOptions(){
     years.forEach(function(y){sel.innerHTML+='<option value="'+y+'"'+(String(y)===cur?' selected':'')+'>'+y+'년</option>'});
   });
 }
+// ==================== 자동완성 ====================
+function getSuggestData(type){
+  var map={};
+  if(type==='loc'){
+    allSongs.forEach(function(s){if(s.location)map[s.location]=(map[s.location]||0)+1});
+  }else if(type==='mem'){
+    allSongs.forEach(function(s){if(s.members)s.members.split(/[,，、;]+/).forEach(function(m){var t=m.trim();if(t)map[t]=(map[t]||0)+1})});
+  }else if(type==='pia'){
+    allSongs.forEach(function(s){if(s.pianist)map[s.pianist]=(map[s.pianist]||0)+1});
+  }
+  return Object.entries(map).sort(function(a,b){return a[0].localeCompare(b[0],'ko')}).map(function(e){return{name:e[0],count:e[1]}});
+}
+
+function showSuggest(inputId,type){
+  var box=document.getElementById('suggest'+inputId.charAt(0).toUpperCase()+inputId.slice(1));
+  if(!box)return;
+  var data=getSuggestData(type);
+  var input=document.getElementById(inputId);
+  var q=(input.value||'').trim().toLowerCase();
+
+  // 단원 입력은 쉼표 뒤의 마지막 이름만 필터링
+  if(type==='mem'){
+    var parts=input.value.split(/[,，、;]+/);
+    q=parts[parts.length-1].trim().toLowerCase();
+  }
+
+  var filtered=q?data.filter(function(d){return d.name.toLowerCase().indexOf(q)>-1}):data;
+  if(filtered.length===0){box.classList.add('hidden');return}
+
+  box.innerHTML=filtered.slice(0,20).map(function(d){
+    return '<div class="suggest-item" onmousedown="pickSuggest(\''+inputId+'\',\''+d.name.replace(/'/g,"\\'")+'\',\''+type+'\')">'+d.name+' <span style="color:var(--ts);font-size:11px">('+d.count+'회)</span></div>';
+  }).join('');
+  box.classList.remove('hidden');
+}
+
+function filterSuggest(inputId,type){
+  showSuggest(inputId,type);
+}
+
+function pickSuggest(inputId,value,type){
+  var input=document.getElementById(inputId);
+  if(type==='mem'){
+    // 쉼표 구분으로 이어 붙이기
+    var parts=input.value.split(/[,，、;]+/);
+    parts.pop();
+    parts.push(value);
+    input.value=parts.join(', ')+', ';
+  }else{
+    input.value=value;
+  }
+  var box=document.getElementById('suggest'+inputId.charAt(0).toUpperCase()+inputId.slice(1));
+  if(box)box.classList.add('hidden');
+  input.focus();
+}
+
+// 다른 곳 클릭하면 자동완성 닫기
+document.addEventListener('click',function(e){
+  document.querySelectorAll('.suggest-box').forEach(function(box){
+    if(!box.contains(e.target))box.classList.add('hidden');
+  });
+});
+
 // ==================== 검색 ====================
 var sTimer=null;
 document.getElementById('searchInput').addEventListener('input',function(){clearTimeout(sTimer);sTimer=setTimeout(doFilter,300)});
