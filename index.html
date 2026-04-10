@@ -782,12 +782,40 @@ function addMember(){
   }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
 }
 
+// [수정] 단원 관리(로그인 계정용) 목록 - PIN이 있는 계정만 표시
 function loadMembers(){
   db.collection('members').orderBy('name').get().then(function(snap){
-    allMembers=[];var c=document.getElementById('memberList');if(!c)return;
-    snap.forEach(function(doc){allMembers.push({id:doc.id,name:doc.data().name,part:doc.data().part})});
-    if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">등록된 단원이 없습니다</div>';return}
-    c.innerHTML=allMembers.map(function(m){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)"><div><span style="font-weight:700;font-size:14px">'+m.name+'</span><span class="meta-tag" style="margin-left:6px">'+m.part+'</span></div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin(\''+m.id+'\',\''+m.name+'\')">PIN</button><button class="btn btn-sm btn-d" onclick="delMember(\''+m.id+'\',\''+m.name+'\')">삭제</button></div></div>'}).join('');
+    allMembers=[];
+    var c=document.getElementById('memberList');
+    if(!c) return;
+    
+    snap.forEach(function(doc){
+      var m = doc.data();
+      // ⭐ 핵심: PIN 번호가 있는 데이터만 '단원 관리' 목록에 추가합니다.
+      // 314명의 명부 데이터는 PIN이 없으므로 여기서 제외됩니다.
+      if(m.pin) { 
+        allMembers.push({id:doc.id, name:m.name, part:m.part});
+      }
+    });
+
+    if(allMembers.length===0){
+      c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px text-align:center">등록된 로그인 계정이 없습니다.</div>';
+      return;
+    }
+
+    c.innerHTML=allMembers.map(function(m){
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
+          <div>
+            <span style="font-weight:700;font-size:14px">${m.name}</span>
+            <span class="meta-tag" style="margin-left:6px">${m.part}</span>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}')">PIN</button>
+            <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
+          </div>
+        </div>`;
+    }).join('');
   });
 }
 
