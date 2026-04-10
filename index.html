@@ -198,10 +198,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 
   <div class="admin-sub hidden" id="subMembers">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">👥 단원 관리</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>소프라노</option><option>알토</option><option>테너</option><option>베이스</option><option>지휘</option><option>반주</option></select></div></div>
-    <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
-    <button class="btn btn-p btn-bl" onclick="addMember()" style="margin-bottom:20px">단원 등록</button>
-    <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 단원</h4>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div>
+      <div class="form-group">
+        <label class="form-label">파트 *</label>
+        <select class="form-sel" id="memPart">
+          <option value="">선택</option>
+          <option>소프라노</option><option>알토</option><option>테너</option><option>베이스</option>
+          <option>지휘</option><option>반주</option><option>임원</option>
+        </select>
+      </div>
+    </div>
+  
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="memPhone" placeholder="010-4420-6131"></div>
+      <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="memBirth" type="date"></div>
+    </div>
+  
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">직업/직장</label><input class="form-input" id="memJob" placeholder="직장명"></div>
+      <div class="form-group"><label class="form-label">봉사회/그룹</label><input class="form-input" id="memGroup" placeholder="예: 봉사회"></div>
+    </div>
+  
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">교구</label><input class="form-input" id="memDistrict" placeholder="매곡5"></div>
+      <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="memArea" placeholder="52"></div>
+      <div class="form-group">
+        <label class="form-label">상태</label>
+        <select class="form-sel" id="memStatus">
+          <option value="active">활동</option>
+          <option value="inactive">휴단</option>
+        </select>
+      </div>
+    </div>
+  
+    <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="초기 PIN"></div>
+    
+    <button class="btn btn-p btn-bl" onclick="addMember()" style="margin-bottom:20px">단원 등록하기</button>
+    
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 단원 목록</h4>
     <div id="memberList"></div>
   </div>
 
@@ -738,25 +774,70 @@ function delSong(id,name){
 }
 function delFromDetail(){if(currentDetailSong){delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
 
-// ==================== 단원 관리 ====================
+// [수정된 부분: 단원 저장 로직]
 function addMember(){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
-  var name=document.getElementById('memName').value.trim();
-  var part=document.getElementById('memPart').value;
-  var pin=document.getElementById('memPin').value.trim();
-  if(!name||!part||!pin)return showToast('이름, 파트, PIN 모두 입력해주세요');
-  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').add({name:name,part:part,pin:pin,favorites:[],recentViewed:[],createdAt:new Date().toISOString()}).then(function(){
-    writeLog('단원 등록','"'+name+'" ('+part+') 등록됨');showToast(name+'님 등록 완료');
-    document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
-  }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
+  if(adminRole!=='admin') return showToast('권한이 없습니다');
+  
+  var data = {
+    name: document.getElementById('memName').value.trim(),
+    part: document.getElementById('memPart').value,
+    phone: document.getElementById('memPhone').value.trim(),
+    birthday: document.getElementById('memBirth').value,
+    job: document.getElementById('memJob').value.trim(),
+    group: document.getElementById('memGroup').value.trim(),
+    district: document.getElementById('memDistrict').value.trim(),
+    area: document.getElementById('memArea').value.trim(),
+    status: document.getElementById('memStatus').value,
+    pin: document.getElementById('memPin').value.trim(),
+    favorites: [],
+    createdAt: new Date().toISOString()
+  };
+
+  if(!data.name || !data.part || !data.pin) return showToast('이름, 파트, PIN은 필수입니다');
+
+  db.collection('members').add(data).then(function(){
+    writeLog('단원 등록', '"' + data.name + '" 등록됨');
+    showToast(data.name + '님 등록 완료');
+    
+    // 입력창 초기화
+    ['memName','memPhone','memBirth','memJob','memGroup','memDistrict','memArea','memPin'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('memPart').selectedIndex = 0;
+    
+    loadMembers(); // 목록 새로고침
+  }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
 }
+// [수정된 부분: 단원 목록 출력 로직]
 function loadMembers(){
   db.collection('members').orderBy('name').get().then(function(snap){
-    allMembers=[];var c=document.getElementById('memberList');if(!c)return;
-    snap.forEach(function(doc){allMembers.push({id:doc.id,name:doc.data().name,part:doc.data().part})});
-    if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">등록된 단원이 없습니다</div>';return}
-    c.innerHTML=allMembers.map(function(m){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)"><div><span style="font-weight:700;font-size:14px">'+m.name+'</span><span class="meta-tag" style="margin-left:6px">'+m.part+'</span></div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin(\''+m.id+'\',\''+m.name+'\')">PIN</button><button class="btn btn-sm btn-d" onclick="delMember(\''+m.id+'\',\''+m.name+'\')">삭제</button></div></div>'}).join('');
+    var c = document.getElementById('memberList');
+    if(!c) return;
+    
+    var html = '';
+    snap.forEach(function(doc){
+      var m = doc.data();
+      html += `
+        <div style="padding:14px; border-bottom:1px solid var(--bd); background:var(--sf); margin-bottom:6px; border-radius:12px; box-shadow: var(--sh)">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <div>
+              <span style="font-weight:800; font-size:16px; color:var(--tx)">${m.name}</span>
+              <span class="meta-tag" style="margin-left:6px; background:var(--pl); color:var(--pd)">${m.part}</span>
+            </div>
+            <div style="font-size:13px; font-weight:700; color:var(--p)">${m.phone || '전화번호 없음'}</div>
+          </div>
+          <div style="font-size:12px; color:var(--ts); line-height:1.5">
+            📍 ${m.district || '-'}교구 ${m.area || '-'}구역 | 🏢 ${m.job || '-'}<br>
+            👥 ${m.group || '-'} | 🎂 ${m.birthday || '-'} | 状态: ${m.status === 'active' ? '활동중' : '휴단'}
+          </div>
+          <div style="display:flex; gap:6px; margin-top:10px">
+            <button class="btn btn-sm" style="flex:1; background:var(--bg); color:var(--ts)" onclick="resetPin('${doc.id}', '${m.name}')">PIN변경</button>
+            ${adminRole === 'admin' ? `<button class="btn btn-sm btn-d" style="flex:1" onclick="delMember('${doc.id}', '${m.name}')">삭제</button>` : ''}
+          </div>
+        </div>`;
+    });
+    
+    c.innerHTML = html || '<div style="padding:20px; text-align:center; color:var(--ts)">등록된 단원이 없습니다.</div>';
   });
 }
 function delMember(id,name){
