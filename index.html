@@ -198,6 +198,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
     <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부/수첩 (<span id="handbookCount">0</span>명)</h3>
+    <div id="handbookPartSummary"></div>
     
     <div style="background:var(--pl); padding:14px; border-radius:12px; margin-bottom:16px">
       <div style="font-weight:700; font-size:14px; margin-bottom:10px; color:var(--pd)">➕ 신규 단원 등록</div>
@@ -866,10 +867,11 @@ function resetPin(id,name){
 var directoryData = []; 
 
 function loadHandbook() {
-  db.collection('members').orderBy('name').get().then(function(snap) {
+  db.collection('handbook').orderBy('name').get().then(function(snap) {
     directoryData = [];
     snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
     renderHandbook(directoryData);
+    updatePartSummary(); // 👈 데이터를 다 불러온 후 파트 요약 업데이트!
   });
 }
 
@@ -1420,6 +1422,38 @@ function showGuide(){
   document.body.appendChild(ov);
 }
 showGuide();
+  
+  // [신규] 명부에서 파트별 인원수를 요약해서 보여주는 기능
+function updatePartSummary() {
+  var container = document.getElementById('handbookPartSummary');
+  if(!container) return;
+
+  // 파트별 카운터 준비
+  var counts = { 'S1': 0, 'S2': 0, 'T1': 0, 'T2': 0, '지휘': 0, '반주': 0, '관현악': 0, '임원': 0 };
+  var others = 0;
+
+  // 명부 데이터(directoryData)를 돌면서 인원수 세기
+  directoryData.forEach(function(m) {
+    if(counts[m.part] !== undefined) counts[m.part]++;
+    else if(m.part) others++; // 오타나 기타 파트
+  });
+
+  // 화면에 그릴 예쁜 버튼(칩) 모양 HTML 만들기
+  var html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">';
+  
+  Object.keys(counts).forEach(function(k) {
+    if(counts[k] > 0) { // 1명 이상 있는 파트만 보여줌
+      html += '<span style="background:var(--pl); color:var(--pd); padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid var(--p)">' + k + ' <span style="color:var(--p); margin-left:2px">' + counts[k] + '</span></span>';
+    }
+  });
+  
+  if(others > 0) {
+    html += '<span style="background:var(--bd); color:var(--ts); padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600;">기타 ' + others + '</span>';
+  }
+  
+  html += '</div>';
+  container.innerHTML = html; // 화면에 쏙!
+}
 </script>
 </body>
 </html>
