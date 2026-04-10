@@ -653,7 +653,8 @@ function addNewSong(){
     buildFilters();buildCatOptions();doFilter();
     writeLog('곡 추가','"'+name+'" 추가됨');
     showToast('곡이 추가되었습니다!');
-    ['addSongName','addYear','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
+    ['addSongName','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
+document.getElementById('addYear').selectedIndex=0;
     document.getElementById('addMonth').selectedIndex=0;
     document.getElementById('addDay').innerHTML='<option value="">선택</option>';
     document.getElementById('addDow').value='';
