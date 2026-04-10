@@ -171,7 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
     <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
-    <div class="admin-tab on" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부/수첩</div>
+    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부/수첩</div>
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
@@ -196,23 +196,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 
     <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
   </div>
-  <div class="admin-sub" id="subMemberHandbook">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-      <h3 style="font-size:16px; font-weight:700">📖 단원 명부/수첩 (<span id="handbookCount">0</span>명)</h3>
-      <button class="btn btn-sm btn-p" onclick="exportMemberCSV()">📥 명부 다운로드</button>
-    </div>
+  <div class="admin-sub hidden" id="subMemberHandbook">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부/수첩 (<span id="handbookCount">0</span>명)</h3>
     
-    <div class="search-wrap" style="margin-bottom:12px">
-      <input class="search-box" id="handbookSearch" type="text" placeholder="이름, 교구, 직업 등으로 검색..." oninput="filterHandbook()">
+    <div style="background:var(--pl); padding:14px; border-radius:12px; margin-bottom:16px">
+      <div style="font-weight:700; font-size:14px; margin-bottom:10px; color:var(--pd)">➕ 신규 단원 등록</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <input class="form-input" id="hbName" placeholder="이름 *">
+        <select class="form-sel" id="hbPart">
+          <option value="">파트 선택 *</option>
+          <option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option>
+          <option>지휘</option><option>반주</option><option>임원</option>
+        </select>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+        <input class="form-input" id="hbPhone" placeholder="전화번호">
+        <input class="form-input" id="hbBirth" type="date">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px">
+        <input class="form-input" id="hbDist" placeholder="교구">
+        <input class="form-input" id="hbArea" placeholder="구역">
+        <input class="form-input" id="hbJob" placeholder="직업">
+      </div>
+      <button class="btn btn-p btn-bl" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
     </div>
   
-    <div id="handbookList">
-      <div class="loading"><div class="spinner"></div>데이터 로드 중...</div>
+    <div class="search-wrap" style="margin-bottom:12px">
+      <input class="search-box" id="handbookSearch" type="text" placeholder="이름, 교구 등으로 검색..." oninput="filterHandbook()">
     </div>
+    <div id="handbookList"></div>
   </div>
   <div class="admin-sub hidden" id="subMembers">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">👥 단원 관리</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>소프라노</option><option>알토</option><option>테너</option><option>베이스</option><option>지휘</option><option>반주</option></select></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>지휘</option><option>반주</option><option>관현악</option></select></div></div>
     <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
     <button class="btn btn-p btn-bl" onclick="addMember()" style="margin-bottom:20px">단원 등록</button>
     <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 단원</h4>
@@ -389,11 +405,16 @@ function switchAdminTab(sub){
   // 기존 코드들...
 }
 function updateAdminTabs(){
-  var tabs=document.getElementById('adminTabRow');if(!tabs)return;
+  var tabs=document.getElementById('adminTabRow'); if(!tabs) return;
   tabs.querySelectorAll('[data-at]').forEach(function(t){
     var k=t.dataset.at;
-    if(adminRole==='chongmu'){t.style.display=(k==='addSong'||k==='schedule')?'':'none'}
-    else{t.style.display=''}
+    if(adminRole==='chongmu'){
+      // 총무부에게 허용할 탭: 곡추가, 일정관리, 단원명부
+      t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook') ? '' : 'none';
+    } else {
+      // 관리자는 모든 탭 다 보임
+      t.style.display='';
+    }
   });
 }
 
@@ -768,6 +789,56 @@ function addMember(){
     document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
   }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
 }
+// [기능] 명부에 단원 직접 추가
+function addHandbookMember(){
+  var name = document.getElementById('hbName').value.trim();
+  var part = document.getElementById('hbPart').value;
+  if(!name || !part) return showToast('이름과 파트는 필수입니다');
+
+  var data = {
+    name: name, part: part,
+    phone: document.getElementById('hbPhone').value.trim(),
+    birthday: document.getElementById('hbBirth').value,
+    district: document.getElementById('hbDist').value.trim(),
+    area: document.getElementById('hbArea').value.trim(),
+    job: document.getElementById('hbJob').value.trim(),
+    status: 'active',
+    createdAt: new Date().toISOString()
+  };
+
+  db.collection('members').add(data).then(function(){
+    showToast(name + '님 명부 등록 완료');
+    // 입력창 초기화
+    ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('hbPart').selectedIndex = 0;
+    loadHandbook(); // 목록 새로고침
+  });
+}
+
+// [기능] 명부 데이터 삭제
+function deleteHandbookMember(id, name){
+  if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
+  db.collection('members').doc(id).delete().then(function(){
+    showToast('삭제되었습니다');
+    loadHandbook();
+  });
+}
+
+// [기능] 데이터 수정 (간단하게 프롬프트로 예시)
+function editHandbookMember(id){
+  var m = directoryData.find(x => x.id === id);
+  if(!m) return;
+  
+  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
+  if(newPhone === null) return; // 취소 시
+
+  db.collection('members').doc(id).update({
+    phone: newPhone
+  }).then(function(){
+    showToast('정보가 수정되었습니다');
+    loadHandbook();
+  });
+}
 // ==================== [수정됨] 단원 관리 (로그인/계정용) ====================
 function addMember(){
   if(adminRole!=='admin')return showToast('권한이 없습니다');
@@ -833,12 +904,12 @@ function loadHandbook() {
 }
 
 function renderHandbook(list) {
-  // 1. [여기에 추가] 숫자를 표시할 요소를 찾아 현재 리스트 개수(list.length)를 넣어줍니다.
   var countEl = document.getElementById('handbookCount');
   if(countEl) countEl.textContent = list.length; 
 
   var c = document.getElementById('handbookList');
   if(!c) return;
+  
   c.innerHTML = list.map(function(m) {
     return `
       <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
@@ -847,7 +918,13 @@ function renderHandbook(list) {
             <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
             <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 없음'}</div>
           </div>
-          <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="showToast('출석 기능은 개발 중입니다')">✔️ 출석</button>
+          <div style="display:flex; flex-direction:column; gap:4px">
+            <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="openAttendance('${m.id}', '${m.name}')">✔️ 출석</button>
+            <div style="display:flex; gap:2px">
+               <button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${m.id}')">✏️</button>
+               <button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${m.id}', '${m.name}')">🗑️</button>
+            </div>
+          </div>
         </div>
         <div style="font-size:12px; color:var(--ts); margin-top:6px; background:var(--bg); padding:8px; border-radius:8px">
           🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
@@ -856,7 +933,7 @@ function renderHandbook(list) {
       </div>`;
   }).join('');
 }
-
+  
 function filterHandbook() {
   var q = document.getElementById('handbookSearch').value.toLowerCase();
   var filtered = directoryData.filter(function(m) {
@@ -1297,7 +1374,56 @@ function showGuide(){
   document.body.appendChild(ov);
 }
 showGuide();
+// [기능] 명부에 단원 직접 추가
+function addHandbookMember(){
+  var name = document.getElementById('hbName').value.trim();
+  var part = document.getElementById('hbPart').value;
+  if(!name || !part) return showToast('이름과 파트는 필수입니다');
 
+  var data = {
+    name: name, part: part,
+    phone: document.getElementById('hbPhone').value.trim(),
+    birthday: document.getElementById('hbBirth').value,
+    district: document.getElementById('hbDist').value.trim(),
+    area: document.getElementById('hbArea').value.trim(),
+    job: document.getElementById('hbJob').value.trim(),
+    status: 'active',
+    createdAt: new Date().toISOString()
+  };
+
+  db.collection('members').add(data).then(function(){
+    showToast(name + '님 명부 등록 완료');
+    // 입력창 초기화
+    ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('hbPart').selectedIndex = 0;
+    loadHandbook(); // 목록 새로고침
+  });
+}
+
+// [기능] 명부 데이터 삭제
+function deleteHandbookMember(id, name){
+  if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
+  db.collection('members').doc(id).delete().then(function(){
+    showToast('삭제되었습니다');
+    loadHandbook();
+  });
+}
+
+// [기능] 데이터 수정 (간단하게 프롬프트로 예시)
+function editHandbookMember(id){
+  var m = directoryData.find(x => x.id === id);
+  if(!m) return;
+  
+  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
+  if(newPhone === null) return; // 취소 시
+
+  db.collection('members').doc(id).update({
+    phone: newPhone
+  }).then(function(){
+    showToast('정보가 수정되었습니다');
+    loadHandbook();
+  });
+}
 </script>
 </body>
 </html>
