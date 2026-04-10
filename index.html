@@ -329,7 +329,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div id="schDetailBody"></div>
   </div>
 </div>
-
+<div class="modal-overlay modal-center" id="modalMemberEdit">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">👤 단원 정보 수정</span>
+      <button class="modal-close" onclick="closeModal('modalMemberEdit')">✕</button>
+    </div>
+    <input type="hidden" id="editHbId">
+    <div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="editHbName"></div>
+    <div class="form-group">
+      <label class="form-label">파트 *</label>
+      <select class="form-sel" id="editHbPart">
+        <option>S1</option><option>S2</option><option>T1</option><option>T2</option>
+        <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option>
+      </select>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
+      <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="editHbBirth" type="date"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+      <div class="form-group"><label class="form-label">교구</label><input class="form-input" id="editHbDist"></div>
+      <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="editHbArea"></div>
+      <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
+    </div>
+    <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
+  </div>
+</div>
 <!-- BOTTOM NAV -->
 <div class="bottom-nav">
   <div class="nav-item active" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
@@ -904,10 +930,31 @@ function deleteHandbookMember(id, name){
 
 function editHandbookMember(id){
   var m = directoryData.find(x => x.id === id); if(!m) return;
-  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
-  if(newPhone !== null) {
-    db.collection('members').doc(id).update({ phone: newPhone }).then(function(){ showToast('수정됨'); loadHandbook(); });
-  }
+  document.getElementById('editHbId').value = id;
+  document.getElementById('editHbName').value = m.name || '';
+  document.getElementById('editHbPart').value = m.part || '';
+  document.getElementById('editHbPhone').value = m.phone || '';
+  document.getElementById('editHbBirth').value = m.birthday || '';
+  document.getElementById('editHbDist').value = m.district || '';
+  document.getElementById('editHbArea').value = m.area || '';
+  document.getElementById('editHbJob').value = m.job || '';
+  openModal('modalMemberEdit');
+}
+
+function updateHandbookMember(){
+  var id = document.getElementById('editHbId').value;
+  var name = document.getElementById('editHbName').value.trim();
+  var part = document.getElementById('editHbPart').value;
+  if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  var data = {
+    name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
+    birthday: document.getElementById('editHbBirth').value, district: document.getElementById('editHbDist').value.trim(),
+    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim()
+  };
+  db.collection('members').doc(id).update(data).then(function(){
+    showToast(name + '님의 정보가 수정되었습니다');
+    closeModal('modalMemberEdit'); loadHandbook();
+  }).catch(function(e){ console.error(e); showToast('수정 중 오류 발생'); });
 }
 
 function openAttendance(id, name) { showToast(name + '님 출석 체크 완료!'); }
@@ -1335,56 +1382,6 @@ function showGuide(){
   document.body.appendChild(ov);
 }
 showGuide();
-// [기능] 명부에 단원 직접 추가
-function addHandbookMember(){
-  var name = document.getElementById('hbName').value.trim();
-  var part = document.getElementById('hbPart').value;
-  if(!name || !part) return showToast('이름과 파트는 필수입니다');
-
-  var data = {
-    name: name, part: part,
-    phone: document.getElementById('hbPhone').value.trim(),
-    birthday: document.getElementById('hbBirth').value,
-    district: document.getElementById('hbDist').value.trim(),
-    area: document.getElementById('hbArea').value.trim(),
-    job: document.getElementById('hbJob').value.trim(),
-    status: 'active',
-    createdAt: new Date().toISOString()
-  };
-
-  db.collection('members').add(data).then(function(){
-    showToast(name + '님 명부 등록 완료');
-    // 입력창 초기화
-    ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('hbPart').selectedIndex = 0;
-    loadHandbook(); // 목록 새로고침
-  });
-}
-
-// [기능] 명부 데이터 삭제
-function deleteHandbookMember(id, name){
-  if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
-  db.collection('members').doc(id).delete().then(function(){
-    showToast('삭제되었습니다');
-    loadHandbook();
-  });
-}
-
-// [기능] 데이터 수정 (간단하게 프롬프트로 예시)
-function editHandbookMember(id){
-  var m = directoryData.find(x => x.id === id);
-  if(!m) return;
-  
-  var newPhone = prompt(m.name + '님의 새 전화번호:', m.phone || '');
-  if(newPhone === null) return; // 취소 시
-
-  db.collection('members').doc(id).update({
-    phone: newPhone
-  }).then(function(){
-    showToast('정보가 수정되었습니다');
-    loadHandbook();
-  });
-}
 </script>
 </body>
 </html>
