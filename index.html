@@ -171,6 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
     <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
+    <div class="admin-tab on" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부/수첩</div>
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
@@ -195,7 +196,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 
     <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
   </div>
-
+  <div class="admin-sub" id="subMemberHandbook">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+      <h3 style="font-size:16px; font-weight:700">📖 단원 명부/수첩 (314명)</h3>
+      <button class="btn btn-sm btn-p" onclick="exportMemberCSV()">📥 명부 다운로드</button>
+    </div>
+    
+    <div class="search-wrap" style="margin-bottom:12px">
+      <input class="search-box" id="handbookSearch" type="text" placeholder="이름, 교구, 직업 등으로 검색..." oninput="filterHandbook()">
+    </div>
+  
+    <div id="handbookList">
+      <div class="loading"><div class="spinner"></div>데이터 로드 중...</div>
+    </div>
+  </div>
   <div class="admin-sub hidden" id="subMembers">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">👥 단원 관리</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>소프라노</option><option>알토</option><option>테너</option><option>베이스</option><option>지휘</option><option>반주</option></select></div></div>
@@ -365,11 +379,14 @@ function switchTab(tab){
 function switchAdminTab(sub){
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
   document.querySelectorAll('[data-at]').forEach(function(el){el.classList.toggle('on',el.dataset.at===sub)});
-  var el=document.getElementById('sub'+sub.charAt(0).toUpperCase()+sub.slice(1));
-  if(el)el.classList.remove('hidden');
-  if(sub==='logs')loadLogs();
-  if(sub==='members')loadMembers();
-  if(sub==='schedule')loadSchAdmin();
+  
+  // 새로 만든 명부 탭 ID와 연결
+  var elId = 'sub' + sub.charAt(0).toUpperCase() + sub.slice(1);
+  var el = document.getElementById(elId);
+  if(el) el.classList.remove('hidden');
+
+  if(sub === 'memberHandbook') loadHandbook(); // 탭 클릭 시 명부 로드
+  // 기존 코드들...
 }
 function updateAdminTabs(){
   var tabs=document.getElementById('adminTabRow');if(!tabs)return;
@@ -752,6 +769,50 @@ function addMember(){
   }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
 }
 function loadMembers(){
+  // [추가] 단원 명부 데이터 로드 및 렌더링
+  var directoryData = []; // 314명의 상세 데이터를 담을 변수
+  
+  function loadHandbook() {
+    // Firestore의 'members' 컬렉션에서 데이터를 가져옴 (사용자님이 넣으신 JSON 구조 기준)
+    db.collection('members').orderBy('name').get().then(function(snap) {
+      directoryData = [];
+      snap.forEach(function(doc) {
+        directoryData.push({ id: doc.id, ...doc.data() });
+      });
+      renderHandbook(directoryData);
+    });
+  }
+  
+  function renderHandbook(list) {
+    var c = document.getElementById('handbookList');
+    if(!c) return;
+    
+    c.innerHTML = list.map(function(m) {
+      return `
+        <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start">
+            <div>
+              <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
+              <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 없음'}</div>
+            </div>
+            <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="openAttendance('${m.id}', '${m.name}')">✔️ 출석</button>
+          </div>
+          <div style="font-size:12px; color:var(--ts); margin-top:6px; background:var(--bg); padding:8px; border-radius:8px">
+            🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
+            👥 ${m.group || '-'} | 🎂 ${m.birthday || '생일 미입력'}
+          </div>
+        </div>`;
+    }).join('');
+  }
+  
+  // 명부 내 실시간 검색 함수
+  function filterHandbook() {
+    var q = document.getElementById('handbookSearch').value.toLowerCase();
+    var filtered = directoryData.filter(function(m) {
+      return m.name.includes(q) || (m.district && m.district.includes(q)) || (m.job && m.job.includes(q));
+    });
+    renderHandbook(filtered);
+  }
   db.collection('members').orderBy('name').get().then(function(snap){
     allMembers=[];var c=document.getElementById('memberList');if(!c)return;
     snap.forEach(function(doc){allMembers.push({id:doc.id,name:doc.data().name,part:doc.data().part})});
