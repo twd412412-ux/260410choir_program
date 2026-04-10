@@ -175,9 +175,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="admin-sub" id="subAddSong">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎵 새 곡 추가</h3>
     <div class="form-group"><label class="form-label">곡명 *</label><input class="form-input" id="addSongName" placeholder="곡 제목"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">연도 *</label><input class="form-input" id="addYear" type="number" placeholder="2026"></div><div class="form-group"><label class="form-label">월 *</label><input class="form-input" id="addMonth" type="number" placeholder="1~12"></div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">일</label><input class="form-input" id="addDay" type="number"></div><div class="form-group"><label class="form-label">요일</label><select class="form-sel" id="addDow"><option value="">선택</option><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option></select></div></div>
-    <div class="form-group"><label class="form-label">카테고리</label><input class="form-input" id="addCat" placeholder="예: 주일예배, 교구집회"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">연도 *</label><input class="form-input" id="addYear" type="number" placeholder="2026" onchange="calcDow('add')"></div>
+      <div class="form-group"><label class="form-label">월 *</label><select class="form-sel" id="addMonth" onchange="calcDow('add')"><option value="">선택</option><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select></div>
+      <div class="form-group"><label class="form-label">일</label><select class="form-sel" id="addDay" onchange="calcDow('add')"><option value="">선택</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="addDow" readonly style="background:var(--pl);font-weight:700"></div>
+    <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 연제, 성가"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대예배실"></div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)"></div>
@@ -265,9 +269,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">✏️ 곡 수정</span><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
     <div class="form-group"><label class="form-label">곡명</label><input class="form-input" id="editName"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">연도</label><input class="form-input" id="editYear" type="number"></div><div class="form-group"><label class="form-label">월</label><input class="form-input" id="editMonth" type="number"></div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">일</label><input class="form-input" id="editDay" type="number"></div><div class="form-group"><label class="form-label">요일</label><select class="form-sel" id="editDow"><option value="">선택</option><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option></select></div></div>
-    <div class="form-group"><label class="form-label">카테고리</label><input class="form-input" id="editCat"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">연도</label><input class="form-input" id="editYear" type="number" onchange="calcDow('edit')"></div>
+      <div class="form-group"><label class="form-label">월</label><select class="form-sel" id="editMonth" onchange="calcDow('edit')"><option value="">선택</option><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select></div>
+      <div class="form-group"><label class="form-label">일</label><select class="form-sel" id="editDay" onchange="calcDow('edit')"><option value="">선택</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="editDow" readonly style="background:var(--pl);font-weight:700"></div>
+    <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="editCatSel" onchange="onCatSelect('edit')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="editCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="editSub"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc"></div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem"></div>
@@ -626,28 +634,33 @@ function shareSong(){
 // ==================== 곡 추가 ====================
 function addNewSong(){
   var name=document.getElementById('addSongName').value.trim();
-  var year=parseInt(document.getElementById('addYear').value);
-  var month=parseInt(document.getElementById('addMonth').value);
-  if(!name||!year||!month)return showToast('곡명, 연도, 월은 필수입니다');
+  var year=parseInt(document.getElementById('addYear').value,10);
+  var month=parseInt(document.getElementById('addMonth').value,10);
+  if(!name||isNaN(year)||isNaN(month))return showToast('곡명, 연도, 월은 필수입니다');
+  var cat=getCatValue('add');
   db.collection('songs').add({
     songName:name,year:year,month:month,
-    day:parseInt(document.getElementById('addDay').value)||null,
+    day:parseInt(document.getElementById('addDay').value,10)||null,
     dayOfWeek:document.getElementById('addDow').value,
-    category:document.getElementById('addCat').value.trim(),
+    category:cat,
     subCategory:document.getElementById('addSub').value.trim(),
     location:document.getElementById('addLoc').value.trim(),
     members:document.getElementById('addMem').value.trim(),
     pianist:document.getElementById('addPia').value.trim(),
     createdAt:new Date().toISOString()
   }).then(function(docRef){
-    // 로컬 캐시에도 즉시 추가
-    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value)||null,dayOfWeek:document.getElementById('addDow').value,category:document.getElementById('addCat').value.trim(),subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),createdAt:new Date().toISOString()});
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value,10)||null,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),createdAt:new Date().toISOString()});
     saveCache('choir_songs',allSongs);
-    buildFilters();doFilter();
+    buildFilters();buildCatOptions();doFilter();
     writeLog('곡 추가','"'+name+'" 추가됨');
     showToast('곡이 추가되었습니다!');
-    ['addSongName','addYear','addMonth','addDay','addCat','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
-    document.getElementById('addDow').selectedIndex=0;
+    ['addSongName','addYear','addSub','addLoc','addMem','addPia'].forEach(function(id){document.getElementById(id).value=''});
+    document.getElementById('addMonth').selectedIndex=0;
+    document.getElementById('addDay').innerHTML='<option value="">선택</option>';
+    document.getElementById('addDow').value='';
+    document.getElementById('addCatSel').selectedIndex=0;
+    document.getElementById('addCatInput').classList.add('hidden');
+    document.getElementById('addCatInput').value='';
   }).catch(function(e){console.error(e);showToast('추가 중 오류 발생')});
 }
 
@@ -657,27 +670,35 @@ function openEdit(id){
   currentDetailSong=song;
   document.getElementById('editName').value=song.songName;
   document.getElementById('editYear').value=song.year;
-  document.getElementById('editMonth').value=song.month;
+  document.getElementById('editMonth').value=song.month||'';
+  calcDow('edit');
   document.getElementById('editDay').value=song.day||'';
-  document.getElementById('editDow').value=song.dayOfWeek||'';
-  document.getElementById('editCat').value=song.category;
+  calcDow('edit');
   document.getElementById('editSub').value=song.subCategory;
   document.getElementById('editLoc').value=song.location;
   document.getElementById('editMem').value=song.members;
   document.getElementById('editPia').value=song.pianist;
+  // 카테고리 설정
+  buildCatOptions();
+  var catSel=document.getElementById('editCatSel');
+  var found=false;
+  for(var i=0;i<catSel.options.length;i++){if(catSel.options[i].value===song.category){catSel.selectedIndex=i;found=true;break}}
+  if(!found&&song.category){catSel.value='__custom';document.getElementById('editCatInput').classList.remove('hidden');document.getElementById('editCatInput').value=song.category}
+  else{document.getElementById('editCatInput').classList.add('hidden');document.getElementById('editCatInput').value=''}
   closeModal('modalDetail');openModal('modalEdit');
 }
 function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
 function saveEdit(){
   if(!currentDetailSong)return;
-  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value)||0,month:parseInt(document.getElementById('editMonth').value)||0,day:parseInt(document.getElementById('editDay').value)||null,dayOfWeek:document.getElementById('editDow').value,category:document.getElementById('editCat').value.trim(),subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim()};
+  var cat=getCatValue('edit');
+  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim()};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
-    // 로컬 캐시도 업데이트
     var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
-    if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();doFilter()}
+    if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();buildCatOptions();doFilter()}
     writeLog('곡 수정','"'+data.songName+'" 수정됨');closeModal('modalEdit');showToast('수정되었습니다');
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
+
 
 // ==================== 곡 삭제 ====================
 function delSong(id,name){
@@ -935,6 +956,65 @@ function exportCSV(){
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   a.download='광주교회찬양대_'+new Date().toISOString().split('T')[0]+'.csv';a.click();showToast('CSV 다운로드 완료');
 }
+// ==================== 요일 자동계산 + 일 드롭다운 + 카테고리 ====================
+var DOW_NAMES=['일','월','화','수','목','금','토'];
+
+function calcDow(prefix){
+  var y=parseInt(document.getElementById(prefix+'Year').value,10);
+  var m=parseInt(document.getElementById(prefix+'Month').value,10);
+  var dSel=document.getElementById(prefix+'Day');
+  var dowEl=document.getElementById(prefix+'Dow');
+
+  // 일 드롭다운 업데이트
+  if(y&&m){
+    var maxDay=new Date(y,m,0).getDate();
+    var curDay=parseInt(dSel.value,10);
+    dSel.innerHTML='<option value="">선택</option>';
+    for(var i=1;i<=maxDay;i++){dSel.innerHTML+='<option value="'+i+'"'+(i===curDay?' selected':'')+'>'+i+'일</option>'}
+  }
+
+  // 요일 자동계산
+  var d=parseInt(dSel.value,10);
+  if(y&&m&&d){
+    var date=new Date(y,m-1,d);
+    dowEl.value=DOW_NAMES[date.getDay()];
+  }else{
+    dowEl.value='';
+  }
+}
+
+function onCatSelect(prefix){
+  var sel=document.getElementById(prefix+'CatSel');
+  var input=document.getElementById(prefix+'CatInput');
+  if(sel.value==='__custom'){
+    input.classList.remove('hidden');
+    input.focus();
+  }else{
+    input.classList.add('hidden');
+    input.value='';
+  }
+}
+
+function getCatValue(prefix){
+  var sel=document.getElementById(prefix+'CatSel');
+  if(sel.value==='__custom')return document.getElementById(prefix+'CatInput').value.trim();
+  return sel.value;
+}
+
+function buildCatOptions(){
+  var catMap={};
+  allSongs.forEach(function(s){if(s.category)catMap[s.category]=(catMap[s.category]||0)+1});
+  var sorted=Object.entries(catMap).sort(function(a,b){return b[1]-a[1]});
+
+  ['add','edit'].forEach(function(prefix){
+    var sel=document.getElementById(prefix+'CatSel');
+    if(!sel)return;
+    var cur=sel.value;
+    sel.innerHTML='<option value="">선택</option>';
+    sorted.forEach(function(e){sel.innerHTML+='<option value="'+e[0]+'"'+(cur===e[0]?' selected':'')+'>'+e[0]+' ('+e[1]+'곡)</option>'});
+    sel.innerHTML+='<option value="__custom">✏️ 직접 입력</option>';
+  });
+}
 
 // ==================== 검색 ====================
 var sTimer=null;
@@ -949,6 +1029,7 @@ function init(){
   initNotice();
   initSchedules();
   initColorPicker();
+  buildCatOptions();
 }
 init();
 </script>
