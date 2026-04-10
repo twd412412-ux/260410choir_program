@@ -407,8 +407,7 @@ function openUserModal(){
   if(currentUser){
     b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+currentUser.name+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+currentUser.part+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div><button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
   }else{
-    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">로그인하면 즐겨찾기가 다른 기기에서도 동기화됩니다.</p><div class="form-group"><label class="form-label">이름 선택</label><select class="form-sel" id="userNameSel"><option value="">등록된 단원 선택...</option></select></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 로그인 없이도 모든 곡 열람 가능</p>';
-    populateUserSel();
+    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">로그인하면 즐겨찾기가 다른 기기에서도 동기화됩니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 로그인 없이도 모든 곡 열람 가능</p>';
   }
   openModal('modalUser');
 }
@@ -419,20 +418,21 @@ function populateUserSel(){
   });
 }
 function loginUser(){
-  var sel=document.getElementById('userNameSel');
+  var nameInput=document.getElementById('userNameInput');
   var pin=document.getElementById('userPinInput');
-  if(!sel||!sel.value)return showToast('이름을 선택해주세요');
+  if(!nameInput||!nameInput.value.trim())return showToast('이름을 입력해주세요');
   if(!pin||!pin.value)return showToast('PIN을 입력해주세요');
-  db.collection('members').doc(sel.value).get().then(function(doc){
-    if(!doc.exists)return showToast('단원 정보를 찾을 수 없습니다');
-    var data=doc.data();
+  var inputName=nameInput.value.trim();
+  db.collection('members').where('name','==',inputName).get().then(function(snap){
+    if(snap.empty)return showToast('등록되지 않은 이름입니다');
+    var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
     currentUser={id:doc.id,name:data.name,part:data.part};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
     showToast(data.name+'님 환영합니다!');renderSongList();
-  });
+  }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 function logoutUser(){currentUser=null;localStorage.removeItem('choir_user');updateUserBar();closeModal('modalUser');showToast('로그아웃 되었습니다')}
 function updateUserBar(){
