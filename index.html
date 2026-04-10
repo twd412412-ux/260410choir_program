@@ -867,7 +867,7 @@ function resetPin(id,name){
 var directoryData = []; 
 
 function loadHandbook() {
-  db.collection('handbook').orderBy('name').get().then(function(snap) {
+  db.collection('members').orderBy('name').get().then(function(snap) {
     directoryData = [];
     snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
     renderHandbook(directoryData);
