@@ -768,51 +768,21 @@ function addMember(){
     document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
   }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
 }
+// ==================== [수정됨] 단원 관리 (로그인/계정용) ====================
+function addMember(){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var name=document.getElementById('memName').value.trim();
+  var part=document.getElementById('memPart').value;
+  var pin=document.getElementById('memPin').value.trim();
+  if(!name||!part||!pin)return showToast('이름, 파트, PIN 모두 입력해주세요');
+  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
+  db.collection('members').add({name:name,part:part,pin:pin,favorites:[],recentViewed:[],createdAt:new Date().toISOString()}).then(function(){
+    writeLog('단원 등록','"'+name+'" ('+part+') 등록됨');showToast(name+'님 등록 완료');
+    document.getElementById('memName').value='';document.getElementById('memPart').selectedIndex=0;document.getElementById('memPin').value='';loadMembers();
+  }).catch(function(e){console.error(e);showToast('등록 중 오류 발생')});
+}
+
 function loadMembers(){
-  // [추가] 단원 명부 데이터 로드 및 렌더링
-  var directoryData = []; // 314명의 상세 데이터를 담을 변수
-  
-  function loadHandbook() {
-    // Firestore의 'members' 컬렉션에서 데이터를 가져옴 (사용자님이 넣으신 JSON 구조 기준)
-    db.collection('members').orderBy('name').get().then(function(snap) {
-      directoryData = [];
-      snap.forEach(function(doc) {
-        directoryData.push({ id: doc.id, ...doc.data() });
-      });
-      renderHandbook(directoryData);
-    });
-  }
-  
-  function renderHandbook(list) {
-    var c = document.getElementById('handbookList');
-    if(!c) return;
-    
-    c.innerHTML = list.map(function(m) {
-      return `
-        <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start">
-            <div>
-              <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
-              <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 없음'}</div>
-            </div>
-            <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="openAttendance('${m.id}', '${m.name}')">✔️ 출석</button>
-          </div>
-          <div style="font-size:12px; color:var(--ts); margin-top:6px; background:var(--bg); padding:8px; border-radius:8px">
-            🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
-            👥 ${m.group || '-'} | 🎂 ${m.birthday || '생일 미입력'}
-          </div>
-        </div>`;
-    }).join('');
-  }
-  
-  // 명부 내 실시간 검색 함수
-  function filterHandbook() {
-    var q = document.getElementById('handbookSearch').value.toLowerCase();
-    var filtered = directoryData.filter(function(m) {
-      return m.name.includes(q) || (m.district && m.district.includes(q)) || (m.job && m.job.includes(q));
-    });
-    renderHandbook(filtered);
-  }
   db.collection('members').orderBy('name').get().then(function(snap){
     allMembers=[];var c=document.getElementById('memberList');if(!c)return;
     snap.forEach(function(doc){allMembers.push({id:doc.id,name:doc.data().name,part:doc.data().part})});
@@ -820,7 +790,52 @@ function loadMembers(){
     c.innerHTML=allMembers.map(function(m){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)"><div><span style="font-weight:700;font-size:14px">'+m.name+'</span><span class="meta-tag" style="margin-left:6px">'+m.part+'</span></div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin(\''+m.id+'\',\''+m.name+'\')">PIN</button><button class="btn btn-sm btn-d" onclick="delMember(\''+m.id+'\',\''+m.name+'\')">삭제</button></div></div>'}).join('');
   });
 }
-function delMember(id,name){
+
+// ==================== [수정됨] 단원 명부/수첩 (행정/조회용) ====================
+var directoryData = []; 
+
+function loadHandbook() {
+  db.collection('members').orderBy('name').get().then(function(snap) {
+    directoryData = [];
+    snap.forEach(function(doc) {
+      directoryData.push({ id: doc.id, ...doc.data() });
+    });
+    renderHandbook(directoryData);
+  });
+}
+
+function renderHandbook(list) {
+  var c = document.getElementById('handbookList');
+  if(!c) return;
+  c.innerHTML = list.map(function(m) {
+    return `
+      <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start">
+          <div>
+            <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
+            <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 없음'}</div>
+          </div>
+          <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="showToast('출석 기능은 개발 중입니다')">✔️ 출석</button>
+        </div>
+        <div style="font-size:12px; color:var(--ts); margin-top:6px; background:var(--bg); padding:8px; border-radius:8px">
+          🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
+          👥 ${m.group || '-'} | 🎂 ${m.birthday || '생일 미입력'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterHandbook() {
+  var q = document.getElementById('handbookSearch').value.toLowerCase();
+  var filtered = directoryData.filter(function(m) {
+    return m.name.includes(q) || (m.district && m.district.includes(q)) || (m.job && m.job.includes(q));
+  });
+  renderHandbook(filtered);
+}
+
+function exportMemberCSV() {
+  showToast('준비 중인 기능입니다');
+}function delMember(id,name){
   if(!confirm('"'+name+'"님을 삭제하시겠습니까?'))return;
   db.collection('members').doc(id).delete().then(function(){writeLog('단원 삭제','"'+name+'" 삭제됨');showToast('삭제되었습니다');loadMembers()});
 }
