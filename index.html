@@ -817,20 +817,22 @@ function addMember(){
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
 
-  db.collection('members').add({ // (또는 accounts 방)
+  // 👇 'accounts' 방에 저장!
+  db.collection('accounts').add({ 
     name:name, part:part, pin:pin, 
     favorites:[], createdAt:new Date().toISOString()
   }).then(function(){
     showToast(name+'님 로그인 계정 생성 완료');
     document.getElementById('memName').value='';
     document.getElementById('memPin').value='';
-    loadMembers(); 
-    // 👇 활동 로그 추가
+    
+    setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
     writeLog('계정 발급', name + '님 로그인 계정 생성');
   }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
 }
+
 function loadMembers(){
-  // 💡 'accounts' 방에서 로그인 계정 목록을 불러옵니다!
+  // 👇 'accounts' 방에서 읽기!
   db.collection('accounts').orderBy('name').get().then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
@@ -852,19 +854,20 @@ function loadMembers(){
 
 function delMember(id,name){
   if(!confirm('"'+name+'"님 계정을 삭제하시겠습니까?'))return;
-  db.collection('members').doc(id).delete().then(function(){ 
+  // 👇 'accounts' 방에서 삭제!
+  db.collection('accounts').doc(id).delete().then(function(){ 
     showToast('삭제되었습니다'); 
-    loadMembers(); 
-    // 👇 활동 로그 추가
+    setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
     writeLog('계정 삭제', name + '님 계정 삭제됨');
   });
 }
+
 function resetPin(id,name){
   var p=prompt(name+'님의 새 PIN(4자리):');
   if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
-  db.collection('members').doc(id).update({pin:p}).then(function(){ 
+  // 👇 'accounts' 방에서 수정!
+  db.collection('accounts').doc(id).update({pin:p}).then(function(){ 
     showToast('PIN 변경 완료'); 
-    // 👇 활동 로그 추가
     writeLog('PIN 변경', name + '님 PIN 초기화');
   });
 }
