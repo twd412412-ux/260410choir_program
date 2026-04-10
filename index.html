@@ -198,7 +198,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   </div>
   <div class="admin-sub" id="subMemberHandbook">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-      <h3 style="font-size:16px; font-weight:700">📖 단원 명부/수첩 (314명)</h3>
+      <h3 style="font-size:16px; font-weight:700">📖 단원 명부/수첩 (<span id="handbookCount">0</span>명)</h3>
       <button class="btn btn-sm btn-p" onclick="exportMemberCSV()">📥 명부 다운로드</button>
     </div>
     
@@ -833,6 +833,10 @@ function loadHandbook() {
 }
 
 function renderHandbook(list) {
+  // 1. [여기에 추가] 숫자를 표시할 요소를 찾아 현재 리스트 개수(list.length)를 넣어줍니다.
+  var countEl = document.getElementById('handbookCount');
+  if(countEl) countEl.textContent = list.length; 
+
   var c = document.getElementById('handbookList');
   if(!c) return;
   c.innerHTML = list.map(function(m) {
