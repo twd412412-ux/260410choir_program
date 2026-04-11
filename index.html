@@ -401,6 +401,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="editHbArea"></div>
       <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
     </div>
+    <div class="form-group">
+      <label class="form-label">앱 권한</label>
+      <select class="form-sel" id="editHbRole">
+        <option value="">없음 (일반 단원)</option>
+        <option value="attendance">출결 관리</option>
+        <option value="chongmu">총무부</option>
+      </select>
+      <div style="font-size:11px;color:var(--ts);margin-top:4px">출결 관리: 출결부만 접근 / 총무부: 곡추가+일정+명부+출결</div>
+    </div>
+
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
   </div>
 </div>
@@ -483,15 +493,17 @@ function updateAdminTabs(){
   var tabs=document.getElementById('adminTabRow'); if(!tabs) return;
   tabs.querySelectorAll('[data-at]').forEach(function(t){
     var k=t.dataset.at;
-    if(adminRole==='chongmu'){
-      // 총무부에게 허용할 탭: 곡추가, 일정관리, 단원명부
-      t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook') ? '' : 'none';
-    } else {
-      // 관리자는 모든 탭 다 보임
+    if(adminRole==='attendance'){
+      t.style.display=(k==='attendance') ? '' : 'none';
+    }else if(adminRole==='chongmu'){
+      t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook' || k==='attendance') ? '' : 'none';
+    }else{
       t.style.display='';
     }
   });
 }
+
+
 
 // ==================== 관리자 로그인 ====================
 function openAdminLogin(){
@@ -553,7 +565,6 @@ function loginUser(){
   if(!pin||!pin.value)return showToast('PIN을 입력해주세요');
   var inputName=nameInput.value.trim();
   
-  // 💡 members가 아니라 'accounts' 방에서 계정을 찾습니다!
   db.collection('accounts').where('name','==',inputName).get().then(function(snap){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
@@ -563,6 +574,27 @@ function loginUser(){
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
     showToast(data.name+'님 환영합니다!');renderSongList();
+
+    // 권한 확인: members 컬렉션에서 role 체크
+    db.collection('members').where('name','==',inputName).get().then(function(mSnap){
+      if(mSnap.empty)return;
+      var mData=mSnap.docs[0].data();
+      if(mData.role==='attendance'){
+        adminRole='attendance';
+        document.body.classList.add('chongmu-mode');
+        document.getElementById('navAdmin').classList.remove('hidden');
+        document.getElementById('btnLock').textContent='🔓';
+        showToast('출결 관리 권한이 있습니다');
+      }else if(mData.role==='chongmu'){
+        adminRole='chongmu';
+        document.body.classList.add('chongmu-mode');
+        document.getElementById('navAdmin').classList.remove('hidden');
+        document.getElementById('navStats').classList.remove('hidden');
+        document.getElementById('btnLock').textContent='🔓';
+        showToast('총무부 권한이 있습니다');
+      }
+      updateAdminTabs();
+    });
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
@@ -940,11 +972,11 @@ function renderHandbook(list) {
       <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start">
           <div>
-            <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span></div>
+            <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span>${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
             <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 미등록'}</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:4px">
-            <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="openAttendance('${m.id}', '${m.name}')">✔️ 출석</button>
+
             <div style="display:flex; gap:2px">
                <button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${m.id}')">✏️</button>
                <button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${m.id}', '${m.name}')">🗑️</button>
@@ -1038,8 +1070,10 @@ function editHandbookMember(id){
   document.getElementById('editHbDist').value = m.district || '';
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
+  document.getElementById('editHbRole').value = m.role || '';
   openModal('modalMemberEdit');
 }
+
 
 function updateHandbookMember(){
   var id = document.getElementById('editHbId').value;
@@ -1049,18 +1083,18 @@ function updateHandbookMember(){
   var data = {
     name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
     birthday: document.getElementById('editHbBirth').value, district: document.getElementById('editHbDist').value.trim(),
-    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim()
+    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim(),
+    role: document.getElementById('editHbRole').value
   };
   db.collection('members').doc(id).update(data).then(function(){
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit'); 
     loadHandbook();
-    // 👇 활동 로그 추가
     writeLog('명부 수정', name + ' 단원 정보 수정');
   }).catch(function(e){ console.error(e); showToast('수정 중 오류 발생'); });
 }
 
-function openAttendance(id, name) { showToast(name + '님 출석 체크 완료!'); }
+
 
 function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 
