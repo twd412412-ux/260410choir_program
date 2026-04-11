@@ -569,32 +569,26 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part};
+    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||''};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
     showToast(data.name+'님 환영합니다!');renderSongList();
 
-    // 권한 확인: members 컬렉션에서 role 체크
-    db.collection('members').where('name','==',inputName).get().then(function(mSnap){
-      if(mSnap.empty)return;
-      var mData=mSnap.docs[0].data();
-      if(mData.role==='attendance'){
-        adminRole='attendance';
-        document.body.classList.add('chongmu-mode');
-        document.getElementById('navAdmin').classList.remove('hidden');
-        document.getElementById('btnLock').textContent='🔓';
-        showToast('출결 관리 권한이 있습니다');
-      }else if(mData.role==='chongmu'){
-        adminRole='chongmu';
-        document.body.classList.add('chongmu-mode');
-        document.getElementById('navAdmin').classList.remove('hidden');
-        document.getElementById('navStats').classList.remove('hidden');
-        document.getElementById('btnLock').textContent='🔓';
-        showToast('총무부 권한이 있습니다');
-      }
+    if(data.role==='attendance'){
+      adminRole='attendance';
+      document.body.classList.add('chongmu-mode');
+      document.getElementById('navAdmin').classList.remove('hidden');
+      document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
-    });
+    }else if(data.role==='chongmu'){
+      adminRole='chongmu';
+      document.body.classList.add('chongmu-mode');
+      document.getElementById('navAdmin').classList.remove('hidden');
+      document.getElementById('navStats').classList.remove('hidden');
+      document.getElementById('btnLock').textContent='🔓';
+      updateAdminTabs();
+    }
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
@@ -912,22 +906,16 @@ function addMember(){
 }
 
 function loadMembers(){
-  // 👇 'accounts' 방에서 읽기!
   db.collection('accounts').orderBy('name').get().then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, role:m.role||''}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
-        <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span></div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}')">PIN</button>
-          <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
-        </div>
-      </div>`;
+      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':'';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)"><div><span style="font-weight:700;font-size:14px">'+m.name+'</span><span class="meta-tag" style="margin-left:6px">'+m.part+'</span>'+roleBadge+'</div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="changeRole(\''+m.id+'\',\''+m.name+'\',\''+m.role+'\')">권한</button><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin(\''+m.id+'\',\''+m.name+'\')">PIN</button><button class="btn btn-sm btn-d" onclick="delMember(\''+m.id+'\',\''+m.name+'\')">삭제</button></div></div>';
     }).join('');
   });
 }
@@ -951,6 +939,23 @@ function resetPin(id,name){
     writeLog('PIN 변경', name + '님 PIN 초기화');
   });
 }
+function changeRole(id,name,currentRole){
+  var msg=name+'님 현재 권한: '+(currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':'없음')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)';
+  var input=prompt(msg);
+  if(input===null)return;
+  var role='';
+  if(input==='1')role='attendance';
+  else if(input==='2')role='chongmu';
+  else if(input==='0')role='';
+  else return showToast('0, 1, 2 중에 입력해주세요');
+  db.collection('accounts').doc(id).update({role:role}).then(function(){
+    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':'없음';
+    showToast(name+'님 권한: '+label);
+    loadMembers();
+    writeLog('권한 변경',name+'님 → '+label);
+  }).catch(function(){showToast('변경 중 오류 발생')});
+}
+
 // ==================== [정리됨] 2. 단원 명부/수첩 (행정용 상세 조회) ====================
 var directoryData = []; 
 
