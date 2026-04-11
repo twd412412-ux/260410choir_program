@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
+<head>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#2563EB">
@@ -1067,8 +1067,7 @@ function filterHandbook() {
     }
     return textMatch && partMatch;
   });
-  
-  renderHandbook
+
 
 // [신규] 칩을 클릭했을 때 필터를 적용하는 함수
 function toggleHbPart(part) {
@@ -1860,52 +1859,6 @@ function loadMemHistory(){
 
 showGuide();
   
-// [수정] 클릭 가능한 파트 요약 칩 (필터 기능 연결)
-function updatePartSummary() {
-  var container = document.getElementById('handbookPartSummary');
-  if(!container) return;
-
-  var counts = { 'S1': 0, 'S2': 0, 'T1': 0, 'T2': 0, '지휘': 0, '반주': 0, '관현악': 0, '임원': 0 };
-  var others = 0;
-
-  directoryData.forEach(function(m) {
-    if(counts[m.part] !== undefined) counts[m.part]++;
-    else others++; // 기타 파트 또는 비어있는 파트
-  });
-
-  var html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">';
-  
-  // 1. '전체' 칩 추가
-  var allBg = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bg)';
-  var allCol = selectedHbPart === 'all' ? '#fff' : 'var(--ts)';
-  var allBd = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bd)';
-  html += `<span style="background:${allBg}; color:${allCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${allBd}; cursor:pointer;" onclick="toggleHbPart('all')">전체 ${directoryData.length}</span>`;
-
-  // 2. 지정된 파트 칩들
-  Object.keys(counts).forEach(function(k) {
-    var isZero = counts[k] === 0;
-    var isSelected = selectedHbPart === k;
-
-    // 선택된 상태면 찐파랑(배경) + 흰 글씨, 아니면 원래 색상
-    var bg = isSelected ? 'var(--p)' : (isZero ? 'var(--bg)' : 'var(--pl)');
-    var border = isSelected ? 'var(--p)' : (isZero ? 'var(--bd)' : 'var(--p)');
-    var textCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--pd)');
-    var numCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--p)');
-
-    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${border}; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('${k}')">${k} <span style="color:${numCol}; margin-left:2px">${counts[k]}</span></span>`;
-  });
-  
-  // 3. '기타' 칩
-  if(others > 0) {
-    var isSelected = selectedHbPart === '기타';
-    var bg = isSelected ? 'var(--p)' : 'var(--bd)';
-    var textCol = isSelected ? '#fff' : 'var(--ts)';
-    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('기타')">기타 ${others}</span>`;
-  }
-  
-  html += '</div>';
-  container.innerHTML = html;
-}
 // [신규] 잘못 만든 날짜의 출석 기록을 통째로 날려버리는 기능
 function deleteAttendance(){
   var date = document.getElementById('attDate').value;
