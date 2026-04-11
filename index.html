@@ -183,7 +183,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
     <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
-    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부/수첩</div>
+    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</div>
     <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 전자출결부</div>
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
@@ -212,7 +212,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <button class="btn btn-p btn-bl" onclick="addNewSong()">곡 추가하기</button>
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
-    <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부/수첩 (<span id="handbookCount">0</span>명)</h3>
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 (<span id="handbookCount">0</span>명)</h3>
     <div id="handbookPartSummary"></div>
     
     <div style="background:var(--pl); padding:14px; border-radius:12px; margin-bottom:16px">
@@ -968,7 +968,7 @@ function changeRole(id,name,currentRole){
   }).catch(function(){showToast('변경 중 오류 발생')});
 }
 
-// ==================== [정리됨] 2. 단원 명부/수첩 (행정용 상세 조회) ====================
+// ==================== [정리됨] 2. 단원 명부 (행정용 상세 조회) ====================
 var directoryData = []; 
 
 function loadHandbook() {
