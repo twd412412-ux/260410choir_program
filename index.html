@@ -394,23 +394,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option>
       </select>
     </div>
+    <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
+    <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="editHbBirth" type="date"></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-      <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
-      <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="editHbBirth" type="date"></div>
-    </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
       <div class="form-group"><label class="form-label">교구</label><input class="form-input" id="editHbDist"></div>
       <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="editHbArea"></div>
-      <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
     </div>
-    <div class="form-group">
-      <label class="form-label">앱 권한</label>
-      <select class="form-sel" id="editHbRole">
-        <option value="">없음 (일반 단원)</option>
-        <option value="attendance">출결 관리</option>
-        <option value="chongmu">총무부</option>
-      </select>
-      <div style="font-size:11px;color:var(--ts);margin-top:4px">출결 관리: 출결부만 접근 / 총무부: 곡추가+일정+명부+출결</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
+      <div class="form-group"><label class="form-label">회별</label><select class="form-sel" id="editHbGroup"><option value="">선택</option><option>어머니회</option><option>봉사회</option><option>청년회</option><option>대학회</option></select></div>
     </div>
 
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
@@ -1077,7 +1069,7 @@ function editHandbookMember(id){
   document.getElementById('editHbDist').value = m.district || '';
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
-  document.getElementById('editHbRole').value = m.role || '';
+  document.getElementById('editHbGroup').value = m.group || '';
   openModal('modalMemberEdit');
 }
 
@@ -1091,8 +1083,9 @@ function updateHandbookMember(){
     name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
     birthday: document.getElementById('editHbBirth').value, district: document.getElementById('editHbDist').value.trim(),
     area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim(),
-    role: document.getElementById('editHbRole').value
+    group: document.getElementById('editHbGroup').value
   };
+
   db.collection('members').doc(id).update(data).then(function(){
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit'); 
