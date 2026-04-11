@@ -108,6 +108,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .suggest-item{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bd)}
 .suggest-item:hover,.suggest-item:active{background:var(--pl)}
 .suggest-item:last-child{border-bottom:none}
+.att-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);gap:8px}
+.att-name{flex:1;font-size:14px;font-weight:600}
+.att-part-tag{font-size:11px;padding:2px 6px;border-radius:8px;background:var(--pl);color:var(--pd);font-weight:600}
+.att-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer}
+.att-btn.present{background:#22C55E;color:#fff;border-color:#22C55E}
+.att-btn.late{background:#F59E0B;color:#fff;border-color:#F59E0B}
+.att-btn.absent{background:#EF4444;color:#fff;border-color:#EF4444}
+
 </style>
 </head>
 <body>
@@ -176,6 +184,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
     <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
+    <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 출결부</div>
+
   </div>
 
   <div class="admin-sub" id="subAddSong">
@@ -266,6 +276,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <p style="font-size:13px;color:var(--ts);margin-bottom:16px">전체 곡 데이터를 CSV로 다운로드합니다.</p>
     <button class="btn btn-p btn-bl" onclick="exportCSV()">CSV 다운로드</button>
   </div>
+    <div class="admin-sub hidden" id="subAttendance">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📋 단원 출결부</h3>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="admin-tab on" data-att="check" onclick="switchAttTab('check')">출석체크</div>
+      <div class="admin-tab" data-att="stats" onclick="switchAttTab('stats')">출석 통계</div>
+      <div class="admin-tab" data-att="history" onclick="switchAttTab('history')">개인 이력</div>
+    </div>
+    <div id="attCheck">
+      <div class="form-group"><label class="form-label">주일 날짜 선택 *</label><input class="form-input" id="attDate" type="date" onchange="loadAttendance()"></div>
+      <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span id="attCount" style="font-size:13px;color:var(--ts)"></span>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" style="background:var(--sc);color:#fff" onclick="attCheckAll('출석')">전체출석</button>
+          <button class="btn btn-sm" style="background:var(--bd);color:var(--ts)" onclick="attCheckAll('결석')">전체결석</button>
+        </div>
+      </div>
+      <div id="attList"></div>
+      <button class="btn btn-p btn-bl" onclick="saveAttendance()" style="margin-top:12px">출석 저장</button>
+    </div>
+    <div id="attStats" class="hidden">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div class="form-group" style="flex:1"><label class="form-label">시작일</label><input class="form-input" id="attStatFrom" type="date"></div>
+        <div class="form-group" style="flex:1"><label class="form-label">종료일</label><input class="form-input" id="attStatTo" type="date"></div>
+      </div>
+      <button class="btn btn-p btn-bl" onclick="loadAttStats()" style="margin-bottom:16px">통계 조회</button>
+      <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📊 파트별 평균 출석률</div><div id="chPartAtt"></div></div>
+      <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">👤 단원별 출석률 (낮은순)</div><div id="chMemAtt"></div></div>
+      <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📈 주간 출석 추이</div><div id="chWeekAtt"></div></div>
+    </div>
+    <div id="attHistory" class="hidden">
+      <div class="form-group"><label class="form-label">단원 선택</label><select class="form-sel" id="attMemSel" onchange="loadMemHistory()"><option value="">선택...</option></select></div>
+      <div id="attMemInfo"></div>
+      <div id="attMemList"></div>
+    </div>
+  </div>
+
 </div></div>
 
 <!-- MODAL: 곡 상세 -->
@@ -429,6 +476,7 @@ function switchAdminTab(sub){
   if(el) el.classList.remove('hidden');
 
   if(sub === 'memberHandbook') loadHandbook(); // 탭 클릭 시 명부 로드
+  if(sub === 'attendance') loadAttendance();
   // 기존 코드들...
 }
 function updateAdminTabs(){
@@ -1467,6 +1515,184 @@ function showGuide(){
   renderSlide();
   document.body.appendChild(ov);
 }
+// ==================== 출석체크 ====================
+var attData={};
+var attPartFilter='all';
+var attMembers=[];
+
+function switchAttTab(tab){
+  ['attCheck','attStats','attHistory'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
+  document.querySelectorAll('[data-att]').forEach(function(el){el.classList.toggle('on',el.dataset.att===tab)});
+  if(tab==='check')document.getElementById('attCheck').classList.remove('hidden');
+  if(tab==='stats'){document.getElementById('attStats').classList.remove('hidden');initAttStatDates()}
+  if(tab==='history'){document.getElementById('attHistory').classList.remove('hidden');populateAttMemSel()}
+}
+
+function loadAttMembers(callback){
+  db.collection('members').orderBy('name').get().then(function(snap){
+    attMembers=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.status==='active')attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
+    });
+    if(callback)callback();
+  });
+}
+
+function loadAttendance(){
+  var date=document.getElementById('attDate').value;
+  if(!date)return;
+  loadAttMembers(function(){
+    var parts=['all','임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var pf=document.getElementById('attPartFilter');
+    pf.innerHTML=parts.map(function(p){
+      return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
+    }).join('');
+    db.collection('attendance').doc(date).get().then(function(doc){
+      if(doc.exists&&doc.data().records){attData=doc.data().records}else{attData={}}
+      renderAttList();
+    }).catch(function(){attData={};renderAttList()});
+  });
+}
+
+function setAttPartFilter(p){
+  attPartFilter=p;
+  document.querySelectorAll('#attPartFilter .day-chip').forEach(function(el){el.classList.toggle('on',el.textContent===(p==='all'?'전체':p))});
+  renderAttList();
+}
+
+function renderAttList(){
+  var c=document.getElementById('attList');
+  var members=attMembers.slice();
+  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter});
+  members.sort(function(a,b){
+    var po=['임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var diff=po.indexOf(a.part)-po.indexOf(b.part);
+    if(diff!==0)return diff;
+    return a.name.localeCompare(b.name,'ko');
+  });
+  var present=0,late=0,absent=0;
+  members.forEach(function(m){
+    var st=attData[m.id]||'결석';
+    if(st==='출석')present++;else if(st==='지각')late++;else absent++;
+  });
+  document.getElementById('attCount').textContent='출석 '+present+' / 지각 '+late+' / 결석 '+absent+' (총 '+members.length+'명)';
+  if(members.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">해당 파트에 단원이 없습니다</div>';return}
+  c.innerHTML=members.map(function(m){
+    var st=attData[m.id]||'결석';
+    return '<div class="att-row"><span class="att-part-tag">'+m.part+'</span><span class="att-name">'+m.name+'</span><div style="display:flex;gap:4px"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'결석\')">결석</button></div></div>';
+  }).join('');
+}
+
+function setAtt(id,status){attData[id]=status;renderAttList()}
+
+function attCheckAll(status){
+  var members=attMembers.slice();
+  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter});
+  members.forEach(function(m){attData[m.id]=status});
+  renderAttList();
+}
+
+function saveAttendance(){
+  var date=document.getElementById('attDate').value;
+  if(!date)return showToast('날짜를 선택해주세요');
+  db.collection('attendance').doc(date).set({
+    date:date,records:attData,updatedAt:new Date().toISOString(),
+    updatedBy:adminRole==='admin'?'관리자':'총무부'
+  }).then(function(){
+    writeLog('출석 저장',date+' 출석 데이터 저장');
+    showToast('출석이 저장되었습니다!');
+  }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
+}
+
+// ==================== 출석 통계 ====================
+function initAttStatDates(){
+  var now=new Date();var from=new Date(now);from.setMonth(from.getMonth()-3);
+  document.getElementById('attStatFrom').value=from.toISOString().split('T')[0];
+  document.getElementById('attStatTo').value=now.toISOString().split('T')[0];
+}
+
+function loadAttStats(){
+  var from=document.getElementById('attStatFrom').value;
+  var to=document.getElementById('attStatTo').value;
+  if(!from||!to)return showToast('기간을 선택해주세요');
+  loadAttMembers(function(){
+    db.collection('attendance').where('date','>=',from).where('date','<=',to).orderBy('date').get().then(function(snap){
+      var records=[];
+      snap.forEach(function(doc){records.push({date:doc.data().date,records:doc.data().records||{}})});
+      if(records.length===0){
+        document.getElementById('chPartAtt').innerHTML='<div style="font-size:13px;color:var(--ts)">해당 기간 출석 데이터가 없습니다</div>';
+        document.getElementById('chMemAtt').innerHTML='';document.getElementById('chWeekAtt').innerHTML='';return;
+      }
+      var partStats={};
+      attMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
+      records.forEach(function(r){attMembers.forEach(function(m){
+        partStats[m.part].total++;var st=r.records[m.id];
+        if(st==='출석'||st==='지각')partStats[m.part].present++;
+      })});
+      var partData=Object.entries(partStats).map(function(e){
+        return{label:e[0],value:e[1].total>0?Math.round(e[1].present/e[1].total*100):0};
+      }).sort(function(a,b){return b.value-a.value});
+      barChart('chPartAtt',partData,'%');
+
+      var memStats={};
+      attMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
+      records.forEach(function(r){attMembers.forEach(function(m){
+        memStats[m.id].total++;var st=r.records[m.id];
+        if(st==='출석'||st==='지각')memStats[m.id].present++;
+      })});
+      var memData=Object.values(memStats).map(function(m){
+        return{label:m.name+' ('+m.part+')',value:m.total>0?Math.round(m.present/m.total*100):0};
+      }).sort(function(a,b){return a.value-b.value}).slice(0,20);
+      barChart('chMemAtt',memData,'%');
+
+      var weekData=records.map(function(r){
+        var total=0,present=0;
+        attMembers.forEach(function(m){total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
+        return{label:r.date.substring(5),value:total>0?Math.round(present/total*100):0};
+      });
+      barChart('chWeekAtt',weekData,'%');
+    }).catch(function(e){console.error(e);showToast('통계 조회 중 오류 발생')});
+  });
+}
+
+// ==================== 개인 출석 이력 ====================
+function populateAttMemSel(){
+  loadAttMembers(function(){
+    var sel=document.getElementById('attMemSel');
+    sel.innerHTML='<option value="">선택...</option>';
+    var parts=['임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var sorted=attMembers.slice().sort(function(a,b){
+      var diff=parts.indexOf(a.part)-parts.indexOf(b.part);
+      if(diff!==0)return diff;return a.name.localeCompare(b.name,'ko');
+    });
+    sorted.forEach(function(m){sel.innerHTML+='<option value="'+m.id+'">'+m.name+' ('+m.part+')</option>'});
+  });
+}
+
+function loadMemHistory(){
+  var id=document.getElementById('attMemSel').value;
+  if(!id){document.getElementById('attMemInfo').innerHTML='';document.getElementById('attMemList').innerHTML='';return}
+  var mem=attMembers.find(function(m){return m.id===id});
+  if(!mem)return;
+  document.getElementById('attMemInfo').innerHTML='<div style="background:var(--pl);border-radius:12px;padding:16px;margin-bottom:16px"><div style="font-size:18px;font-weight:700">'+mem.name+'</div><div style="font-size:13px;color:var(--ts);margin-top:4px">'+mem.part+(mem.group?' · '+mem.group:'')+(mem.district?' · '+mem.district:'')+'</div>'+(mem.phone?'<div style="font-size:13px;color:var(--ts);margin-top:2px">📞 '+mem.phone+'</div>':'')+'</div>';
+  var from=new Date();from.setMonth(from.getMonth()-6);var fromStr=from.toISOString().split('T')[0];
+  db.collection('attendance').where('date','>=',fromStr).orderBy('date','desc').get().then(function(snap){
+    var total=0,present=0,late=0,absent=0;var rows=[];
+    snap.forEach(function(doc){
+      var r=doc.data().records||{};var st=r[id]||'결석';
+      total++;if(st==='출석')present++;else if(st==='지각')late++;else absent++;
+      var color=st==='출석'?'#22C55E':st==='지각'?'#F59E0B':'#EF4444';
+      rows.push('<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)"><span style="font-size:14px">'+doc.data().date+'</span><span style="font-size:13px;font-weight:700;color:'+color+'">'+st+'</span></div>');
+    });
+    var rate=total>0?Math.round(present/total*100):0;
+    var h='<div class="stat-grid" style="padding:0;margin-bottom:16px"><div class="stat-card"><div class="stat-num">'+rate+'%</div><div class="stat-lbl">출석률</div></div><div class="stat-card"><div class="stat-num" style="color:#22C55E">'+present+'</div><div class="stat-lbl">출석</div></div><div class="stat-card"><div class="stat-num" style="color:#F59E0B">'+late+'</div><div class="stat-lbl">지각</div></div><div class="stat-card"><div class="stat-num" style="color:#EF4444">'+absent+'</div><div class="stat-lbl">결석</div></div></div>';
+    h+='<h4 style="font-size:14px;font-weight:700;margin-bottom:8px">최근 출석 이력 ('+total+'주)</h4>';
+    h+=rows.length>0?rows.join(''):'<div style="font-size:13px;color:var(--ts)">출석 기록이 없습니다</div>';
+    document.getElementById('attMemList').innerHTML=h;
+  }).catch(function(){document.getElementById('attMemList').innerHTML='<div style="font-size:13px;color:var(--ts)">이력을 불러올 수 없습니다</div>'});
+}
+
 showGuide();
   
 // [수정] 클릭 가능한 파트 요약 칩 (필터 기능 연결)
