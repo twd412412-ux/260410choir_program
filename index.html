@@ -222,7 +222,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <select class="form-sel" id="hbPart">
           <option value="">파트 선택 *</option>
           <option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option>
-          <option>지휘</option><option>반주</option><option>임원</option>
+          <option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option><option>명단제외</option>
         </select>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
@@ -409,7 +409,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <label class="form-label">파트 *</label>
       <select class="form-sel" id="editHbPart">
         <option>S1</option><option>S2</option><option>T1</option><option>T2</option>
-        <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option>
+        <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option><option>준단원</option><option>신입단원</option><option>명단제외</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
@@ -1047,32 +1047,28 @@ function renderHandbook(list) {
 // 현재 선택된 파트 필터를 기억하는 변수
 var selectedHbPart = 'all';
 
-// [수정] 텍스트 검색과 파트 클릭 필터를 동시에 적용
+// [수정] 텍스트 검색과 파트 클릭 필터를 동시에 적용 (새 파트 추가)
 function filterHandbook() {
   var q = document.getElementById('handbookSearch').value.toLowerCase();
   
   var filtered = directoryData.filter(function(m) {
-    // 1. 이름/교구/직업 텍스트 검색
     var name = m.name || ""; var dist = m.district || ""; var job = m.job || "";
     var textMatch = name.toLowerCase().includes(q) || dist.toLowerCase().includes(q) || job.toLowerCase().includes(q);
 
-    // 2. 파트 칩 클릭 필터링
     var partMatch = true;
     if (selectedHbPart !== 'all') {
       if (selectedHbPart === '기타') {
-        // 지정된 8개 파트가 아니거나 파트가 비어있는 모든 사람을 찾음
-        var standardParts = ['S1', 'S2', 'T1', 'T2', '지휘', '반주', '관현악', '임원'];
+        // 👇 여기에 신입단원, 준단원, 명단제외를 추가했습니다!
+        var standardParts = ['S1', 'S2', 'T1', 'T2', '지휘', '반주', '관현악', '임원', '준단원', '신입단원', '명단제외'];
         partMatch = !standardParts.includes(m.part || '');
       } else {
         partMatch = m.part === selectedHbPart;
       }
     }
-
     return textMatch && partMatch;
   });
   
-  renderHandbook(filtered);
-}
+  renderHandbook
 
 // [신규] 칩을 클릭했을 때 필터를 적용하는 함수
 function toggleHbPart(part) {
@@ -1128,26 +1124,50 @@ function editHandbookMember(id){
 }
 
 
-function updateHandbookMember(){
-  var id = document.getElementById('editHbId').value;
-  var name = document.getElementById('editHbName').value.trim();
-  var part = document.getElementById('editHbPart').value;
-  if(!name || !part) return showToast('이름과 파트는 필수입니다');
-  var data = {
-    name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
-    birthday: document.getElementById('editHbBirth').value, district: document.getElementById('editHbDist').value.trim(),
-    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim(),
-    group: document.getElementById('editHbGroup').value
-  };
+// [수정] 클릭 가능한 파트 요약 칩 (새 파트 카운터 추가)
+function updatePartSummary() {
+  var container = document.getElementById('handbookPartSummary');
+  if(!container) return;
 
-  db.collection('members').doc(id).update(data).then(function(){
-    showToast(name + '님의 정보가 수정되었습니다');
-    closeModal('modalMemberEdit'); 
-    loadHandbook();
-    writeLog('명부 수정', name + ' 단원 정보 수정');
-  }).catch(function(e){ console.error(e); showToast('수정 중 오류 발생'); });
+  // 👇 여기에 새 파트들의 카운터를 위한 자리를 마련했습니다!
+  var counts = { 'S1': 0, 'S2': 0, 'T1': 0, 'T2': 0, '관현악': 0, '지휘': 0, '반주': 0, '임원': 0, '준단원': 0, '신입단원': 0, '명단제외': 0 };
+  var others = 0;
+
+  directoryData.forEach(function(m) {
+    if(counts[m.part] !== undefined) counts[m.part]++;
+    else others++;
+  });
+
+  var html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">';
+  
+  var allBg = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bg)';
+  var allCol = selectedHbPart === 'all' ? '#fff' : 'var(--ts)';
+  var allBd = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bd)';
+  html += `<span style="background:${allBg}; color:${allCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${allBd}; cursor:pointer;" onclick="toggleHbPart('all')">전체 ${directoryData.length}</span>`;
+
+  Object.keys(counts).forEach(function(k) {
+    var isZero = counts[k] === 0;
+    var isSelected = selectedHbPart === k;
+
+    var bg = isSelected ? 'var(--p)' : (isZero ? 'var(--bg)' : 'var(--pl)');
+    var border = isSelected ? 'var(--p)' : (isZero ? 'var(--bd)' : 'var(--p)');
+    var textCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--pd)');
+    var numCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--p)');
+
+    // 명단제외는 약간 눈에 덜 띄게 회색 톤으로 처리하려면 아래 로직 추가 가능 (현재는 기본 통일)
+    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${border}; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('${k}')">${k} <span style="color:${numCol}; margin-left:2px">${counts[k]}</span></span>`;
+  });
+  
+  if(others > 0) {
+    var isSelected = selectedHbPart === '기타';
+    var bg = isSelected ? 'var(--p)' : 'var(--bd)';
+    var textCol = isSelected ? '#fff' : 'var(--ts)';
+    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('기타')">기타 ${others}</span>`;
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
 }
-
 
 
 function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
