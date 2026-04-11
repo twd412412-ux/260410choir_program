@@ -181,11 +181,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
     <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부/수첩</div>
+    <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 출결부</div>
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
     <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
-    <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 출결부</div>
+
 
   </div>
 
@@ -1600,7 +1601,7 @@ function renderAttList(){
   var members=attMembers.slice();
   if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter});
   members.sort(function(a,b){
-    var po=['임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var po=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var diff=po.indexOf(a.part)-po.indexOf(b.part);
     if(diff!==0)return diff;
     return a.name.localeCompare(b.name,'ko');
@@ -1661,7 +1662,8 @@ function loadAttStats(){
       var partStats={};
       attMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
       records.forEach(function(r){attMembers.forEach(function(m){
-        partStats[m.part].total++;var st=r.records[m.id];
+        var st=r.records[m.id]||'무단결석';
+        partStats[m.part].total++;
         if(st==='출석'||st==='지각')partStats[m.part].present++;
       })});
       var partData=Object.entries(partStats).map(function(e){
@@ -1672,7 +1674,8 @@ function loadAttStats(){
       var memStats={};
       attMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
       records.forEach(function(r){attMembers.forEach(function(m){
-        memStats[m.id].total++;var st=r.records[m.id];
+        var st=r.records[m.id]||'무단결석';
+        memStats[m.id].total++;
         if(st==='출석'||st==='지각')memStats[m.id].present++;
       })});
       var memData=Object.values(memStats).map(function(m){
@@ -1682,7 +1685,7 @@ function loadAttStats(){
 
       var weekData=records.map(function(r){
         var total=0,present=0;
-        attMembers.forEach(function(m){total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
+        attMembers.forEach(function(m){total++;var st=r.records[m.id]||'무단결석';if(st==='출석'||st==='지각')present++});
         return{label:r.date.substring(5),value:total>0?Math.round(present/total*100):0};
       });
       barChart('chWeekAtt',weekData,'%');
@@ -1695,7 +1698,7 @@ function populateAttMemSel(){
   loadAttMembers(function(){
     var sel=document.getElementById('attMemSel');
     sel.innerHTML='<option value="">선택...</option>';
-    var parts=['임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var parts=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var sorted=attMembers.slice().sort(function(a,b){
       var diff=parts.indexOf(a.part)-parts.indexOf(b.part);
       if(diff!==0)return diff;return a.name.localeCompare(b.name,'ko');
