@@ -1846,7 +1846,7 @@ function loadAttMembers(callback){
     attMembers=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      if(d.status==='active')attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',subPart:d.subPart||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
+      if(d.status==='active'&&d.part!=='명단제외')attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',subPart:d.subPart||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
     });
     if(callback)callback();
   });
