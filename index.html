@@ -6,7 +6,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#2563EB">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="./manifest.json">
 <title>광주교회 찬양대</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -307,12 +306,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     </div>
     <div id="attCheck">
       <div class="form-group"><label class="form-label">날짜 선택 *</label><input class="form-input" id="attDate" type="date" onchange="loadAttendance()"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn" id="attSessionAM" style="flex:1;background:var(--p);color:#fff;border:2px solid var(--p)" onclick="setAttSession('오전')">☀️ 오전</button>
+        <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
+      </div>
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts)"></span>
         <div style="display:flex;gap:4px">
           <button class="btn btn-sm" style="background:var(--sc);color:#fff" onclick="attCheckAll('출석')">전체출석</button>
-          <button class="btn btn-sm" style="background:var(--bd);color:var(--ts)" onclick="attCheckAll('결석')">전체결석</button>
+          <button class="btn btn-sm" style="background:var(--bd);color:var(--ts)" onclick="attCheckAll('무단결석')">전체무단</button>
         </div>
       </div>
       <div id="attList"></div>
@@ -1526,14 +1529,13 @@ function exportAttCSV(){
   loadAttMembers(function(){
     db.collection('attendance').orderBy('date').get().then(function(snap){
       if(snap.empty)return showToast('출석 데이터가 없습니다');
-      var dates=[];var allRecords=[];
+      var allRecords=[];
       snap.forEach(function(doc){
         var d=doc.data();
-        dates.push(d.date);
-        allRecords.push({date:d.date,records:d.records||{},reasons:d.reasons||{}});
+        allRecords.push({date:d.date,session:d.session||'오전',records:d.records||{},reasons:d.reasons||{}});
       });
       var hd=['이름','파트'];
-      dates.forEach(function(d){hd.push(d)});
+      allRecords.forEach(function(r){hd.push(r.date+' '+r.session)});
       var csv='\uFEFF'+hd.join(',')+'\n';
       attMembers.forEach(function(m){
         var row=['"'+m.name+'"','"'+m.part+'"'];
@@ -1552,6 +1554,7 @@ function exportAttCSV(){
     }).catch(function(){showToast('출석 데이터를 불러올 수 없습니다')});
   });
 }
+
 
 // ==================== 요일 자동계산 + 일 드롭다운 + 카테고리 ====================
 var DOW_NAMES=['일','월','화','수','목','금','토'];
@@ -1778,6 +1781,27 @@ var attData={};
 var attPartFilter='all';
 var attMembers=[];
 var attReasons={};
+var attSession='오전';
+
+function setAttSession(s){
+  attSession=s;
+  var am=document.getElementById('attSessionAM');
+  var pm=document.getElementById('attSessionPM');
+  if(s==='오전'){
+    am.style.background='var(--p)';am.style.color='#fff';am.style.borderColor='var(--p)';
+    pm.style.background='var(--sf)';pm.style.color='var(--ts)';pm.style.borderColor='var(--bd)';
+  }else{
+    pm.style.background='var(--p)';pm.style.color='#fff';pm.style.borderColor='var(--p)';
+    am.style.background='var(--sf)';am.style.color='var(--ts)';am.style.borderColor='var(--bd)';
+  }
+  loadAttendance();
+}
+
+function getAttDocId(){
+  var date=document.getElementById('attDate').value;
+  if(!date)return null;
+  return date+'_'+attSession;
+}
 
 
 function switchAttTab(tab){
@@ -1800,22 +1824,22 @@ function loadAttMembers(callback){
 }
 
 function loadAttendance(){
-  var date=document.getElementById('attDate').value;
-  if(!date)return;
+  var docId=getAttDocId();
+  if(!docId)return;
   loadAttMembers(function(){
-    var parts=['all','임원','S1','S2','T1','T2','관현악','준단원','신입단원'];
+    var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
     pf.innerHTML=parts.map(function(p){
       return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
     }).join('');
-    db.collection('attendance').doc(date).get().then(function(doc){
+    db.collection('attendance').doc(docId).get().then(function(doc){
       if(doc.exists&&doc.data().records){attData=doc.data().records}else{attData={}}
       if(doc.exists&&doc.data().reasons){attReasons=doc.data().reasons}else{attReasons={}}
       renderAttList();
-
-    }).catch(function(){attData={};renderAttList()});
+    }).catch(function(){attData={};attReasons={};renderAttList()});
   });
 }
+
 
 function setAttPartFilter(p){
   attPartFilter=p;
@@ -1872,17 +1896,18 @@ function attCheckAll(status){
 }
 
 function saveAttendance(){
+  var docId=getAttDocId();
+  if(!docId)return showToast('날짜를 선택해주세요');
   var date=document.getElementById('attDate').value;
-  if(!date)return showToast('날짜를 선택해주세요');
-  db.collection('attendance').doc(date).set({
-    date:date,records:attData,reasons:attReasons,updatedAt:new Date().toISOString(),
+  db.collection('attendance').doc(docId).set({
+    date:date,session:attSession,records:attData,reasons:attReasons,updatedAt:new Date().toISOString(),
     updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')
   }).then(function(){
-
-    writeLog('출석 저장',date+' 출석 데이터 저장');
-    showToast('출석이 저장되었습니다!');
+    writeLog('출석 저장',date+' '+attSession+' 출석 데이터 저장');
+    showToast(date+' '+attSession+' 출석이 저장되었습니다!');
   }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
 }
+
 
 // ==================== 출석 통계 ====================
 function initAttStatDates(){
@@ -1898,7 +1923,10 @@ function loadAttStats(){
   loadAttMembers(function(){
     db.collection('attendance').where('date','>=',from).where('date','<=',to).orderBy('date').get().then(function(snap){
       var records=[];
-      snap.forEach(function(doc){records.push({date:doc.data().date,records:doc.data().records||{}})});
+      snap.forEach(function(doc){
+        var d=doc.data();
+        records.push({date:d.date,session:d.session||'오전',records:d.records||{}});
+      });
       if(records.length===0){
         document.getElementById('chPartAtt').innerHTML='<div style="font-size:13px;color:var(--ts)">해당 기간 출석 데이터가 없습니다</div>';
         document.getElementById('chMemAtt').innerHTML='';document.getElementById('chWeekAtt').innerHTML='';return;
@@ -1928,14 +1956,17 @@ function loadAttStats(){
       barChart('chMemAtt',memData,'%');
 
       var weekData=records.map(function(r){
-        var total=0,present=0;
-        attMembers.forEach(function(m){total++;var st=r.records[m.id]||'무단결석';if(st==='출석'||st==='지각')present++});
-        return{label:r.date.substring(5),value:total>0?Math.round(present/total*100):0};
+        return{label:r.date.substring(5)+' '+r.session,value:(function(){
+          var total=0,present=0;
+          attMembers.forEach(function(m){total++;var st=r.records[m.id]||'무단결석';if(st==='출석'||st==='지각')present++});
+          return total>0?Math.round(present/total*100):0;
+        })()};
       });
       barChart('chWeekAtt',weekData,'%');
     }).catch(function(e){console.error(e);showToast('통계 조회 중 오류 발생')});
   });
 }
+
 
 // ==================== 개인 출석 이력 ====================
 function populateAttMemSel(){
@@ -1961,45 +1992,41 @@ function loadMemHistory(){
   db.collection('attendance').where('date','>=',fromStr).orderBy('date','desc').get().then(function(snap){
     var total=0,present=0,late=0,excused=0,absent=0;var rows=[];
     snap.forEach(function(doc){
-      var r=doc.data().records||{};var st=r[id]||'무단결석';
+      var d=doc.data();var r=d.records||{};var st=r[id]||'무단결석';var session=d.session||'오전';
       total++;if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else absent++;
       var color=st==='출석'?'#22C55E':st==='지각'?'#F59E0B':st==='사유결석'?'#8B5CF6':'#EF4444';
-      var reasonNote=(st==='사유결석'&&doc.data().reasons&&doc.data().reasons[id])?' — '+doc.data().reasons[id]:'';
-      rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px">'+doc.data().date+'</span><span style="font-size:13px;font-weight:700;color:'+color+'">'+st+'</span></div>'+(reasonNote?'<div style="font-size:11px;color:#8B5CF6;margin-top:2px">📝'+reasonNote+'</div>':'')+'</div>');
+      var reasonNote=(st==='사유결석'&&d.reasons&&d.reasons[id])?' — '+d.reasons[id]:'';
+      var sessionTag=session==='오후'?' <span style="font-size:11px;background:#7C3AED;color:#fff;padding:1px 6px;border-radius:6px">오후</span>':' <span style="font-size:11px;background:var(--p);color:#fff;padding:1px 6px;border-radius:6px">오전</span>';
+      rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px">'+d.date+sessionTag+'</span><span style="font-size:13px;font-weight:700;color:'+color+'">'+st+'</span></div>'+(reasonNote?'<div style="font-size:11px;color:#8B5CF6;margin-top:2px">사유: '+reasonNote+'</div>':'')+'</div>');
     });
     var rate=total>0?Math.round(present/total*100):0;
     var h='<div class="stat-grid" style="padding:0;margin-bottom:16px"><div class="stat-card"><div class="stat-num">'+rate+'%</div><div class="stat-lbl">출석률</div></div><div class="stat-card"><div class="stat-num" style="color:#22C55E">'+present+'</div><div class="stat-lbl">출석</div></div><div class="stat-card"><div class="stat-num" style="color:#F59E0B">'+late+'</div><div class="stat-lbl">지각</div></div><div class="stat-card"><div class="stat-num" style="color:#8B5CF6">'+excused+'</div><div class="stat-lbl">사유결석</div></div><div class="stat-card"><div class="stat-num" style="color:#EF4444">'+absent+'</div><div class="stat-lbl">무단결석</div></div></div>';
-    h+='<h4 style="font-size:14px;font-weight:700;margin-bottom:8px">최근 출석 이력 ('+total+'주)</h4>';
+    h+='<h4 style="font-size:14px;font-weight:700;margin-bottom:8px">최근 출석 이력 ('+total+'회)</h4>';
     h+=rows.length>0?rows.join(''):'<div style="font-size:13px;color:var(--ts)">출석 기록이 없습니다</div>';
     document.getElementById('attMemList').innerHTML=h;
   }).catch(function(){document.getElementById('attMemList').innerHTML='<div style="font-size:13px;color:var(--ts)">이력을 불러올 수 없습니다</div>'});
 }
 
 
+
 showGuide();
   
 // [신규] 잘못 만든 날짜의 출석 기록을 통째로 날려버리는 기능
 function deleteAttendance(){
-  var date = document.getElementById('attDate').value;
-  if(!date) return showToast('날짜를 먼저 선택해주세요');
-  if(!confirm(date + ' 출석 기록을 완전히 삭제할까요?\n(통계에서 깔끔하게 사라집니다)')) return;
-
-  db.collection('attendance').doc(date).delete().then(function(){
-    showToast('해당 날짜의 기록이 삭제되었습니다!');
-    
-    // 화면 완전 초기화 (실수 방지)
-    document.getElementById('attDate').value = '';
-    attData = {};
-    attReasons = {};
-    document.getElementById('attList').innerHTML = '';
-    document.getElementById('attCount').textContent = '';
-    
-    writeLog('출석 삭제', date + ' 기록 통째로 삭제됨');
-  }).catch(function(e){
-    console.error(e);
-    showToast('삭제 중 오류가 발생했습니다');
-  });
+  var docId=getAttDocId();
+  if(!docId)return showToast('날짜를 먼저 선택해주세요');
+  var date=document.getElementById('attDate').value;
+  if(!confirm(date+' '+attSession+' 출석 기록을 완전히 삭제할까요?'))return;
+  db.collection('attendance').doc(docId).delete().then(function(){
+    showToast(date+' '+attSession+' 기록이 삭제되었습니다!');
+    document.getElementById('attDate').value='';
+    attData={};attReasons={};
+    document.getElementById('attList').innerHTML='';
+    document.getElementById('attCount').textContent='';
+    writeLog('출석 삭제',date+' '+attSession+' 기록 삭제됨');
+  }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
 }
+
 // [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
 function uploadPhotoAndResize(fileInputId, urlInputId) {
   var fileInput = document.getElementById(fileInputId);
