@@ -597,7 +597,6 @@ function loginUser(){
 
     if(data.role==='attendance'){
       adminRole='attendance';
-      document.body.classList.add('chongmu-mode');
       document.getElementById('navAdmin').classList.remove('hidden');
       document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
@@ -618,8 +617,31 @@ function updateUserBar(){
   if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+currentUser.part+')'}
   else{bar.classList.add('hidden')}
 }
-function restoreUser(){var s=localStorage.getItem('choir_user');if(s){try{currentUser=JSON.parse(s);updateUserBar()}catch(e){}}}
+// [수정됨] 앱을 다시 켰을 때, 이름뿐만 아니라 '권한(하단 탭)'까지 완벽하게 기억해내는 기능
+function restoreUser() {
+  var s = localStorage.getItem('choir_user');
+  if (s) {
+    try {
+      currentUser = JSON.parse(s);
+      updateUserBar();
 
+      // 👇 이 아래 부분(권한 검사 및 탭 복구)이 추가되었습니다!
+      if (currentUser.role === 'attendance') {
+        adminRole = 'attendance';
+        document.getElementById('navAdmin').classList.remove('hidden');
+        document.getElementById('btnLock').textContent = '🔓';
+      } else if (currentUser.role === 'chongmu') {
+        adminRole = 'chongmu';
+        document.body.classList.add('chongmu-mode');
+        document.getElementById('navAdmin').classList.remove('hidden');
+        document.getElementById('navStats').classList.remove('hidden');
+        document.getElementById('btnLock').textContent = '🔓';
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
 function syncFav(){
   localStorage.setItem('choir_fav',JSON.stringify(favorites));
   // 💡 즐겨찾기도 'accounts' 방에 동기화합니다!
@@ -782,7 +804,7 @@ function openDetail(id){
   localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
 
   document.getElementById('detailTitle').textContent=song.songName;
-  document.getElementById('detailAdmin').style.display=adminRole?'flex':'none';
+  document.getElementById('detailAdmin').style.display=(adminRole==='admin' || adminRole==='chongmu') ? 'flex' : 'none';
   document.getElementById('detailDelBtn').style.display=adminRole==='admin'?'':'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
@@ -877,7 +899,12 @@ function openEdit(id){
 function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
 function saveEdit(){
   if(!currentDetailSong)return;
+  
+  // 👇 최고 관리자와 총무부가 아니면 아예 저장을 막고 튕겨냅니다!
+  if(adminRole !== 'admin' && adminRole !== 'chongmu') return showToast('곡을 수정할 권한이 없습니다.'); 
+  
   var cat=getCatValue('edit');
+  
   var yt=document.getElementById('editYoutube').value.trim();
   var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim(),youtube:yt};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
