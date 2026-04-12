@@ -1785,6 +1785,8 @@ var attData={};
 var attPartFilter='all';
 var attMembers=[];
 var attReasons={};
+var attAmData=null;
+var attPmData=null;
 var attSession='오전';
 
 function setAttSession(s){
@@ -1830,19 +1832,31 @@ function loadAttMembers(callback){
 function loadAttendance(){
   var docId=getAttDocId();
   if(!docId)return;
+  var date=document.getElementById('attDate').value;
   loadAttMembers(function(){
     var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
     pf.innerHTML=parts.map(function(p){
       return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
     }).join('');
-    db.collection('attendance').doc(docId).get().then(function(doc){
-      if(doc.exists&&doc.data().records){attData=doc.data().records}else{attData={}}
-      if(doc.exists&&doc.data().reasons){attReasons=doc.data().reasons}else{attReasons={}}
+    Promise.all([
+      db.collection('attendance').doc(date+'_오전').get(),
+      db.collection('attendance').doc(date+'_오후').get()
+    ]).then(function(res){
+      attAmData=res[0].exists?res[0].data():null;
+      attPmData=res[1].exists?res[1].data():null;
+      if(attSession==='오전'){
+        attData=attAmData?attAmData.records||{}:{};
+        attReasons=attAmData?attAmData.reasons||{}:{};
+      }else{
+        attData=attPmData?attPmData.records||{}:{};
+        attReasons=attPmData?attPmData.reasons||{}:{};
+      }
       renderAttList();
-    }).catch(function(){attData={};attReasons={};renderAttList()});
+    }).catch(function(){attData={};attReasons={};attAmData=null;attPmData=null;renderAttList()});
   });
 }
+
 
 
 function setAttPartFilter(p){
@@ -1872,8 +1886,14 @@ function renderAttList(){
   c.innerHTML=members.map(function(m){
     var st=attData[m.id]||'무단결석';
     var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<span style="font-size:10px;color:#8B5CF6;margin-right:4px">사유: '+attReasons[m.id]+'</span>':'';
-    return '<div class="att-row"><span class="att-part-tag">'+m.part+'</span><span class="att-name">'+m.name+'</span>'+reasonText+'<div style="display:flex;gap:3px;flex-wrap:wrap"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
+    var amSt=attAmData&&attAmData.records&&attAmData.records[m.id];
+    var pmSt=attPmData&&attPmData.records&&attPmData.records[m.id];
+    var amBadge=amSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:4px">오전✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:4px">오전✖</span>';
+    var pmBadge=pmSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:2px">오후✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:2px">오후✖</span>';
+    var statusBar=amBadge+'<span style="font-size:9px;color:var(--bd);margin:0 2px">|</span>'+pmBadge;
+    return '<div class="att-row"><span class="att-part-tag">'+m.part+'</span><span class="att-name">'+m.name+' '+statusBar+'</span>'+reasonText+'<div style="display:flex;gap:3px;flex-wrap:wrap"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
   }).join('');
+
 
 }
 
