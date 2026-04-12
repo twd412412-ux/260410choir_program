@@ -486,7 +486,7 @@ function switchTab(tab){
   if(tab==='favorites')renderFav();
   if(tab==='calendar')renderCal();
   if(tab==='stats')renderStats();
-  if(tab==='admin'){loadMembers();loadLogs();loadSchAdmin();updateAdminTabs()}
+  if(tab==='admin'){loadMembers();loadLogs();loadSchAdmin();updateAdminTabs();showFirstAdminTab()}
 }
 function switchAdminTab(sub){
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
@@ -513,6 +513,14 @@ function updateAdminTabs(){
       t.style.display='';
     }
   });
+}
+function showFirstAdminTab(){
+  var tabs=document.getElementById('adminTabRow');if(!tabs)return;
+  var firstVisible=null;
+  tabs.querySelectorAll('[data-at]').forEach(function(t){
+    if(t.style.display!=='none'&&!firstVisible)firstVisible=t.dataset.at;
+  });
+  if(firstVisible)switchAdminTab(firstVisible);
 }
 
 
@@ -1124,6 +1132,26 @@ function editHandbookMember(id){
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
   openModal('modalMemberEdit');
+}
+function updateHandbookMember(){
+  var id = document.getElementById('editHbId').value;
+  var name = document.getElementById('editHbName').value.trim();
+  var part = document.getElementById('editHbPart').value;
+  if(!id) return showToast('수정할 단원을 찾을 수 없습니다');
+  if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  var data = {
+    name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
+    birthday: document.getElementById('editHbBirth').value||'', district: document.getElementById('editHbDist').value.trim(),
+    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim(),
+    group: document.getElementById('editHbGroup').value||''
+  };
+  showToast('저장 중...');
+  db.collection('members').doc(id).update(data).then(function(){
+    showToast(name + '님의 정보가 수정되었습니다');
+    closeModal('modalMemberEdit');
+    loadHandbook();
+    writeLog('명부 수정', name + ' 단원 정보 수정');
+  }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
 
