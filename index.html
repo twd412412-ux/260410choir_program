@@ -1191,6 +1191,16 @@ function editHandbookMember(id){
   // 👇 수정 창을 열 때 기존 사진 URL을 칸에 채워줍니다!
   if(document.getElementById('editHbPhotoUrl')) {
     document.getElementById('editHbPhotoUrl').value = m.photo || '';
+    
+    // 👇 창 열 때 기존 사진이 있으면 띄워주기
+    var previewImg = document.getElementById('editHbPhotoPreview');
+    if (m.photo) {
+      previewImg.src = m.photo;
+      previewImg.style.display = 'block';
+    } else {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+    }
   }
   
   openModal('modalMemberEdit');
