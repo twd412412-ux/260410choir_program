@@ -11,6 +11,7 @@
 <title>광주교회 찬양대</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
 :root{--p:#2563EB;--pd:#1D4ED8;--pl:#DBEAFE;--bg:#F0F7FF;--sf:#FFFFFF;--tx:#1E293B;--ts:#64748B;--bd:#E2E8F0;--dg:#EF4444;--sc:#22C55E;--wn:#F59E0B;--sh:0 1px 3px rgba(0,0,0,.1);--r:12px}
 .dark{--p:#60A5FA;--pd:#3B82F6;--pl:#1E3A5F;--bg:#0F172A;--sf:#1E293B;--tx:#F1F5F9;--ts:#94A3B8;--bd:#334155;--sh:0 1px 3px rgba(0,0,0,.3)}
@@ -234,6 +235,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <input class="form-input" id="hbArea" placeholder="구역">
         <input class="form-input" id="hbJob" placeholder="직업">
       </div>
+      <div class="form-group">
+        <label class="form-label">프로필 사진</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="photoInput" accept="image/*" style="font-size:13px; flex:1">
+          <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="uploadPhotoAndResize()">사진 업로드</button>
+        </div>
+        <input class="form-input hidden" id="photoUrlInput" readonly placeholder="업로드하면 URL이 자동으로 입력됩니다">
+      </div>
       <button class="btn btn-p btn-bl" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
     </div>
   
@@ -422,7 +431,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
       <div class="form-group"><label class="form-label">회별</label><select class="form-sel" id="editHbGroup"><option value="">선택</option><option>어머니회</option><option>봉사회</option><option>청년회</option><option>대학회</option></select></div>
     </div>
-
+    <div class="form-group">
+      <label class="form-label">프로필 사진</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="photoInput" accept="image/*" style="font-size:13px; flex:1">
+        <button class="btn btn-sm" style="background:var(--pl); color:var(--pd)" onclick="uploadPhotoAndResize()">사진 업로드</button>
+      </div>
+      <input class="form-input hidden" id="photoUrlInput" readonly placeholder="업로드하면 URL이 자동으로 입력됩니다">
+    </div>
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
   </div>
 </div>
@@ -447,7 +463,7 @@ firebase.initializeApp({
   appId:"1:493401753336:web:5c69b98f1b5445e3099d0d"
 });
 var db = firebase.firestore();
-
+var storage = firebase.storage();
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='songs';
 var adminRole=null;
@@ -1119,8 +1135,11 @@ function addHandbookMember(){
   var name = document.getElementById('hbName').value.trim();
   var part = document.getElementById('hbPart').value;
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  
+  // 👇 photo 항목이 추가되었습니다!
   var data = {
     name: name, part: part,
+    photo: document.getElementById('hbPhotoUrl') ? document.getElementById('hbPhotoUrl').value.trim() : '',
     phone: document.getElementById('hbPhone').value.trim(),
     birthday: document.getElementById('hbBirth').value,
     district: document.getElementById('hbDist').value.trim(),
@@ -1128,12 +1147,13 @@ function addHandbookMember(){
     job: document.getElementById('hbJob').value.trim(),
     status: 'active', createdAt: new Date().toISOString()
   };
-  db.collection('members').add(data).then(function(){ // (또는 handbook 방)
+  
+  db.collection('members').add(data).then(function(){ 
     showToast(name + '님 명부 등록 완료');
     ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('hbPart').selectedIndex = 0;
+    if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
     loadHandbook();
-    // 👇 활동 로그 추가
     writeLog('명부 추가', name + ' 단원 신규 등록');
   });
 }
@@ -1158,6 +1178,12 @@ function editHandbookMember(id){
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
+  
+  // 👇 수정 창을 열 때 기존 사진 URL을 칸에 채워줍니다!
+  if(document.getElementById('editHbPhotoUrl')) {
+    document.getElementById('editHbPhotoUrl').value = m.photo || '';
+  }
+  
   openModal('modalMemberEdit');
 }
 function updateHandbookMember(){
@@ -1166,12 +1192,19 @@ function updateHandbookMember(){
   var part = document.getElementById('editHbPart').value;
   if(!id) return showToast('수정할 단원을 찾을 수 없습니다');
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  
+  // 👇 photo 항목이 추가되었습니다!
   var data = {
-    name: name, part: part, phone: document.getElementById('editHbPhone').value.trim(),
-    birthday: document.getElementById('editHbBirth').value||'', district: document.getElementById('editHbDist').value.trim(),
-    area: document.getElementById('editHbArea').value.trim(), job: document.getElementById('editHbJob').value.trim(),
+    name: name, part: part, 
+    photo: document.getElementById('editHbPhotoUrl') ? document.getElementById('editHbPhotoUrl').value.trim() : '',
+    phone: document.getElementById('editHbPhone').value.trim(),
+    birthday: document.getElementById('editHbBirth').value||'', 
+    district: document.getElementById('editHbDist').value.trim(),
+    area: document.getElementById('editHbArea').value.trim(), 
+    job: document.getElementById('editHbJob').value.trim(),
     group: document.getElementById('editHbGroup').value||''
   };
+  
   showToast('저장 중...');
   db.collection('members').doc(id).update(data).then(function(){
     showToast(name + '님의 정보가 수정되었습니다');
@@ -1180,7 +1213,6 @@ function updateHandbookMember(){
     writeLog('명부 수정', name + ' 단원 정보 수정');
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
-
 
 // [수정] 클릭 가능한 파트 요약 칩 (새 파트 카운터 추가)
 function updatePartSummary() {
@@ -1939,6 +1971,57 @@ function deleteAttendance(){
     console.error(e);
     showToast('삭제 중 오류가 발생했습니다');
   });
+}
+  // [신규] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수 (신규/수정 공용)
+function uploadPhotoAndResize(fileInputId, urlInputId) {
+  var fileInput = document.getElementById(fileInputId);
+  if (!fileInput.files || fileInput.files.length === 0) {
+    return showToast('먼저 앨범에서 사진을 선택해주세요!');
+  }
+
+  var file = fileInput.files[0];
+  showToast('사진을 압축하며 업로드 중입니다... ⏳');
+
+  var reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = function(event) {
+    var img = new Image();
+    img.src = event.target.result;
+    
+    img.onload = function() {
+      // 가로 300px 크기로 압축
+      var canvas = document.createElement('canvas');
+      var MAX_WIDTH = 300; 
+      var scaleSize = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scaleSize;
+
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // 압축된 이미지 뽑아내기
+      canvas.toBlob(function(blob) {
+        // Firebase Storage에 업로드
+        var fileName = 'profiles/' + Date.now() + '_' + file.name;
+        var uploadTask = storage.ref().child(fileName).put(blob);
+
+        uploadTask.then(function(snapshot) {
+          snapshot.ref.getDownloadURL().then(function(downloadURL) {
+            // 해당 화면의 URL 입력칸에 주소 쏙 집어넣기!
+            var urlInput = document.getElementById(urlInputId);
+            if (urlInput) {
+              urlInput.value = downloadURL;
+              urlInput.classList.remove('hidden'); // 만약 숨겨져 있었다면 보이게
+            }
+            showToast('✅ 사진 업로드 완료!');
+          });
+        }).catch(function(error) {
+          console.error(error);
+          showToast('업로드 실패. 다시 시도해주세요.');
+        });
+      }, 'image/jpeg', 0.8);
+    }
+  };
 }
 </script>
 </body>
