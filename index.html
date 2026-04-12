@@ -1991,7 +1991,7 @@ function deleteAttendance(){
     showToast('삭제 중 오류가 발생했습니다');
   });
 }
-  // [신규] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수 (신규/수정 공용)
+// [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
 function uploadPhotoAndResize(fileInputId, urlInputId) {
   var fileInput = document.getElementById(fileInputId);
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -1999,7 +1999,7 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
   }
 
   var file = fileInput.files[0];
-  showToast('사진을 압축하며 업로드 중입니다... ⏳');
+  showToast('🚀 사진을 압축하며 업로드 중입니다... (최대 5초 대기)');
 
   var reader = new FileReader();
   reader.readAsDataURL(file);
@@ -2025,25 +2025,32 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
         var uploadTask = storage.ref().child(fileName).put(blob);
 
         uploadTask.then(function(snapshot) {
+          // 💡 여기서 주소를 받아옵니다!
           snapshot.ref.getDownloadURL().then(function(downloadURL) {
-            // 해당 화면의 URL 입력칸에 주소 쏙 집어넣기!
+            
             var urlInput = document.getElementById(urlInputId);
             if (urlInput) {
-              urlInput.value = downloadURL;
-              urlInput.classList.remove('hidden'); // 만약 숨겨져 있었다면 보이게
+              urlInput.value = downloadURL; // 빈칸에 주소 강제 주입!
+              urlInput.classList.remove('hidden'); 
               
-              // 👇 업로드 직후 화면에 사진 띄우기
               var previewImg = document.getElementById(urlInputId === 'hbPhotoUrl' ? 'hbPhotoPreview' : 'editHbPhotoPreview');
               if(previewImg) {
                 previewImg.src = downloadURL;
                 previewImg.style.display = 'block';
               }
             }
-            showToast('✅ 사진 업로드 완료!');
+            showToast('✅ 사진 업로드 완료! (저장하기를 눌러주세요)');
+            
+          }).catch(function(err) {
+            // 주소를 받아오지 못했을 때 뜨는 에러
+            console.error(err);
+            showToast('❌ 주소 가져오기 실패: ' + err.message);
           });
+          
         }).catch(function(error) {
+          // 업로드 자체가 실패했을 때 뜨는 에러
           console.error(error);
-          showToast('업로드 실패. 다시 시도해주세요.');
+          showToast('❌ 업로드 실패: ' + error.message);
         });
       }, 'image/jpeg', 0.8);
     }
