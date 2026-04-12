@@ -437,10 +437,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div class="form-group"><label class="form-label">교구</label><input class="form-input" id="editHbDist"></div>
       <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="editHbArea"></div>
     </div>
+    
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
       <div class="form-group"><label class="form-label">직업</label><input class="form-input" id="editHbJob"></div>
       <div class="form-group"><label class="form-label">회별</label><select class="form-sel" id="editHbGroup"><option value="">선택</option><option>어머니회</option><option>봉사회</option><option>청년회</option><option>대학회</option></select></div>
     </div>
+    <div class="form-group">
+      <label class="form-label">겸직</label>
+      <select class="form-sel" id="editHbSub">
+        <option value="">없음</option>
+        <option value="임원">임원</option>
+        <option value="지휘">지휘</option>
+        <option value="반주">반주</option>
+        <option value="준단원">준단원</option>
+        <option value="신입단원">신입단원</option>
+      </select>
+      <div style="font-size:11px;color:var(--ts);margin-top:4px">예: 파트 T2 + 겸직 임원 → T2 · 임원</div>
+    </div>
+
+    
     <div class="form-group" style="margin-top:8px;">
       <label class="form-label" style="font-size:12px; color:var(--p)">📷 프로필 사진 수정</label>
       <div style="text-align:center; margin-bottom:10px;"><img id="editHbPhotoPreview" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--bd); margin:0 auto;"></div>
@@ -1098,7 +1113,8 @@ function renderHandbook(list) {
         <div style="display:flex; justify-content:space-between; align-items:flex-start">
           <div style="display:flex; align-items:center;">
             ${photoHtml} <div>
-              <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}</span>${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
+              <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}${m.subPart?' · '+m.subPart:''}</span>
+${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
               <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 미등록'}</div>
             </div>
           </div>
@@ -1135,8 +1151,9 @@ function filterHandbook() {
         var standardParts = ['S1', 'S2', 'T1', 'T2', '지휘', '반주', '관현악', '임원', '준단원', '신입단원', '명단제외'];
         partMatch = !standardParts.includes(m.part || '');
       } else {
-        partMatch = m.part === selectedHbPart;
+        partMatch = m.part === selectedHbPart || m.subPart === selectedHbPart;
       }
+
     }
     return textMatch && partMatch;
   });
@@ -1203,6 +1220,8 @@ function editHandbookMember(id){
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
+  document.getElementById('editHbSub').value = m.subPart || '';
+
   
   // 👇 수정 창을 열 때 기존 사진 URL을 칸에 채워줍니다!
   if(document.getElementById('editHbPhotoUrl')) {
@@ -1237,7 +1256,8 @@ function updateHandbookMember(){
     district: document.getElementById('editHbDist').value.trim(),
     area: document.getElementById('editHbArea').value.trim(), 
     job: document.getElementById('editHbJob').value.trim(),
-    group: document.getElementById('editHbGroup').value||''
+    group: document.getElementById('editHbGroup').value||'',
+    subPart: document.getElementById('editHbSub').value||''
   };
   
   showToast('저장 중...');
@@ -1823,7 +1843,7 @@ function loadAttMembers(callback){
     attMembers=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      if(d.status==='active')attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
+      if(d.status==='active')attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',subPart:d.subPart||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
     });
     if(callback)callback();
   });
@@ -1868,7 +1888,7 @@ function setAttPartFilter(p){
 function renderAttList(){
   var c=document.getElementById('attList');
   var members=attMembers.slice();
-  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter});
+  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
   members.sort(function(a,b){
     var po=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var diff=po.indexOf(a.part)-po.indexOf(b.part);
@@ -1883,16 +1903,20 @@ function renderAttList(){
   document.getElementById('attCount').textContent='출석 '+present+' / 지각 '+late+' / 사유 '+excused+' / 무단 '+absent+' (총 '+members.length+'명)';
 
   if(members.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">해당 파트에 단원이 없습니다</div>';return}
+
   c.innerHTML=members.map(function(m){
     var st=attData[m.id]||'무단결석';
     var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<span style="font-size:10px;color:#8B5CF6;margin-right:4px">사유: '+attReasons[m.id]+'</span>':'';
     var amSt=attAmData&&attAmData.records&&attAmData.records[m.id];
     var pmSt=attPmData&&attPmData.records&&attPmData.records[m.id];
-    var amBadge=amSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:4px">오전✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:4px">오전✖</span>';
-    var pmBadge=pmSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:2px">오후✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:2px">오후✖</span>';
+    var amBadge=attAmData?(amSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:4px">오전✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:4px">오전✖</span>'):'<span style="font-size:9px;background:var(--bd);color:var(--ts);padding:1px 5px;border-radius:4px;margin-left:4px">오전 미확인</span>';
+    var pmBadge=attPmData?(pmSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:2px">오후✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:2px">오후✖</span>'):'<span style="font-size:9px;background:var(--bd);color:var(--ts);padding:1px 5px;border-radius:4px;margin-left:2px">오후 미확인</span>';
     var statusBar=amBadge+'<span style="font-size:9px;color:var(--bd);margin:0 2px">|</span>'+pmBadge;
-    return '<div class="att-row"><span class="att-part-tag">'+m.part+'</span><span class="att-name">'+m.name+' '+statusBar+'</span>'+reasonText+'<div style="display:flex;gap:3px;flex-wrap:wrap"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
+    var partLabel=m.part+(m.subPart?' · '+m.subPart:'');
+    return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><span class="att-name">'+m.name+' '+statusBar+'</span>'+reasonText+'<div style="display:flex;gap:3px;flex-wrap:wrap"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
   }).join('');
+
+
 
 
 }
