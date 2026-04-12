@@ -1088,9 +1088,10 @@ function renderHandbook(list) {
     // 👇 사진 HTML 동적 생성 (여기 추가됨)
     // 주소가 진짜로 있을 때만 <img> 태그를 만들고, 
     // 주소가 없거나(null), 비어있으면("") 무조건 👤 아이콘을 보여줍니다.
-    var photoHtml = (m.photo && m.photo.trim() !== "") 
-      ? `<img src="${m.photo}" onclick="viewLargePhoto('${m.photo}')" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\"width:50px; height:50px; border-radius:50%; background:var(--pl); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:12px\">👤</div>';" style="width:50px; height:50px; border-radius:50%; object-fit:cover; margin-right:12px; border:2px solid var(--pl); cursor:pointer;">`
-      : `<div style="width:50px; height:50px; border-radius:50%; background:var(--pl); display:flex; align-items:center; justify-content:center; font-size:24px; margin-right:12px">👤</div>`;
+    var safePhoto = (m.photo && m.photo.trim() !== '') ? m.photo.replace(/'/g, '%27').replace(/"/g, '%22') : '';
+    var photoHtml = safePhoto
+      ? '<img src="' + safePhoto + '" onclick="viewLargePhoto(\'' + safePhoto + '\')" onerror="this.style.display=\'none\'" style="width:50px;height:50px;border-radius:50%;object-fit:cover;margin-right:12px;border:2px solid var(--pl);cursor:pointer;flex-shrink:0">'
+      : '<div style="width:50px;height:50px;border-radius:50%;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:24px;margin-right:12px;flex-shrink:0">👤</div>';
 
     return `
       <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
@@ -1189,6 +1190,9 @@ function deleteHandbookMember(id, name){
   });
 }
 function editHandbookMember(id){
+  document.getElementById('editHbPhotoFile').value = '';
+  var prevPreview = document.getElementById('editHbPhotoPreview');
+  if(prevPreview){prevPreview.src='';prevPreview.style.display='none'}
   var m = directoryData.find(x => x.id === id); if(!m) return;
   document.getElementById('editHbId').value = id;
   document.getElementById('editHbName').value = m.name || '';
