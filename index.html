@@ -90,9 +90,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .log-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
-.bottom-nav{position:fixed;bottom:5px;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:8px 0 calc(env(safe-area-inset-bottom,8px) + 4px);z-index:100}
-.nav-item{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--ts);cursor:pointer;padding:4px 8px;gap:2px}
-.nav-item.active{color:var(--p);font-weight:700}
+.bottom-nav{position:fixed;bottom:5px;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:8px 8px calc(env(safe-area-inset-bottom,8px) + 6px);z-index:100;box-shadow:0 -6px 18px rgba(0,0,0,.06)}
+.nav-item{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--ts);cursor:pointer;padding:8px 6px;gap:3px;border-radius:12px;transition:all .18s ease}
+.nav-item:active{transform:scale(.96);background:var(--pl)}
+.nav-item.active{color:var(--p);font-weight:700;background:var(--pl);box-shadow:inset 0 0 0 1px rgba(37,99,235,.12)}
 .nav-icon{font-size:20px}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:300;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -1898,18 +1899,17 @@ function loadAttMembers(callback){
 }
 
 function loadAttendance(){
-  ensureAttDate();
   var docId=getAttDocId();
   if(!docId)return;
   var date=document.getElementById('attDate').value;
   loadAttMembers(function(){
-    var parts=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
+    var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
     if(adminRole==='attendance'&&currentUser){
       attPartFilter=currentUser.part;
       pf.innerHTML='<div class="day-chip on">'+currentUser.part+'</div>';
     }else{
-      if(attPartFilter==='all')attPartFilter=parts[0];
+      if(!parts.includes(attPartFilter))attPartFilter='all';
       pf.innerHTML=parts.map(function(p){
         return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
       }).join('');
