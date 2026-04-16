@@ -912,7 +912,10 @@ function addNewSong(){
     allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value,10)||null,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();doFilter();
-    writeLog('곡 추가','"'+name+'" 추가됨');
+    // [수정됨] 곡 추가 로그 디테일 강화
+    var logDay = document.getElementById('addDay').value ? '.' + document.getElementById('addDay').value : '';
+    var logPia = document.getElementById('addPia').value || '반주 미정';
+    writeLog('곡 추가', `🎵 [${name}] 등록\n👉 예정일: ${year}.${month}${logDay} | 🎹 반주: ${logPia}`);
     showToast('곡이 추가되었습니다!');
     ['addSongName','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('addYear').selectedIndex=0;
@@ -1204,7 +1207,8 @@ function addHandbookMember(){
     document.getElementById('hbPart').selectedIndex = 0;
     if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
     loadHandbook();
-    writeLog('명부 추가', name + ' 단원 신규 등록');
+    var distInfo = document.getElementById('hbDist').value ? `${document.getElementById('hbDist').value}교구` : '교구 미입력';
+    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part} | 🏠 ${distInfo}`);
   });
 }
 
@@ -1280,7 +1284,7 @@ function updateHandbookMember(){
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit');
     loadHandbook();
-    writeLog('명부 수정', name + ' 단원 정보 수정');
+    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
@@ -1404,7 +1408,9 @@ function addSchedule(){
   db.collection('schedules').add({date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,createdAt:new Date().toISOString()}).then(function(docRef){
     allSchedules.push({id:docRef.id,date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor});
     saveCache('choir_schedules',allSchedules);
-    writeLog('일정 추가','"'+title+'" ('+date+')');showToast('일정 추가 완료');
+    var logTime = document.getElementById('schTime').value ? ` 🕐 ${document.getElementById('schTime').value}` : '';
+    var logLoc = document.getElementById('schLoc').value ? ` | 📍 ${document.getElementById('schLoc').value}` : '';
+    writeLog('일정 추가', `📅 [${title}]\n👉 일시: ${date}${logTime}${logLoc}`);
     ['schDate','schTitle','schTime','schLoc','schSongs','schMemo'].forEach(function(id){document.getElementById(id).value=''});loadSchAdmin();
   });
 }
