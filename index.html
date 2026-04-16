@@ -2041,19 +2041,28 @@ function saveAttendance(){
     }
     return db.collection('attendance').doc(docId).set(saveData);
   }).then(function(){
-    // [업그레이드] 저장된 인원수를 계산해서 로그에 기록
-    var pCnt = 0, aCnt = 0;
-    for(var key in attData){
-       var st = attData[key];
-       if(st === '출석' || st === '지각') pCnt++;
-       else aCnt++;
+    // 현재 선택된 파트 기준으로만 로그 숫자를 계산
+    var scopedMembers = attMembers.slice();
+    if(attPartFilter!=='all'){
+      scopedMembers = scopedMembers.filter(function(m){
+        return m.part===attPartFilter || m.subPart===attPartFilter;
+      });
     }
+  
+    var pCnt = 0, aCnt = 0;
+    scopedMembers.forEach(function(m){
+      var st = attData[m.id] || '';
+      if(st === '출석' || st === '지각') pCnt++;
+      else if(st === '사유결석' || st === '무단결석') aCnt++;
+    });
+  
     var partLabel = (attPartFilter === 'all' ? '전체' : attPartFilter);
     var detailMsg = `${date} ${attSession} [${partLabel}] 업데이트 완료\n👉 출석/지각: ${pCnt}명 | 결석/기타: ${aCnt}명`;
-    
+  
     writeLog('출석 저장', detailMsg);
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
   }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
+
 }
 
 
