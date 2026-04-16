@@ -552,6 +552,8 @@ function updateAdminTabs(){
     var k=t.dataset.at;
     if(adminRole==='attendance'){
       t.style.display=(k==='attendance') ? '' : 'none';
+    }else if(adminRole==='songschedule'){
+      t.style.display=(k==='addSong' || k==='schedule') ? '' : 'none';
     }else if(adminRole==='chongmu'){
       t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook' || k==='attendance') ? '' : 'none';
     }else{
@@ -559,6 +561,7 @@ function updateAdminTabs(){
     }
   });
 }
+
 function showFirstAdminTab(){
   var tabs=document.getElementById('adminTabRow');if(!tabs)return;
   var firstVisible=null;
@@ -652,6 +655,11 @@ function loginUser(){
       document.getElementById('navStats').classList.remove('hidden');
       document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
+    }else if(data.role==='songschedule'){
+      adminRole='songschedule';
+      document.getElementById('navAdmin').classList.remove('hidden');
+      document.getElementById('btnLock').textContent='🔓';
+      updateAdminTabs();
     }
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
@@ -680,6 +688,10 @@ function restoreUser() {
         document.body.classList.add('chongmu-mode');
         document.getElementById('navAdmin').classList.remove('hidden');
         document.getElementById('navStats').classList.remove('hidden');
+        document.getElementById('btnLock').textContent = '🔓';
+      } else if (currentUser.role === 'songschedule') {
+        adminRole = 'songschedule';
+        document.getElementById('navAdmin').classList.remove('hidden');
         document.getElementById('btnLock').textContent = '🔓';
       }
     } catch (e) {
@@ -1068,21 +1080,23 @@ function resetPin(id,name){
   });
 }
 function changeRole(id,name,currentRole){
-  var msg=name+'님 현재 권한: '+(currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':'없음')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)';
+  var msg=name+'님 현재 권한: '+(currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':currentRole==='songschedule'?'곡+일정':'없음')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)\n3 = 곡+일정 (곡추가+일정만)';
   var input=prompt(msg);
   if(input===null)return;
   var role='';
   if(input==='1')role='attendance';
   else if(input==='2')role='chongmu';
+  else if(input==='3')role='songschedule';
   else if(input==='0')role='';
-  else return showToast('0, 1, 2 중에 입력해주세요');
+  else return showToast('0, 1, 2, 3 중에 입력해주세요');
   db.collection('accounts').doc(id).update({role:role}).then(function(){
-    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':'없음';
+    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':'없음';
     showToast(name+'님 권한: '+label);
     loadMembers();
     writeLog('권한 변경',name+'님 → '+label);
   }).catch(function(){showToast('변경 중 오류 발생')});
 }
+
 
 // ==================== [정리됨] 2. 단원 명부 (행정용 상세 조회) ====================
 var directoryData = []; 
