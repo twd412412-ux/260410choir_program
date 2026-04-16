@@ -1876,11 +1876,18 @@ function loadAttendance(){
   if(!docId)return;
   var date=document.getElementById('attDate').value;
   loadAttMembers(function(){
-    var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
+    var parts=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
-    pf.innerHTML=parts.map(function(p){
-      return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
-    }).join('');
+    if(adminRole==='attendance'&&currentUser){
+      attPartFilter=currentUser.part;
+      pf.innerHTML='<div class="day-chip on">'+currentUser.part+'</div>';
+    }else{
+      if(attPartFilter==='all')attPartFilter=parts[0];
+      pf.innerHTML=parts.map(function(p){
+        return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
+      }).join('');
+    }
+
     Promise.all([
       db.collection('attendance').doc(date+'_오전').get(),
       db.collection('attendance').doc(date+'_오후').get()
@@ -1979,14 +1986,31 @@ function saveAttendance(){
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 선택해주세요');
   var date=document.getElementById('attDate').value;
-  db.collection('attendance').doc(docId).set({
-    date:date,session:attSession,records:attData,reasons:attReasons,updatedAt:new Date().toISOString(),
-    updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')
+  var saveData={date:date,session:attSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
+  db.collection('attendance').doc(docId).get().then(function(doc){
+    var existingRecords=doc.exists&&doc.data().records?doc.data().records:{};
+    var existingReasons=doc.exists&&doc.data().reasons?doc.data().reasons:{};
+    if(adminRole==='admin'||adminRole==='chongmu'){
+      saveData.records=attData;
+      saveData.reasons=attReasons;
+    }else{
+      attMembers.forEach(function(m){
+        if(m.part===attPartFilter||m.subPart===attPartFilter){
+          existingRecords[m.id]=attData[m.id]||'무단결석';
+          if(attReasons[m.id])existingReasons[m.id]=attReasons[m.id];
+          else delete existingReasons[m.id];
+        }
+      });
+      saveData.records=existingRecords;
+      saveData.reasons=existingReasons;
+    }
+    return db.collection('attendance').doc(docId).set(saveData);
   }).then(function(){
-    writeLog('출석 저장',date+' '+attSession+' 출석 데이터 저장');
+    writeLog('출석 저장',date+' '+attSession+' '+attPartFilter+' 출석 저장');
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
   }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
 }
+
 
 
 // ==================== 출석 통계 ====================
