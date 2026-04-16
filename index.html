@@ -2337,6 +2337,225 @@ function removePreviewPhoto() {
   }
   showToast('사진이 지워졌습니다. 아래 [저장하기]를 꼭 누르세요!');
 }
+// ==================== [신규] 월간 결산 보고서 ====================
+function generateReport() {
+  var monthVal = document.getElementById('reportMonthSel').value;
+  if(!monthVal) return showToast('보고서를 생성할 연도와 월을 선택해주세요.');
+  
+  var year = parseInt(monthVal.split('-')[0], 10);
+  var month = parseInt(monthVal.split('-')[1], 10);
+  var prefix = monthVal; // 예: "2026-04"
+  
+  var canvas = document.getElementById('reportCanvas');
+  var printBtn = document.getElementById('btnPrintReport');
+  
+  canvas.style.display = 'block';
+  printBtn.style.display = 'none';
+  canvas.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ts)">데이터를 수집하고 분석하는 중입니다...<br>잠시만 기다려주세요! ⏳</div>';
+  
+  // 1. 해당 월의 곡, 2. 해당 월의 출석, 3. 전체 단원 데이터를 한 번에 가져옵니다.
+  Promise.all([
+    db.collection('songs').where('year', '==', year).where('month', '==', month).get(),
+    db.collection('attendance').where('date', '>=', prefix + '-01').where('date', '<=', prefix + '-31').get(),
+    db.collection('members').get()
+  ]).then(function(res) {
+    
+    // --- 데이터 가공 준비 ---
+    var songs = [];
+    res[0].forEach(doc => songs.push(doc.data()));
+    songs.sort((a, b) => (a.day || 0) - (b.day || 0)); // 날짜순 정렬
+    
+    var attDocs = [];
+    res[1].forEach(doc => attDocs.push(doc.data()));
+    
+    var activeMembers = [];
+    var newMembers = [];
+    var memStats = {}; // 개인별 출석 카운트
+    
+    res[2].forEach(doc => {
+       var d = doc.data();
+       if(d.status === 'active' && d.part !== '명단제외' && !d.noAtt) {
+           activeMembers.push({id: doc.id, name: d.name, part: d.part});
+           memStats[doc.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
+       }
+       // 신규 입단자 추출 (등록일이 이번 달인 사람)
+       if(d.createdAt && d.createdAt.startsWith(prefix) && d.part !== '명단제외') {
+           newMembers.push(d);
+       }
+    });
+
+    // --- 출석 데이터 분석 ---
+    var dateMap = {}; // 날짜별 오전/오후 묶기
+    attDocs.forEach(d => {
+       if(!dateMap[d.date]) dateMap[d.date] = {};
+       if(d.session === '오전') dateMap[d.date].am = d.records || {};
+       if(d.session === '오후') dateMap[d.date].pm = d.records || {};
+    });
+
+    Object.keys(dateMap).forEach(date => {
+       var amRec = dateMap[date].am;
+       var pmRec = dateMap[date].pm;
+       activeMembers.forEach(m => {
+           var amOk = false, pmOk = false;
+           if(amRec) {
+               memStats[m.id].amTotal++;
+               var st = amRec[m.id];
+               if(st==='출석'||st==='지각') { amOk = true; memStats[m.id].amPresent++; }
+           }
+           if(pmRec) {
+               memStats[m.id].pmTotal++;
+               var st = pmRec[m.id];
+               if(st==='출석'||st==='지각') { pmOk = true; memStats[m.id].pmPresent++; }
+           }
+           // 이탈자 (오전 출석, 오후 결석)
+           if(amOk && pmRec && !pmOk) memStats[m.id].drops++;
+       });
+    });
+
+    // --- 파트별 및 전체 통계 계산 ---
+    var partStats = {};
+    var totAmP=0, totAmT=0, totPmP=0, totPmT=0, totDrops=0;
+    var longAbsentees = [];
+    
+    activeMembers.forEach(m => {
+       var s = memStats[m.id];
+       if(!partStats[m.part]) partStats[m.part] = { amP:0, amT:0, pmP:0, pmT:0, drops:0 };
+       
+       partStats[m.part].amP += s.amPresent; partStats[m.part].amT += s.amTotal;
+       partStats[m.part].pmP += s.pmPresent; partStats[m.part].pmT += s.pmTotal;
+       partStats[m.part].drops += s.drops;
+
+       totAmP += s.amPresent; totAmT += s.amTotal;
+       totPmP += s.pmPresent; totPmT += s.pmTotal;
+       totDrops += s.drops;
+
+       // 장기 결석자 (한 번도 안 온 사람)
+       if(s.amTotal > 0 || s.pmTotal > 0) {
+           if(s.amPresent === 0 && s.pmPresent === 0) longAbsentees.push(m);
+       }
+    });
+
+    var amRate = totAmT > 0 ? Math.round((totAmP / totAmT) * 100) : 0;
+    var pmRate = totPmT > 0 ? Math.round((totPmP / totPmT) * 100) : 0;
+    var dropRate = totAmP > 0 ? Math.round((totDrops / totAmP) * 100) : 0;
+
+    // --- 1. 종합 현황 HTML ---
+    var h = `<div style="background:#fff; color:#222; padding:20px; font-family:'Malgun Gothic', sans-serif;">
+      <h2 style="text-align:center; font-size:22px; font-weight:800; border-bottom:3px solid #000; padding-bottom:12px; margin-bottom:20px;">
+        ${year}년 ${month}월 광주교회 찬양대 결산 보고서
+      </h2>
+      
+      <h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:24px; margin-bottom:12px;">📊 1. 종합 현황</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
+        <tr>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">이달의 총인원</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전 평균 출석률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 평균 출석률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 이탈률</th>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700;">${activeMembers.length}명</td>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#16A34A;">${amRate}%</td>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#2563EB;">${pmRate}%</td>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#D97706;">${dropRate}%</td>
+        </tr>
+      </table>
+
+      <h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">🎵 2. 찬양 및 특송 결산</h3>`;
+      
+    if(songs.length === 0) {
+      h += `<p style="font-size:13px; color:#666;">등록된 곡 기록이 없습니다.</p>`;
+    } else {
+      h += `<table style="width:100%; border-collapse:collapse; font-size:13px; text-align:left;">
+        <tr>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:60px;">일자</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">곡명</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:80px;">분류</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:80px;">반주/장소</th>
+        </tr>`;
+      songs.forEach(s => {
+        var dayStr = s.day ? `${s.month}/${s.day}` : `${s.month}월`;
+        h += `<tr>
+          <td style="border:1px solid #ccc; padding:8px; text-align:center;">${dayStr}</td>
+          <td style="border:1px solid #ccc; padding:8px; font-weight:700;">${s.songName}</td>
+          <td style="border:1px solid #ccc; padding:8px;">${s.category || '-'}</td>
+          <td style="border:1px solid #ccc; padding:8px; font-size:12px;">${s.pianist||''}<br>${s.location||''}</td>
+        </tr>`;
+      });
+      h += `</table>`;
+    }
+
+    h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">📈 3. 파트별 출석 상세 데이터</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:13px; text-align:center;">
+        <tr>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">파트</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">인원</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전 출석률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 출석률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 이탈률</th>
+        </tr>`;
+    
+    var parts = ['S1','S2','T1','T2','임원','관현악','지휘','반주'];
+    parts.forEach(p => {
+      if(partStats[p]) {
+        var st = partStats[p];
+        var pAmRate = st.amT > 0 ? Math.round((st.amP / st.amT) * 100) : 0;
+        var pPmRate = st.pmT > 0 ? Math.round((st.pmP / st.pmT) * 100) : 0;
+        var pDropRate = st.amP > 0 ? Math.round((st.drops / st.amP) * 100) : 0;
+        var pCount = activeMembers.filter(m => m.part === p).length;
+        
+        h += `<tr>
+          <td style="border:1px solid #ccc; padding:8px; font-weight:700;">${p}</td>
+          <td style="border:1px solid #ccc; padding:8px;">${pCount}명</td>
+          <td style="border:1px solid #ccc; padding:8px;">${pAmRate}%</td>
+          <td style="border:1px solid #ccc; padding:8px;">${pPmRate}%</td>
+          <td style="border:1px solid #ccc; padding:8px; color:#DC2626;">${pDropRate}%</td>
+        </tr>`;
+      }
+    });
+    h += `</table>`;
+
+    if(longAbsentees.length > 0) {
+      h += `<div style="margin-top:12px; padding:10px; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px;">
+        <span style="font-weight:700; color:#DC2626; font-size:13px;">⚠️ 이달의 장기 결석자 (${longAbsentees.length}명) : </span>
+        <span style="font-size:13px; color:#991B1B;">${longAbsentees.map(m => m.name + '(' + m.part + ')').join(', ')}</span>
+        <div style="font-size:11px; color:#DC2626; margin-top:4px;">* 이번 달 오전/오후를 한 번도 출석하지 않은 단원입니다. 심방 및 안부 확인이 필요합니다.</div>
+      </div>`;
+    }
+
+    h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">👥 4. 단원 변동 현황</h3>`;
+    if(newMembers.length > 0) {
+      h += `<ul style="font-size:14px; line-height:1.6; padding-left:20px; margin:0;">
+        <li><strong style="color:#2563EB;">신규 등록 (${newMembers.length}명):</strong> ${newMembers.map(m => m.name + ' (' + m.part + ')').join(', ')}</li>
+      </ul>`;
+    } else {
+      h += `<p style="font-size:13px; color:#666;">이번 달 신규 등록 단원이 없습니다.</p>`;
+    }
+
+    h += `</div>`; // 보고서 전체 div 끝
+
+    canvas.innerHTML = h;
+    printBtn.style.display = 'block'; // 인쇄 버튼 보이기
+    
+  }).catch(function(err) {
+    console.error(err);
+    canvas.innerHTML = '<div style="color:#DC2626; text-align:center; padding:20px;">데이터를 불러오는 중 오류가 발생했습니다.</div>';
+  });
+}
+
+function printReport() {
+  var content = document.getElementById('reportCanvas').innerHTML;
+  var win = window.open('', '_blank', 'width=800,height=900');
+  win.document.write('<html><head><title>월간 결산 보고서</title></head><body style="margin:0; padding:20px; background:#fff;">');
+  win.document.write(content);
+  win.document.write('</body></html>');
+  win.document.close();
+  
+  // 브라우저 렌더링 시간 벌어주기
+  setTimeout(function() {
+    win.print();
+  }, 500);
+}
 </script>
 </body>
 </html>
