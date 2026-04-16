@@ -331,6 +331,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <div class="form-group" style="flex:1"><label class="form-label">종료일</label><input class="form-input" id="attStatTo" type="date"></div>
       </div>
       <button class="btn btn-p btn-bl" onclick="loadAttStats()" style="margin-bottom:16px">통계 조회</button>
+      <div id="attDashboard" style="margin-bottom:16px"></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📊 파트별 평균 출석률</div><div id="chPartAtt"></div></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">👤 단원별 출석률 (낮은순)</div><div id="chMemAtt"></div></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📈 주간 출석 추이</div><div id="chWeekAtt"></div></div>
@@ -1842,7 +1843,7 @@ function switchAttTab(tab){
   ['attCheck','attStats','attHistory'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
   document.querySelectorAll('[data-att]').forEach(function(el){el.classList.toggle('on',el.dataset.att===tab)});
   if(tab==='check')document.getElementById('attCheck').classList.remove('hidden');
-  if(tab==='stats'){document.getElementById('attStats').classList.remove('hidden');initAttStatDates()}
+  if(tab==='stats'){document.getElementById('attStats').classList.remove('hidden');initAttStatDates();loadAttDashboard()}
   if(tab==='history'){document.getElementById('attHistory').classList.remove('hidden');populateAttMemSel()}
 }
 
@@ -1971,6 +1972,58 @@ function initAttStatDates(){
   document.getElementById('attStatFrom').value=from.toISOString().split('T')[0];
   document.getElementById('attStatTo').value=now.toISOString().split('T')[0];
 }
+function loadAttDashboard(){
+  var el=document.getElementById('attDashboard');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;color:var(--ts);font-size:13px;padding:12px">현황 불러오는 중...</div>';
+  loadAttMembers(function(){
+    var today=new Date();
+    var day=today.getDay();
+    var lastSun=new Date(today);
+    if(day!==0)lastSun.setDate(today.getDate()-day);
+    var sunStr=lastSun.getFullYear()+'-'+String(lastSun.getMonth()+1).padStart(2,'0')+'-'+String(lastSun.getDate()).padStart(2,'0');
+    Promise.all([
+      db.collection('attendance').doc(sunStr+'_오전').get(),
+      db.collection('attendance').doc(sunStr+'_오후').get()
+    ]).then(function(res){
+      var amData=res[0].exists?res[0].data():null;
+      var pmData=res[1].exists?res[1].data():null;
+      var total=attMembers.length;
+      if(!amData&&!pmData){el.innerHTML='<div class="chart-card" style="margin:0"><div style="font-size:15px;font-weight:700;margin-bottom:8px">📋 '+sunStr+' (주일) 출석 현황</div><div style="font-size:13px;color:var(--ts)">이번 주일 출석 데이터가 아직 없습니다</div></div>';return}
+      var amPresent=0,amAbsent=0,pmPresent=0,pmAbsent=0;
+      var bothAbsent=[];
+      attMembers.forEach(function(m){
+        var amSt=amData&&amData.records?amData.records[m.id]||'무단결석':'미확인';
+        var pmSt=pmData&&pmData.records?pmData.records[m.id]||'무단결석':'미확인';
+        var amOk=amSt==='출석'||amSt==='지각';
+        var pmOk=pmSt==='출석'||pmSt==='지각';
+        if(amData){if(amOk)amPresent++;else amAbsent++}
+        if(pmData){if(pmOk)pmPresent++;else pmAbsent++}
+        if(amData&&pmData&&!amOk&&!pmOk)bothAbsent.push(m);
+      });
+      var h='<div class="chart-card" style="margin:0">';
+      h+='<div style="font-size:15px;font-weight:700;margin-bottom:12px">📋 '+sunStr+' (주일) 출석 현황</div>';
+      if(amData){
+        var amRate=total>0?Math.round(amPresent/total*100):0;
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span style="font-size:14px;font-weight:700">☀️ 오전</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+amPresent+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+amAbsent+'</span> ('+amRate+'%)</span></div>';
+      }
+      if(pmData){
+        var pmRate=total>0?Math.round(pmPresent/total*100):0;
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px"><span style="font-size:14px;font-weight:700">🌙 오후</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+pmPresent+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+pmAbsent+'</span> ('+pmRate+'%)</span></div>';
+      }
+      if(bothAbsent.length>0){
+        h+='<div style="margin-top:8px;padding:10px 12px;background:#FEF2F2;border-radius:8px;border-left:3px solid #EF4444">';
+        h+='<div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ 오전+오후 모두 결석 ('+bothAbsent.length+'명)</div>';
+        h+='<div style="font-size:12px;color:#991B1B;line-height:1.8">';
+        h+=bothAbsent.map(function(m){return m.name+' <span style="color:var(--ts)">('+m.part+')</span>'}).join(' · ');
+        h+='</div></div>';
+      }
+      h+='</div>';
+      el.innerHTML=h;
+    }).catch(function(){el.innerHTML=''});
+  });
+}
+
 
 function loadAttStats(){
   var from=document.getElementById('attStatFrom').value;
