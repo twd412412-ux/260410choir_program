@@ -1018,8 +1018,7 @@ function loadMembers(){
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
-      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':'';
-      
+      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':m.role==='songschedule'?' <span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">곡+일정</span>':'';      
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
         <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}</div>
         <div style="display:flex;gap:4px">
