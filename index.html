@@ -2017,55 +2017,129 @@ function initAttStatDates(){
   document.getElementById('attStatFrom').value=from.toISOString().split('T')[0];
   document.getElementById('attStatTo').value=now.toISOString().split('T')[0];
 }
+// [업그레이드] 3주 연속 결석 및 이탈률 분석 기능 추가
 function loadAttDashboard(){
   var el=document.getElementById('attDashboard');
   if(!el)return;
-  el.innerHTML='<div style="text-align:center;color:var(--ts);font-size:13px;padding:12px">현황 불러오는 중...</div>';
+  el.innerHTML='<div style="text-align:center;color:var(--ts);font-size:13px;padding:12px">통계 데이터 분석 중...</div>';
+  
   loadAttMembers(function(){
     var today=new Date();
     var day=today.getDay();
     var lastSun=new Date(today);
     if(day!==0)lastSun.setDate(today.getDate()-day);
-    var sunStr=lastSun.getFullYear()+'-'+String(lastSun.getMonth()+1).padStart(2,'0')+'-'+String(lastSun.getDate()).padStart(2,'0');
+
+    // 최근 3주치 주일 날짜 계산
+    var sun1 = new Date(lastSun);
+    var sun2 = new Date(lastSun); sun2.setDate(sun2.getDate()-7);
+    var sun3 = new Date(lastSun); sun3.setDate(sun3.getDate()-14);
+    function fmt(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    var s1 = fmt(sun1), s2 = fmt(sun2), s3 = fmt(sun3);
+
+    // 3주치 오전/오후 데이터를 한꺼번에 가져옵니다
     Promise.all([
-      db.collection('attendance').doc(sunStr+'_오전').get(),
-      db.collection('attendance').doc(sunStr+'_오후').get()
+      db.collection('attendance').doc(s1+'_오전').get(),
+      db.collection('attendance').doc(s1+'_오후').get(),
+      db.collection('attendance').doc(s2+'_오전').get(),
+      db.collection('attendance').doc(s2+'_오후').get(),
+      db.collection('attendance').doc(s3+'_오전').get(),
+      db.collection('attendance').doc(s3+'_오후').get()
     ]).then(function(res){
-      var amData=res[0].exists?res[0].data():null;
-      var pmData=res[1].exists?res[1].data():null;
+      var am1 = res[0].exists?res[0].data():null;
+      var pm1 = res[1].exists?res[1].data():null;
+      var am2 = res[2].exists?res[2].data():null;
+      var pm2 = res[3].exists?res[3].data():null;
+      var am3 = res[4].exists?res[4].data():null;
+      var pm3 = res[5].exists?res[5].data():null;
+
       var total=attMembers.length;
-      if(!amData&&!pmData){el.innerHTML='<div class="chart-card" style="margin:0"><div style="font-size:15px;font-weight:700;margin-bottom:8px">📋 '+sunStr+' (주일) 출석 현황</div><div style="font-size:13px;color:var(--ts)">이번 주일 출석 데이터가 아직 없습니다</div></div>';return}
-      var amPresent=0,amAbsent=0,pmPresent=0,pmAbsent=0;
+      if(!am1 && !pm1){
+         el.innerHTML='<div class="chart-card" style="margin:0"><div style="font-size:15px;font-weight:700;margin-bottom:8px">📋 '+s1+' (주일) 출석 현황</div><div style="font-size:13px;color:var(--ts)">이번 주일 출석 데이터가 아직 없습니다</div></div>';
+         return;
+      }
+
+      var amPresent=0, amAbsent=0, pmPresent=0, pmAbsent=0;
       var bothAbsent=[];
+      var dropOuts=[];       // 이탈자 (오전 출석 -> 오후 결석)
+      var longAbsentees=[];  // 3주 연속 결석자
+
       attMembers.forEach(function(m){
-        var amSt=amData&&amData.records?amData.records[m.id]||'무단결석':'미확인';
-        var pmSt=pmData&&pmData.records?pmData.records[m.id]||'무단결석':'미확인';
+        // [1] 이번 주 현황 분석
+        var amSt=am1&&am1.records?am1.records[m.id]||'무단결석':'미확인';
+        var pmSt=pm1&&pm1.records?pm1.records[m.id]||'무단결석':'미확인';
         var amOk=amSt==='출석'||amSt==='지각';
         var pmOk=pmSt==='출석'||pmSt==='지각';
-        if(amData){if(amOk)amPresent++;else amAbsent++}
-        if(pmData){if(pmOk)pmPresent++;else pmAbsent++}
-        if(amData&&pmData&&!amOk&&!pmOk)bothAbsent.push(m);
+
+        if(am1){if(amOk)amPresent++;else amAbsent++;}
+        if(pm1){if(pmOk)pmPresent++;else pmAbsent++;}
+        if(am1&&pm1&&!amOk&&!pmOk) bothAbsent.push(m);
+
+        // [2] 이탈률 분석: 오전엔 왔는데 오후에 안 온 사람
+        if(am1&&pm1&&amOk&&!pmOk) dropOuts.push(m);
+
+        // [3] 3주 연속 결석자 분석 (오전, 오후 모두 안 온 주가 3주 연속일 때)
+        function isAbsent(amData, pmData) {
+           if(!amData && !pmData) return false; // 출석부 자체가 안 만들어진 주는 제외
+           var a = amData&&amData.records?amData.records[m.id]:null;
+           var p = pmData&&pmData.records?pmData.records[m.id]:null;
+           if(a==='출석'||a==='지각'||p==='출석'||p==='지각') return false; // 한 번이라도 왔으면 아님
+           return true; 
+        }
+        if((am1||pm1) && (am2||pm2) && (am3||pm3)){
+           if(isAbsent(am1,pm1) && isAbsent(am2,pm2) && isAbsent(am3,pm3)){
+              longAbsentees.push(m);
+           }
+        }
       });
+
       var h='<div class="chart-card" style="margin:0">';
-      h+='<div style="font-size:15px;font-weight:700;margin-bottom:12px">📋 '+sunStr+' (주일) 출석 현황</div>';
-      if(amData){
+
+      // 🚨 3주 연속 결석자 알림창 (가장 눈에 띄게 맨 위에 배치!)
+      if(longAbsentees.length > 0){
+        h+='<div style="margin-bottom:16px;padding:12px;background:#FEF2F2;border-radius:8px;border-left:4px solid #B91C1C;">';
+        h+='<div style="font-size:14px;font-weight:800;color:#991B1B;margin-bottom:6px">🚨 최근 3주 연속 결석 단원 ('+longAbsentees.length+'명)</div>';
+        h+='<div style="font-size:12px;color:#7F1D1D;line-height:1.6">';
+        h+=longAbsentees.map(function(m){return m.name+' <span style="color:#B91C1C;font-size:10px">('+m.part+')</span>'}).join(', ');
+        h+='</div></div>';
+      }
+
+      h+='<div style="font-size:15px;font-weight:700;margin-bottom:12px">📋 '+s1+' (주일) 출석 요약</div>';
+
+      if(am1){
         var amRate=total>0?Math.round(amPresent/total*100):0;
         h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span style="font-size:14px;font-weight:700">☀️ 오전</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+amPresent+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+amAbsent+'</span> ('+amRate+'%)</span></div>';
       }
-      if(pmData){
+      if(pm1){
         var pmRate=total>0?Math.round(pmPresent/total*100):0;
         h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px"><span style="font-size:14px;font-weight:700">🌙 오후</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+pmPresent+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+pmAbsent+'</span> ('+pmRate+'%)</span></div>';
       }
+
+      // 🏃 이탈률 지표 UI 추가
+      if(am1 && pm1 && amPresent > 0){
+        var dropRate = Math.round((dropOuts.length / amPresent) * 100);
+        h+='<div style="margin-bottom:8px;padding:10px 12px;background:#FFFBEB;border-radius:8px;border-left:3px solid #F59E0B">';
+        h+='<div style="font-size:13px;font-weight:700;color:#D97706;margin-bottom:6px">🏃 오전 ➔ 오후 이탈률: '+dropRate+'% ('+dropOuts.length+'명)</div>';
+        if(dropOuts.length > 0){
+           h+='<div style="font-size:11px;color:#B45309;line-height:1.6">';
+           h+=dropOuts.map(function(m){return m.name}).join(', ');
+           h+='</div>';
+        }
+        h+='</div>';
+      }
+
       if(bothAbsent.length>0){
         h+='<div style="margin-top:8px;padding:10px 12px;background:#FEF2F2;border-radius:8px;border-left:3px solid #EF4444">';
-        h+='<div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ 오전+오후 모두 결석 ('+bothAbsent.length+'명)</div>';
+        h+='<div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ 당일 전면 결석 ('+bothAbsent.length+'명)</div>';
         h+='<div style="font-size:12px;color:#991B1B;line-height:1.8">';
         h+=bothAbsent.map(function(m){return m.name+' <span style="color:var(--ts)">('+m.part+')</span>'}).join(' · ');
         h+='</div></div>';
       }
       h+='</div>';
       el.innerHTML=h;
-    }).catch(function(){el.innerHTML=''});
+      
+    }).catch(function(){
+      el.innerHTML='<div style="font-size:13px;color:var(--dg);text-align:center;padding:10px">데이터를 분석하는 중 오류가 발생했습니다.</div>';
+    });
   });
 }
 
