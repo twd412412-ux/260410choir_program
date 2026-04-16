@@ -1847,6 +1847,15 @@ var attReasons={};
 var attAmData=null;
 var attPmData=null;
 var attSession='오전';
+function getTodayInputDate(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function ensureAttDate(){
+  var el=document.getElementById('attDate');
+  if(el&&!el.value)el.value=getTodayInputDate();
+}
 
 function setAttSession(s){
   attSession=s;
@@ -1889,6 +1898,7 @@ function loadAttMembers(callback){
 }
 
 function loadAttendance(){
+  ensureAttDate();
   var docId=getAttDocId();
   if(!docId)return;
   var date=document.getElementById('attDate').value;
@@ -1996,9 +2006,20 @@ function attCheckAll(status){
 }
 
 function saveAttendance(){
+  ensureAttDate();
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 선택해주세요');
   var date=document.getElementById('attDate').value;
+  var scopeMembers=attMembers.slice();
+  if(attPartFilter!=='all')scopeMembers=scopeMembers.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
+  var uncheckedNames=scopeMembers.filter(function(m){return !attData[m.id]}).map(function(m){return m.name});
+  if(uncheckedNames.length>0){
+    var msg='미체크 인원이 '+uncheckedNames.length+'명 있습니다.\n\n'+uncheckedNames.slice(0,30).join(', ');
+    if(uncheckedNames.length>30)msg+='\n외 '+(uncheckedNames.length-30)+'명';
+    msg+='\n\n미체크 인원은 빈 상태로 남겨둡니다.\n그래도 저장하시겠습니까?';
+    if(!confirm(msg))return;
+  }
+
   var saveData={date:date,session:attSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
   db.collection('attendance').doc(docId).get().then(function(doc){
     var existingRecords=doc.exists&&doc.data().records?doc.data().records:{};
@@ -2009,7 +2030,8 @@ function saveAttendance(){
     }else{
       attMembers.forEach(function(m){
         if(m.part===attPartFilter||m.subPart===attPartFilter){
-          existingRecords[m.id]=attData[m.id]||'무단결석';
+          if(attData[m.id])existingRecords[m.id]=attData[m.id];
+          else delete existingRecords[m.id];
           if(attReasons[m.id])existingReasons[m.id]=attReasons[m.id];
           else delete existingReasons[m.id];
         }
