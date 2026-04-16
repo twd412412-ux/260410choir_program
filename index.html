@@ -1923,7 +1923,17 @@ function renderAttList(){
     var st=attData[m.id]||'무단결석';
     if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else absent++;
   });
-  document.getElementById('attCount').textContent='출석 '+present+' / 지각 '+late+' / 사유 '+excused+' / 무단 '+absent+' (총 '+members.length+'명)';
+  var uncheckedNames=[];
+  var sessionData=attSession==='오전'?attAmData:attPmData;
+  if(sessionData){
+    members.forEach(function(m){
+      var rec=sessionData.records||{};
+      if(!rec[m.id])uncheckedNames.push(m.name);
+    });
+  }
+  var countHtml='출석 '+present+' / 지각 '+late+' / 사유 '+excused+' / 무단 '+absent+' (총 '+members.length+'명)';
+  if(uncheckedNames.length>0&&uncheckedNames.length<=30){countHtml+='<div style="font-size:11px;color:#DC2626;margin-top:4px;line-height:1.6">🔔 '+attSession+' 미체크 '+uncheckedNames.length+'명: '+uncheckedNames.join(', ')+'</div>'}
+  document.getElementById('attCount').innerHTML=countHtml;
 
   if(members.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">해당 파트에 단원이 없습니다</div>';return}
 
