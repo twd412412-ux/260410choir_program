@@ -136,7 +136,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .hb-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
 .hb-card-info{font-size:12px;color:var(--ts);margin-top:6px;background:var(--bg);padding:8px;border-radius:8px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 
-/* 관리자 화면 모바일 여백 + 내부 폭 넘침 방지 */
+/* 관리자 화면 모바일 여백 + 폭 보정 v2 */
 #pageAdmin{
   padding-left:16px;
   padding-right:16px;
@@ -152,6 +152,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 #pageAdmin .admin-sub{
   padding-left:2px;
   padding-right:2px;
+  padding-bottom:110px;
   max-width:100%;
   box-sizing:border-box;
 }
@@ -160,7 +161,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   box-sizing:border-box;
 }
 
-/* 입력칸이 화면 밖으로 밀지 않게 */
 #pageAdmin .form-input,
 #pageAdmin .form-sel,
 #pageAdmin .search-box,
@@ -171,24 +171,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   box-sizing:border-box;
 }
 
-/* 작은 폰에서는 관리자 폼 2열/3열을 1열로 내려서 잘림 방지 */
-@media(max-width:430px){
-  #pageAdmin [style*="grid-template-columns:1fr 1fr"],
-  #pageAdmin [style*="grid-template-columns:1fr 1fr 1fr"]{
-    display:grid!important;
-    grid-template-columns:1fr!important;
-  }
-
-  #pageAdmin [style*="display:flex"]{
-    min-width:0;
-  }
-
-  #pageAdmin .form-group{
-    min-width:0;
-  }
+/* 출석체크: 하단 저장 버튼/하단 네비에 잘리지 않게 */
+#attCheck{
+  padding-bottom:120px;
 }
 
-/* 출석부는 한 줄 유지하되 너무 길면 말줄임 */
+.att-save-float{
+  position:sticky;
+  bottom:86px;
+  z-index:60;
+  padding:10px 0 12px;
+  background:var(--bg);
+}
+
+/* 출석부는 한 줄 유지하되 폭만 압축 */
 .att-row{
   max-width:100%;
   overflow:hidden;
@@ -214,6 +210,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   padding-left:6px;
   padding-right:6px;
   flex-shrink:0;
+}
+
+/* 출석통계: 시작일/종료일은 한 줄에서 정확히 반반 */
+#attStats > div[style*="display:flex"]{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:8px!important;
+}
+
+#attStats .form-group{
+  min-width:0;
+}
+
+/* 단원명부 신규 등록: 기존 의도대로 2열/3열 유지 */
+#subMemberHandbook [style*="grid-template-columns:1fr 1fr"]{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+}
+
+#subMemberHandbook [style*="grid-template-columns:1fr 1fr 1fr"]{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)!important;
+}
+
+#subMemberHandbook input,
+#subMemberHandbook select{
+  min-width:0;
 }
 
 /* 단원명부 카드 안쪽 텍스트가 화면을 밀지 않게 */
@@ -269,6 +290,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   line-height:1.6;
   word-break:keep-all;
   overflow-wrap:anywhere;
+}
+
+/* 일정관리: 날짜/제목은 전체폭, 시간/장소는 한 줄 유지 */
+#subSchedule [style*="grid-template-columns:1fr 1fr"]{
+  grid-template-columns:minmax(112px,.42fr) minmax(0,.58fr)!important;
+}
+
+#subSchedule input,
+#subSchedule select{
+  min-width:0;
 }
 
 /* 일정 목록 텍스트가 버튼을 밀지 않게 */
@@ -412,7 +443,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
         <input class="form-input" id="hbPhone" placeholder="전화번호">
-        <input class="form-input" id="hbBirth" type="date">
+        <input class="form-input" id="hbBirth" type="text" placeholder="생년월일" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px">
         <input class="form-input" id="hbDist" placeholder="교구">
