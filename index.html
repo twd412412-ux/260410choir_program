@@ -135,14 +135,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .hb-card-meta{font-size:12px;font-weight:400;color:var(--ts);white-space:nowrap}
 .hb-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
 .hb-card-info{font-size:12px;color:var(--ts);margin-top:6px;background:var(--bg);padding:8px;border-radius:8px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
-.sch-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd);max-width:100%;overflow:hidden}
-.sch-info{flex:1;display:flex;gap:8px;align-items:flex-start;min-width:0}
-.sch-text{min-width:0;flex:1;word-break:keep-all;overflow-wrap:anywhere}
-.sch-actions{display:flex;gap:4px;flex-shrink:0}
-/* 관리자 화면 모바일 좌우 여백 */
+
+/* 관리자 화면 모바일 여백 + 내부 폭 넘침 방지 */
 #pageAdmin{
   padding-left:16px;
   padding-right:16px;
+  max-width:100%;
+  box-sizing:border-box;
 }
 
 #pageAdmin > div{
@@ -153,16 +152,157 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 #pageAdmin .admin-sub{
   padding-left:2px;
   padding-right:2px;
+  max-width:100%;
+  box-sizing:border-box;
 }
 
+#pageAdmin .admin-sub *{
+  box-sizing:border-box;
+}
+
+/* 입력칸이 화면 밖으로 밀지 않게 */
 #pageAdmin .form-input,
 #pageAdmin .form-sel,
 #pageAdmin .search-box,
 #pageAdmin .btn-bl{
   width:100%;
   max-width:100%;
+  min-width:0;
   box-sizing:border-box;
 }
+
+/* 작은 폰에서는 관리자 폼 2열/3열을 1열로 내려서 잘림 방지 */
+@media(max-width:430px){
+  #pageAdmin [style*="grid-template-columns:1fr 1fr"],
+  #pageAdmin [style*="grid-template-columns:1fr 1fr 1fr"]{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+
+  #pageAdmin [style*="display:flex"]{
+    min-width:0;
+  }
+
+  #pageAdmin .form-group{
+    min-width:0;
+  }
+}
+
+/* 출석부는 한 줄 유지하되 너무 길면 말줄임 */
+.att-row{
+  max-width:100%;
+  overflow:hidden;
+}
+
+.att-name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.att-part-tag{
+  flex-shrink:0;
+  white-space:nowrap;
+  max-width:58px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.att-btn{
+  min-width:46px;
+  padding-left:6px;
+  padding-right:6px;
+  flex-shrink:0;
+}
+
+/* 단원명부 카드 안쪽 텍스트가 화면을 밀지 않게 */
+.hb-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  min-width:0;
+}
+
+.hb-card-main{
+  display:flex;
+  align-items:center;
+  min-width:0;
+  flex:1;
+}
+
+.hb-card-text{
+  min-width:0;
+  flex:1;
+}
+
+.hb-card-title{
+  font-weight:800;
+  font-size:16px;
+  line-height:1.35;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+
+.hb-card-meta{
+  font-size:12px;
+  font-weight:400;
+  color:var(--ts);
+  white-space:nowrap;
+}
+
+.hb-card-actions{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  flex-shrink:0;
+}
+
+.hb-card-info{
+  font-size:12px;
+  color:var(--ts);
+  margin-top:6px;
+  background:var(--bg);
+  padding:8px;
+  border-radius:8px;
+  line-height:1.6;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+
+/* 일정 목록 텍스트가 버튼을 밀지 않게 */
+.sch-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:10px 0;
+  border-bottom:1px solid var(--bd);
+  max-width:100%;
+}
+
+.sch-info{
+  flex:1;
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  min-width:0;
+}
+
+.sch-text{
+  min-width:0;
+  flex:1;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
+}
+
+.sch-actions{
+  display:flex;
+  gap:4px;
+  flex-shrink:0;
+}
+
 
 </style>
 </head>
