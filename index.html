@@ -864,7 +864,7 @@ function openDetail(id){
   localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
 
   document.getElementById('detailTitle').textContent=song.songName;
-  document.getElementById('detailAdmin').style.display=(adminRole==='admin' || adminRole==='chongmu') ? 'flex' : 'none';
+  document.getElementById('detailAdmin').style.display=(adminRole==='admin' || adminRole==='chongmu' || adminRole==='songschedule') ? 'flex' : 'none';
   document.getElementById('detailDelBtn').style.display=adminRole==='admin'?'':'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
@@ -964,7 +964,7 @@ function saveEdit(){
   if(!currentDetailSong)return;
   
   // 👇 최고 관리자와 총무부가 아니면 아예 저장을 막고 튕겨냅니다!
-  if(adminRole !== 'admin' && adminRole !== 'chongmu') return showToast('곡을 수정할 권한이 없습니다.'); 
+  if(adminRole !== 'admin' && adminRole !== 'chongmu' && adminRole !== 'songschedule') return showToast('곡을 수정할 권한이 없습니다.');
   
   var cat=getCatValue('edit');
   
