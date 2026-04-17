@@ -546,7 +546,7 @@ function switchAdminTab(sub){
   if(el) el.classList.remove('hidden');
 
   if(sub === 'memberHandbook') loadHandbook(); // 탭 클릭 시 명부 로드
-  if(sub === 'attendance') loadAttendance();
+  if(sub === 'attendance'){ensureAttDate();loadAttendance()}
   // 기존 코드들...
 }
 function updateAdminTabs(){
@@ -2061,7 +2061,9 @@ function saveAttendance(){
   
     writeLog('출석 저장', detailMsg);
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
+    loadAttendance();
   }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
+
 
 }
 
