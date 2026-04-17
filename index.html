@@ -2365,17 +2365,22 @@ function saveAttendance(){
       });
     }
   
-    var pCnt = 0, aCnt = 0;
+    var presentCnt = 0, lateCnt = 0, excusedCnt = 0, absentCnt = 0, uncheckedCnt = 0;
+    
     scopedMembers.forEach(function(m){
       var st = attData[m.id] || '';
-      if(st === '출석' || st === '지각') pCnt++;
-      else if(st === '사유결석' || st === '무단결석') aCnt++;
+      if(st === '출석') presentCnt++;
+      else if(st === '지각') lateCnt++;
+      else if(st === '사유결석') excusedCnt++;
+      else if(st === '무단결석') absentCnt++;
+      else uncheckedCnt++;
     });
-  
+    
     var partLabel = (attPartFilter === 'all' ? '전체' : attPartFilter);
-    var detailMsg = `${date} ${attSession} [${partLabel}] 업데이트 완료\n👉 출석/지각: ${pCnt}명 | 결석/기타: ${aCnt}명`;
-  
+    var detailMsg = `${date} ${attSession} [${partLabel}] 저장 완료\n출석 ${presentCnt} / 지각 ${lateCnt} / 사유 ${excusedCnt} / 무단 ${absentCnt} / 미체크 ${uncheckedCnt}`;
+    
     writeLog('출석 저장', detailMsg);
+
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
     loadAttendance();
   }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
