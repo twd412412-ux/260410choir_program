@@ -120,6 +120,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .att-btn.absent{background:#EF4444;color:#fff;border-color:#EF4444}
 .att-save-float{position:sticky;bottom:70px;z-index:50;padding:12px 16px;background:var(--bg)}
 .att-btn.excused{background:#8B5CF6;color:#fff;border-color:#8B5CF6}
+#pageAdmin,.admin-sub,#subMemberHandbook,#subAttendance,#subSchedule{max-width:100%;overflow-x:hidden;box-sizing:border-box}
+#subSchedule .form-group,#subAttendance .form-group,#subMemberHandbook .form-group{min-width:0}
+#subSchedule [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+#attDate{width:100%;max-width:100%;min-width:0}
+.att-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);gap:6px;max-width:100%;overflow:hidden}
+.att-name{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-part-tag{font-size:10px;padding:2px 6px;border-radius:8px;background:var(--pl);color:var(--pd);font-weight:600;white-space:nowrap;flex-shrink:0;max-width:64px;overflow:hidden;text-overflow:ellipsis}
+.att-btn{padding:6px 6px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer;min-width:46px;flex-shrink:0}
+.hb-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0}
+.hb-card-main{display:flex;align-items:center;min-width:0;flex:1}
+.hb-card-text{min-width:0;flex:1}
+.hb-card-title{font-weight:800;font-size:16px;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.hb-card-meta{font-size:12px;font-weight:400;color:var(--ts);white-space:nowrap}
+.hb-card-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.hb-card-info{font-size:12px;color:var(--ts);margin-top:6px;background:var(--bg);padding:8px;border-radius:8px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+.sch-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd);max-width:100%;overflow:hidden}
+.sch-info{flex:1;display:flex;gap:8px;align-items:flex-start;min-width:0}
+.sch-text{min-width:0;flex:1;word-break:keep-all;overflow-wrap:anywhere}
+.sch-actions{display:flex;gap:4px;flex-shrink:0}
 
 </style>
 </head>
@@ -1131,22 +1150,22 @@ function renderHandbook(list) {
 
     return `
       <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start">
-          <div style="display:flex; align-items:center;">
-            ${photoHtml} <div>
-              <div style="font-weight:800; font-size:16px">${m.name} <span style="font-size:12px; font-weight:400; color:var(--ts)">${m.part}${m.subPart?' · '+m.subPart:''}</span>
+        <div class="hb-card-head">
+          <div class="hb-card-main">
+            ${photoHtml} <div class="hb-card-text">
+              <div class="hb-card-title">${m.name} <span class="hb-card-meta">${m.part}${m.subPart?' · '+m.subPart:''}</span>
 ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
               <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 미등록'}</div>
             </div>
           </div>
-          <div style="display:flex; flex-direction:column; gap:4px">
+          <div class="hb-card-actions">
             <div style="display:flex; gap:2px">
                <button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${m.id}')">✏️</button>
                <button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${m.id}', '${m.name}')">🗑️</button>
             </div>
           </div>
         </div>
-        <div style="font-size:12px; color:var(--ts); margin-top:6px; background:var(--bg); padding:8px; border-radius:8px">
+        <div class="hb-card-info">
           🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
           👥 ${m.group || '-'} | 🎂 ${m.birthday || '생일 미입력'}
         </div>
@@ -1428,7 +1447,7 @@ function loadSchAdmin(){
   var today=new Date().toISOString().split('T')[0];
   c.innerHTML=sorted.map(function(s){
     var past=s.date<today;
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);'+(past?'opacity:.5;':'')+'"><div style="flex:1;display:flex;gap:8px;align-items:flex-start"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div><div style="font-weight:700;font-size:14px">'+s.title+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+'</div></div><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button><button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button></div></div>';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+'</div></div><div class="sch-actions"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button><button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button></div></div>';
   }).join('');
 }
 function editSchedule(id){
@@ -1996,7 +2015,7 @@ function renderAttList(){
     var amBadge=attAmData?(amSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:4px">오전✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:4px">오전✖</span>'):'<span style="font-size:9px;background:var(--bd);color:var(--ts);padding:1px 5px;border-radius:4px;margin-left:4px">오전 미확인</span>';
     var pmBadge=attPmData?(pmSt?'<span style="font-size:9px;background:#DCFCE7;color:#16A34A;padding:1px 5px;border-radius:4px;margin-left:2px">오후✅</span>':'<span style="font-size:9px;background:#FEE2E2;color:#DC2626;padding:1px 5px;border-radius:4px;margin-left:2px">오후✖</span>'):'<span style="font-size:9px;background:var(--bd);color:var(--ts);padding:1px 5px;border-radius:4px;margin-left:2px">오후 미확인</span>';
     var statusBar=amBadge+'<span style="font-size:9px;color:var(--bd);margin:0 2px">|</span>'+pmBadge;
-    var partLabel=m.part+(m.subPart?' · '+m.subPart:'');
+    var partLabel=m.part+(m.subPart?'·'+m.subPart:'');
     return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><span class="att-name">'+m.name+' '+statusBar+'</span>'+reasonText+'<div style="display:flex;gap:3px;flex-wrap:wrap"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
   }).join('');
 
