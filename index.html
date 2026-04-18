@@ -56,6 +56,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
 .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--ts)}
+.reason-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.reason-chip{min-height:42px;padding:10px 8px;border:1.5px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer}
+.reason-chip.on{background:var(--pl);border-color:var(--p);color:var(--pd)}
+.reason-help{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
 .detail-label{width:80px;font-weight:700;color:var(--ts);flex-shrink:0}
 .detail-value{flex:1;color:var(--tx)}
@@ -760,6 +764,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
   </div>
 </div>
+<div class="modal-overlay modal-center" id="modalAttReason">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">📝 결석 사유 선택</span>
+      <button class="modal-close" onclick="closeAttReasonModal()">✕</button>
+    </div>
+    <div class="reason-help">사유를 하나 선택하고, 필요하면 아래에 상세 내용을 적어주세요.</div>
+    <div class="reason-grid" id="attReasonPresetList">
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('출근')">출근</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('질병')">질병</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('입원')">입원</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('가족일')">가족일</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('학업')">학업</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('전도')">전도</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('식당봉사')">식당봉사</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('기타')">기타</button>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">상세 사유</label>
+      <input class="form-input" id="attReasonText" placeholder="필요하면 상세 사유 입력" onkeypress="if(event.key==='Enter')confirmAttReason()">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn" style="flex:1" onclick="closeAttReasonModal()">취소</button>
+      <button class="btn btn-p" style="flex:1" onclick="confirmAttReason()">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <div class="bottom-nav">
   <div class="nav-item active" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
@@ -2156,6 +2188,8 @@ var attReasons={};
 var attAmData=null;
 var attPmData=null;
 var attSession='오전';
+var currentAttReasonId='';
+var currentAttReasonPreset='';
 function getTodayInputDate(){
   var d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -2301,23 +2335,87 @@ function renderAttList(){
     
     return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+m.name+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div><div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
   }).join('');
-
-
-
-
 }
 
 function setAtt(id,status){
   if(status==='사유결석'){
-    var reason=prompt('결석 사유를 입력하세요:');
-    if(reason===null)return;
-    attData[id]='사유결석';
-    if(!attReasons)attReasons={};
-    attReasons[id]=reason.trim()||'사유 미기재';
+    openAttReasonModal(id);
   }else{
     attData[id]=status;
     if(attReasons)delete attReasons[id];
+    if(currentAttReasonId===id){
+      currentAttReasonId='';
+      currentAttReasonPreset='';
+    }
+    renderAttList();
   }
+}
+
+function openAttReasonModal(id){
+  currentAttReasonId=id;
+  currentAttReasonPreset='';
+  var existing=(attReasons&&attReasons[id])?attReasons[id]:'';
+  var presets=['출근','질병','입원','가족일','학업','전도','식당봉사','기타'];
+
+  if(existing){
+    presets.forEach(function(p){
+      if(!currentAttReasonPreset && (existing===p || existing.indexOf(p+' - ')===0)){
+        currentAttReasonPreset=p;
+      }
+    });
+  }
+
+  document.getElementById('attReasonText').value =
+    (currentAttReasonPreset && existing.indexOf(currentAttReasonPreset+' - ')===0)
+      ? existing.substring((currentAttReasonPreset+' - ').length)
+      : '';
+
+  renderAttReasonPreset();
+  openModal('modalAttReason');
+  setTimeout(function(){document.getElementById('attReasonText').focus()},120);
+}
+
+function renderAttReasonPreset(){
+  var wrap=document.getElementById('attReasonPresetList');
+  if(!wrap)return;
+  wrap.querySelectorAll('.reason-chip').forEach(function(el){
+    el.classList.toggle('on',el.textContent===currentAttReasonPreset);
+  });
+}
+
+function selectAttReasonPreset(reason){
+  currentAttReasonPreset=reason;
+  renderAttReasonPreset();
+  if(reason==='기타')document.getElementById('attReasonText').focus();
+}
+
+function closeAttReasonModal(){
+  closeModal('modalAttReason');
+}
+
+function confirmAttReason(){
+  if(!currentAttReasonId)return closeAttReasonModal();
+
+  var detail=document.getElementById('attReasonText').value.trim();
+  var finalReason='';
+
+  if(currentAttReasonPreset){
+    finalReason=(detail&&detail!==currentAttReasonPreset)
+      ? (currentAttReasonPreset+' - '+detail)
+      : currentAttReasonPreset;
+  }else if(detail){
+    finalReason=detail;
+  }
+
+  if(!finalReason)return showToast('결석 사유를 선택하거나 입력해주세요');
+
+  attData[currentAttReasonId]='사유결석';
+  if(!attReasons)attReasons={};
+  attReasons[currentAttReasonId]=finalReason;
+
+  currentAttReasonId='';
+  currentAttReasonPreset='';
+  closeAttReasonModal();
   renderAttList();
 }
 
