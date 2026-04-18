@@ -2214,14 +2214,22 @@ function loadAttendance(){
     var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
     if(adminRole==='attendance'&&currentUser){
-      attPartFilter=currentUser.part;
-      pf.innerHTML='<div class="day-chip on">'+currentUser.part+'</div>';
+      var allowedParts = (currentUser.part==='S1' || currentUser.part==='S2') ? ['S1','S2'] : [currentUser.part];
+    
+      if(allowedParts.indexOf(attPartFilter)===-1){
+        attPartFilter = allowedParts[0];
+      }
+    
+      pf.innerHTML = allowedParts.map(function(p){
+        return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+p+'</div>';
+      }).join('');
     }else{
       if(!parts.includes(attPartFilter))attPartFilter='all';
       pf.innerHTML=parts.map(function(p){
         return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
       }).join('');
     }
+
 
     Promise.all([
       db.collection('attendance').doc(date+'_오전').get(),
@@ -2599,7 +2607,7 @@ function loadMemHistory(){
   db.collection('attendance').where('date','>=',fromStr).orderBy('date','desc').get().then(function(snap){
     var total=0,present=0,late=0,excused=0,absent=0;var rows=[];
     snap.forEach(function(doc){
-      var d=doc.data();var r=d.records||{};var st=r[id]||'무단결석';var session=d.session||'오전';
+      var d=doc.data();var r=d.records||{};var st=r[id]||'';var session=d.session||'오전';
       total++;if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else absent++;
       var color=st==='출석'?'#22C55E':st==='지각'?'#F59E0B':st==='사유결석'?'#8B5CF6':'#EF4444';
       var reasonNote=(st==='사유결석'&&d.reasons&&d.reasons[id])?' — '+d.reasons[id]:'';
