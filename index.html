@@ -607,9 +607,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <button class="btn" id="attSessionAM" style="flex:1;background:var(--p);color:#fff;border:2px solid var(--p)" onclick="setAttSession('오전')">☀️ 오전</button>
         <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
       </div>
-      <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span id="attCount" style="font-size:13px;color:var(--ts)"></span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
+        <button class="btn btn-sm" style="padding:6px 10px;min-height:auto;background:var(--pl);color:var(--pd);border-color:rgba(37,99,235,.18);white-space:nowrap" onclick="attCheckAll('출석')">모두 출석</button>
       </div>
       <div id="attList"></div>
       
@@ -2422,7 +2422,7 @@ function confirmAttReason(){
 
 function attCheckAll(status){
   var members=attMembers.slice();
-  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter});
+  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
   members.forEach(function(m){attData[m.id]=status});
   renderAttList();
 }
