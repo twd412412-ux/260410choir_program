@@ -2608,7 +2608,7 @@ function loadMemHistory(){
     var total=0,present=0,late=0,excused=0,absent=0;var rows=[];
     snap.forEach(function(doc){
       var d=doc.data();var r=d.records||{};var st=r[id]||'';var session=d.session||'오전';
-      total++;if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else absent++;
+      total++;if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else if(st==='무단결석')absent++;
       var color=st==='출석'?'#22C55E':st==='지각'?'#F59E0B':st==='사유결석'?'#8B5CF6':'#EF4444';
       var reasonNote=(st==='사유결석'&&d.reasons&&d.reasons[id])?' — '+d.reasons[id]:'';
       var sessionTag=session==='오후'?' <span style="font-size:11px;background:#7C3AED;color:#fff;padding:1px 6px;border-radius:6px">오후</span>':' <span style="font-size:11px;background:var(--p);color:#fff;padding:1px 6px;border-radius:6px">오전</span>';
