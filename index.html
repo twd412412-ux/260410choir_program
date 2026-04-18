@@ -2863,6 +2863,24 @@ function generateReport() {
     var activeMembers = [];
     var newMembers = [];
     var memStats = {}; // 개인별 출석 카운트
+    var reasonStats = {
+      '출근': 0,
+      '질병': 0,
+      '입원': 0,
+      '가족일': 0,
+      '학업': 0,
+      '전도': 0,
+      '식당봉사': 0,
+      '기타': 0
+    };
+
+    function normalizeReasonCategory(reason){
+      if(!reason) return null;
+      var head = reason.split(' - ')[0].trim();
+      if(reasonStats.hasOwnProperty(head)) return head;
+      return '기타';
+    }
+
     
     res[2].forEach(doc => {
        var d = doc.data();
@@ -2882,7 +2900,16 @@ function generateReport() {
        if(!dateMap[d.date]) dateMap[d.date] = {};
        if(d.session === '오전') dateMap[d.date].am = d.records || {};
        if(d.session === '오후') dateMap[d.date].pm = d.records || {};
+
+       var reasons = d.reasons || {};
+       Object.keys(reasons).forEach(id => {
+          if((d.records || {})[id] === '사유결석') {
+             var cat = normalizeReasonCategory(reasons[id]);
+             if(cat) reasonStats[cat]++;
+          }
+       });
     });
+
 
     Object.keys(dateMap).forEach(date => {
        var amRec = dateMap[date].am;
@@ -3015,7 +3042,31 @@ function generateReport() {
       </div>`;
     }
 
-    h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">👥 4. 단원 변동 현황</h3>`;
+    var reasonOrder = ['출근','질병','입원','가족일','학업','전도','식당봉사','기타'];
+    var maxReason = Math.max.apply(null, reasonOrder.map(function(k){ return reasonStats[k]; }));
+    var totalReasonCount = reasonOrder.reduce(function(sum, k){ return sum + reasonStats[k]; }, 0);
+
+    h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">📌 4. 사유결석 사유 분포</h3>`;
+
+    if(totalReasonCount === 0) {
+      h += `<p style="font-size:13px; color:#666;">이번 달 사유결석 기록이 없습니다.</p>`;
+    } else {
+      h += `<div style="border:1px solid #E5E7EB; border-radius:8px; padding:14px 14px 8px; background:#FAFAFA;">`;
+      reasonOrder.forEach(function(cat){
+        var count = reasonStats[cat];
+        var width = maxReason > 0 ? Math.max(8, Math.round((count / maxReason) * 100)) : 0;
+        h += `<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:70px; font-size:13px; font-weight:700; color:#334155; flex-shrink:0;">${cat}</div>
+          <div style="flex:1; height:18px; background:#E5E7EB; border-radius:999px; overflow:hidden;">
+            <div style="width:${count > 0 ? width : 0}%; height:100%; background:#6366F1; border-radius:999px;"></div>
+          </div>
+          <div style="width:42px; text-align:right; font-size:12px; font-weight:700; color:#475569; flex-shrink:0;">${count}건</div>
+        </div>`;
+      });
+      h += `</div>`;
+    }
+
+    h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">👥 5. 단원 변동 현황</h3>`;
     if(newMembers.length > 0) {
       h += `<ul style="font-size:14px; line-height:1.6; padding-left:20px; margin:0;">
         <li><strong style="color:#2563EB;">신규 등록 (${newMembers.length}명):</strong> ${newMembers.map(m => m.name + ' (' + m.part + ')').join(', ')}</li>
