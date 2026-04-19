@@ -527,11 +527,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 <!-- PAGE: 관리자 -->
 <div class="tab-page hidden" id="pageAdmin"><div style="padding:16px">
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
-    <div class="admin-tab on" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
-    <div class="admin-tab" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
-    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</div>
+    <div class="admin-tab on" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
     <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 전자출결부</div>
+    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</div>
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
+    <div class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
     <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
@@ -916,20 +916,27 @@ function switchTab(tab){
   if(tab==='calendar')renderCal();
   if(tab==='archive')renderArchivePage();
   if(tab==='stats')renderStats();
-  if(tab==='admin'){loadMembers();loadLogs();loadSchAdmin();updateAdminTabs();showFirstAdminTab()}
+  if(tab==='admin'){
+    loadMembers();loadLogs();loadSchAdmin();updateAdminTabs();showFirstAdminTab();
+    window.scrollTo({top:0,behavior:'auto'});
+    var adminPage=document.getElementById('pageAdmin');
+    if(adminPage) adminPage.scrollTop=0;
+  }
 }
 function switchAdminTab(sub){
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
   document.querySelectorAll('[data-at]').forEach(function(el){el.classList.toggle('on',el.dataset.at===sub)});
   
-  // 새로 만든 명부 탭 ID와 연결
   var elId = 'sub' + sub.charAt(0).toUpperCase() + sub.slice(1);
   var el = document.getElementById(elId);
   if(el) el.classList.remove('hidden');
 
-  if(sub === 'memberHandbook') loadHandbook(); // 탭 클릭 시 명부 로드
+  window.scrollTo({top:0,behavior:'auto'});
+  var adminPage=document.getElementById('pageAdmin');
+  if(adminPage) adminPage.scrollTop=0;
+
+  if(sub === 'memberHandbook') loadHandbook();
   if(sub === 'attendance'){ensureAttDate();loadAttendance()}
-  // 기존 코드들...
 }
 function updateAdminTabs(){
   var tabs=document.getElementById('adminTabRow'); if(!tabs) return;
@@ -949,11 +956,21 @@ function updateAdminTabs(){
 
 function showFirstAdminTab(){
   var tabs=document.getElementById('adminTabRow');if(!tabs)return;
-  var firstVisible=null;
+  var preferredOrder = adminRole==='attendance'
+    ? ['attendance']
+    : adminRole==='songschedule'
+      ? ['addSong','schedule']
+      : adminRole==='chongmu'
+        ? ['attendance','memberHandbook','addSong','schedule','report']
+        : ['members','attendance','memberHandbook','notice','addSong','schedule','logs','export','report'];
+
+  var visible = [];
   tabs.querySelectorAll('[data-at]').forEach(function(t){
-    if(t.style.display!=='none'&&!firstVisible)firstVisible=t.dataset.at;
+    if(t.style.display!=='none') visible.push(t.dataset.at);
   });
-  if(firstVisible)switchAdminTab(firstVisible);
+
+  var target = preferredOrder.find(function(key){ return visible.indexOf(key)!==-1; }) || visible[0];
+  if(target) switchAdminTab(target);
 }
 
 
