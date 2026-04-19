@@ -2926,8 +2926,10 @@ function loadAttDashboard(){
         if(pm1){if(pmOk)pmPresent++;else pmAbsent++;}
         if(am1&&pm1&&!amOk&&!pmOk) bothAbsent.push(m);
 
-        // [2] 이탈률 분석: 오전엔 왔는데 오후에 안 온 사람
-        if(am1&&pm1&&amOk&&!pmOk) dropOuts.push(m);
+        // [2] 이탈률 분석: 오전엔 왔는데 오후에 '무단결석' 또는 '사유결석'인 사람만 (미체크 제외)
+        var pmActual=pm1&&pm1.records?pm1.records[m.id]:'';
+        if(am1&&pm1&&amOk&&!pmOk&&pmActual) dropOuts.push(m);
+
 
         // [3] 3주 연속 결석자 분석 (오전, 오후 모두 안 온 주가 3주 연속일 때)
         function isAbsent(amData, pmData) {
@@ -2987,9 +2989,67 @@ function loadAttDashboard(){
         h+='</div></div>';
       }
       h+='</div>';
+      // === 전주 주일 접힌 카드 추가 ===
+      if(am2||pm2){
+        var am2Present=0,am2Absent=0,pm2Present=0,pm2Absent=0;
+        var both2Absent=[];
+        var drop2Outs=[];
+
+        attMembers.forEach(function(m){
+          var a2St=am2&&am2.records?am2.records[m.id]||'무단결석':'미확인';
+          var p2St=pm2&&pm2.records?pm2.records[m.id]||'무단결석':'미확인';
+          var a2Ok=a2St==='출석'||a2St==='지각';
+          var p2Ok=p2St==='출석'||p2St==='지각';
+
+          if(am2){if(a2Ok)am2Present++;else am2Absent++;}
+          if(pm2){if(p2Ok)pm2Present++;else pm2Absent++;}
+          if(am2&&pm2&&!a2Ok&&!p2Ok)both2Absent.push(m);
+
+          var p2Actual=pm2&&pm2.records?pm2.records[m.id]:'';
+          if(am2&&pm2&&a2Ok&&!p2Ok&&p2Actual)drop2Outs.push(m);
+        });
+
+        h+='<div style="margin-top:12px">';
+        h+='<div onclick="var body=this.nextElementSibling;var arrow=this.querySelector(\'.pw-arrow\');if(body.style.display===\'none\'){body.style.display=\'block\';arrow.textContent=\'▼\'}else{body.style.display=\'none\';arrow.textContent=\'▶\'}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--sf);border-radius:8px;box-shadow:var(--sh)">';
+        h+='<span class="pw-arrow" style="font-size:12px;color:var(--ts)">▶</span>';
+        h+='<span style="font-size:14px;font-weight:700">📋 전주 '+s2+' (주일) 출석 요약</span>';
+        h+='</div>';
+        h+='<div style="display:none;margin-top:6px">';
+        h+='<div class="chart-card" style="margin:0">';
+
+        if(am2){
+          var am2Rate=total>0?Math.round(am2Present/total*100):0;
+          h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span style="font-size:14px;font-weight:700">☀️ 오전</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+am2Present+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+am2Absent+'</span> ('+am2Rate+'%)</span></div>';
+        }
+        if(pm2){
+          var pm2Rate=total>0?Math.round(pm2Present/total*100):0;
+          h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px"><span style="font-size:14px;font-weight:700">🌙 오후</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+pm2Present+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+pm2Absent+'</span> ('+pm2Rate+'%)</span></div>';
+        }
+
+        if(am2&&pm2&&am2Present>0){
+          var drop2Rate=Math.round((drop2Outs.length/am2Present)*100);
+          h+='<div style="margin-bottom:8px;padding:10px 12px;background:#FFFBEB;border-radius:8px;border-left:3px solid #F59E0B">';
+          h+='<div style="font-size:13px;font-weight:700;color:#D97706;margin-bottom:6px">🏃 오전→오후 이탈률: '+drop2Rate+'% ('+drop2Outs.length+'명)</div>';
+          if(drop2Outs.length>0){
+            h+='<div style="font-size:11px;color:#B45309;line-height:1.6">'+drop2Outs.map(function(m){return m.name}).join(', ')+'</div>';
+          }
+          h+='</div>';
+        }
+
+        if(both2Absent.length>0){
+          h+='<div style="margin-top:8px;padding:10px 12px;background:#FEF2F2;border-radius:8px;border-left:3px solid #EF4444">';
+          h+='<div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:6px">⚠️ 전면 결석 ('+both2Absent.length+'명)</div>';
+          h+='<div style="font-size:12px;color:#991B1B;line-height:1.8">'+both2Absent.map(function(m){return m.name+' <span style="color:var(--ts)">('+m.part+')</span>'}).join(' · ')+'</div>';
+          h+='</div>';
+        }
+
+        h+='</div>'; // chart-card
+        h+='</div>'; // 접힌 body
+        h+='</div>'; // 전체 wrapper
+      }
+
       el.innerHTML=h;
-      
-    }).catch(function(){
+
       el.innerHTML='<div style="font-size:13px;color:var(--dg);text-align:center;padding:10px">데이터를 분석하는 중 오류가 발생했습니다.</div>';
     });
   });
@@ -3389,8 +3449,9 @@ function generateReport() {
                var st = pmRec[m.id];
                if(st==='출석'||st==='지각') { pmOk = true; memStats[m.id].pmPresent++; }
            }
-           // 이탈자 (오전 출석, 오후 결석)
-           if(amOk && pmRec && !pmOk) memStats[m.id].drops++;
+           // 이탈자 (오전 출석, 오후에 실제 결석 처리된 사람만 - 미체크 제외)
+           if(amOk && pmRec && !pmOk && pmRec[m.id]) memStats[m.id].drops++;
+
        });
     });
 
