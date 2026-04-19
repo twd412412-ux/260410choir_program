@@ -488,12 +488,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   </div>
   <div class="archive-upload-card hidden" id="archiveUploadCard">
     <div class="archive-upload-title">➕ 사진 · 영상 올리기</div>
-    <div class="archive-grid">
-      <div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="archivePart"><option value="">선택</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
-      <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="archiveDate" type="date"></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">파트 *</label><select class="form-sel" id="archivePart"><option value="">선택</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">날짜 *</label><input class="form-input" id="archiveDate" type="date" style="min-width:0"></div>
     </div>
-    <div class="form-group"><label class="form-label">제목 *</label><input class="form-input" id="archiveTitle" placeholder="예: 4월 셋째 주 S1 연습"></div>
-    <div class="form-group"><label class="form-label">설명</label><input class="form-input" id="archiveDesc" placeholder="짧은 설명이나 메모"></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">제목 *</label><input class="form-input" id="archiveTitle" placeholder="예: 4월 셋째 주 S1 연습"></div>
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">설명</label><input class="form-input" id="archiveDesc" placeholder="짧은 메모"></div>
+    </div>
     <div class="form-group" style="margin-bottom:0"><label class="form-label">파일 *</label><input class="form-input" id="archiveFile" type="file" accept="image/*" style="padding:8px"></div>
     <div class="archive-preview-note">사진 파일만 업로드할 수 있어요. 업로드 시 자동 압축되어 보통 3MB 안팎으로 저장됩니다.</div>
     <div class="archive-upload-actions">
