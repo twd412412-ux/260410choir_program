@@ -614,10 +614,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       </div>
       <div id="attList"></div>
 
-      
+      <div class="att-save-float"><button id="attSaveBtn" class="btn btn-p btn-bl" onclick="saveAttendance()">출석 저장</button></div>
 
-      
-      <div class="att-save-float"><button class="btn btn-p btn-bl" onclick="saveAttendance()">출석 저장</button></div>
 
     </div>
     <div id="attStats" class="hidden">
@@ -2449,6 +2447,15 @@ function saveAttendance(){
     if(!confirm(msg))return;
   }
 
+  var saveBtn=document.getElementById('attSaveBtn');
+  if(saveBtn){
+    if(saveBtn.disabled)return;
+    saveBtn.disabled=true;
+    saveBtn.textContent='저장 중...';
+    saveBtn.style.opacity='0.7';
+    saveBtn.style.cursor='default';
+  }
+
   var saveData={date:date,session:attSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
   db.collection('attendance').doc(docId).get().then(function(doc){
     var existingRecords=doc.exists&&doc.data().records?doc.data().records:{};
@@ -2494,9 +2501,26 @@ function saveAttendance(){
     
     writeLog('출석 저장', detailMsg);
 
+    if(saveBtn){
+      saveBtn.disabled=false;
+      saveBtn.textContent='출석 저장';
+      saveBtn.style.opacity='';
+      saveBtn.style.cursor='';
+    }
+
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
     loadAttendance();
-  }).catch(function(e){console.error(e);showToast('저장 중 오류 발생')});
+  }).catch(function(e){
+    if(saveBtn){
+      saveBtn.disabled=false;
+      saveBtn.textContent='출석 저장';
+      saveBtn.style.opacity='';
+      saveBtn.style.cursor='';
+    }
+    console.error(e);
+    showToast('저장 중 오류 발생');
+  });
+
 
 
 }
