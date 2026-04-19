@@ -1414,7 +1414,7 @@ function loadMembers(){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, role:m.role||''}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
