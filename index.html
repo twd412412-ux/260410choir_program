@@ -2008,8 +2008,8 @@ function compressArchiveImage(file){
     reader.onload=function(ev){
       var img=new Image();
       img.onload=function(){
-        var maxWidth=1600;
-        var maxHeight=1600;
+        var maxWidth=2400;
+        var maxHeight=2400;
         var width=img.width;
         var height=img.height;
         var ratio=Math.min(maxWidth/width,maxHeight/height,1);
