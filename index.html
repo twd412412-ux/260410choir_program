@@ -123,19 +123,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .archive-upload-note{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .archive-card{overflow:hidden;margin-bottom:10px}
-.archive-thumb{width:100%;max-height:160px;display:block;background:#000;object-fit:cover;cursor:pointer}
-.archive-body{padding:12px}
+.archive-thumb{width:100%;height:120px;display:block;background:#000;object-fit:cover;cursor:pointer}
+.archive-body{padding:8px}
 .archive-title-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
-.archive-title{font-size:15px;font-weight:700;line-height:1.4}
-.archive-meta-line{font-size:12px;color:var(--ts);margin-bottom:8px}
-.archive-desc{font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-line}
+.archive-title{font-size:12px;font-weight:700;line-height:1.3}
+.archive-meta-line{font-size:10px;color:var(--ts);margin-bottom:4px}
+.archive-desc{font-size:11px;color:var(--tx);line-height:1.4;white-space:pre-line;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .archive-empty{padding:30px 16px;text-align:center;color:var(--ts);font-size:13px}
 .archive-upload-actions{display:flex;gap:8px;margin-top:12px}
 .archive-preview-note{font-size:11px;color:var(--ts);margin-top:6px}
 .archive-type-badge{background:rgba(37,99,235,.08);color:var(--p);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
 @media(max-width:430px){
-  .archive-grid{grid-template-columns:1fr}
+  .archive-grid{grid-template-columns:1fr 1fr}
 }
+
 
 
 
@@ -496,8 +497,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">제목 *</label><input class="form-input" id="archiveTitle" placeholder="예: 4월 셋째 주 S1 연습"></div>
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">설명</label><input class="form-input" id="archiveDesc" placeholder="짧은 메모"></div>
     </div>
-    <div class="form-group" style="margin-bottom:0"><label class="form-label">파일 *</label><input class="form-input" id="archiveFile" type="file" accept="image/*" style="padding:8px"></div>
-    <div class="archive-preview-note">사진 파일만 업로드할 수 있어요. 업로드 시 자동 압축되어 보통 3MB 안팎으로 저장됩니다.</div>
+    <div class="form-group" style="margin-bottom:0"><label class="form-label">파일 * (여러 장 선택 가능)</label><input class="form-input" id="archiveFile" type="file" accept="image/*" multiple style="padding:8px"></div>
+    <div class="archive-preview-note">사진 파일만 업로드할 수 있어요. 여러 장을 한 번에 선택하면 순서대로 업로드됩니다.</div>
     <div class="archive-upload-actions">
       <button id="btnArchiveUpload" class="btn btn-p" style="flex:1" onclick="uploadArchiveMedia()">업로드</button>
       <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="loadArchiveItems()">새로고침</button>
@@ -2061,7 +2062,6 @@ function uploadArchiveMedia(){
   }
   if(!canUploadArchive())return showToast('업로드 권한이 없습니다');
 
-
   var partEl=document.getElementById('archivePart');
   var dateEl=document.getElementById('archiveDate');
   var titleEl=document.getElementById('archiveTitle');
@@ -2073,67 +2073,80 @@ function uploadArchiveMedia(){
   var date=dateEl.value;
   var title=titleEl.value.trim();
   var description=descEl.value.trim();
-  var file=fileEl.files&&fileEl.files[0];
+  var files=fileEl.files;
 
-  if(!part||!date||!title||!file)return showToast('파트, 날짜, 제목, 파일을 모두 입력해주세요');
-  if((file.type||'').indexOf('image/')!==0)return showToast('사진 파일만 업로드할 수 있습니다');
-  if(file.size>80*1024*1024)return showToast('파일 용량은 80MB 이하로 올려주세요');
+  if(!part||!date||!title||!files||files.length===0)return showToast('파트, 날짜, 제목, 파일을 모두 입력해주세요');
 
-  var type='image';
-  var safeName=file.name.replace(/[^\w.\-가-힣]/g,'_').replace(/\.[^.]+$/,'');
+  var fileArr=[];
+  for(var i=0;i<files.length;i++){
+    if((files[i].type||'').indexOf('image/')!==0){return showToast('사진 파일만 업로드할 수 있습니다');}
+    if(files[i].size>80*1024*1024){return showToast('파일 용량은 80MB 이하로 올려주세요');}
+    fileArr.push(files[i]);
+  }
 
   if(btn){
     btn.disabled=true;
-    btn.textContent='업로드 중...';
+    btn.textContent='업로드 중... (0/'+fileArr.length+')';
     btn.style.opacity='0.7';
   }
 
-  compressArchiveImage(file).then(function(uploadBlob){
-    var filePath='archive/'+part+'/'+Date.now()+'_'+safeName+'.jpg';
-    return storage.ref().child(filePath).put(uploadBlob,{contentType:'image/jpeg'}).then(function(snapshot){
-      return snapshot.ref.getDownloadURL().then(function(downloadURL){
-        return {
-          downloadURL:downloadURL,
-          filePath:filePath,
-          size:uploadBlob.size
-        };
-      });
-    });
-  }).then(function(uploaded){
-    return db.collection('mediaArchive').add({
-      title:title,
-      description:description,
-      date:date,
-      part:part,
-      type:type,
-      url:uploaded.downloadURL,
-      path:uploaded.filePath,
-      fileSize:uploaded.size,
-      uploadedAt:new Date().toISOString(),
-      uploadedBy:currentUser ? currentUser.name : (adminRole==='admin' ? '관리자' : '총무부'),
-      uploadedByPart:currentUser ? currentUser.part : (adminRole==='admin' ? '관리자' : '총무부')
+  var uploaded=0;
+  var uploader=currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부');
+  var uploaderPart=currentUser?currentUser.part:(adminRole==='admin'?'관리자':'총무부');
 
-    });
-  }).then(function(){
-    writeLog('아카이브 업로드', title+' ['+part+'] '+(type==='video'?'영상':'사진')+' 업로드');
-    partEl.value='';
-    dateEl.value=new Date().toISOString().split('T')[0];
-    titleEl.value='';
-    descEl.value='';
-    fileEl.value='';
-    showToast('아카이브 업로드 완료');
-    loadArchiveItems();
-  }).catch(function(e){
-    console.error(e);
-    showToast('아카이브 업로드 실패');
-  }).finally(function(){
-    if(btn){
-      btn.disabled=false;
-      btn.textContent='업로드';
-      btn.style.opacity='';
+  function uploadOne(idx){
+    if(idx>=fileArr.length){
+      if(btn){btn.disabled=false;btn.textContent='업로드';btn.style.opacity='';}
+      partEl.value='';
+      dateEl.value=new Date().toISOString().split('T')[0];
+      titleEl.value='';
+      descEl.value='';
+      fileEl.value='';
+      showToast(fileArr.length+'장 업로드 완료!');
+      writeLog('아카이브 업로드',title+' ['+part+'] '+fileArr.length+'장 업로드');
+      loadArchiveItems();
+      return;
     }
-  });
+
+    var file=fileArr[idx];
+    var safeName=file.name.replace(/[^\w.\-가-힣]/g,'_').replace(/\.[^.]+$/,'');
+    var fileTitle=fileArr.length>1?title+' ('+( idx+1)+'/'+fileArr.length+')':title;
+
+    compressArchiveImage(file).then(function(uploadBlob){
+      var filePath='archive/'+part+'/'+Date.now()+'_'+safeName+'.jpg';
+      return storage.ref().child(filePath).put(uploadBlob,{contentType:'image/jpeg'}).then(function(snapshot){
+        return snapshot.ref.getDownloadURL().then(function(downloadURL){
+          return db.collection('mediaArchive').add({
+            title:fileTitle,
+            description:description,
+            date:date,
+            part:part,
+            type:'image',
+            url:downloadURL,
+            path:filePath,
+            fileSize:uploadBlob.size,
+            uploadedAt:new Date().toISOString(),
+            uploadedBy:uploader,
+            uploadedByPart:uploaderPart
+          });
+        });
+      });
+    }).then(function(){
+      uploaded++;
+      if(btn)btn.textContent='업로드 중... ('+uploaded+'/'+fileArr.length+')';
+      uploadOne(idx+1);
+    }).catch(function(e){
+      console.error(e);
+      showToast((idx+1)+'번째 파일 업로드 실패');
+      uploaded++;
+      if(btn)btn.textContent='업로드 중... ('+uploaded+'/'+fileArr.length+')';
+      uploadOne(idx+1);
+    });
+  }
+
+  uploadOne(0);
 }
+
 
 // ==================== 통계 ====================
 function renderStats(){
