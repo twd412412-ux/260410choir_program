@@ -123,7 +123,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .archive-upload-note{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .archive-card{overflow:hidden;margin-bottom:10px}
-.archive-thumb{width:100%;display:block;background:#000;aspect-ratio:16/10;object-fit:cover}
+.archive-thumb{width:100%;max-height:160px;display:block;background:#000;object-fit:cover;cursor:pointer}
 .archive-body{padding:12px}
 .archive-title-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .archive-title{font-size:15px;font-weight:700;line-height:1.4}
@@ -1979,7 +1979,7 @@ function renderArchiveList(){
     var safeUrl=String(item.url||'').replace(/'/g,'%27');
     var preview=item.type==='video'
       ? '<video class="archive-thumb" src="'+item.url+'" controls preload="metadata" playsinline></video>'
-      : '<img class="archive-thumb" src="'+item.url+'" alt="'+escHtml(item.title)+'" onclick="viewLargePhoto(\''+safeUrl+'\')">';
+      : '<img class="archive-thumb" src="'+item.url+'" alt="'+escHtml(item.title)+'" onclick="openPhotoViewer(\''+safeUrl+'\')" style="cursor:pointer">';
     var desc=item.description?'<div class="archive-desc">'+escHtml(item.description)+'</div>':'<div class="archive-desc" style="color:var(--ts)">설명 없음</div>';
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
@@ -3144,6 +3144,42 @@ function removePreviewPhoto() {
   }
   showToast('사진이 지워졌습니다. 아래 [저장하기]를 꼭 누르세요!');
 }
+var photoViewerZoom=1;
+var photoViewerSrc='';
+
+function openPhotoViewer(url){
+  photoViewerSrc=url;
+  photoViewerZoom=1;
+  var v=document.getElementById('photoViewer');
+  var img=document.getElementById('photoViewerImg');
+  img.src=url;
+  img.style.transform='scale(1)';
+  v.style.display='flex';
+}
+
+function closePhotoViewer(e){
+  if(e.target.id==='photoViewer') document.getElementById('photoViewer').style.display='none';
+}
+
+function zoomPhoto(dir){
+  photoViewerZoom=Math.max(0.5,Math.min(5,photoViewerZoom+(dir*0.5)));
+  document.getElementById('photoViewerImg').style.transform='scale('+photoViewerZoom+')';
+}
+
+function downloadViewerPhoto(){
+  if(!photoViewerSrc)return;
+  fetch(photoViewerSrc).then(function(r){return r.blob()}).then(function(b){
+    var u=URL.createObjectURL(b);
+    var a=document.createElement('a');
+    a.href=u;
+    a.download='archive_photo.jpg';
+    a.click();
+    URL.revokeObjectURL(u);
+  }).catch(function(){
+    window.open(photoViewerSrc,'_blank');
+  });
+}
+
 // ==================== [신규] 월간 결산 보고서 ====================
 function generateReport() {
   var monthVal = document.getElementById('reportMonthSel').value;
@@ -3415,5 +3451,15 @@ function printReport() {
   }, 500);
 }
 </script>
+<div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center" onclick="closePhotoViewer(event)">
+  <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
+    <button onclick="event.stopPropagation();zoomPhoto(-1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">−</button>
+    <button onclick="event.stopPropagation();zoomPhoto(1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">+</button>
+    <button onclick="event.stopPropagation();downloadViewerPhoto()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">⬇</button>
+    <button onclick="event.stopPropagation();document.getElementById('photoViewer').style.display='none'" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">✕</button>
+  </div>
+  <img id="photoViewerImg" src="" style="max-width:90%;max-height:80%;object-fit:contain;transition:transform 0.2s;cursor:grab" draggable="false">
+</div>
+
 </body>
 </html>
