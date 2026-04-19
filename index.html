@@ -783,11 +783,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     </div>
     <div class="form-group" style="margin-bottom:0">
       <label class="form-label">상세 사유</label>
-      <input class="form-input" id="attReasonText" placeholder="필요하면 상세 사유 입력" onkeypress="if(event.key==='Enter')confirmAttReason()">
+      <input class="form-input" id="attReasonText" placeholder="필요하면 상세 사유 입력" oninput="renderAttReasonPreset()" onkeypress="if(event.key==='Enter')confirmAttReason()">
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn" style="flex:1" onclick="closeAttReasonModal()">취소</button>
-      <button class="btn btn-p" style="flex:1" onclick="confirmAttReason()">확인</button>
+      <button id="attReasonConfirmBtn" class="btn btn-p" style="flex:1;opacity:.45;cursor:not-allowed" onclick="confirmAttReason()" disabled>확인</button>
     </div>
   </div>
 </div>
@@ -2382,10 +2382,23 @@ function openAttReasonModal(id){
 function renderAttReasonPreset(){
   var wrap=document.getElementById('attReasonPresetList');
   if(!wrap)return;
+
   wrap.querySelectorAll('.reason-chip').forEach(function(el){
     el.classList.toggle('on',el.textContent===currentAttReasonPreset);
   });
+
+  var btn=document.getElementById('attReasonConfirmBtn');
+  var detailEl=document.getElementById('attReasonText');
+  var detail=detailEl ? detailEl.value.trim() : '';
+  var enabled=!!currentAttReasonPreset && (currentAttReasonPreset!=='기타' || !!detail);
+
+  if(btn){
+    btn.disabled=!enabled;
+    btn.style.opacity=enabled ? '1' : '.45';
+    btn.style.cursor=enabled ? 'pointer' : 'not-allowed';
+  }
 }
+
 
 function selectAttReasonPreset(reason){
   currentAttReasonPreset=reason;
@@ -2403,15 +2416,14 @@ function confirmAttReason(){
   var detail=document.getElementById('attReasonText').value.trim();
   var finalReason='';
 
-  if(currentAttReasonPreset){
-    finalReason=(detail&&detail!==currentAttReasonPreset)
-      ? (currentAttReasonPreset+' - '+detail)
-      : currentAttReasonPreset;
-  }else if(detail){
-    finalReason=detail;
-  }
+  if(!currentAttReasonPreset)return showToast('먼저 사유 칩을 선택해주세요');
+  if(currentAttReasonPreset==='기타' && !detail)return showToast('기타 사유는 상세 내용을 입력해주세요');
 
-  if(!finalReason)return showToast('결석 사유를 선택하거나 입력해주세요');
+  finalReason=(detail&&detail!==currentAttReasonPreset)
+    ? (currentAttReasonPreset+' - '+detail)
+    : currentAttReasonPreset;
+
+
 
   attData[currentAttReasonId]='사유결석';
   if(!attReasons)attReasons={};
