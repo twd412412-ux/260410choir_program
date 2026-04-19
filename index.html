@@ -2034,8 +2034,11 @@ function compressArchiveImage(file){
   });
 }
 function uploadArchiveMedia(){
-  if(!currentUser)return showToast('로그인 후 이용 가능합니다');
+  if(!currentUser && adminRole!=='admin' && adminRole!=='chongmu'){
+    return showToast('로그인 후 이용 가능합니다');
+  }
   if(!canUploadArchive())return showToast('업로드 권한이 없습니다');
+
 
   var partEl=document.getElementById('archivePart');
   var dateEl=document.getElementById('archiveDate');
@@ -2085,8 +2088,9 @@ function uploadArchiveMedia(){
       path:uploaded.filePath,
       fileSize:uploaded.size,
       uploadedAt:new Date().toISOString(),
-      uploadedBy:currentUser.name,
-      uploadedByPart:currentUser.part
+      uploadedBy:currentUser ? currentUser.name : (adminRole==='admin' ? '관리자' : '총무부'),
+      uploadedByPart:currentUser ? currentUser.part : (adminRole==='admin' ? '관리자' : '총무부')
+
     });
   }).then(function(){
     writeLog('아카이브 업로드', title+' ['+part+'] '+(type==='video'?'영상':'사진')+' 업로드');
