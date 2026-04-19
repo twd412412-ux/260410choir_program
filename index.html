@@ -2869,6 +2869,19 @@ function initAttStatDates(){
   document.getElementById('attStatFrom').value=from.toISOString().split('T')[0];
   document.getElementById('attStatTo').value=now.toISOString().split('T')[0];
 }
+
+function togglePrevWeekCard(btn){
+  var body=btn.nextElementSibling;
+  var arrow=btn.querySelector('.pw-arrow');
+  if(body.style.display==='none'){
+    body.style.display='block';
+    arrow.textContent='▼';
+  }else{
+    body.style.display='none';
+    arrow.textContent='▶';
+  }
+}
+
 // [업그레이드] 3주 연속 결석 및 이탈률 분석 기능 추가
 function loadAttDashboard(){
   var el=document.getElementById('attDashboard');
@@ -3010,7 +3023,7 @@ function loadAttDashboard(){
         });
 
         h+='<div style="margin-top:12px">';
-        h+='<div onclick="var body=this.nextElementSibling;var arrow=this.querySelector(\'.pw-arrow\');if(body.style.display===\'none\'){body.style.display=\'block\';arrow.textContent=\'▼\'}else{body.style.display=\'none\';arrow.textContent=\'▶\'}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--sf);border-radius:8px;box-shadow:var(--sh)">';
+        h+='<div onclick="togglePrevWeekCard(this)" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--sf);border-radius:8px;box-shadow:var(--sh)">';
         h+='<span class="pw-arrow" style="font-size:12px;color:var(--ts)">▶</span>';
         h+='<span style="font-size:14px;font-weight:700">📋 전주 '+s2+' (주일) 출석 요약</span>';
         h+='</div>';
