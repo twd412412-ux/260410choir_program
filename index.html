@@ -1456,7 +1456,7 @@ function renderHandbook(list) {
             ${photoHtml} <div class="hb-card-text">
               <div class="hb-card-title">${m.name} <span class="hb-card-meta">${m.part}${m.subPart?' · '+m.subPart:''}</span>
 ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
-              <div style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0">${m.phone || '전화번호 미등록'}</div>
+              ${m.phone ? `<a href="tel:${m.phone.replace(/[^0-9+]/g,'')}" style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0; display:inline-block; text-decoration:none">📞 ${m.phone}</a>` : `<div style="font-size:13px; color:var(--ts); font-weight:700; margin:4px 0">전화번호 미등록</div>`}
             </div>
           </div>
           <div class="hb-card-actions">
