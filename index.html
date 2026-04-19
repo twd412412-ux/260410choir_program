@@ -2447,8 +2447,10 @@ function init(){
   initColorPicker();
   buildCatOptions();
   buildYearOptions();
+  initPhotoViewerTouch();
 }
 init();
+
 // ==================== PWA 설치 안내 ====================
 var deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){
@@ -3224,6 +3226,55 @@ function applyPvTransform(){
   var img=document.getElementById('photoViewerImg');
   if(img)img.style.transform='scale('+photoViewerZoom+') translate('+pvOffsetX+'px,'+pvOffsetY+'px)';
 }
+function initPhotoViewerTouch(){
+  setTimeout(function(){
+    var viewer=document.getElementById('photoViewer');
+    if(!viewer)return;
+
+    viewer.addEventListener('touchstart',function(e){
+      if(e.touches.length===2){
+        pvIsPinching=true;
+        pvStartDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+        pvStartZoom=photoViewerZoom;
+        e.preventDefault();
+      }else if(e.touches.length===1&&photoViewerZoom>1){
+        pvIsPinching=false;
+        pvPanStartX=e.touches[0].clientX;
+        pvPanStartY=e.touches[0].clientY;
+        pvLastOffsetX=pvOffsetX;
+        pvLastOffsetY=pvOffsetY;
+        e.preventDefault();
+      }
+    },{passive:false});
+
+    viewer.addEventListener('touchmove',function(e){
+      if(e.touches.length===2&&pvIsPinching){
+        var dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+        var newZoom=pvStartZoom*(dist/pvStartDist);
+        photoViewerZoom=Math.max(0.5,Math.min(5,newZoom));
+        if(photoViewerZoom<=1){pvOffsetX=0;pvOffsetY=0;pvLastOffsetX=0;pvLastOffsetY=0;}
+        applyPvTransform();
+        e.preventDefault();
+      }else if(e.touches.length===1&&photoViewerZoom>1&&!pvIsPinching){
+        var dx=(e.touches[0].clientX-pvPanStartX)/photoViewerZoom;
+        var dy=(e.touches[0].clientY-pvPanStartY)/photoViewerZoom;
+        pvOffsetX=pvLastOffsetX+dx;
+        pvOffsetY=pvLastOffsetY+dy;
+        applyPvTransform();
+        e.preventDefault();
+      }
+    },{passive:false});
+
+    viewer.addEventListener('touchend',function(e){
+      if(e.touches.length<2)pvIsPinching=false;
+      if(e.touches.length===0){
+        pvLastOffsetX=pvOffsetX;
+        pvLastOffsetY=pvOffsetY;
+      }
+    });
+  },500);
+}
+
 
 function downloadViewerPhoto(){
   if(!photoViewerSrc)return;
@@ -3239,52 +3290,7 @@ function downloadViewerPhoto(){
   });
 }
 
-(function(){
-  var viewer=document.getElementById('photoViewer');
-  if(!viewer)return;
 
-  viewer.addEventListener('touchstart',function(e){
-    if(e.touches.length===2){
-      pvIsPinching=true;
-      pvStartDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      pvStartZoom=photoViewerZoom;
-      e.preventDefault();
-    }else if(e.touches.length===1&&photoViewerZoom>1){
-      pvIsPinching=false;
-      pvPanStartX=e.touches[0].clientX;
-      pvPanStartY=e.touches[0].clientY;
-      pvLastOffsetX=pvOffsetX;
-      pvLastOffsetY=pvOffsetY;
-      e.preventDefault();
-    }
-  },{passive:false});
-
-  viewer.addEventListener('touchmove',function(e){
-    if(e.touches.length===2&&pvIsPinching){
-      var dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      var newZoom=pvStartZoom*(dist/pvStartDist);
-      photoViewerZoom=Math.max(0.5,Math.min(5,newZoom));
-      if(photoViewerZoom<=1){pvOffsetX=0;pvOffsetY=0;pvLastOffsetX=0;pvLastOffsetY=0;}
-      applyPvTransform();
-      e.preventDefault();
-    }else if(e.touches.length===1&&photoViewerZoom>1&&!pvIsPinching){
-      var dx=(e.touches[0].clientX-pvPanStartX)/photoViewerZoom;
-      var dy=(e.touches[0].clientY-pvPanStartY)/photoViewerZoom;
-      pvOffsetX=pvLastOffsetX+dx;
-      pvOffsetY=pvLastOffsetY+dy;
-      applyPvTransform();
-      e.preventDefault();
-    }
-  },{passive:false});
-
-  viewer.addEventListener('touchend',function(e){
-    if(e.touches.length<2)pvIsPinching=false;
-    if(e.touches.length===0){
-      pvLastOffsetX=pvOffsetX;
-      pvLastOffsetY=pvOffsetY;
-    }
-  });
-})();
 
 // ==================== [신규] 월간 결산 보고서 ====================
 function generateReport() {
