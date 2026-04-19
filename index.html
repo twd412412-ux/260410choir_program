@@ -1025,7 +1025,7 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||''};
+    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||'',canArchiveUpload:!!data.canArchiveUpload};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
@@ -1418,7 +1418,8 @@ function loadMembers(){
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
-      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':m.role==='songschedule'?' <span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">곡+일정</span>':'';      
+      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':m.role==='songschedule'?' <span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">곡+일정</span>':'';
+      if(m.canArchiveUpload) roleBadge += ' <span style="font-size:10px;background:#8B5CF6;color:#fff;padding:1px 6px;border-radius:8px">아카이브</span>';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
         <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}</div>
         <div style="display:flex;gap:4px">
@@ -1479,21 +1480,28 @@ function resetPin(id,name){
   });
 }
 function changeRole(id,name,currentRole){
-  var msg=name+'님 현재 권한: '+(currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':currentRole==='songschedule'?'곡+일정':'없음')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)\n3 = 곡+일정 (곡추가+일정만)';
-  var input=prompt(msg);
-  if(input===null)return;
-  var role='';
-  if(input==='1')role='attendance';
-  else if(input==='2')role='chongmu';
-  else if(input==='3')role='songschedule';
-  else if(input==='0')role='';
-  else return showToast('0, 1, 2, 3 중에 입력해주세요');
-  db.collection('accounts').doc(id).update({role:role}).then(function(){
-    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':'없음';
-    showToast(name+'님 권한: '+label);
-    loadMembers();
-    writeLog('권한 변경',name+'님 → '+label);
-  }).catch(function(){showToast('변경 중 오류 발생')});
+  db.collection('accounts').doc(id).get().then(function(docSnap){
+    var data=docSnap.exists?(docSnap.data()||{}):{};
+    var currentArchive = !!data.canArchiveUpload;
+    var currentRoleLabel=currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':currentRole==='songschedule'?'곡+일정':'없음';
+    var msg=name+'님 현재 권한: '+currentRoleLabel+(currentArchive?' + 아카이브 업로드':'')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)\n3 = 곡+일정 (곡추가+일정만)\n4 = 일반 단원 + 아카이브 업로드만 허용';
+    var input=prompt(msg);
+    if(input===null)return;
+    var role='';
+    var canArchiveUpload=false;
+    if(input==='1')role='attendance';
+    else if(input==='2')role='chongmu';
+    else if(input==='3')role='songschedule';
+    else if(input==='4'){role='';canArchiveUpload=true;}
+    else if(input==='0')role='';
+    else return showToast('0, 1, 2, 3, 4 중에 입력해주세요');
+    db.collection('accounts').doc(id).update({role:role,canArchiveUpload:canArchiveUpload}).then(function(){
+      var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':(canArchiveUpload?'일반 단원 + 아카이브':'없음');
+      showToast(name+'님 권한: '+label);
+      loadMembers();
+      writeLog('권한 변경',name+'님 → '+label);
+    }).catch(function(){showToast('변경 중 오류 발생')});
+  }).catch(function(){showToast('권한 조회 중 오류 발생')});
 }
 
 
@@ -1916,7 +1924,8 @@ function canUploadArchive(){
   return adminRole==='admin' || adminRole==='chongmu' || (!!currentUser && (
     currentUser.role==='attendance' ||
     currentUser.role==='songschedule' ||
-    currentUser.role==='chongmu'
+    currentUser.role==='chongmu' ||
+    currentUser.canArchiveUpload===true
   ));
 }
 
