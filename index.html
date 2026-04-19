@@ -3062,7 +3062,8 @@ function loadAttDashboard(){
       }
 
       el.innerHTML=h;
-
+    }).catch(function(e){
+      console.error(e);
       el.innerHTML='<div style="font-size:13px;color:var(--dg);text-align:center;padding:10px">데이터를 분석하는 중 오류가 발생했습니다.</div>';
     });
   });
