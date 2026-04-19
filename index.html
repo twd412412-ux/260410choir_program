@@ -138,8 +138,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 }
 
 
-
-
 .att-btn.present{background:#22C55E;color:#fff;border-color:#22C55E}
 .att-btn.late{background:#F59E0B;color:#fff;border-color:#F59E0B}
 .att-btn.absent{background:#EF4444;color:#fff;border-color:#EF4444}
@@ -506,11 +504,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   </div>
   <div class="archive-filter-card">
     <div class="archive-upload-title" style="margin-bottom:8px">보기 설정</div>
-    <div class="archive-grid">
-      <div class="form-group"><label class="form-label">파트</label><select class="form-sel" id="archiveFilterPart" onchange="renderArchiveList()"><option value="all">전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
-      <div class="form-group"><label class="form-label">유형</label><select class="form-sel" id="archiveFilterType" onchange="renderArchiveList()"><option value="all">전체</option><option value="image">사진</option></select></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">파트</label><select class="form-sel" id="archiveFilterPart" onchange="renderArchiveList()"><option value="all">전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
+      <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">유형</label><select class="form-sel" id="archiveFilterType" onchange="renderArchiveList()"><option value="all">전체</option><option value="image">사진</option></select></div>
+      <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">보기</label><select class="form-sel" id="archiveViewMode" onchange="renderArchiveList()"><option value="grid2">2열</option><option value="grid3">3열</option><option value="list">1열 (크게)</option></select></div>
     </div>
   </div>
+
   <div class="result-count" id="archiveCount">아카이브 0개</div>
   <div class="card-list" id="archiveList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
 </div>
@@ -1978,12 +1978,19 @@ function renderArchiveList(){
     list.innerHTML='<div class="archive-empty">조건에 맞는 사진이나 영상이 없습니다.</div>';
     return;
   }
+  var viewMode=document.getElementById('archiveViewMode')?document.getElementById('archiveViewMode').value:'grid2';
+  if(viewMode==='grid3'){list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:8px 16px'}
+  else if(viewMode==='list'){list.style.cssText='display:grid;grid-template-columns:1fr;gap:10px;padding:8px 16px'}
+  else{list.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 16px'}
   list.innerHTML=items.map(function(item){
     var safeUrl=String(item.url||'').replace(/'/g,'%27');
     var preview=item.type==='video'
       ? '<video class="archive-thumb" src="'+item.url+'" controls preload="metadata" playsinline></video>'
-      : '<img class="archive-thumb" src="'+item.url+'" alt="'+escHtml(item.title)+'" onclick="openPhotoViewer(\''+safeUrl+'\')" style="cursor:pointer">';
-    var desc=item.description?'<div class="archive-desc">'+escHtml(item.description)+'</div>':'<div class="archive-desc" style="color:var(--ts)">설명 없음</div>';
+      : '<img class="archive-thumb" src="'+item.url+'" alt="'+escHtml(item.title)+'" onclick="openPhotoViewer(\''+safeUrl+'\')" style="cursor:pointer;height:'+(viewMode==='grid3'?'90px':viewMode==='list'?'200px':'120px')+'">';
+    var desc='';
+    if(viewMode==='grid3'){desc=''}
+    else if(item.description){desc='<div class="archive-desc">'+escHtml(item.description)+'</div>'}
+    else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
     var canDel=false;
@@ -2083,6 +2090,8 @@ function uploadArchiveMedia(){
     if(files[i].size>80*1024*1024){return showToast('파일 용량은 80MB 이하로 올려주세요');}
     fileArr.push(files[i]);
   }
+  if(fileArr.length>5){return showToast('한 번에 최대 5장까지만 업로드할 수 있습니다');}
+
 
   if(btn){
     btn.disabled=true;
