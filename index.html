@@ -1983,7 +1983,11 @@ function renderArchiveList(){
     var desc=item.description?'<div class="archive-desc">'+escHtml(item.description)+'</div>':'<div class="archive-desc" style="color:var(--ts)">설명 없음</div>';
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+'</div></div>';
+    var canDel=false;
+    if(adminRole==='admin') canDel=true;
+    else if(currentUser && item.uploadedBy===currentUser.name) canDel=true;
+    var delBtn=canDel?'<button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+escHtml(item.title).replace(/'/g,"\\'")+'\',\''+(item.path||'').replace(/'/g,"\\'")+'\')" style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-top:8px">🗑️ 삭제</button>':'';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+delBtn+'</div></div>';
   }).join('');
 }
 function compressArchiveImage(file){
@@ -2031,6 +2035,21 @@ function compressArchiveImage(file){
     };
     reader.onerror=function(){reject(new Error('file_read_fail'))};
     reader.readAsDataURL(file);
+  });
+}
+function deleteArchiveItem(id,title,path){
+  if(!confirm('"'+title+'" 사진을 삭제하시겠습니까?'))return;
+  db.collection('mediaArchive').doc(id).delete().then(function(){
+    if(path){
+      storage.ref().child(path).delete().catch(function(){});
+    }
+    archiveItems=archiveItems.filter(function(x){return x.id!==id});
+    renderArchiveList();
+    writeLog('아카이브 삭제',title+' 삭제됨');
+    showToast('삭제되었습니다');
+  }).catch(function(e){
+    console.error(e);
+    showToast('삭제 중 오류 발생');
   });
 }
 
