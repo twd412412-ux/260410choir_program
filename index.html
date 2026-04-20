@@ -3173,55 +3173,90 @@ function loadMemHistory(){
     var sessionTotal=0,present=0,late=0,excused=0,absent=0,unchecked=0;
     var sundayWeeks={};
     var rows=[];
+    var rawDocs=[];
 
     function isTargetSession(d){
       var targetPart=d.targetPart||'all';
       return targetPart==='all'||targetPart===mem.part||targetPart===mem.subPart;
     }
 
-    function ensureSundayWeek(date){
-      if(!sundayWeeks[date])sundayWeeks[date]={am:'',pm:''};
-      return sundayWeeks[date];
+    function isSunday(dateStr){
+      var d=new Date(dateStr+'T00:00:00');
+      return d.getDay()===0;
     }
 
     snap.forEach(function(doc){
       var d=doc.data();
       if(!d||!isTargetSession(d))return;
+      rawDocs.push({id:doc.id,data:d});
+    });
+
+    var dayMeta={};
+    rawDocs.forEach(function(item){
+      var d=item.data;
+      var date=d.date;
+      if(!dayMeta[date])dayMeta[date]={hasAM:false,hasPM:false};
+      var session=d.session||'';
+      if(session==='오전')dayMeta[date].hasAM=true;
+      if(session==='오후')dayMeta[date].hasPM=true;
+    });
+
+    rawDocs.forEach(function(item){
+      var docId=item.id;
+      var d=item.data;
+      var date=d.date;
+      var session=d.session||'오전';
+      var meta=dayMeta[date]||{hasAM:false,hasPM:false};
+      var isLegacyDoc=!d.session||d.session==='';
+      var hasSplitDocs=meta.hasAM||meta.hasPM;
+      if(isLegacyDoc&&hasSplitDocs)return;
+      if(!isSunday(date))return;
+
       var r=d.records||{};
       var st=r[id]||'';
-      var session=d.session||'오전';
-      var week=ensureSundayWeek(d.date);
-      if(session==='오후')week.pm=st;else week.am=st;
+      if(!sundayWeeks[date])sundayWeeks[date]={am:'',pm:'',legacy:''};
+      if(session==='오후')sundayWeeks[date].pm=st;
+      else if(session==='오전')sundayWeeks[date].am=st;
+      else sundayWeeks[date].legacy=st;
+
       sessionTotal++;
       if(st==='출석')present++;
       else if(st==='지각')late++;
       else if(st==='사유결석')excused++;
       else if(st==='무단결석')absent++;
       else unchecked++;
+
       var color=st==='출석'?'#22C55E':st==='지각'?'#F59E0B':st==='사유결석'?'#8B5CF6':st==='무단결석'?'#EF4444':'var(--ts)';
       var label=st||'미체크';
       var reasonNote=(st==='사유결석'&&d.reasons&&d.reasons[id])?' — '+d.reasons[id]:'';
-      var sessionTag=session==='오후'?' <span style="font-size:11px;background:#7C3AED;color:#fff;padding:1px 6px;border-radius:6px">오후</span>':' <span style="font-size:11px;background:var(--p);color:#fff;padding:1px 6px;border-radius:6px">오전</span>';
-      rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px">'+d.date+sessionTag+'</span><span style="font-size:13px;font-weight:700;color:'+color+'">'+label+'</span></div>'+(reasonNote?'<div style="font-size:11px;color:#8B5CF6;margin-top:2px">사유: '+reasonNote+'</div>':'')+'</div>');
+      var sessionTag=session==='오후'?' <span style="font-size:11px;background:#7C3AED;color:#fff;padding:1px 6px;border-radius:6px">오후</span>':session==='오전'?' <span style="font-size:11px;background:var(--p);color:#fff;padding:1px 6px;border-radius:6px">오전</span>':' <span style="font-size:11px;background:#475569;color:#fff;padding:1px 6px;border-radius:6px">구버전</span>';
+      rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--bd)"><div style="display:flex;justify-content:space-between"><span style="font-size:14px">'+date+sessionTag+'</span><span style="font-size:13px;font-weight:700;color:'+color+'">'+label+'</span></div>'+(reasonNote?'<div style="font-size:11px;color:#8B5CF6;margin-top:2px">사유: '+reasonNote+'</div>':'')+'</div>');
     });
 
     var sundayTotal=0,sundayPresent=0,sundayPartial=0;
     Object.keys(sundayWeeks).forEach(function(date){
       var week=sundayWeeks[date];
-      var amOk=week.am==='출석'||week.am==='지각';
-      var pmOk=week.pm==='출석'||week.pm==='지각';
-      var hasAny=week.am||week.pm;
-      if(!hasAny)return;
-      sundayTotal++;
-      if(amOk&&pmOk)sundayPresent++;
-      else if(amOk||pmOk)sundayPartial++;
+      var hasSplit=week.am!==''||week.pm!=='';
+      var hasLegacy=week.legacy!=='';
+      if(hasSplit){
+        var amOk=week.am==='출석'||week.am==='지각';
+        var pmOk=week.pm==='출석'||week.pm==='지각';
+        var hasAny=week.am!==''||week.pm!=='';
+        if(!hasAny)return;
+        sundayTotal++;
+        if(amOk&&pmOk)sundayPresent++;
+        else if(amOk||pmOk)sundayPartial++;
+      }else if(hasLegacy){
+        sundayTotal++;
+        if(week.legacy==='출석'||week.legacy==='지각')sundayPresent++;
+      }
     });
 
     var rate=sundayTotal>0?Math.round(((sundayPresent+(sundayPartial*0.5))/sundayTotal)*100):0;
     var h='';
-    h+='<div style="font-size:12px;color:var(--ts);margin-bottom:8px">주일 기준 출석률입니다. 오전/오후는 개별 저장하되, 메인 출석률은 주일 단위로 묶어 계산합니다.</div>';
+    h+='<div style="font-size:12px;color:var(--ts);margin-bottom:8px">주일만 메인 통계에 반영합니다. 토요일/특별 체크는 제외하고, 같은 날짜에 오전·오후 문서가 있으면 구버전 단일 문서는 무시합니다.</div>';
     h+='<div class="stat-grid" style="padding:0;margin-bottom:16px"><div class="stat-card"><div class="stat-num">'+rate+'%</div><div class="stat-lbl">주일 출석률</div></div><div class="stat-card"><div class="stat-num" style="color:#22C55E">'+sundayPresent+'</div><div class="stat-lbl">완전 출석 주일</div></div><div class="stat-card"><div class="stat-num" style="color:#0EA5E9">'+sundayPartial+'</div><div class="stat-lbl">부분 출석 주일</div></div><div class="stat-card"><div class="stat-num" style="color:#22C55E">'+present+'</div><div class="stat-lbl">오전/오후 출석</div></div><div class="stat-card"><div class="stat-num" style="color:#F59E0B">'+late+'</div><div class="stat-lbl">지각</div></div><div class="stat-card"><div class="stat-num" style="color:#8B5CF6">'+excused+'</div><div class="stat-lbl">사유결석</div></div><div class="stat-card"><div class="stat-num" style="color:#EF4444">'+absent+'</div><div class="stat-lbl">무단결석</div></div><div class="stat-card"><div class="stat-num" style="color:var(--ts)">'+unchecked+'</div><div class="stat-lbl">미체크</div></div></div>';
-    h+='<div style="font-size:12px;color:var(--ts);margin:-6px 0 12px">주일 '+sundayTotal+'회 기준, 오전/오후 회차 기록 '+sessionTotal+'건</div>';
+    h+='<div style="font-size:12px;color:var(--ts);margin:-6px 0 12px">주일 '+sundayTotal+'회 기준, 반영된 오전/오후 회차 기록 '+sessionTotal+'건</div>';
     h+='<h4 style="font-size:14px;font-weight:700;margin-bottom:8px">최근 출석 이력 ('+rows.length+'회)</h4>';
     h+=rows.length>0?rows.join(''):'<div style="font-size:13px;color:var(--ts)">출석 기록이 없습니다</div>';
     document.getElementById('attMemList').innerHTML=h;
