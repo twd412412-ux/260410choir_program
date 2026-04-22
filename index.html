@@ -677,7 +677,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
-        <button class="btn btn-sm" style="padding:6px 10px;min-height:auto;background:var(--pl);color:var(--pd);border-color:rgba(37,99,235,.18);white-space:nowrap" onclick="attCheckAll('출석')">모두 출석</button>
       </div>
       <div id="attList"></div>
 
@@ -2818,14 +2817,6 @@ function confirmAttReason(){
   currentAttReasonId='';
   currentAttReasonPreset='';
   closeAttReasonModal();
-  renderAttList();
-}
-
-
-function attCheckAll(status){
-  var members=attMembers.slice();
-  if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
-  members.forEach(function(m){attData[m.id]=status});
   renderAttList();
 }
 
