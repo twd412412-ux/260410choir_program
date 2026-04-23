@@ -45,7 +45,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .admin-actions{display:none;gap:2px}
 .admin-mode .admin-actions{display:flex}
 .chongmu-mode .admin-actions{display:flex}
-.chongmu-mode .admin-btn-del{display:none!important}
+.songschedule-mode .admin-actions{display:flex}
 .admin-btn{background:none;border:none;cursor:pointer;font-size:15px;padding:2px}
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:flex-end}
 .modal-overlay.active{display:flex}
@@ -989,7 +989,7 @@ function showFirstAdminTab(){
 function openAdminLogin(){
   if(adminRole){
     adminRole=null;
-    document.body.classList.remove('admin-mode','chongmu-mode');
+    document.body.classList.remove('admin-mode','chongmu-mode','songschedule-mode');
     document.getElementById('navAdmin').classList.add('hidden');
     document.getElementById('navStats').classList.add('hidden');
     document.getElementById('navArchive').classList.toggle('hidden',!currentUser);
@@ -1006,7 +1006,7 @@ function checkAdminPw(){
   var pw=document.getElementById('adminPw').value;
   if(role==='admin'&&pw==='9917'){
     adminRole='admin';
-    document.body.classList.add('admin-mode');document.body.classList.remove('chongmu-mode');
+    document.body.classList.add('admin-mode');document.body.classList.remove('chongmu-mode','songschedule-mode');
     document.getElementById('navAdmin').classList.remove('hidden');
     document.getElementById('navStats').classList.remove('hidden');
     document.getElementById('navArchive').classList.remove('hidden');
@@ -1015,7 +1015,7 @@ function checkAdminPw(){
     closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();
   }else if(role==='chongmu'&&pw==='0412'){
     adminRole='chongmu';
-    document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode');
+    document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode','songschedule-mode');
     document.getElementById('navAdmin').classList.remove('hidden');
     document.getElementById('navStats').classList.remove('hidden');
     document.getElementById('navArchive').classList.remove('hidden');
@@ -1066,12 +1066,15 @@ function loginUser(){
     }else if(data.role==='chongmu'){
       adminRole='chongmu';
       document.body.classList.add('chongmu-mode');
+      document.body.classList.remove('admin-mode','songschedule-mode');
       document.getElementById('navAdmin').classList.remove('hidden');
       document.getElementById('navStats').classList.remove('hidden');
       document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
     }else if(data.role==='songschedule'){
       adminRole='songschedule';
+      document.body.classList.add('songschedule-mode');
+      document.body.classList.remove('admin-mode','chongmu-mode');
       document.getElementById('navAdmin').classList.remove('hidden');
       document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
@@ -1110,11 +1113,14 @@ function restoreUser() {
       } else if (currentUser.role === 'chongmu') {
         adminRole = 'chongmu';
         document.body.classList.add('chongmu-mode');
+        document.body.classList.remove('admin-mode','songschedule-mode');
         document.getElementById('navAdmin').classList.remove('hidden');
         document.getElementById('navStats').classList.remove('hidden');
         document.getElementById('btnLock').textContent = '🔓';
       } else if (currentUser.role === 'songschedule') {
         adminRole = 'songschedule';
+        document.body.classList.add('songschedule-mode');
+        document.body.classList.remove('admin-mode','chongmu-mode');
         document.getElementById('navAdmin').classList.remove('hidden');
         document.getElementById('btnLock').textContent = '🔓';
       }
@@ -1286,7 +1292,7 @@ function openDetail(id){
 
   document.getElementById('detailTitle').textContent=song.songName;
   document.getElementById('detailAdmin').style.display=(adminRole==='admin' || adminRole==='chongmu' || adminRole==='songschedule') ? 'flex' : 'none';
-  document.getElementById('detailDelBtn').style.display=adminRole==='admin'?'':'none';
+  document.getElementById('detailDelBtn').style.display=(adminRole==='admin' || adminRole==='chongmu' || adminRole==='songschedule') ? '' : 'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
   var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
@@ -1401,7 +1407,7 @@ function saveEdit(){
 
 // ==================== 곡 삭제 ====================
 function delSong(id,name){
-  if(adminRole!=='admin')return showToast('삭제 권한이 없습니다');
+  if(adminRole!=='admin' && adminRole!=='chongmu' && adminRole!=='songschedule')return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+name+'" 삭제하시겠습니까?'))return;
   db.collection('songs').doc(id).delete().then(function(){
     // 로컬 캐시에서도 제거
