@@ -2733,6 +2733,19 @@ function renderAttList(){
 }
 
 function setAtt(id,status){
+  var currentStatus=attData[id]||'';
+
+  if(currentStatus===status){
+    delete attData[id];
+    if(attReasons)delete attReasons[id];
+    if(currentAttReasonId===id){
+      currentAttReasonId='';
+      currentAttReasonPreset='';
+    }
+    renderAttList();
+    return;
+  }
+
   if(status==='사유결석'){
     openAttReasonModal(id);
   }else{
