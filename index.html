@@ -531,7 +531,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="archive-upload-card hidden" id="archiveUploadCard">
     <div class="archive-upload-title">➕ 사진 · 영상 올리기</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
-      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">파트 *</label><select class="form-sel" id="archivePart"><option value="">선택</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">파트 *</label><select class="form-sel" id="archivePart"><option value="">선택</option><option>전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">날짜 *</label><input class="form-input" id="archiveDate" type="date" style="min-width:0"></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -548,7 +548,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="archive-filter-card">
     <div class="archive-upload-title" style="margin-bottom:8px">보기 설정</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">파트</label><select class="form-sel" id="archiveFilterPart" onchange="renderArchiveList()"><option value="all">전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
+      <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">파트</label><select class="form-sel" id="archiveFilterPart" onchange="renderArchiveList()"><option value="all">전체보기</option><option value="전체">전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
       <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">유형</label><select class="form-sel" id="archiveFilterType" onchange="renderArchiveList()"><option value="all">전체</option><option value="image">사진</option></select></div>
       <div class="form-group" style="flex:1;min-width:80px;margin-bottom:0"><label class="form-label">보기</label><select class="form-sel" id="archiveViewMode" onchange="renderArchiveList()"><option value="grid2">2열</option><option value="grid3">3열</option><option value="list">1열 (크게)</option></select></div>
     </div>
