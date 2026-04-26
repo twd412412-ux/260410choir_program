@@ -1186,10 +1186,9 @@ function getSundayFrom(base, offsetWeeks){
   d.setDate(d.getDate()-d.getDay()+(offsetWeeks*7));
   return d;
 }
-function getMondayFrom(base){
-  var d=new Date(base.getFullYear(),base.getMonth(),base.getDate());
-  var diff=d.getDay()===0?-6:1-d.getDay();
-  d.setDate(d.getDate()+diff);
+function getSaturdayFromSunday(sunday){
+  var d=new Date(sunday.getFullYear(),sunday.getMonth(),sunday.getDate());
+  d.setDate(d.getDate()+6);
   return d;
 }
 function renderHome(){
@@ -1201,12 +1200,12 @@ function renderHome(){
 
   var lastSun=getSundayFrom(today,-1), thisSun=getSundayFrom(today,0), nextSun=getSundayFrom(today,1);
   var thisSunStr=homeInputDate(thisSun);
-  var mon=getMondayFrom(today), sun=new Date(mon); sun.setDate(mon.getDate()+6);
-  var monStr=homeInputDate(mon), sunStr=homeInputDate(sun);
+  var weekStart=thisSun, weekEnd=getSaturdayFromSunday(thisSun);
+  var weekStartStr=homeInputDate(weekStart), weekEndStr=homeInputDate(weekEnd);
 
   Promise.all([
     db.collection('songs').get(),
-    db.collection('schedules').where('date','>=',monStr).where('date','<=',sunStr).get(),
+    db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get(),
     db.collection('members').get(),
     db.collection('attendance').doc(thisSunStr+'_오전').get(),
     db.collection('attendance').doc(thisSunStr+'_오후').get()
