@@ -675,6 +675,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
       </div>
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div id="attGuideCard" style="display:none;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
       </div>
@@ -2682,7 +2683,53 @@ function setAttPartFilter(p){
   renderAttList();
 }
 
+
+function getAttDateInfo(dateStr){
+  var parts=String(dateStr||'').split('-');
+  if(parts.length!==3)return null;
+  var d=new Date(Number(parts[0]),Number(parts[1])-1,Number(parts[2]));
+  if(isNaN(d.getTime()))return null;
+  return {date:d,day:d.getDay(),dayName:['주일','월','화','수','목','금','토'][d.getDay()]};
+}
+
+function renderAttGuideCard(){
+  var el=document.getElementById('attGuideCard');
+  if(!el)return;
+  var dateEl=document.getElementById('attDate');
+  var date=dateEl?dateEl.value:'';
+  if(!date){el.style.display='none';el.innerHTML='';return;}
+  if(!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance')){el.style.display='none';el.innerHTML='';return;}
+  var info=getAttDateInfo(date);
+  if(!info){el.style.display='none';el.innerHTML='';return;}
+
+  var curData=attSession==='오전'?attAmData:attPmData;
+  var otherData=attSession==='오전'?attPmData:attAmData;
+  var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ 주일 출석부입니다',msg='이 회차는 저장 후 월간 결산 출석률에 포함됩니다.';
+
+  if(info.day!==0){
+    bg='#EFF6FF';bd='#BFDBFE';color='#1D4ED8';title='ℹ️ 선택한 날짜는 '+info.dayName+'요일입니다';
+    msg='특별연습/토요연습 출석 기록은 저장할 수 있지만, 월간 결산 출석률에는 포함되지 않습니다.';
+  }else if(!curData){
+    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='📋 주일 '+attSession+' 출석부가 아직 저장되지 않았습니다';
+    msg='출석체크 후 저장하면 이 회차가 결산 통계에 포함됩니다.';
+    if(attSession==='오후'&&attAmData)msg='오전 출석부는 저장되어 있습니다. 오후 출석체크 후 저장하면 이 회차도 결산 통계에 포함됩니다.';
+  }else if(attSession==='오전'&&!otherData){
+    bg='#F0FDF4';bd='#BBF7D0';color='#166534';title='✅ 주일 오전 출석부입니다';
+    msg='이 회차는 결산 통계에 포함됩니다. 오후 출석부는 아직 저장되지 않았습니다.';
+  }else if(attSession==='오후'&&!otherData){
+    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='🌙 주일 오후 출석부입니다';
+    msg='오전 출석부가 아직 없습니다. 오전/오후 누락 여부를 확인해주세요.';
+  }
+
+  el.style.display='block';
+  el.innerHTML='<div style="padding:11px 13px;background:'+bg+';border:1px solid '+bd+';border-radius:10px;line-height:1.5">'
+    +'<div style="font-size:13px;font-weight:800;color:'+color+';margin-bottom:3px">'+title+'</div>'
+    +'<div style="font-size:12px;color:#334155">'+msg+'</div>'
+    +'</div>';
+}
+
 function renderAttList(){
+  renderAttGuideCard();
   var c=document.getElementById('attList');
   var members=attMembers.slice();
   if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
