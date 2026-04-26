@@ -3543,10 +3543,12 @@ function generateReport() {
     res[0].forEach(doc => songs.push(doc.data()));
     songs.sort((a, b) => (a.day || 0) - (b.day || 0)); // 날짜순 정렬
     
+    var rawAttDocs = [];
     var attDocs = [];
     res[1].forEach(doc => {
       var data = doc.data();
       if(!data || !data.date) return;
+      rawAttDocs.push(data);
       var parts = String(data.date).split('-');
       if(parts.length !== 3) return;
       var dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -3587,6 +3589,87 @@ function generateReport() {
            newMembers.push(d);
        }
     });
+
+    function getLocalDateInfo(dateStr){
+      var parts = String(dateStr || '').split('-');
+      if(parts.length !== 3) return null;
+      var dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if(isNaN(dateObj.getTime())) return null;
+      return { obj: dateObj, day: dateObj.getDay(), dayName: ['주일','월','화','수','목','금','토'][dateObj.getDay()] };
+    }
+
+    function countCheckedRecords(records){
+      if(!records) return 0;
+      var count = 0;
+      Object.keys(records).forEach(function(id){ if(records[id]) count++; });
+      return count;
+    }
+
+    function detectAttendanceAnomalies(allDocs, members){
+      var anomalies = [];
+      var grouped = {};
+      allDocs.forEach(function(d){
+        if(!d || !d.date) return;
+        var info = getLocalDateInfo(d.date);
+        var checked = countCheckedRecords(d.records || {});
+        if(info && info.day !== 0){
+          anomalies.push({
+            level: 'info',
+            title: '비주일 출석부 제외',
+            message: d.date + ' ' + info.dayName + ' ' + (d.session || '') + ' 출석부 (' + checked + '명 체크)는 주일 기준 결산 출석 통계에서 제외됩니다.'
+          });
+        }
+        if(!grouped[d.date]) grouped[d.date] = {};
+        if(d.session === '오전') grouped[d.date].am = d;
+        if(d.session === '오후') grouped[d.date].pm = d;
+      });
+
+      Object.keys(grouped).sort().forEach(function(date){
+        var info = getLocalDateInfo(date);
+        if(!info || info.day !== 0) return;
+        var g = grouped[date];
+        if(g.am && !g.pm){
+          anomalies.push({level:'warn', title:'주일 오후 출석부 없음', message: date + ' 주일은 오전 출석부만 있습니다. 오후 출석률 계산에서는 오후 회차가 제외됩니다.'});
+        }else if(!g.am && g.pm){
+          anomalies.push({level:'warn', title:'주일 오전 출석부 없음', message: date + ' 주일은 오후 출석부만 있습니다. 오전 출석률/이탈률 확인이 필요합니다.'});
+        }
+
+        ['am','pm'].forEach(function(key){
+          var d = g[key];
+          if(!d || !members.length) return;
+          var records = d.records || {};
+          var unchecked = 0;
+          members.forEach(function(m){ if(!records[m.id]) unchecked++; });
+          var ratio = unchecked / members.length;
+          if(ratio >= 0.3){
+            anomalies.push({
+              level:'warn',
+              title:'미체크 비율 높음',
+              message: date + ' 주일 ' + (d.session || (key==='am'?'오전':'오후')) + ' 출석부 미체크 ' + unchecked + '명 (' + Math.round(ratio*100) + '%) — 저장 전 확인이 필요합니다.'
+            });
+          }
+        });
+      });
+      return anomalies;
+    }
+
+    function renderAnomalyBox(anomalies){
+      if(!anomalies.length){
+        return '<div style="margin:14px 0 18px; padding:10px 12px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; font-size:12px; color:#166534;"><strong>🔍 출석 데이터 점검:</strong> 주일 기준 결산 통계에 영향을 줄 이상 항목이 없습니다.</div>';
+      }
+      var items = anomalies.map(function(a){
+        var color = a.level === 'warn' ? '#B45309' : '#2563EB';
+        var icon = a.level === 'warn' ? '⚠️' : 'ℹ️';
+        return '<li style="margin-bottom:6px; line-height:1.45;"><span style="font-weight:700; color:'+color+'">'+icon+' '+a.title+'</span><br><span style="color:#334155;">'+a.message+'</span></li>';
+      }).join('');
+      return '<div style="margin:14px 0 18px; padding:12px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px;">'
+        + '<div style="font-size:13px; font-weight:800; color:#92400E; margin-bottom:7px;">🔍 출석 데이터 점검 결과</div>'
+        + '<div style="font-size:11px; color:#64748B; margin-bottom:8px;">출석 통계는 주일 기준으로 계산됩니다. 비주일 출석부는 운영 기록으로 보관하되 결산 출석률에는 포함하지 않습니다.</div>'
+        + '<ul style="font-size:12px; padding-left:18px; margin:0;">'+items+'</ul>'
+        + '</div>';
+    }
+
+    var attendanceAnomalies = detectAttendanceAnomalies(rawAttDocs, activeMembers);
 
     // --- 출석 데이터 분석 ---
     var dateMap = {}; // 날짜별 오전/오후 묶기
@@ -3658,6 +3741,7 @@ function generateReport() {
       <h2 style="text-align:center; font-size:19px; font-weight:800; border-bottom:3px solid #000; padding-bottom:12px; margin-bottom:20px;">
         ${year}년 ${month}월 광주교회 찬양대 결산 보고서
       </h2>
+      ${renderAnomalyBox(attendanceAnomalies)}
       
       <h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:24px; margin-bottom:12px;">📊 1. 종합 현황</h3>
       <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
