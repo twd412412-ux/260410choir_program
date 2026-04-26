@@ -2704,21 +2704,34 @@ function renderAttGuideCard(){
 
   var curData=attSession==='오전'?attAmData:attPmData;
   var otherData=attSession==='오전'?attPmData:attAmData;
-  var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ 주일 출석부입니다',msg='이 회차는 저장 후 월간 결산 출석률에 포함됩니다.';
+  var scopeMembers=attMembers.slice();
+  if(attPartFilter!=='all')scopeMembers=scopeMembers.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
+  var scopeLabel=attPartFilter==='all'?'전체':attPartFilter;
+  function checkedInScope(data){
+    if(!data||!data.records)return 0;
+    var n=0;
+    scopeMembers.forEach(function(m){if(data.records[m.id])n++;});
+    return n;
+  }
+  var curChecked=checkedInScope(curData);
+  var otherChecked=checkedInScope(otherData);
+  var curReady=!!curData && (attPartFilter==='all' || curChecked>0);
+  var otherReady=!!otherData && (attPartFilter==='all' || otherChecked>0);
+  var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ 주일 '+attSession+' 출석부입니다',msg='선택 범위('+scopeLabel+') 기준으로 체크 기록이 있으며, 이 회차는 결산 통계에 포함됩니다.';
 
   if(info.day!==0){
     bg='#EFF6FF';bd='#BFDBFE';color='#1D4ED8';title='ℹ️ 선택한 날짜는 '+info.dayName+'요일입니다';
     msg='특별연습/토요연습 출석 기록은 저장할 수 있지만, 월간 결산 출석률에는 포함되지 않습니다.';
-  }else if(!curData){
-    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='📋 주일 '+attSession+' 출석부가 아직 저장되지 않았습니다';
-    msg='출석체크 후 저장하면 이 회차가 결산 통계에 포함됩니다.';
-    if(attSession==='오후'&&attAmData)msg='오전 출석부는 저장되어 있습니다. 오후 출석체크 후 저장하면 이 회차도 결산 통계에 포함됩니다.';
-  }else if(attSession==='오전'&&!otherData){
-    bg='#F0FDF4';bd='#BBF7D0';color='#166534';title='✅ 주일 오전 출석부입니다';
-    msg='이 회차는 결산 통계에 포함됩니다. 오후 출석부는 아직 저장되지 않았습니다.';
-  }else if(attSession==='오후'&&!otherData){
-    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='🌙 주일 오후 출석부입니다';
-    msg='오전 출석부가 아직 없습니다. 오전/오후 누락 여부를 확인해주세요.';
+  }else if(!curReady){
+    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='📋 '+scopeLabel+' 주일 '+attSession+' 체크 기록이 아직 없습니다';
+    msg='출석체크 후 저장하면 선택 범위('+scopeLabel+') 기록이 이 회차 결산 통계에 반영됩니다.';
+    if(attSession==='오후'&&otherReady)msg='선택 범위('+scopeLabel+')의 오전 체크 기록은 있습니다. 오후 출석체크 후 저장하면 오후 회차도 결산 통계에 반영됩니다.';
+  }else if(attSession==='오전'&&!otherReady){
+    bg='#F0FDF4';bd='#BBF7D0';color='#166534';title='✅ '+scopeLabel+' 주일 오전 체크 기록이 있습니다';
+    msg='이 회차는 결산 통계에 포함됩니다. 선택 범위('+scopeLabel+')의 오후 체크 기록은 아직 없습니다.';
+  }else if(attSession==='오후'&&!otherReady){
+    bg='#FFFBEB';bd='#FDE68A';color='#92400E';title='🌙 '+scopeLabel+' 주일 오후 체크 기록이 있습니다';
+    msg='선택 범위('+scopeLabel+')의 오전 체크 기록이 아직 없습니다. 오전/오후 누락 여부를 확인해주세요.';
   }
 
   el.style.display='block';
