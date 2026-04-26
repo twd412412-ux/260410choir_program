@@ -3544,7 +3544,15 @@ function generateReport() {
     songs.sort((a, b) => (a.day || 0) - (b.day || 0)); // 날짜순 정렬
     
     var attDocs = [];
-    res[1].forEach(doc => attDocs.push(doc.data()));
+    res[1].forEach(doc => {
+      var data = doc.data();
+      if(!data || !data.date) return;
+      var parts = String(data.date).split('-');
+      if(parts.length !== 3) return;
+      var dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if(dateObj.getDay() !== 0) return; // 결산 출석 통계는 주일만 집계
+      attDocs.push(data);
+    });
     
     var activeMembers = [];
     var newMembers = [];
