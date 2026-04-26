@@ -1191,6 +1191,17 @@ function homeDateStr(d){return (d.getMonth()+1)+'/'+d.getDate();}
 function homeInputDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function homeDowName(d){return ['주일','월','화','수','목','금','토'][d.getDay()];}
 function escAttr(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function normalizePartName(part){
+  var v=String(part||'').trim();
+  var up=v.toUpperCase();
+  var map={S1:'S1',S2:'S2',T1:'T1',T2:'T2'};
+  return map[up]||v;
+}
+function isAttendanceTargetMember(d){
+  var part=normalizePartName(d.part);
+  var status=d.status||'active';
+  return status==='active'&&part!=='명단제외'&&!d.noAtt;
+}
 function getSundayFrom(base, offsetWeeks){
   var d=new Date(base.getFullYear(),base.getMonth(),base.getDate());
   d.setDate(d.getDate()-d.getDay()+(offsetWeeks*7));
@@ -1225,7 +1236,7 @@ function renderHome(){
     weekSchedules.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch);});
     weekSchedules.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
 
-    var members=[];res[2].forEach(function(doc){var d=doc.data();if(d.status==='active'&&d.part!=='명단제외'&&!d.noAtt)members.push({id:doc.id,name:d.name||'',part:d.part||'',subPart:d.subPart||''})});
+    var members=[];res[2].forEach(function(doc){var d=doc.data();if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)})});
     var am=res[3].exists?res[3].data():null;
     var pm=res[4].exists?res[4].data():null;
 
@@ -1733,7 +1744,7 @@ function renderHandbook(list) {
       : '<div style="width:50px;height:50px;border-radius:50%;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:24px;margin-right:12px;flex-shrink:0">👤</div>';
 
     return `
-      <div class="song-card" style="border-left-color: ${m.status === 'active' ? 'var(--p)' : 'var(--ts)'}">
+      <div class="song-card" style="border-left-color: ${(m.status||'active') === 'active' ? 'var(--p)' : 'var(--ts)'}">
         <div class="hb-card-head">
           <div class="hb-card-main">
             ${photoHtml} <div class="hb-card-text">
@@ -1796,7 +1807,7 @@ function toggleHbPart(part) {
 
 function addHandbookMember(){
   var name = document.getElementById('hbName').value.trim();
-  var part = document.getElementById('hbPart').value;
+  var part = normalizePartName(document.getElementById('hbPart').value);
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
   
   // 👇 photo 항목이 추가되었습니다!
@@ -1838,7 +1849,7 @@ function editHandbookMember(id){
   var m = directoryData.find(x => x.id === id); if(!m) return;
   document.getElementById('editHbId').value = id;
   document.getElementById('editHbName').value = m.name || '';
-  document.getElementById('editHbPart').value = m.part || '';
+  document.getElementById('editHbPart').value = normalizePartName(m.part) || '';
   document.getElementById('editHbPhone').value = m.phone || '';
   document.getElementById('editHbBirth').value = m.birthday || '';
   document.getElementById('editHbDist').value = m.district || '';
@@ -1870,7 +1881,7 @@ function editHandbookMember(id){
 function updateHandbookMember(){
   var id = document.getElementById('editHbId').value;
   var name = document.getElementById('editHbName').value.trim();
-  var part = document.getElementById('editHbPart').value;
+  var part = normalizePartName(document.getElementById('editHbPart').value);
   if(!id) return showToast('수정할 단원을 찾을 수 없습니다');
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
   
@@ -1885,7 +1896,8 @@ function updateHandbookMember(){
     job: document.getElementById('editHbJob').value.trim(),
     group: document.getElementById('editHbGroup').value||'',
     subPart: document.getElementById('editHbSub').value||'',
-    noAtt: document.getElementById('editHbNoAtt').checked || false
+    noAtt: document.getElementById('editHbNoAtt').checked || false,
+    status: part==='명단제외' ? 'inactive' : 'active'
 
   };
   
@@ -1908,9 +1920,11 @@ function updatePartSummary() {
   var others = 0;
 
   directoryData.forEach(function(m) {
-    if(counts[m.part] !== undefined) counts[m.part]++;
+    var mainPart=normalizePartName(m.part);
+    var subPart=normalizePartName(m.subPart);
+    if(counts[mainPart] !== undefined) counts[mainPart]++;
     else others++;
-    if(m.subPart && counts[m.subPart] !== undefined && m.subPart !== m.part) counts[m.subPart]++;
+    if(subPart && counts[subPart] !== undefined && subPart !== mainPart) counts[subPart]++;
 
   });
 
@@ -2793,7 +2807,7 @@ function loadAttMembers(callback){
     attMembers=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      if(d.status==='active'&&d.part!=='명단제외'&&!d.noAtt)attMembers.push({id:doc.id,name:d.name||'',part:d.part||'',subPart:d.subPart||'',phone:d.phone||'',group:d.group||'',district:d.district||''});
+      if(isAttendanceTargetMember(d))attMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||''});
     });
     if(callback)callback();
   });
@@ -3807,8 +3821,8 @@ function generateReport() {
     
     res[2].forEach(doc => {
        var d = doc.data();
-       if(d.status === 'active' && d.part !== '명단제외' && !d.noAtt) {
-           activeMembers.push({id: doc.id, name: d.name, part: d.part});
+       if(isAttendanceTargetMember(d)) {
+           activeMembers.push({id: doc.id, name: d.name, part: normalizePartName(d.part)});
            memStats[doc.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
        }
        // 신규 입단자 추출 (등록일이 이번 달인 사람)
