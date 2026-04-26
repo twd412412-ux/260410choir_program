@@ -94,19 +94,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .log-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:flex-end;gap:4px;padding:8px 8px calc(env(safe-area-inset-bottom,8px) + 6px);z-index:100;box-shadow:0 -6px 18px rgba(0,0,0,.06);overflow:visible;backface-visibility:hidden}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:flex-end;gap:4px;padding:8px 8px calc(env(safe-area-inset-bottom,8px) + 6px);z-index:100;box-shadow:0 -6px 18px rgba(0,0,0,.06);overflow:visible}
 .nav-side{display:flex;align-items:flex-end;flex:1;min-width:0;gap:4px}
 .nav-left{padding-right:38px}
 .nav-right{padding-left:38px}
-.nav-item{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--ts);cursor:pointer;padding:8px 4px;gap:3px;border-radius:12px;transition:all .18s ease}
+.nav-item{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--ts);cursor:pointer;padding:8px 4px;gap:3px;border-radius:12px;transition:all .18s ease;background:transparent;border:0;font-family:inherit}
 .nav-item:active{transform:scale(.96);background:var(--pl)}
 .nav-item.active{color:var(--p);font-weight:700;background:var(--pl);box-shadow:inset 0 0 0 1px rgba(37,99,235,.12)}
-.nav-icon{font-size:20px}
-.nav-item[data-t="home"]{position:absolute!important;left:50%!important;top:-22px!important;margin-left:-34px!important;width:68px!important;height:68px!important;min-width:68px!important;flex:0 0 68px!important;border-radius:28px!important;background:#2563EB!important;color:#fff!important;border:4px solid var(--sf)!important;box-shadow:0 10px 26px rgba(37,99,235,.32)!important;padding:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;z-index:3!important;overflow:hidden!important}
-.nav-item[data-t="home"].active{background:#2563EB!important;color:#fff!important;box-shadow:0 10px 26px rgba(37,99,235,.32)!important}
-.nav-item[data-t="home"]:active{transform:scale(.96)!important;background:#2563EB!important}
-.nav-item[data-t="home"] .nav-icon{position:static!important;display:block!important;width:auto!important;height:auto!important;font-size:23px!important;line-height:1!important;margin:0!important;color:#fff!important;text-align:center!important}
-.nav-item[data-t="home"] .nav-label{position:static!important;display:block!important;font-size:11px!important;font-weight:900!important;color:#fff!important;line-height:1!important;margin:0!important;text-align:center!important}
+.nav-icon{font-size:20px;line-height:1}
+.home-fab{position:absolute;left:50%;top:-22px;margin-left:-34px;width:68px;height:68px;border-radius:28px;border:4px solid var(--sf);background:#2563EB;color:#fff;box-shadow:0 10px 26px rgba(37,99,235,.32);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;z-index:3;cursor:pointer;font-family:inherit;line-height:1}
+.home-fab:active{transform:scale(.96)}
+.home-fab.active{background:#2563EB;color:#fff}
+.home-fab-icon{font-size:23px;line-height:1;color:#fff;display:block}
+.home-fab-label{font-size:11px;font-weight:900;line-height:1;color:#fff;display:block}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:300;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .dark .toast{background:#F1F5F9;color:#1E293B}
@@ -909,7 +909,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐겨찾기</div>
     <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
   </div>
-  <div class="nav-item active" data-t="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">홈</span></div>
+  <button class="home-fab active" data-t="home" type="button" onclick="switchTab('home')"><span class="home-fab-icon">🏠</span><span class="home-fab-label">홈</span></button>
   <div class="nav-side nav-right">
     <div class="nav-item" data-t="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>일정</div>
     <div class="nav-item hidden" data-t="stats" id="navStats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>통계</div>
@@ -951,7 +951,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=6').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=7').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -968,7 +968,7 @@ function switchTab(tab){
   }
   currentTab=tab;
   ['pageHome','pageSongs','pageFavorites','pageCalendar','pageArchive','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
-  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
+  document.querySelectorAll('.nav-item,.home-fab').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
   var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(p)p.classList.remove('hidden');
   if(tab==='home')renderHome();
