@@ -1235,7 +1235,7 @@ function renderHome(){
     }
     var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
 
-    var partOrder=['S1','S2','T1','T2','관현악','지휘','반주','임원','준단원','신입단원'];
+    var partOrder=['S1','S2','T1','T2','관현악'];
     var parts=partOrder.filter(function(p){return members.some(function(m){return m.part===p||m.subPart===p})});
     var partHtml=parts.map(function(p){
       var scoped=members.filter(function(m){return m.part===p||m.subPart===p});
