@@ -810,6 +810,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div id="schDetailBody"></div>
   </div>
 </div>
+<!-- MODAL: 아카이브 수정 -->
+<div class="modal-overlay modal-center" id="modalArchiveEdit">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">🗂️ 아카이브 수정</span><button class="modal-close" onclick="closeModal('modalArchiveEdit')">✕</button></div>
+    <input type="hidden" id="archiveEditId">
+    <div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="archiveEditPart"><option>전체</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
+    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="archiveEditDate" type="date"></div>
+    <div class="form-group"><label class="form-label">제목 *</label><input class="form-input" id="archiveEditTitle"></div>
+    <div class="form-group"><label class="form-label">설명</label><textarea class="form-input" id="archiveEditDesc" rows="3"></textarea></div>
+    <button class="btn btn-p btn-bl" onclick="saveArchiveEdit()">저장</button>
+  </div>
+</div>
 <div class="modal-overlay modal-center" id="modalPhotoViewer">
   <div style="position:relative; max-width:85%; max-height:85%;">
     <img id="viewerImage" src="" style="width:100%; height:auto; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
@@ -2201,7 +2213,8 @@ function loadArchiveItems(){
         type:d.type||'image',
         url:d.url||'',
         uploadedAt:d.uploadedAt||'',
-        uploadedBy:d.uploadedBy||''
+        uploadedBy:d.uploadedBy||'',
+        path:d.path||''
       });
     });
     renderArchiveList();
@@ -2242,11 +2255,13 @@ function renderArchiveList(){
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
-    var canDel=false;
-    if(adminRole==='admin') canDel=true;
-    else if(currentUser && item.uploadedBy===currentUser.name) canDel=true;
-    var delBtn=canDel?'<button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+escHtml(item.title).replace(/'/g,"\\'")+'\',\''+(item.path||'').replace(/'/g,"\\'")+'\')" style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;margin-top:8px">🗑️ 삭제</button>':'';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+delBtn+'</div></div>';
+    var canManage=false;
+    if(adminRole==='admin'||adminRole==='chongmu') canManage=true;
+    else if(currentUser && item.uploadedBy===currentUser.name) canManage=true;
+    var safeTitle=escHtml(item.title).replace(/'/g,"\\'");
+    var safePath=(item.path||'').replace(/'/g,"\\'");
+    var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+actionBtns+'</div></div>';
   }).join('');
 }
 function compressArchiveImage(file){
@@ -2295,6 +2310,37 @@ function compressArchiveImage(file){
     reader.onerror=function(){reject(new Error('file_read_fail'))};
     reader.readAsDataURL(file);
   });
+}
+function canManageArchiveItem(item){
+  if(adminRole==='admin'||adminRole==='chongmu')return true;
+  return !!(currentUser&&item&&item.uploadedBy===currentUser.name);
+}
+function openArchiveEdit(id){
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('수정할 자료를 찾을 수 없습니다');
+  if(!canManageArchiveItem(item))return showToast('수정 권한이 없습니다');
+  document.getElementById('archiveEditId').value=item.id;
+  document.getElementById('archiveEditPart').value=item.part||'전체';
+  document.getElementById('archiveEditDate').value=item.date||'';
+  document.getElementById('archiveEditTitle').value=item.title||'';
+  document.getElementById('archiveEditDesc').value=item.description||'';
+  openModal('modalArchiveEdit');
+}
+function saveArchiveEdit(){
+  var id=document.getElementById('archiveEditId').value;
+  var part=document.getElementById('archiveEditPart').value;
+  var date=document.getElementById('archiveEditDate').value;
+  var title=document.getElementById('archiveEditTitle').value.trim();
+  var description=document.getElementById('archiveEditDesc').value.trim();
+  if(!id||!part||!date||!title)return showToast('파트, 날짜, 제목은 필수입니다');
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('수정할 자료를 찾을 수 없습니다');
+  if(!canManageArchiveItem(item))return showToast('수정 권한이 없습니다');
+  db.collection('mediaArchive').doc(id).update({part:part,date:date,title:title,description:description,updatedAt:new Date().toISOString(),updatedBy:currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부')}).then(function(){
+    item.part=part;item.date=date;item.title=title;item.description=description;
+    closeModal('modalArchiveEdit');renderArchiveList();
+    writeLog('아카이브 수정',title+' ['+part+'] 수정됨');showToast('수정되었습니다');
+  }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
 function deleteArchiveItem(id,title,path){
   if(!confirm('"'+title+'" 사진을 삭제하시겠습니까?'))return;
