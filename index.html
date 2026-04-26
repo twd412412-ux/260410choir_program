@@ -1242,9 +1242,19 @@ function renderHome(){
       var rate=total>0?Math.round((present+late)/total*100):0;
       return {state:'done',text:'완료 · 출석률 '+rate+'% · 출석 '+(present+late)+'/'+total+'명',rate:rate,unchecked:0,checked:checked,total:total};
     }
+    function canSeeHomeAttendanceDetail(){
+      return adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role));
+    }
+    function publicStatusText(st){
+      if(st.state==='done')return '출석 체크 완료';
+      if(st.state==='progress')return '집계 중';
+      if(st.state==='none')return '체크 전';
+      return '준비 중';
+    }
     function statusBadge(st){
       var color=st.state==='done'?'#16A34A':st.state==='progress'?'#D97706':'var(--ts)';
-      return '<span style="font-size:12px;font-weight:800;color:'+color+'">'+st.text+'</span>';
+      var text=canSeeHomeAttendanceDetail()?st.text:publicStatusText(st);
+      return '<span style="font-size:12px;font-weight:800;color:'+color+'">'+text+'</span>';
     }
     var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
 
