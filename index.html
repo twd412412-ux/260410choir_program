@@ -109,6 +109,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .nav-item[data-t="home"]{font-size:10px;font-weight:900;line-height:1.05}
 .nav-item[data-t="home"] .nav-icon{position:absolute;top:10px;left:0;right:0;text-align:center;font-size:22px;line-height:1}
 .nav-item[data-t="home"] .nav-label{position:absolute;left:0;right:0;top:38px;display:block!important;text-align:center;font-size:11px!important;font-weight:900;color:#fff!important;line-height:1!important;z-index:4}
+/* hard override: floating home button must stay blue and show label */
+.bottom-nav>.nav-item[data-t="home"]{background:#2563EB!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:0 10px 26px rgba(37,99,235,.32)!important}
+.bottom-nav>.nav-item[data-t="home"].active{background:#2563EB!important;color:#fff!important}
+.bottom-nav>.nav-item[data-t="home"] .nav-icon{position:absolute!important;top:10px!important;left:0!important;right:0!important;text-align:center!important;font-size:22px!important;line-height:1!important;display:block!important}
+.bottom-nav>.nav-item[data-t="home"] .nav-label{position:absolute!important;left:0!important;right:0!important;top:38px!important;display:block!important;text-align:center!important;font-size:11px!important;font-weight:900!important;color:#fff!important;line-height:1!important;z-index:4!important}
+
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:300;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .dark .toast{background:#F1F5F9;color:#1E293B}
@@ -953,7 +959,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=5').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
