@@ -890,9 +890,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 <!-- BOTTOM NAV -->
 
 <div class="bottom-nav">
-  <div class="nav-item active" data-t="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span>홈</div>
   <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
   <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐겨찾기</div>
+  <div class="nav-item active" data-t="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span>홈</div>
   <div class="nav-item" data-t="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>일정</div>
   <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
   <div class="nav-item hidden" data-t="stats" id="navStats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>통계</div>
@@ -1196,13 +1196,13 @@ function renderHome(){
   var monStr=homeInputDate(mon), sunStr=homeInputDate(sun);
 
   Promise.all([
-    db.collection('schedules').where('date','>=',homeInputDate(lastSun)).where('date','<=',homeInputDate(nextSun)).get(),
+    db.collection('songs').get(),
     db.collection('schedules').where('date','>=',monStr).where('date','<=',sunStr).get(),
     db.collection('members').get(),
     db.collection('attendance').doc(thisSunStr+'_오전').get(),
     db.collection('attendance').doc(thisSunStr+'_오후').get()
   ]).then(function(res){
-    var hymnSchedules=[];res[0].forEach(function(doc){var d=doc.data();hymnSchedules.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',songs:d.songs||'',color:d.color||COLORS[0]})});
+    var hymnSongs=[];res[0].forEach(function(doc){var d=doc.data();hymnSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,category:d.category||'',subCategory:d.subCategory||'',location:d.location||''})});
     var weekSchedules=[];res[1].forEach(function(doc){var d=doc.data();weekSchedules.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing})});
     weekSchedules.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
 
@@ -1211,9 +1211,11 @@ function renderHome(){
     var pm=res[4].exists?res[4].data():null;
 
     function songsFor(date){
-      var rows=hymnSchedules.filter(function(s){return s.date===date&&s.songs});
+      var parts=date.split('-');
+      var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
+      var rows=hymnSongs.filter(function(s){return s.year===y&&s.month===m&&s.day===d});
       if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
-      return rows.map(function(s){return '<span style="font-weight:800">'+s.songs+'</span>'+(s.title?'<div style="font-size:11px;color:var(--ts);margin-top:2px">'+s.title+'</div>':'')}).join('<div style="height:6px"></div>');
+      return rows.map(function(s){return '<span style="font-weight:800">'+s.songName+'</span>'+(s.category||s.subCategory?'<div style="font-size:11px;color:var(--ts);margin-top:2px">'+[s.category,s.subCategory].filter(Boolean).join(' · ')+'</div>':'')}).join('<div style="height:6px"></div>');
     }
     function hymnRow(label,d){
       return '<div class="home-soft-row"><div class="home-row-label">'+label+' '+homeDateStr(d)+'</div><div class="home-row-main">'+songsFor(homeInputDate(d))+'</div></div>';
@@ -1292,6 +1294,7 @@ function initSongs(){
     });
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
+    if(currentTab==='home')renderHome();
   }).catch(function(err){
     console.error(err);
     if(!cached||cached.length===0){
@@ -1313,6 +1316,7 @@ function refreshData(){
       });
       saveCache('choir_songs',allSongs);
       buildFilters();doFilter();
+      if(currentTab==='home')renderHome();
     }),
     db.collection('schedules').get().then(function(snap){
       allSchedules=[];
