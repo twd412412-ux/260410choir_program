@@ -897,7 +897,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('출근')">출근</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('건강')">건강</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('입원')">입원</button>
-      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('가족일(간호)')">가족일(간호)</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('가족일(간호 등)')">가족일(간호 등)</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('학업')">학업</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('전도')">전도</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('식당봉사')">식당봉사</button>
@@ -3051,7 +3051,7 @@ function openAttReasonModal(id){
   currentAttReasonId=id;
   currentAttReasonPreset='';
   var existing=(attReasons&&attReasons[id])?attReasons[id]:'';
-  var presets=['출근','건강','입원','가족일(간호)','학업','전도','식당봉사','기타'];
+  var presets=['출근','건강','입원','가족일(간호 등)','학업','전도','식당봉사','기타'];
 
   if(existing){
     presets.forEach(function(p){
@@ -3850,7 +3850,7 @@ function generateReport() {
       '출근': 0,
       '건강': 0,
       '입원': 0,
-      '가족일(간호)': 0,
+      '가족일(간호 등)': 0,
       '학업': 0,
       '전도': 0,
       '식당봉사': 0,
@@ -3861,7 +3861,7 @@ function generateReport() {
       if(!reason) return null;
       var head = reason.split(' - ')[0].trim();
       if(head === '질병') head = '건강';
-      if(head === '가족일') head = '가족일(간호)';
+      if(head === '가족일') head = '가족일(간호 등)';
       if(reasonStats.hasOwnProperty(head)) return head;
       return '기타';
     }
@@ -4110,7 +4110,7 @@ function generateReport() {
       </div>`;
     }
 
-    var reasonOrder = ['출근','건강','입원','가족일(간호)','학업','전도','식당봉사','기타'];
+    var reasonOrder = ['출근','건강','입원','가족일(간호 등)','학업','전도','식당봉사','기타'];
     var maxReason = Math.max.apply(null, reasonOrder.map(function(k){ return reasonStats[k]; }));
     var totalReasonCount = reasonOrder.reduce(function(sum, k){ return sum + reasonStats[k]; }, 0);
 
