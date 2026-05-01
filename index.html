@@ -58,6 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--ts)}
 .reason-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .reason-chip{min-height:42px;padding:10px 8px;border:1.5px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer}
+.reason-chip-sub{display:block;font-size:10px;line-height:1.1;font-weight:600;margin-top:2px}
 .reason-chip.on{background:var(--pl);border-color:var(--p);color:var(--pd)}
 .reason-help{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
@@ -897,7 +898,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('출근')">출근</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('건강')">건강</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('입원')">입원</button>
-      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('가족일(간호 등)')">가족일(간호 등)</button>
+      <button class="reason-chip" type="button" onclick="selectAttReasonPreset('가족일(간호 등)')">가족일<span class="reason-chip-sub">(간호 등)</span></button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('학업')">학업</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('전도')">전도</button>
       <button class="reason-chip" type="button" onclick="selectAttReasonPreset('식당봉사')">식당봉사</button>
@@ -3076,7 +3077,7 @@ function renderAttReasonPreset(){
   if(!wrap)return;
 
   wrap.querySelectorAll('.reason-chip').forEach(function(el){
-    el.classList.toggle('on',el.textContent===currentAttReasonPreset);
+    el.classList.toggle('on',el.textContent.replace(/\s+/g,'')===currentAttReasonPreset.replace(/\s+/g,''));
   });
 
   var btn=document.getElementById('attReasonConfirmBtn');
