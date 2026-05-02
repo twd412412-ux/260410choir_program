@@ -1238,16 +1238,32 @@ function renderHome(){
   var weekStart=thisSun, weekEnd=getSaturdayFromSunday(thisSun);
   var weekStartStr=homeInputDate(weekStart), weekEndStr=homeInputDate(weekEnd);
 
+  var songPromise=allSongs.length>0
+    ? Promise.resolve(allSongs)
+    : db.collection('songs').get().then(function(snap){
+        var rows=[];
+        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''})});
+        allSongs=rows;saveCache('choir_songs',allSongs);
+        return rows;
+      });
+  var schedulePromise=allSchedules.length>0
+    ? Promise.resolve(allSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}))
+    : db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get().then(function(snap){
+        var rows=[];
+        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
+        rows.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch)});
+        return rows;
+      });
+
   Promise.all([
-    db.collection('songs').get(),
-    db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get(),
+    songPromise,
+    schedulePromise,
     db.collection('members').get(),
     db.collection('attendance').doc(thisSunStr+'_오전').get(),
     db.collection('attendance').doc(thisSunStr+'_오후').get()
   ]).then(function(res){
-    var hymnSongs=[];res[0].forEach(function(doc){var d=doc.data();var item=Object.assign({id:doc.id},d);item.songName=item.songName||'';item.year=item.year||0;item.month=item.month||0;item.day=item.day||null;item.category=item.category||'';item.subCategory=item.subCategory||'';item.location=item.location||'';hymnSongs.push(item);if(!allSongs.some(function(x){return x.id===item.id}))allSongs.push(item);});
-    var weekSchedules=[];res[1].forEach(function(doc){var d=doc.data();weekSchedules.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
-    weekSchedules.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch);});
+    var hymnSongs=res[0];
+    var weekSchedules=res[1];
     weekSchedules.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
 
     var members=[];res[2].forEach(function(doc){var d=doc.data();if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)})});
