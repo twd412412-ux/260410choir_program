@@ -719,6 +719,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
       </div>
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div class="form-group" style="margin-bottom:12px"><label class="form-label">상태 필터</label><select class="form-sel" id="attStatusFilter" onchange="setAttStatusFilter(this.value)"><option value="all">전체</option><option value="출석">출석</option><option value="지각">지각</option><option value="사유결석">사유</option><option value="무단결석">무단</option></select></div>
       <div id="attGuideCard" style="display:none;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
@@ -2808,6 +2809,7 @@ var attReasons={};
 var attAmData=null;
 var attPmData=null;
 var attSession='오전';
+var attStatusFilter='all';
 var currentAttReasonId='';
 var currentAttReasonPreset='';
 function getTodayInputDate(){
@@ -2911,6 +2913,11 @@ function setAttPartFilter(p){
   renderAttList();
 }
 
+function setAttStatusFilter(status){
+  attStatusFilter=status||'all';
+  renderAttList();
+}
+
 
 function getAttDateInfo(dateStr){
   var parts=String(dateStr||'').split('-');
@@ -2989,13 +2996,19 @@ function renderAttList(){
   var uncheckedNames=[];
   members.forEach(function(m){if(!attData[m.id])uncheckedNames.push(m.name)});
   var countHtml='출석 '+present+' / 지각 '+late+' / 사유 '+excused+' / 무단 '+absent+' / 미체크 '+unchecked+' (총 '+members.length+'명)';
+  var displayMembers=members;
+  if(attStatusFilter!=='all'){
+    displayMembers=members.filter(function(m){return (attData[m.id]||'')===attStatusFilter});
+    countHtml+='<div style="font-size:11px;color:var(--p);margin-top:4px;line-height:1.6">🔎 '+document.getElementById('attStatusFilter').selectedOptions[0].text+' '+displayMembers.length+'명 표시 중</div>';
+  }
   if(uncheckedNames.length>0&&uncheckedNames.length<=30){countHtml+='<div style="font-size:11px;color:#DC2626;margin-top:4px;line-height:1.6">🔔 미체크 '+uncheckedNames.length+'명: '+uncheckedNames.join(', ')+'</div>'}
   document.getElementById('attCount').innerHTML=countHtml;
 
 
   if(members.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">해당 파트에 단원이 없습니다</div>';return}
+  if(displayMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">선택한 상태의 단원이 없습니다</div>';return}
 
-  c.innerHTML=members.map(function(m){
+  c.innerHTML=displayMembers.map(function(m){
     var st=attData[m.id]||'';
     var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<div class="att-reason">사유: '+attReasons[m.id]+'</div>':'';
     var amSt=attAmData&&attAmData.records&&attAmData.records[m.id];
