@@ -3096,24 +3096,33 @@ function setAtt(id,status){
   }
 }
 
+function normalizeAttReasonCategory(reason){
+  if(!reason)return null;
+  var head=String(reason).split(' - ')[0].trim();
+  if(head==='질병')head='건강';
+  if(head==='가족일')head='가족일(간호 등)';
+  var presets=['출근','건강','입원','가족일(간호 등)','학업','전도','식당봉사','기타'];
+  return presets.indexOf(head)>-1?head:'기타';
+}
+function getAttReasonDetail(reason,category){
+  if(!reason||!category)return '';
+  var text=String(reason);
+  if(text.indexOf(category+' - ')===0)return text.substring((category+' - ').length);
+  if(category==='건강'&&text.indexOf('질병 - ')===0)return text.substring(5);
+  if(category==='가족일(간호 등)'&&text.indexOf('가족일 - ')===0)return text.substring(6);
+  return '';
+}
+
 function openAttReasonModal(id){
   currentAttReasonId=id;
   currentAttReasonPreset='';
   var existing=(attReasons&&attReasons[id])?attReasons[id]:'';
-  var presets=['출근','건강','입원','가족일(간호 등)','학업','전도','식당봉사','기타'];
 
   if(existing){
-    presets.forEach(function(p){
-      if(!currentAttReasonPreset && (existing===p || existing.indexOf(p+' - ')===0)){
-        currentAttReasonPreset=p;
-      }
-    });
+    currentAttReasonPreset=normalizeAttReasonCategory(existing)||'';
   }
 
-  document.getElementById('attReasonText').value =
-    (currentAttReasonPreset && existing.indexOf(currentAttReasonPreset+' - ')===0)
-      ? existing.substring((currentAttReasonPreset+' - ').length)
-      : '';
+  document.getElementById('attReasonText').value = getAttReasonDetail(existing,currentAttReasonPreset);
 
   renderAttReasonPreset();
   openModal('modalAttReason');
@@ -3907,12 +3916,8 @@ function generateReport() {
     };
 
     function normalizeReasonCategory(reason){
-      if(!reason) return null;
-      var head = reason.split(' - ')[0].trim();
-      if(head === '질병') head = '건강';
-      if(head === '가족일') head = '가족일(간호 등)';
-      if(reasonStats.hasOwnProperty(head)) return head;
-      return '기타';
+      var cat=normalizeAttReasonCategory(reason);
+      return reasonStats.hasOwnProperty(cat)?cat:'기타';
     }
 
     
