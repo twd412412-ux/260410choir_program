@@ -3506,11 +3506,12 @@ function loadAttStats(){
       var partStats={};
       attMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
       records.forEach(function(r){attMembers.forEach(function(m){
-        var st=r.records[m.id]||'무단결석';
+        if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
+        var st=r.records[m.id];
         partStats[m.part].total++;
         if(st==='출석'||st==='지각')partStats[m.part].present++;
       })});
-      var partData=Object.entries(partStats).map(function(e){
+      var partData=Object.entries(partStats).filter(function(e){return e[1].total>0}).map(function(e){
         return{label:e[0],value:e[1].total>0?Math.round(e[1].present/e[1].total*100):0};
       }).sort(function(a,b){return b.value-a.value});
       barChart('chPartAtt',partData,'%');
@@ -3518,11 +3519,12 @@ function loadAttStats(){
       var memStats={};
       attMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
       records.forEach(function(r){attMembers.forEach(function(m){
-        var st=r.records[m.id]||'무단결석';
+        if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
+        var st=r.records[m.id];
         memStats[m.id].total++;
         if(st==='출석'||st==='지각')memStats[m.id].present++;
       })});
-      var memData=Object.values(memStats).map(function(m){
+      var memData=Object.values(memStats).filter(function(m){return m.total>0}).map(function(m){
         return{label:m.name+' ('+m.part+')',value:m.total>0?Math.round(m.present/m.total*100):0};
       }).sort(function(a,b){return a.value-b.value}).slice(0,20);
       barChart('chMemAtt',memData,'%');
@@ -3530,7 +3532,7 @@ function loadAttStats(){
       var weekData=records.map(function(r){
         return{label:r.date.substring(5)+' '+r.session,value:(function(){
           var total=0,present=0;
-          attMembers.forEach(function(m){total++;var st=r.records[m.id]||'무단결석';if(st==='출석'||st==='지각')present++});
+          attMembers.forEach(function(m){if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
           return total>0?Math.round(present/total*100):0;
         })()};
       });
