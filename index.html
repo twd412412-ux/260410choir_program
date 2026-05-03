@@ -92,6 +92,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .cal-cell.today .cal-date{background:var(--p);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .cal-bar{display:block;padding:1px 3px;margin:1px 0;border-radius:3px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .cal-dot{display:inline-block;width:5px;height:5px;background:var(--p);border-radius:50%;margin:0 1px}
+.cal-view-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 16px 8px}
+.cal-view-label{font-size:12px;color:var(--ts);font-weight:600}
+.cal-view-select{border:1px solid var(--bd);border-radius:10px;background:var(--sf);color:var(--tx);padding:7px 10px;font-size:12px;font-weight:700}
+.cal-cell.stack{min-height:76px}
+.cal-cell.stack .cal-bar{font-size:8px;padding:2px 3px;margin:2px 0;line-height:1.25}
+.cal-bar.song{background:#64748B}
 .log-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
@@ -519,6 +525,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 <!-- PAGE: 캘린더 -->
 <div id="pageCalendar" class="hidden">
   <div class="cal-nav"><button onclick="calPrev()">◀</button><span class="cal-nav-title" id="calTitle"></span><button onclick="calNext()">▶</button></div>
+  <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="default">기본 · 점+밴드</option><option value="stack">스택형</option></select></div>
   <div class="cal-grid" id="calGrid"></div>
   <div style="padding:12px 16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:8px" id="calEvtTitle">일정</h3><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
 </div>
@@ -949,6 +956,7 @@ var allSongs=[], filteredSongs=[], currentTab='home';
 var adminRole=null;
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, allSchedules=[], allMembers=[];
+var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
 var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
@@ -2130,9 +2138,12 @@ function delSchedule(id,title){
 function initCal(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
+function setCalViewMode(v){calViewMode=v||'default';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
+function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
 
 function renderCal(){
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
+  var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
   var g=document.getElementById('calGrid');
   var hds=['일','월','화','수','목','금','토'];
   var h=hds.map(function(x){return '<div class="cal-hdr">'+x+'</div>'}).join('');
@@ -2146,12 +2157,20 @@ function renderCal(){
     var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isT=ds===todayStr;
     var evts=allSchedules.filter(function(s){return s.date===ds});
-    var sngCnt=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d}).length;
-    var cls='cal-cell'+(isT?' today':'');
+    var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d});
+    var cls='cal-cell'+(isT?' today':'')+(calViewMode==='stack'?' stack':'');
     var inner='<div class="cal-date">'+d+'</div>';
-    evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+e.color+'" title="'+e.title+'">'+e.title+'</div>'});
-    if(evts.length>2)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(evts.length-2)+'개</div>';
-    if(sngCnt>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(sngCnt,4);j++)inner+='<span class="cal-dot"></span>';if(sngCnt>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(sngCnt-4)+'</span>';inner+='</div>'}
+    if(calViewMode==='stack'){
+      var items=[];
+      evts.forEach(function(e){items.push({kind:'evt',title:(e.useBriefing?'📋 ':'📅 ')+(e.title||'일정'),color:e.color||COLORS[0]})});
+      songs.forEach(function(s){items.push({kind:'song',title:'🎵 '+(s.songName||'찬양곡'),color:'#64748B'})});
+      items.slice(0,3).forEach(function(item){inner+='<div class="cal-bar '+(item.kind==='song'?'song':'')+'" style="background:'+item.color+'" title="'+escHtml(item.title)+'">'+escHtml(item.title)+'</div>'});
+      if(items.length>3)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(items.length-3)+'개</div>';
+    }else{
+      evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+e.color+'" title="'+escHtml(e.title)+'">'+escHtml(e.title)+'</div>'});
+      if(evts.length>2)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(evts.length-2)+'개</div>';
+      if(songs.length>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(songs.length,4);j++)inner+='<span class="cal-dot"></span>';if(songs.length>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(songs.length-4)+'</span>';inner+='</div>'}
+    }
     h+='<div class="'+cls+'" onclick="showCalDay(\''+ds+'\','+d+')">'+inner+'</div>';
   }
   var total=fd+ld;var rem=total%7===0?0:7-(total%7);
