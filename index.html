@@ -2915,7 +2915,7 @@ function setAttendanceLoading(isLoading,message){
   var count=document.getElementById('attCount');
   if(isLoading){
     if(count)count.innerHTML=message||'출결부 불러오는 중...';
-    if(list)list.innerHTML='<div style="font-size:13px;color:var(--ts);padding:14px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:10px">⏳ '+(message||'선택한 날짜/회차 출결부를 불러오는 중입니다...')+'</div>';
+    if(list)list.innerHTML='<div style="font-size:13px;color:var(--ts);padding:14px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:10px">⏳ '+(message||'불러오는 중입니다...')+'</div>';
   }
 }
 
@@ -2929,7 +2929,7 @@ function loadAttendance(){
   attReasons={};
   attAmData=null;
   attPmData=null;
-  setAttendanceLoading(true,'선택한 '+date+' '+attSession+' 출결부 불러오는 중...');
+  setAttendanceLoading(true,'불러오는 중...');
   loadAttMembers(function(){
     if(seq!==attLoadSeq)return;
     var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
