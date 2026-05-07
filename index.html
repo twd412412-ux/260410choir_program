@@ -2845,6 +2845,7 @@ var attAmData=null;
 var attPmData=null;
 var attSession='오전';
 var attStatusFilter='all';
+var attUnsubs=[];
 var currentAttReasonId='';
 var currentAttReasonPreset='';
 function getTodayInputDate(){
@@ -2901,6 +2902,7 @@ function loadAttendance(){
   var docId=getAttDocId();
   if(!docId)return;
   var date=document.getElementById('attDate').value;
+  clearAttRealtimeListeners();
   loadAttMembers(function(){
     var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
@@ -2922,12 +2924,16 @@ function loadAttendance(){
     }
 
 
-    Promise.all([
-      db.collection('attendance').doc(date+'_오전').get(),
-      db.collection('attendance').doc(date+'_오후').get()
-    ]).then(function(res){
-      attAmData=res[0].exists?res[0].data():null;
-      attPmData=res[1].exists?res[1].data():null;
+    var amLoaded=false, pmLoaded=false;
+    function applyAttendanceSnapshot(session,doc){
+      if(session==='오전'){
+        attAmData=doc.exists?doc.data():null;
+        amLoaded=true;
+      }else{
+        attPmData=doc.exists?doc.data():null;
+        pmLoaded=true;
+      }
+      if(!amLoaded||!pmLoaded)return;
       if(attSession==='오전'){
         attData=attAmData?attAmData.records||{}:{};
         attReasons=attAmData?attAmData.reasons||{}:{};
@@ -2936,8 +2942,16 @@ function loadAttendance(){
         attReasons=attPmData?attPmData.reasons||{}:{};
       }
       renderAttList();
-    }).catch(function(){attData={};attReasons={};attAmData=null;attPmData=null;renderAttList()});
+    }
+    function handleAttendanceListenError(){attData={};attReasons={};attAmData=null;attPmData=null;renderAttList()}
+    attUnsubs.push(db.collection('attendance').doc(date+'_오전').onSnapshot(function(doc){applyAttendanceSnapshot('오전',doc)},handleAttendanceListenError));
+    attUnsubs.push(db.collection('attendance').doc(date+'_오후').onSnapshot(function(doc){applyAttendanceSnapshot('오후',doc)},handleAttendanceListenError));
   });
+}
+
+function clearAttRealtimeListeners(){
+  attUnsubs.forEach(function(unsub){try{unsub()}catch(e){}});
+  attUnsubs=[];
 }
 
 
