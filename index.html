@@ -1865,6 +1865,7 @@ function addHandbookMember(){
     ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('hbPart').selectedIndex = 0;
     if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
+    invalidateAttendanceMemberCache();
     loadHandbook();
     var distInfo = document.getElementById('hbDist').value ? `${document.getElementById('hbDist').value}교구` : '교구 미입력';
     writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part} | 🏠 ${distInfo}`);
@@ -1875,6 +1876,7 @@ function deleteHandbookMember(id, name){
   if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
   db.collection('members').doc(id).delete().then(function(){ 
     showToast('삭제되었습니다'); 
+    invalidateAttendanceMemberCache();
     loadHandbook(); 
     // 👇 활동 로그 추가
     writeLog('명부 삭제', name + ' 단원 삭제됨');
@@ -1943,6 +1945,7 @@ function updateHandbookMember(){
   db.collection('members').doc(id).update(data).then(function(){
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit');
+    invalidateAttendanceMemberCache();
     loadHandbook();
     writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
@@ -2846,6 +2849,9 @@ var attPmData=null;
 var attSession='오전';
 var attStatusFilter='all';
 var attUnsubs=[];
+var attMembersLoaded=false;
+var attLoadSeq=0;
+var attLoading=false;
 var currentAttReasonId='';
 var currentAttReasonPreset='';
 function getTodayInputDate(){
@@ -2888,22 +2894,44 @@ function switchAttTab(tab){
 }
 
 function loadAttMembers(callback){
+  if(attMembersLoaded){
+    if(callback)callback();
+    return;
+  }
   db.collection('members').orderBy('name').get().then(function(snap){
     attMembers=[];
     snap.forEach(function(doc){
       var d=doc.data();
       if(isAttendanceTargetMember(d))attMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||''});
     });
+    attMembersLoaded=true;
     if(callback)callback();
   });
+}
+
+function setAttendanceLoading(isLoading,message){
+  attLoading=!!isLoading;
+  var list=document.getElementById('attList');
+  var count=document.getElementById('attCount');
+  if(isLoading){
+    if(count)count.innerHTML=message||'출결부 불러오는 중...';
+    if(list)list.innerHTML='<div style="font-size:13px;color:var(--ts);padding:14px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:10px">⏳ '+(message||'선택한 날짜/회차 출결부를 불러오는 중입니다...')+'</div>';
+  }
 }
 
 function loadAttendance(){
   var docId=getAttDocId();
   if(!docId)return;
+  var seq=++attLoadSeq;
   var date=document.getElementById('attDate').value;
   clearAttRealtimeListeners();
+  attData={};
+  attReasons={};
+  attAmData=null;
+  attPmData=null;
+  setAttendanceLoading(true,'선택한 '+date+' '+attSession+' 출결부 불러오는 중...');
   loadAttMembers(function(){
+    if(seq!==attLoadSeq)return;
     var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
     var pf=document.getElementById('attPartFilter');
     if(adminRole==='attendance'&&currentUser){
@@ -2926,6 +2954,7 @@ function loadAttendance(){
 
     var amLoaded=false, pmLoaded=false;
     function applyAttendanceSnapshot(session,doc){
+      if(seq!==attLoadSeq)return;
       if(session==='오전'){
         attAmData=doc.exists?doc.data():null;
         amLoaded=true;
@@ -2933,7 +2962,7 @@ function loadAttendance(){
         attPmData=doc.exists?doc.data():null;
         pmLoaded=true;
       }
-      if(!amLoaded||!pmLoaded)return;
+      if(session!==attSession && !(amLoaded&&pmLoaded))return;
       if(attSession==='오전'){
         attData=attAmData?attAmData.records||{}:{};
         attReasons=attAmData?attAmData.reasons||{}:{};
@@ -2941,9 +2970,15 @@ function loadAttendance(){
         attData=attPmData?attPmData.records||{}:{};
         attReasons=attPmData?attPmData.reasons||{}:{};
       }
+      setAttendanceLoading(false);
       renderAttList();
     }
-    function handleAttendanceListenError(){attData={};attReasons={};attAmData=null;attPmData=null;renderAttList()}
+    function handleAttendanceListenError(){
+      if(seq!==attLoadSeq)return;
+      attData={};attReasons={};attAmData=null;attPmData=null;
+      setAttendanceLoading(false);
+      renderAttList();
+    }
     attUnsubs.push(db.collection('attendance').doc(date+'_오전').onSnapshot(function(doc){applyAttendanceSnapshot('오전',doc)},handleAttendanceListenError));
     attUnsubs.push(db.collection('attendance').doc(date+'_오후').onSnapshot(function(doc){applyAttendanceSnapshot('오후',doc)},handleAttendanceListenError));
   });
@@ -2952,6 +2987,10 @@ function loadAttendance(){
 function clearAttRealtimeListeners(){
   attUnsubs.forEach(function(unsub){try{unsub()}catch(e){}});
   attUnsubs=[];
+}
+
+function invalidateAttendanceMemberCache(){
+  attMembersLoaded=false;
 }
 
 
