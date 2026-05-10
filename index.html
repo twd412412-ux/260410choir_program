@@ -3389,10 +3389,7 @@ function loadAttDashboard(){
       var pm3 = res[5].exists?res[5].data():null;
 
       var total=attMembers.length;
-      if(!am1 && !pm1){
-         el.innerHTML='<div class="chart-card" style="margin:0"><div style="font-size:15px;font-weight:700;margin-bottom:8px">📋 '+s1+' (주일) 출석 현황</div><div style="font-size:13px;color:var(--ts)">이번 주일 출석 데이터가 아직 없습니다</div></div>';
-         return;
-      }
+      var hasCurrentWeekData=!!(am1||pm1);
 
       var amPresent=0, amAbsent=0, pmPresent=0, pmAbsent=0;
       var bothAbsent=[];
@@ -3442,6 +3439,10 @@ function loadAttDashboard(){
       }
 
       h+='<div style="font-size:15px;font-weight:700;margin-bottom:12px">📋 '+s1+' (주일) 출석 요약</div>';
+
+      if(!hasCurrentWeekData){
+        h+='<div style="font-size:13px;color:var(--ts);padding:8px 0">이번 주일 출석 데이터가 아직 없습니다. 아래 전주 요약을 확인해주세요.</div>';
+      }
 
       if(am1){
         var amRate=total>0?Math.round(amPresent/total*100):0;
