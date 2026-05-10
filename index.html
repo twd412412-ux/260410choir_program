@@ -3121,6 +3121,57 @@ function renderAttList(){
 
 }
 
+var ATT_LATE_CUTOFFS={
+  '오전':'09:30',
+  '오후':'14:00'
+};
+var ATT_LATE_GRACE_MINUTES=10;
+
+function parseAttDateTime(dateStr,timeStr){
+  var d=String(dateStr||'').split('-');
+  var t=String(timeStr||'').split(':');
+  if(d.length!==3||t.length!==2)return null;
+  var dt=new Date(Number(d[0]),Number(d[1])-1,Number(d[2]),Number(t[0]),Number(t[1]),0,0);
+  return isNaN(dt.getTime())?null:dt;
+}
+
+function getLateAttendanceInfo(dateStr,session,now){
+  var info=getAttDateInfo(dateStr);
+  if(!info||info.day!==0)return null;
+  var cutoffText=ATT_LATE_CUTOFFS[session];
+  if(!cutoffText)return null;
+  var cutoff=parseAttDateTime(dateStr,cutoffText);
+  if(!cutoff)return null;
+  var lateFrom=new Date(cutoff.getTime()+ATT_LATE_GRACE_MINUTES*60000);
+  var current=now||new Date();
+  if(current.getTime()<lateFrom.getTime())return null;
+  return {cutoffText:cutoffText,lateFrom:lateFrom,graceMinutes:ATT_LATE_GRACE_MINUTES};
+}
+
+function shouldStopForLateAttendancePrompt(id,status,currentStatus){
+  if(status!=='출석'||currentStatus===status)return false;
+  var dateEl=document.getElementById('attDate');
+  var date=dateEl?dateEl.value:'';
+  var lateInfo=getLateAttendanceInfo(date,attSession);
+  if(!lateInfo)return false;
+
+  var label=attSession+' 출석 기준 '+lateInfo.cutoffText+' + 유예 '+lateInfo.graceMinutes+'분이 지났습니다.';
+  var choice=prompt(label+'\n\n지각으로 체크하시겠습니까?\n1. 지각으로 체크\n2. 출석으로 유지\n3. 취소','1');
+  if(choice===null)return true;
+  choice=String(choice).trim();
+  if(choice==='1'||choice==='지각'){
+    attData[id]='지각';
+    if(attReasons)delete attReasons[id];
+    renderAttList();
+    showToast('지각으로 체크됨');
+    return true;
+  }
+  if(choice==='2'||choice==='출석')return false;
+  if(choice==='3'||choice==='취소'||choice==='')return true;
+  showToast('1, 2, 3 중 하나로 선택해주세요');
+  return true;
+}
+
 function setAtt(id,status){
   var currentStatus=attData[id]||'';
 
@@ -3135,6 +3186,8 @@ function setAtt(id,status){
     showToast('미체크로 변경됨');
     return;
   }
+
+  if(shouldStopForLateAttendancePrompt(id,status,currentStatus))return;
 
   if(status==='사유결석'){
     openAttReasonModal(id);
