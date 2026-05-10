@@ -60,6 +60,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .reason-chip{min-height:42px;padding:10px 8px;border:1.5px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer}
 .reason-chip-sub{display:block;font-size:10px;line-height:1.1;font-weight:600;margin-top:2px}
 .reason-chip.on{background:var(--pl);border-color:var(--p);color:var(--pd)}
+.late-prompt-text{font-size:15px;font-weight:800;line-height:1.5;margin-bottom:14px;color:var(--tx);text-align:center}
+.late-prompt-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.late-chip{min-height:44px;border:1.5px solid var(--bd);border-radius:12px;background:var(--sf);color:var(--tx);font-size:14px;font-weight:800;cursor:pointer}
+.late-chip.late{background:#FEF3C7;border-color:#F59E0B;color:#92400E}
+.late-chip.present{background:var(--pl);border-color:var(--p);color:var(--pd)}
+.late-chip.cancel{color:var(--ts)}
 .reason-help{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
 .detail-label{width:80px;font-weight:700;color:var(--ts);flex-shrink:0}
@@ -919,6 +925,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn" style="flex:1" onclick="closeAttReasonModal()">취소</button>
       <button id="attReasonConfirmBtn" class="btn btn-p" style="flex:1;opacity:.45;cursor:not-allowed" onclick="confirmAttReason()" disabled>확인</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay modal-center" id="modalLateAtt">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">⏰ 지각 확인</span>
+      <button class="modal-close" onclick="closeLateAttendanceModal()">✕</button>
+    </div>
+    <div class="late-prompt-text" id="lateAttMessage"></div>
+    <div class="late-prompt-grid">
+      <button class="late-chip late" type="button" onclick="chooseLateAttendance('late')">지각으로 체크</button>
+      <button class="late-chip present" type="button" onclick="chooseLateAttendance('present')">출석으로 유지</button>
+      <button class="late-chip cancel" type="button" onclick="closeLateAttendanceModal()">취소</button>
     </div>
   </div>
 </div>
@@ -2854,6 +2874,7 @@ var attLoadSeq=0;
 var attLoading=false;
 var currentAttReasonId='';
 var currentAttReasonPreset='';
+var pendingLateAttId='';
 function getTodayInputDate(){
   var d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -3147,7 +3168,41 @@ function getLateAttendanceInfo(dateStr,session,now){
   if(!cutoff)return null;
   var lateFrom=new Date(cutoff.getTime()+ATT_LATE_GRACE_MINUTES*60000);
   if(current.getTime()<lateFrom.getTime())return null;
-  return {cutoffText:cutoffText,lateFrom:lateFrom,graceMinutes:ATT_LATE_GRACE_MINUTES};
+  var minutesPast=Math.floor((current.getTime()-cutoff.getTime())/60000);
+  return {cutoffText:cutoffText,minutesPast:minutesPast};
+}
+
+function openLateAttendanceModal(id,lateInfo){
+  pendingLateAttId=id;
+  var msg=document.getElementById('lateAttMessage');
+  if(msg)msg.innerHTML=attSession+' '+lateInfo.cutoffText+' 기준에서<br><span style="color:#D97706">'+lateInfo.minutesPast+'분</span> 지났습니다.<br>지각으로 체크하시겠습니까?';
+  openModal('modalLateAtt');
+}
+
+function closeLateAttendanceModal(){
+  pendingLateAttId='';
+  closeModal('modalLateAtt');
+}
+
+function chooseLateAttendance(choice){
+  var id=pendingLateAttId;
+  if(!id)return closeLateAttendanceModal();
+  if(choice==='late'){
+    attData[id]='지각';
+    if(attReasons)delete attReasons[id];
+    closeLateAttendanceModal();
+    renderAttList();
+    showToast('지각으로 체크됨');
+    return;
+  }
+  if(choice==='present'){
+    attData[id]='출석';
+    if(attReasons)delete attReasons[id];
+    closeLateAttendanceModal();
+    renderAttList();
+    return;
+  }
+  closeLateAttendanceModal();
 }
 
 function shouldStopForLateAttendancePrompt(id,status,currentStatus){
@@ -3156,21 +3211,7 @@ function shouldStopForLateAttendancePrompt(id,status,currentStatus){
   var date=dateEl?dateEl.value:'';
   var lateInfo=getLateAttendanceInfo(date,attSession);
   if(!lateInfo)return false;
-
-  var label=attSession+' 출석 기준 '+lateInfo.cutoffText+' + 유예 '+lateInfo.graceMinutes+'분이 지났습니다.';
-  var choice=prompt(label+'\n\n지각으로 체크하시겠습니까?\n1. 지각으로 체크\n2. 출석으로 유지\n3. 취소','1');
-  if(choice===null)return true;
-  choice=String(choice).trim();
-  if(choice==='1'||choice==='지각'){
-    attData[id]='지각';
-    if(attReasons)delete attReasons[id];
-    renderAttList();
-    showToast('지각으로 체크됨');
-    return true;
-  }
-  if(choice==='2'||choice==='출석')return false;
-  if(choice==='3'||choice==='취소'||choice==='')return true;
-  showToast('1, 2, 3 중 하나로 선택해주세요');
+  openLateAttendanceModal(id,lateInfo);
   return true;
 }
 
