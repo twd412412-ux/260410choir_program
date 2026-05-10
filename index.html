@@ -3138,12 +3138,14 @@ function parseAttDateTime(dateStr,timeStr){
 function getLateAttendanceInfo(dateStr,session,now){
   var info=getAttDateInfo(dateStr);
   if(!info||info.day!==0)return null;
+  var current=now||new Date();
+  var today=getTodayInputDate();
+  if(dateStr!==today)return null;
   var cutoffText=ATT_LATE_CUTOFFS[session];
   if(!cutoffText)return null;
   var cutoff=parseAttDateTime(dateStr,cutoffText);
   if(!cutoff)return null;
   var lateFrom=new Date(cutoff.getTime()+ATT_LATE_GRACE_MINUTES*60000);
-  var current=now||new Date();
   if(current.getTime()<lateFrom.getTime())return null;
   return {cutoffText:cutoffText,lateFrom:lateFrom,graceMinutes:ATT_LATE_GRACE_MINUTES};
 }
