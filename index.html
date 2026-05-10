@@ -3175,7 +3175,7 @@ function getLateAttendanceInfo(dateStr,session,now){
 function openLateAttendanceModal(id,lateInfo){
   pendingLateAttId=id;
   var msg=document.getElementById('lateAttMessage');
-  if(msg)msg.innerHTML=attSession+' '+lateInfo.cutoffText+' 기준에서<br><span style="color:#D97706">'+lateInfo.minutesPast+'분</span> 지났습니다.<br>지각으로 체크하시겠습니까?';
+  if(msg)msg.innerHTML=attSession+' 출석 기준 '+lateInfo.cutoffText+'을<br><span style="color:#D97706">'+lateInfo.minutesPast+'분</span> 지났습니다.<br>지각으로 체크하시겠습니까?';
   openModal('modalLateAtt');
 }
 
