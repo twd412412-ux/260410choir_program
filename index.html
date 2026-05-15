@@ -1689,18 +1689,18 @@ function loadMembers(){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
       var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':m.role==='songschedule'?' <span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">곡+일정</span>':'';
       if(m.canArchiveUpload) roleBadge += ' <span style="font-size:10px;background:#8B5CF6;color:#fff;padding:1px 6px;border-radius:8px">아카이브</span>';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
-        <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}</div>
+        <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}<div style="font-size:12px;color:var(--ts);margin-top:4px">PIN: <b style="color:var(--p);letter-spacing:1px">${m.pin}</b></div></div>
         <div style="display:flex;gap:4px">
           <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editAccount('${m.id}','${m.name}','${m.part}')">수정</button>
           <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="changeRole('${m.id}','${m.name}','${m.role}')">권한</button>
-          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}')">PIN</button>
+          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}','${m.pin}')">PIN</button>
           <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
         </div>
       </div>`;
@@ -1745,12 +1745,13 @@ function delMember(id,name){
   });
 }
 
-function resetPin(id,name){
-  var p=prompt(name+'님의 새 PIN(4자리):');
+function resetPin(id,name,currentPin){
+  var p=prompt(name+'님의 새 PIN(4자리):', currentPin||'');
   if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
   // 👇 'accounts' 방에서 수정!
   db.collection('accounts').doc(id).update({pin:p}).then(function(){ 
-    showToast('PIN 변경 완료'); 
+    showToast('PIN 변경 완료');
+    setTimeout(function() { loadMembers(); }, 500);
     writeLog('PIN 변경', name + '님 PIN 초기화');
   });
 }
