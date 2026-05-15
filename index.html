@@ -600,11 +600,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="admin-sub" id="subAddSong">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎵 새 곡 추가</h3>
     <div class="form-group"><label class="form-label">곡명 *</label><input class="form-input" id="addSongName" placeholder="곡 제목"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-      <div class="form-group"><label class="form-label">연도 *</label><select class="form-sel" id="addYear" onchange="calcDow('add')"><option value="">선택</option></select></div>
-      <div class="form-group"><label class="form-label">월 *</label><select class="form-sel" id="addMonth" onchange="calcDow('add')"><option value="">선택</option><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select></div>
-      <div class="form-group"><label class="form-label">일</label><select class="form-sel" id="addDay" onchange="calcDow('add')"><option value="">선택</option></select></div>
-    </div>
+    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="addDate" type="date" onchange="calcDow('add')" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     <div class="form-group"><label class="form-label">요일 (자동계산)</label><input class="form-input" id="addDow" readonly style="background:var(--pl);font-weight:700"></div>
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 용봉, 연제"></div>
@@ -674,7 +670,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
-    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="schDate" type="date"></div>
+    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
@@ -1563,14 +1559,16 @@ function shareSong(){
 // ==================== 곡 추가 ====================
 function addNewSong(){
   var name=document.getElementById('addSongName').value.trim();
-  var year=parseInt(document.getElementById('addYear').value,10);
-  var month=parseInt(document.getElementById('addMonth').value,10);
-  if(!name||isNaN(year)||isNaN(month))return showToast('곡명, 연도, 월은 필수입니다');
+  var dateParts=getDateParts(document.getElementById('addDate').value);
+  if(!name||!dateParts)return showToast('곡명과 날짜는 필수입니다');
+  var year=dateParts.year;
+  var month=dateParts.month;
+  var day=dateParts.day;
   var cat=getCatValue('add');
   var yt=document.getElementById('addYoutube').value.trim();
   db.collection('songs').add({
     songName:name,year:year,month:month,
-    day:parseInt(document.getElementById('addDay').value,10)||null,
+    day:day,
     dayOfWeek:document.getElementById('addDow').value,
     category:cat,
     subCategory:document.getElementById('addSub').value.trim(),
@@ -1580,18 +1578,14 @@ function addNewSong(){
     youtube:yt,
     createdAt:new Date().toISOString()
   }).then(function(docRef){
-    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:parseInt(document.getElementById('addDay').value,10)||null,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:day,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();doFilter();
     // [수정됨] 곡 추가 로그 디테일 강화
-    var logDay = document.getElementById('addDay').value ? '.' + document.getElementById('addDay').value : '';
     var logPia = document.getElementById('addPia').value || '반주 미정';
-    writeLog('곡 추가', `🎵 [${name}] 등록\n👉 예정일: ${year}.${month}${logDay} | 🎹 반주: ${logPia}`);
+    writeLog('곡 추가', `🎵 [${name}] 등록\n👉 예정일: ${year}.${month}.${day} | 🎹 반주: ${logPia}`);
     showToast('곡이 추가되었습니다!');
-    ['addSongName','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){document.getElementById(id).value=''});
-    document.getElementById('addYear').selectedIndex=0;
-    document.getElementById('addMonth').selectedIndex=0;
-    document.getElementById('addDay').innerHTML='<option value="">선택</option>';
+    ['addSongName','addDate','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('addDow').value='';
     document.getElementById('addCatSel').selectedIndex=0;
     document.getElementById('addCatInput').classList.add('hidden');
@@ -2640,24 +2634,44 @@ function exportAttCSV(){
 // ==================== 요일 자동계산 + 일 드롭다운 + 카테고리 ====================
 var DOW_NAMES=['일','월','화','수','목','금','토'];
 
-function calcDow(prefix){
-  var y=parseInt(document.getElementById(prefix+'Year').value,10);
-  var m=parseInt(document.getElementById(prefix+'Month').value,10);
-  var dSel=document.getElementById(prefix+'Day');
-  var dowEl=document.getElementById(prefix+'Dow');
+function openDatePicker(input){
+  if(input&&typeof input.showPicker==='function'){
+    try{input.showPicker()}catch(e){}
+  }
+}
 
-  // 일 드롭다운 업데이트
-  if(y&&m){
-    var maxDay=new Date(y,m,0).getDate();
-    var curDay=parseInt(dSel.value,10);
-    dSel.innerHTML='<option value="">선택</option>';
-    for(var i=1;i<=maxDay;i++){dSel.innerHTML+='<option value="'+i+'"'+(i===curDay?' selected':'')+'>'+i+'일</option>'}
+function getDateParts(value){
+  var m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return null;
+  return {year:parseInt(m[1],10),month:parseInt(m[2],10),day:parseInt(m[3],10)};
+}
+
+function calcDow(prefix){
+  var dowEl=document.getElementById(prefix+'Dow');
+  var parts=null;
+
+  if(prefix==='add'){
+    parts=getDateParts(document.getElementById('addDate').value);
+  }else{
+    var y=parseInt(document.getElementById(prefix+'Year').value,10);
+    var m=parseInt(document.getElementById(prefix+'Month').value,10);
+    var dSel=document.getElementById(prefix+'Day');
+
+    // 일 드롭다운 업데이트
+    if(y&&m){
+      var maxDay=new Date(y,m,0).getDate();
+      var curDay=parseInt(dSel.value,10);
+      dSel.innerHTML='<option value="">선택</option>';
+      for(var i=1;i<=maxDay;i++){dSel.innerHTML+='<option value="'+i+'"'+(i===curDay?' selected':'')+'>'+i+'일</option>'}
+    }
+
+    var d=parseInt(dSel.value,10);
+    if(y&&m&&d)parts={year:y,month:m,day:d};
   }
 
   // 요일 자동계산
-  var d=parseInt(dSel.value,10);
-  if(y&&m&&d){
-    var date=new Date(y,m-1,d);
+  if(parts){
+    var date=new Date(parts.year,parts.month-1,parts.day);
     dowEl.value=DOW_NAMES[date.getDay()];
   }else{
     dowEl.value='';
