@@ -587,7 +587,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="admin-tab on" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
     <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 전자출결부</div>
     <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</div>
-    <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지사항</div>
+    <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지/설정</div>
     <div class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
@@ -666,6 +666,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
     <div class="form-group"><label class="form-label">공지 내용</label><input class="form-input" id="noticeInput" placeholder="상단에 표시할 공지사항"></div>
     <div style="display:flex;gap:8px"><button class="btn btn-p" onclick="saveNotice()">저장</button><button class="btn btn-d" onclick="delNotice()">삭제</button></div>
     <div style="margin-top:16px"><h4 style="font-size:14px;font-weight:700;margin-bottom:4px">현재 공지</h4><div id="curNotice" style="font-size:14px;color:var(--ts)">없음</div></div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🔐 총무부 비밀번호 변경</h3>
+      <div class="form-group"><label class="form-label">새 총무부 비밀번호 *</label><input class="form-input" id="chongmuPwNew" type="password" placeholder="새 비밀번호 입력" autocomplete="new-password"></div>
+      <div class="form-group"><label class="form-label">새 비밀번호 확인 *</label><input class="form-input" id="chongmuPwConfirm" type="password" placeholder="한 번 더 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter')saveChongmuPassword()"></div>
+      <button class="btn btn-p btn-bl" onclick="saveChongmuPassword()">총무부 비밀번호 저장</button>
+      <p style="font-size:12px;color:var(--ts);margin-top:8px">관리자 로그인 상태에서만 변경할 수 있습니다.</p>
+    </div>
   </div>
 
   <div class="admin-sub hidden" id="subSchedule">
@@ -970,6 +977,7 @@ var storage = firebase.storage();
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='home';
 var adminRole=null;
+var chongmuPassword='0412';
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, allSchedules=[], allMembers=[];
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
@@ -1101,15 +1109,18 @@ function checkAdminPw(){
     document.getElementById('btnLock').textContent='🔓';
     document.getElementById('adminPw').value='';
     closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();
-  }else if(role==='chongmu'&&pw==='0412'){
-    adminRole='chongmu';
-    document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode','songschedule-mode');
-    document.getElementById('navAdmin').classList.remove('hidden');
-    document.getElementById('navStats').classList.remove('hidden');
-    document.getElementById('navArchive').classList.remove('hidden');
-    document.getElementById('btnLock').textContent='🔓';
-    document.getElementById('adminPw').value='';
-    closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();
+  }else if(role==='chongmu'){
+    loadAdminSettings().then(function(){
+      if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
+      adminRole='chongmu';
+      document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode','songschedule-mode');
+      document.getElementById('navAdmin').classList.remove('hidden');
+      document.getElementById('navStats').classList.remove('hidden');
+      document.getElementById('navArchive').classList.remove('hidden');
+      document.getElementById('btnLock').textContent='🔓';
+      document.getElementById('adminPw').value='';
+      closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();
+    }).catch(function(){showToast('비밀번호 확인 중 오류 발생')});
   }else{showToast('비밀번호가 틀렸습니다')}
 }
 
@@ -2018,6 +2029,36 @@ function updatePartSummary() {
 
 function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 
+// ==================== 관리자 설정 ====================
+function loadAdminSettings(){
+  return db.collection('settings').doc('admin').get().then(function(doc){
+    if(doc.exists&&doc.data().chongmuPassword){
+      chongmuPassword=String(doc.data().chongmuPassword);
+      saveCache('choir_admin_settings',{chongmuPassword:chongmuPassword});
+    }
+  }).catch(function(){
+    var cached=loadCache('choir_admin_settings',600000);
+    if(cached&&cached.chongmuPassword)chongmuPassword=String(cached.chongmuPassword);
+  });
+}
+function initAdminSettings(){loadAdminSettings()}
+function saveChongmuPassword(){
+  if(adminRole!=='admin')return showToast('관리자만 변경할 수 있습니다');
+  var pw=document.getElementById('chongmuPwNew').value.trim();
+  var confirmPw=document.getElementById('chongmuPwConfirm').value.trim();
+  if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
+  if(pw.length<4)return showToast('비밀번호는 4자리 이상으로 입력해주세요');
+  if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
+  db.collection('settings').doc('admin').set({chongmuPassword:pw,updatedAt:new Date().toISOString()},{merge:true}).then(function(){
+    chongmuPassword=pw;
+    saveCache('choir_admin_settings',{chongmuPassword:pw});
+    document.getElementById('chongmuPwNew').value='';
+    document.getElementById('chongmuPwConfirm').value='';
+    writeLog('총무부 비밀번호 변경','관리자가 총무부 로그인 비밀번호를 변경함');
+    showToast('총무부 비밀번호 변경 완료');
+  }).catch(function(){showToast('비밀번호 저장 중 오류 발생')});
+}
+
 // ==================== 공지사항 (get + 캐시) ====================
 function initNotice(){
   var cached=loadCache('choir_notice',600000);
@@ -2811,6 +2852,7 @@ function init(){
   restoreUser();
   initCal();
   initSongs();
+  initAdminSettings();
   initNotice();
   initSchedules();
   initColorPicker();
