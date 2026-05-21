@@ -734,7 +734,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
         <button class="btn" id="attSessionAM" style="flex:1;background:var(--p);color:#fff;border:2px solid var(--p)" onclick="setAttSession('오전')">☀️ 오전</button>
         <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;margin:-2px 0 12px;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+      <label id="attExcludeFromReportWrap" style="display:none;align-items:center;gap:8px;margin:-2px 0 12px;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
         <input type="checkbox" id="attExcludeFromReport" onchange="renderAttGuideCard()">
         이 회차는 결산 출석률에서 제외
       </label>
@@ -2970,11 +2970,17 @@ function getCurrentAttDocData(){
   return attSession==='오전'?attAmData:attPmData;
 }
 
+function canManageAttendanceReportExclusion(){
+  return adminRole==='admin'||adminRole==='chongmu';
+}
+
 function syncAttExcludeControl(){
   var el=document.getElementById('attExcludeFromReport');
+  var wrap=document.getElementById('attExcludeFromReportWrap');
   if(!el)return;
   var data=getCurrentAttDocData();
   el.checked=!!(data&&data.excludeFromReport);
+  if(wrap)wrap.style.display=canManageAttendanceReportExclusion()?'flex':'none';
 }
 
 
@@ -3136,7 +3142,7 @@ function renderAttGuideCard(){
   var curReady=!!curData && (attPartFilter==='all' || curChecked>0);
   var otherReady=!!otherData && (attPartFilter==='all' || otherChecked>0);
   var excludeEl=document.getElementById('attExcludeFromReport');
-  var excludeFromReport=!!(excludeEl&&excludeEl.checked);
+  var excludeFromReport=!!((excludeEl&&excludeEl.checked)||(curData&&curData.excludeFromReport));
   var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ 주일 '+attSession+' 출석부입니다',msg='선택 범위('+scopeLabel+') 기준으로 체크 기록이 있으며, 이 회차는 결산 통계에 포함됩니다.';
 
   if(excludeFromReport){
@@ -3439,10 +3445,12 @@ function saveAttendance(){
   }
 
   var excludeEl=document.getElementById('attExcludeFromReport');
-  var saveData={date:date,session:attSession,excludeFromReport:!!(excludeEl&&excludeEl.checked),updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
+  var saveData={date:date,session:attSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
   db.collection('attendance').doc(docId).get().then(function(doc){
+    var existingData=doc.exists?doc.data():{};
     var existingRecords=doc.exists&&doc.data().records?doc.data().records:{};
     var existingReasons=doc.exists&&doc.data().reasons?doc.data().reasons:{};
+    saveData.excludeFromReport=canManageAttendanceReportExclusion()?!!(excludeEl&&excludeEl.checked):!!(existingData&&existingData.excludeFromReport);
     if(adminRole==='admin'||adminRole==='chongmu'){
       saveData.records=attData;
       saveData.reasons=attReasons;
