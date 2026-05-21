@@ -4139,10 +4139,12 @@ function generateReport() {
     
     var rawAttDocs = [];
     var attDocs = [];
+    var excludedAttDocs = [];
     res[1].forEach(doc => {
       var data = doc.data();
       if(!data || !data.date) return;
       rawAttDocs.push(data);
+      if(data.excludeFromReport) excludedAttDocs.push(data);
       var parts = String(data.date).split('-');
       if(parts.length !== 3) return;
       var dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -4273,6 +4275,28 @@ function generateReport() {
         + '</div>';
     }
 
+    function renderExcludedAttendanceBox(docs){
+      if(!docs.length)return '';
+      var rows = docs.slice().sort(function(a,b){
+        return String(a.date || '').localeCompare(String(b.date || '')) || String(a.session || '').localeCompare(String(b.session || ''));
+      }).map(function(d){
+        var checked = countCheckedRecords(d.records || {});
+        var session = d.session || '오전';
+        return '<tr>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+d.date+'</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+session+'</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">출석률 제외</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">운영 기록 보관 · 체크 '+checked+'명</td>'
+          + '</tr>';
+      }).join('');
+      return '<div style="margin:14px 0 18px;">'
+        + '<div style="font-size:13px;font-weight:800;color:#1D4ED8;margin-bottom:7px;">ℹ️ 출석률 제외 회차</div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">'
+        + '<tr><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">날짜</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">회차</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">처리</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">비고</th></tr>'
+        + rows
+        + '</table></div>';
+    }
+
     var attendanceAnomalies = detectAttendanceAnomalies(rawAttDocs, activeMembers);
 
     // --- 출석 데이터 분석 ---
@@ -4346,6 +4370,7 @@ function generateReport() {
         ${year}년 ${month}월 광주교회 찬양대 결산 보고서
       </h2>
       ${renderAnomalyBox(attendanceAnomalies)}
+      ${renderExcludedAttendanceBox(excludedAttDocs)}
       
       <h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:24px; margin-bottom:12px;">📊 1. 종합 현황</h3>
       <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
