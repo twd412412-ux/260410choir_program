@@ -4499,6 +4499,7 @@ function generateReport() {
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:60px;">일자</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">곡명</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:80px;">분류</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">팀원</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc; width:80px;">반주/장소</th>
         </tr>`;
       songs.forEach(s => {
@@ -4507,6 +4508,7 @@ function generateReport() {
           <td style="border:1px solid #ccc; padding:8px; text-align:center;">${dayStr}</td>
           <td style="border:1px solid #ccc; padding:8px; font-weight:700;">${s.songName}</td>
           <td style="border:1px solid #ccc; padding:8px;">${s.category || '-'}</td>
+          <td style="border:1px solid #ccc; padding:8px; font-size:12px; line-height:1.5;">${s.members || '-'}</td>
           <td style="border:1px solid #ccc; padding:8px; font-size:12px;">${s.pianist||''}<br>${s.location||''}</td>
         </tr>`;
       });
