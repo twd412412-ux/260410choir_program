@@ -155,9 +155,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .archive-preview-note{font-size:11px;color:var(--ts);margin-top:6px}
 .archive-type-badge{background:rgba(37,99,235,.08);color:var(--p);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
 .archive-reactions{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative}
-.archive-reaction-pill{border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:14px;padding:3px 7px;font-size:11px;font-weight:700;line-height:1}
-.archive-reaction-btn{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:14px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer}
-.archive-reaction-btn.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
+.archive-reaction-pill{border:1px solid #FECDD3;background:#FFF1F2;color:#BE123C;border-radius:14px;padding:3px 7px;font-size:11px;font-weight:700;line-height:1}
+.archive-reaction-btn{border:1px solid #FDA4AF;background:#FFE4E6;color:#BE123C;border-radius:14px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 1px 2px rgba(190,18,60,.12)}
+.archive-reaction-btn.on{background:#E11D48;color:#fff;border-color:#E11D48}
 .archive-reaction-picker{display:none;position:absolute;left:0;bottom:28px;background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:6px;gap:4px;z-index:5}
 .archive-reaction-picker.show{display:flex}
 .archive-reaction-choice{width:34px;height:34px;border:none;border-radius:50%;background:var(--bg);font-size:18px;cursor:pointer}
@@ -1020,7 +1020,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=13').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=14').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
