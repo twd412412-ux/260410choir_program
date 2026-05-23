@@ -999,6 +999,8 @@ var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, allSchedules=[], allMembers=[];
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
+var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
+var ARCHIVE_PAGE_SIZE=30;
 var ARCHIVE_REACTIONS=[
   {key:'heart',emoji:'❤️',label:'좋아요'},
   {key:'agree',emoji:'👍',label:'공감해요'},
@@ -1020,7 +1022,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=15').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=16').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2318,11 +2320,21 @@ function renderArchivePage(){
   if(archiveItems.length===0)loadArchiveItems();
   else renderArchiveList();
 }
-function loadArchiveItems(){
+function loadArchiveItems(more){
   var list=document.getElementById('archiveList');
-  if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>아카이브 불러오는 중...</div>';
-  db.collection('mediaArchive').orderBy('uploadedAt','desc').limit(120).get().then(function(snap){
+  if(archiveLoading)return;
+  archiveLoading=true;
+  if(!more){
     archiveItems=[];
+    archiveLastDoc=null;
+    archiveHasMore=true;
+    if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>아카이브 불러오는 중...</div>';
+  }else{
+    renderArchiveList();
+  }
+  var query=db.collection('mediaArchive').orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE);
+  if(more&&archiveLastDoc)query=query.startAfter(archiveLastDoc);
+  query.get().then(function(snap){
     snap.forEach(function(doc){
       var d=doc.data()||{};
       archiveItems.push({
@@ -2340,9 +2352,13 @@ function loadArchiveItems(){
         reactionUsers:d.reactionUsers||{}
       });
     });
+    archiveLastDoc=snap.docs.length?snap.docs[snap.docs.length-1]:archiveLastDoc;
+    archiveHasMore=snap.docs.length===ARCHIVE_PAGE_SIZE;
+    archiveLoading=false;
     renderArchiveList();
   }).catch(function(e){
     console.error(e);
+    archiveLoading=false;
     if(list)list.innerHTML='<div class="archive-empty">아카이브를 불러오지 못했습니다.</div>';
     showToast('아카이브 불러오기 실패');
   });
@@ -2358,7 +2374,7 @@ function renderArchiveList(){
     var typeOk=(typeFilter==='all'||item.type===typeFilter);
     return partOk&&typeOk;
   });
-  count.textContent='아카이브 '+items.length+'개';
+  count.textContent='아카이브 '+items.length+'개 표시';
   if(items.length===0){
     list.innerHTML='<div class="archive-empty">조건에 맞는 사진이나 영상이 없습니다.</div>';
     return;
@@ -2385,7 +2401,12 @@ function renderArchiveList(){
     var safePath=(item.path||'').replace(/'/g,"\\'");
     var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
     return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
-  }).join('');
+  }).join('')+renderArchiveMoreButton();
+}
+function renderArchiveMoreButton(){
+  if(!archiveHasMore&&!archiveLoading)return '';
+  var label=archiveLoading?'불러오는 중...':'더보기';
+  return '<div style="grid-column:1/-1;padding:4px 0 12px"><button class="btn btn-p btn-bl" onclick="loadArchiveItems(true)" '+(archiveLoading?'disabled style="opacity:.7"':'')+'>'+label+'</button></div>';
 }
 function archiveReactionInfo(type){
   for(var i=0;i<ARCHIVE_REACTIONS.length;i++){
@@ -2425,7 +2446,7 @@ function renderArchiveReactions(item){
     return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')">'+r.emoji+'</button>';
   }).join('');
   var adminList=(adminRole==='admin'||adminRole==='chongmu')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
-  return '<div class="archive-reactions">'+chips+'<button class="archive-reaction-btn '+(selected?'on':'')+'" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')">공감하기</button>'+adminList+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
+  return '<div class="archive-reactions" id="archiveReactions-'+item.id+'">'+chips+'<button class="archive-reaction-btn '+(selected?'on':'')+'" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')">공감하기</button>'+adminList+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
 }
 function openArchiveReactionPicker(id){
   var el=document.getElementById('archiveReactionPicker-'+id);
@@ -2457,12 +2478,17 @@ function toggleArchiveReaction(id,type){
   }).then(function(users){
     item.reactionUsers=users;
     item.reactions=archiveReactionCounts(users);
-    renderArchiveList();
+    updateArchiveReactionView(item);
     showToast('공감이 반영되었습니다');
   }).catch(function(e){
     console.error(e);
     showToast('공감 저장 중 오류 발생');
   });
+}
+function updateArchiveReactionView(item){
+  var el=document.getElementById('archiveReactions-'+item.id);
+  if(el)el.outerHTML=renderArchiveReactions(item);
+  else renderArchiveList();
 }
 function showArchiveReactionUsers(id){
   var item=archiveItems.find(function(x){return x.id===id});
