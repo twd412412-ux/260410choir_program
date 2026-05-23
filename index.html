@@ -1020,7 +1020,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=14').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=15').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -4117,8 +4117,6 @@ function loadMemHistory(){
 
 
 
-showGuide();
-  
 // [신규] 잘못 만든 날짜의 출석 기록을 통째로 날려버리는 기능
 function deleteAttendance(){
   var docId=getAttDocId();
