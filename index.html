@@ -757,6 +757,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       </div>
       <button class="btn btn-p btn-bl" onclick="loadAttStats()" style="margin-bottom:16px">통계 조회</button>
       <div id="attDashboard" style="margin-bottom:16px"></div>
+      <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">⏰ 지각 기록 현황</div><div id="chLateAtt"><div style="font-size:13px;color:var(--ts)">기간 선택 후 통계 조회를 눌러주세요</div></div></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📊 파트별 평균 출석률</div><div id="chPartAtt"></div></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">👤 단원별 출석률 (낮은순)</div><div id="chMemAtt"></div></div>
       <div class="chart-card" style="margin:0 0 10px"><div class="chart-title">📈 주간 출석 추이</div><div id="chWeekAtt"></div></div>
@@ -3539,6 +3540,15 @@ function togglePrevWeekCard(btn){
   }
 }
 
+function getAttendanceStatsScopeMembers(){
+  var members=attMembers.slice();
+  if(adminRole==='attendance'&&currentUser){
+    var allowedParts=(currentUser.part==='S1'||currentUser.part==='S2')?['S1','S2']:[currentUser.part];
+    members=members.filter(function(m){return allowedParts.indexOf(m.part)!==-1||allowedParts.indexOf(m.subPart)!==-1});
+  }
+  return members;
+}
+
 // [업그레이드] 3주 연속 결석 및 이탈률 분석 기능 추가
 function loadAttDashboard(){
   var el=document.getElementById('attDashboard');
@@ -3748,11 +3758,15 @@ function loadAttStats(){
       });
       if(records.length===0){
         document.getElementById('chPartAtt').innerHTML='<div style="font-size:13px;color:var(--ts)">해당 기간 출석 데이터가 없습니다</div>';
-        document.getElementById('chMemAtt').innerHTML='';document.getElementById('chWeekAtt').innerHTML='';return;
+        document.getElementById('chMemAtt').innerHTML='';document.getElementById('chWeekAtt').innerHTML='';
+        document.getElementById('chLateAtt').innerHTML='<div style="font-size:13px;color:var(--ts)">해당 기간 지각 기록이 없습니다</div>';
+        return;
       }
+      renderLateAttendanceStats(records,from,to);
       var partStats={};
-      attMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
-      records.forEach(function(r){attMembers.forEach(function(m){
+      var scopedMembers=getAttendanceStatsScopeMembers();
+      scopedMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
+      records.forEach(function(r){scopedMembers.forEach(function(m){
         if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
         var st=r.records[m.id];
         partStats[m.part].total++;
@@ -3764,8 +3778,8 @@ function loadAttStats(){
       barChart('chPartAtt',partData,'%');
 
       var memStats={};
-      attMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
-      records.forEach(function(r){attMembers.forEach(function(m){
+      scopedMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
+      records.forEach(function(r){scopedMembers.forEach(function(m){
         if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
         var st=r.records[m.id];
         memStats[m.id].total++;
@@ -3779,13 +3793,72 @@ function loadAttStats(){
       var weekData=records.map(function(r){
         return{label:r.date.substring(5)+' '+r.session,value:(function(){
           var total=0,present=0;
-          attMembers.forEach(function(m){if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
+          scopedMembers.forEach(function(m){if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
           return total>0?Math.round(present/total*100):0;
         })()};
       });
       barChart('chWeekAtt',weekData,'%');
     }).catch(function(e){console.error(e);showToast('통계 조회 중 오류 발생')});
   });
+}
+
+function renderLateAttendanceStats(records,from,to){
+  var el=document.getElementById('chLateAtt');
+  if(!el)return;
+  var members=getAttendanceStatsScopeMembers();
+  var memberMap={};
+  members.forEach(function(m){memberMap[m.id]=m});
+  var byMember={};
+  var byPart={};
+  var lateRows=[];
+
+  records.forEach(function(r){
+    Object.keys(r.records||{}).forEach(function(id){
+      if(r.records[id]!=='지각'||!memberMap[id])return;
+      var m=memberMap[id];
+      if(!byMember[id])byMember[id]={name:m.name,part:m.part,count:0,dates:[]};
+      byMember[id].count++;
+      byMember[id].dates.push(r.date+' '+r.session);
+      byPart[m.part]=(byPart[m.part]||0)+1;
+      lateRows.push({date:r.date,session:r.session,name:m.name,part:m.part});
+    });
+  });
+
+  var totalLate=lateRows.length;
+  var scopeLabel=(adminRole==='attendance'&&currentUser)?'담당 파트':'전체 파트';
+  var h='<div style="font-size:11px;color:var(--ts);line-height:1.5;margin-bottom:10px">공식 지각률이 아니라, 선택 기간에 <b>지각으로 기록된 횟수</b>입니다. 파트별 체크 기준 차이로 참고용입니다. ('+from+' ~ '+to+' · '+scopeLabel+')</div>';
+
+  if(totalLate===0){
+    el.innerHTML=h+'<div style="font-size:13px;color:var(--ts)">해당 기간 지각 기록이 없습니다</div>';
+    return;
+  }
+
+  h+='<div class="stat-grid" style="padding:0;margin-bottom:12px"><div class="stat-card"><div class="stat-num" style="color:#D97706">'+totalLate+'</div><div class="stat-lbl">지각 기록 총 횟수</div></div><div class="stat-card"><div class="stat-num" style="color:#D97706">'+Object.keys(byMember).length+'</div><div class="stat-lbl">지각 기록 인원</div></div></div>';
+
+  var partData=Object.entries(byPart).sort(function(a,b){return b[1]-a[1]}).map(function(x){return{label:x[0],value:x[1]}});
+  h+='<div style="font-size:13px;font-weight:800;margin:8px 0 6px">파트별 지각 기록</div>';
+  h+=renderMiniBarRows(partData,'회');
+
+  var memData=Object.values(byMember).sort(function(a,b){return b.count-a.count||a.name.localeCompare(b.name,'ko')}).slice(0,20).map(function(m){return{label:m.name+' ('+m.part+')',value:m.count}});
+  h+='<div style="font-size:13px;font-weight:800;margin:12px 0 6px">단원별 지각 기록</div>';
+  h+=renderMiniBarRows(memData,'회');
+
+  h+='<div style="font-size:13px;font-weight:800;margin:12px 0 6px">최근 지각 기록</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:6px">';
+  lateRows.sort(function(a,b){return (b.date+b.session).localeCompare(a.date+a.session)}).slice(0,20).forEach(function(r){
+    h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px"><span style="font-weight:800">'+r.name+' <span style="color:var(--ts);font-weight:600">('+r.part+')</span></span><span style="color:var(--ts)">'+r.date+' '+r.session+'</span></div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+function renderMiniBarRows(data,unit){
+  if(!data.length)return '<div style="font-size:13px;color:var(--ts)">데이터 없음</div>';
+  var mx=Math.max.apply(null,data.map(function(d){return d.value}));
+  return data.map(function(d){
+    var pct=mx>0?(d.value/mx*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:92px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.label+'">'+d.label+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:#F59E0B;height:100%;border-radius:4px;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:38px;font-size:11px;font-weight:700;color:#D97706">'+d.value+unit+'</span></div>';
+  }).join('');
 }
 
 
