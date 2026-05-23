@@ -154,6 +154,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .archive-upload-actions{display:flex;gap:8px;margin-top:12px}
 .archive-preview-note{font-size:11px;color:var(--ts);margin-top:6px}
 .archive-type-badge{background:rgba(37,99,235,.08);color:var(--p);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.archive-reactions{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative}
+.archive-reaction-pill{border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:14px;padding:3px 7px;font-size:11px;font-weight:700;line-height:1}
+.archive-reaction-btn{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:14px;padding:4px 8px;font-size:11px;font-weight:800;cursor:pointer}
+.archive-reaction-btn.on{background:var(--pl);color:var(--pd);border-color:var(--p)}
+.archive-reaction-picker{display:none;position:absolute;left:0;bottom:28px;background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:6px;gap:4px;z-index:5}
+.archive-reaction-picker.show{display:flex}
+.archive-reaction-choice{width:34px;height:34px;border:none;border-radius:50%;background:var(--bg);font-size:18px;cursor:pointer}
+.archive-reaction-choice.on{background:var(--pl);box-shadow:inset 0 0 0 2px var(--p)}
 @media(max-width:430px){
   .archive-grid{grid-template-columns:1fr 1fr}
 }
@@ -991,6 +999,12 @@ var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, allSchedules=[], allMembers=[];
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
+var ARCHIVE_REACTIONS=[
+  {key:'heart',emoji:'❤️',label:'좋아요'},
+  {key:'agree',emoji:'👍',label:'공감해요'},
+  {key:'trouble',emoji:'😅',label:'곤란해요'},
+  {key:'laugh',emoji:'😂',label:'웃겨요'}
+];
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
 var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
 var activeDays=[];
@@ -1006,7 +1020,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=12').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=13').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2321,7 +2335,9 @@ function loadArchiveItems(){
         url:d.url||'',
         uploadedAt:d.uploadedAt||'',
         uploadedBy:d.uploadedBy||'',
-        path:d.path||''
+        path:d.path||'',
+        reactions:d.reactions||{},
+        reactionUsers:d.reactionUsers||{}
       });
     });
     renderArchiveList();
@@ -2368,8 +2384,103 @@ function renderArchiveList(){
     var safeTitle=escHtml(item.title).replace(/'/g,"\\'");
     var safePath=(item.path||'').replace(/'/g,"\\'");
     var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+actionBtns+'</div></div>';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
   }).join('');
+}
+function archiveReactionInfo(type){
+  for(var i=0;i<ARCHIVE_REACTIONS.length;i++){
+    if(ARCHIVE_REACTIONS[i].key===type)return ARCHIVE_REACTIONS[i];
+  }
+  return null;
+}
+function archiveReactionUserKey(){
+  return currentUser&&currentUser.id?currentUser.id:'';
+}
+function archiveReactionUserLabel(){
+  if(!currentUser)return '';
+  return currentUser.name+(currentUser.part?' ('+currentUser.part+')':'');
+}
+function archiveReactionEntryType(entry){
+  return typeof entry==='string'?entry:(entry&&entry.type)||'';
+}
+function archiveReactionCounts(users){
+  var counts={};
+  Object.keys(users||{}).forEach(function(uid){
+    var type=archiveReactionEntryType(users[uid]);
+    if(archiveReactionInfo(type))counts[type]=(counts[type]||0)+1;
+  });
+  return counts;
+}
+function renderArchiveReactions(item){
+  var users=item.reactionUsers||{};
+  var counts=archiveReactionCounts(users);
+  var selected=archiveReactionEntryType(users[archiveReactionUserKey()]);
+  var total=Object.keys(users).length;
+  var chips=ARCHIVE_REACTIONS.map(function(r){
+    var n=counts[r.key]||0;
+    return n?'<span class="archive-reaction-pill">'+r.emoji+' '+n+'</span>':'';
+  }).join('');
+  if(!chips)chips='<span style="font-size:11px;color:var(--ts)">공감 없음</span>';
+  var choices=ARCHIVE_REACTIONS.map(function(r){
+    return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')">'+r.emoji+'</button>';
+  }).join('');
+  var adminList=(adminRole==='admin'||adminRole==='chongmu')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
+  return '<div class="archive-reactions">'+chips+'<button class="archive-reaction-btn '+(selected?'on':'')+'" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')">공감하기</button>'+adminList+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
+}
+function openArchiveReactionPicker(id){
+  var el=document.getElementById('archiveReactionPicker-'+id);
+  if(!el)return;
+  document.querySelectorAll('.archive-reaction-picker.show').forEach(function(x){
+    if(x!==el)x.classList.remove('show');
+  });
+  el.classList.toggle('show');
+}
+function toggleArchiveReaction(id,type){
+  if(!currentUser)return showToast('로그인 후 공감할 수 있습니다');
+  if(!archiveReactionInfo(type))return;
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('자료를 찾을 수 없습니다');
+  var userKey=archiveReactionUserKey();
+  var userLabel=archiveReactionUserLabel();
+  var ref=db.collection('mediaArchive').doc(id);
+  db.runTransaction(function(tx){
+    return tx.get(ref).then(function(docSnap){
+      if(!docSnap.exists)throw new Error('not_found');
+      var data=docSnap.data()||{};
+      var users=Object.assign({},data.reactionUsers||{});
+      var prev=archiveReactionEntryType(users[userKey]);
+      if(prev===type)delete users[userKey];
+      else users[userKey]={type:type,name:currentUser.name,part:currentUser.part||'',label:userLabel,updatedAt:new Date().toISOString()};
+      tx.update(ref,{reactionUsers:users,reactions:archiveReactionCounts(users),reactionUpdatedAt:new Date().toISOString()});
+      return users;
+    });
+  }).then(function(users){
+    item.reactionUsers=users;
+    item.reactions=archiveReactionCounts(users);
+    renderArchiveList();
+    showToast('공감이 반영되었습니다');
+  }).catch(function(e){
+    console.error(e);
+    showToast('공감 저장 중 오류 발생');
+  });
+}
+function showArchiveReactionUsers(id){
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('자료를 찾을 수 없습니다');
+  if(adminRole!=='admin'&&adminRole!=='chongmu')return showToast('관리자만 볼 수 있습니다');
+  var grouped={};
+  ARCHIVE_REACTIONS.forEach(function(r){grouped[r.key]=[]});
+  Object.keys(item.reactionUsers||{}).forEach(function(uid){
+    var entry=item.reactionUsers[uid]||{};
+    var type=archiveReactionEntryType(entry);
+    if(!grouped[type])return;
+    grouped[type].push((entry.label||entry.name||uid));
+  });
+  var lines=ARCHIVE_REACTIONS.map(function(r){
+    var names=grouped[r.key]||[];
+    return r.emoji+' '+r.label+': '+(names.length?names.join(', '):'-');
+  });
+  alert(lines.join('\n'));
 }
 function compressArchiveImage(file){
   return new Promise(function(resolve,reject){
