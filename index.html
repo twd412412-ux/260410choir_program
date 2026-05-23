@@ -1321,6 +1321,7 @@ function renderHome(){
     }
 
     function statusFor(data, scopeMembers){
+      if(data&&data.excludeFromReport)return {state:'excluded',text:'출석률 제외 · 통계 미반영',rate:null,unchecked:0,checked:0,total:scopeMembers.length};
       if(!data||!data.records)return {state:'none',text:'아직 출석부 없음 · 총 '+scopeMembers.length+'명',rate:null,unchecked:scopeMembers.length,checked:0,total:scopeMembers.length};
       var present=0,late=0,checked=0,total=scopeMembers.length;
       scopeMembers.forEach(function(m){var st=data.records[m.id]||'';if(st){checked++;if(st==='출석')present++;else if(st==='지각')late++;}});
@@ -1336,11 +1337,12 @@ function renderHome(){
     function publicStatusText(st){
       if(st.state==='done')return '출석 체크 완료';
       if(st.state==='progress')return '집계 중';
+      if(st.state==='excluded')return '출석률 제외';
       if(st.state==='none')return '체크 전';
       return '준비 중';
     }
     function statusBadge(st){
-      var color=st.state==='done'?'#16A34A':st.state==='progress'?'#D97706':'var(--ts)';
+      var color=st.state==='done'?'#16A34A':st.state==='progress'?'#D97706':st.state==='excluded'?'#2563EB':'var(--ts)';
       var text=canSeeHomeAttendanceDetail()?st.text:publicStatusText(st);
       return '<span style="font-size:12px;font-weight:800;color:'+color+'">'+text+'</span>';
     }
