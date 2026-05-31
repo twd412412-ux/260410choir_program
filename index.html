@@ -5,24 +5,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#F2E9D8">
 <link rel="manifest" href="./manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>광주교회 찬양대</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
-:root{--p:#2563EB;--pd:#1D4ED8;--pl:#DBEAFE;--bg:#F0F7FF;--sf:#FFFFFF;--tx:#1E293B;--ts:#64748B;--bd:#E2E8F0;--dg:#EF4444;--sc:#22C55E;--wn:#F59E0B;--sh:0 1px 3px rgba(0,0,0,.1);--r:12px}
-.dark{--p:#60A5FA;--pd:#3B82F6;--pl:#1E3A5F;--bg:#0F172A;--sf:#1E293B;--tx:#F1F5F9;--ts:#94A3B8;--bd:#334155;--sh:0 1px 3px rgba(0,0,0,.3)}
+:root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
+.dark{--p:#9DAF96;--pd:#C9D5C2;--pl:#263126;--bg:#141813;--sf:#1D211B;--tx:#F4F0E8;--ts:#AAB3A4;--bd:#343B31;--sh:0 12px 30px rgba(0,0,0,.28);--accent:#D0A56A;--soft:#24281F;--line:#343B31}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:92px;transition:background .3s,color .3s}
+body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:92px;transition:background .3s,color .3s;letter-spacing:0}
 .hidden{display:none!important}
-.header{background:var(--p);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(37,99,235,.3)}
-.header-title{font-size:18px;font-weight:700}
+.header{background:rgba(255,253,247,.94);color:var(--tx);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 var(--line);backdrop-filter:blur(16px)}
+.dark .header{background:rgba(29,33,27,.92)}
+.header-title{font-size:18px;font-weight:850;letter-spacing:0}
 .header-actions{display:flex;gap:8px}
-.icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
-.notice-banner{background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
-.user-bar{background:var(--pl);padding:8px 16px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.icon-btn{background:var(--soft);border:1px solid var(--line);color:var(--tx);width:36px;height:36px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+.notice-banner{background:#EFE2C8;color:#5B3E1E;padding:11px 16px;font-size:13px;font-weight:700;display:flex;align-items:flex-start;gap:8px;line-height:1.45;border-bottom:1px solid #E2CEAA}
+.dark .notice-banner{background:#3A2D1D;color:#EED6B0;border-bottom-color:#51422E}
+.user-bar{background:var(--pl);padding:8px 16px;font-size:13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
 .user-bar-name{font-weight:700;color:var(--pd)}.dark .user-bar-name{color:var(--p)}
 .search-section{padding:12px 16px;background:var(--sf);border-bottom:1px solid var(--bd)}
 .search-wrap{position:relative}.search-wrap::before{content:'🔍';position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px}
@@ -212,7 +217,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 
 .att-save-float{
   position:sticky;
-  bottom:96px;
+  bottom:84px;
   z-index:60;
   padding:10px 0 14px;
   background:linear-gradient(to bottom, rgba(255,255,255,0), var(--bg) 26%, var(--bg));
@@ -486,12 +491,294 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .home-part-name{text-align:center;font-size:15px;font-weight:950;margin-bottom:7px}
 .home-status-line{display:flex;justify-content:center;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.45}
 
+/* Design refresh: warm community service style */
+.search-section{background:var(--sf);border-bottom:1px solid var(--line);padding:14px 16px 16px}
+.search-wrap::before{content:'⌕';left:14px;color:var(--ts);font-size:22px;line-height:1}
+.search-box,.form-input,.form-sel,.filter-select,.cal-view-select{background:#FBF9F2;border:1px solid var(--bd);border-radius:10px;color:var(--tx);box-shadow:none;font-weight:650}
+.dark .search-box,.dark .form-input,.dark .form-sel,.dark .filter-select,.dark .cal-view-select{background:#181D17}
+.search-box{padding:12px 14px 12px 42px;font-size:15px}
+.search-box:focus,.form-input:focus,.form-sel:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(111,130,110,.16)}
+.filter-row{gap:10px;margin-top:10px}
+.filter-label{color:var(--ts);font-weight:800}
+.day-chip,.admin-tab{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:10px;font-weight:750;box-shadow:0 1px 0 rgba(56,49,38,.03)}
+.day-chip.on,.admin-tab.on{background:var(--p);border-color:var(--p);color:#fff;box-shadow:0 8px 18px rgba(82,101,82,.16)}
+.result-count{background:var(--bg);color:var(--ts);padding:14px 16px 8px;font-weight:800}
+.card-list{padding:10px 16px 118px}
+.song-card,.stat-card,.chart-card,.archive-upload-card,.archive-filter-card,.archive-card,.home-card{background:var(--sf);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+.song-card{padding:16px;margin-bottom:10px;border-left:5px solid var(--p)}
+.song-card-title{font-size:16px;margin-bottom:8px;line-height:1.35}
+.song-card-meta{font-size:13px;gap:8px;line-height:1.45;color:var(--ts)}
+.meta-tag,.archive-type-badge{background:var(--pl);color:var(--pd);border-radius:8px;font-weight:850}
+.bk-star{color:var(--accent);font-size:21px}
+.btn{border-radius:10px;font-weight:800}
+.btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--pd)}
+.btn-d{background:var(--dg);color:#fff}
+.modal-content{border-radius:18px 18px 0 0;border:1px solid var(--line);box-shadow:0 -20px 50px rgba(56,49,38,.14)}
+.modal-center .modal-content{border-radius:18px}
+.modal-title{font-weight:850}
+.bottom-nav{background:rgba(255,253,247,.95);border-top:1px solid var(--line);box-shadow:0 -14px 34px rgba(56,49,38,.08);gap:6px;padding:9px 12px calc(env(safe-area-inset-bottom,8px) + 8px);backdrop-filter:blur(16px)}
+.dark .bottom-nav{background:rgba(29,33,27,.92)}
+.nav-left,.nav-right{padding:0}
+.nav-item{border:1px solid transparent;border-radius:14px;color:var(--ts);font-size:11px;font-weight:750;min-height:58px}
+.nav-icon{font-size:19px;filter:saturate(.72)}
+.nav-item.active{background:var(--pl);border-color:rgba(111,130,110,.24);color:var(--pd);box-shadow:none}
+.home-fab{position:static;margin:0;width:auto;height:58px;min-width:76px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--ts);box-shadow:none;gap:3px;flex:0 0 76px}
+.home-fab-icon,.home-fab-label{color:inherit}
+.home-fab-icon{font-size:19px;filter:saturate(.72)}
+.home-fab-label{font-size:11px;font-weight:850}
+.home-fab.active{background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 12px 24px rgba(82,101,82,.20)}
+.home-wrap{padding:16px 16px 28px;max-width:560px}
+.home-hero{background:var(--p);border-radius:999px;color:#fff;box-shadow:0 8px 18px rgba(82,101,82,.14);font-size:13px;padding:10px 14px;margin-bottom:12px}
+.home-card{border-radius:16px;padding:17px;margin-bottom:14px}
+.home-card-head{font-size:17px;justify-content:flex-start;text-align:left;margin-bottom:12px}
+.home-card-icon{width:32px;height:32px;border-radius:10px;background:var(--pl);color:var(--pd)}
+.home-soft-row,.home-hymn-card,.home-timeline-item,.home-part-item{background:#F4F0E7;border:1px solid var(--line);border-radius:12px}
+.dark .home-soft-row,.dark .home-hymn-card,.dark .home-timeline-item,.dark .home-part-item{background:#22271F}
+.home-hymn-card.primary,.home-soft-row.primary{background:var(--pl);border-color:rgba(111,130,110,.28)}
+.home-hymn-card.primary .home-hymn-label,.home-soft-row.primary .home-row-label{color:var(--pd)}
+.home-row-main,.home-hymn-card .home-row-main{color:var(--tx)}
+.cal-nav{padding:16px 16px 10px}
+.cal-nav-title{font-size:20px;font-weight:900}
+.cal-nav button{background:var(--pl);border:1px solid rgba(111,130,110,.20);color:var(--pd);border-radius:14px}
+.cal-grid{gap:4px;padding:0 12px}
+.cal-hdr{font-size:12px;color:var(--ts)}
+.cal-cell{min-height:64px;border:1px solid var(--line);border-radius:10px;background:var(--sf);font-size:11px}
+.cal-cell:hover,.cal-cell.today{background:var(--pl)}
+.cal-cell.today .cal-date{background:var(--p);color:#fff}
+.cal-bar{background:var(--p)!important;border-radius:6px}
+.cal-bar.song{background:#7A8D78!important}
+.stat-num{color:var(--p)}
+.archive-reaction-btn,.archive-reaction-pill{border-color:#E3B6B6;background:#F8EAEA;color:#954D4D}
+.archive-reaction-btn.on{background:var(--dg);border-color:var(--dg);color:#fff}
+.att-save-float{background:linear-gradient(to bottom, rgba(247,244,236,0), var(--bg) 28%, var(--bg))}
+.dark .att-save-float{background:linear-gradient(to bottom, rgba(20,24,19,0), var(--bg) 28%, var(--bg))}
+.att-row{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 4px 16px rgba(56,49,38,.05)}
+.att-part-tag{background:var(--pl);color:var(--pd);border-radius:8px;font-weight:850}
+.att-name{font-size:15px;font-weight:850}
+.att-state-badge{border-radius:6px;font-weight:800}
+.att-state-badge.ok{background:#E3EBDD;color:#526552}
+.att-state-badge.no{background:#F0E5E2;color:#9E5B54}
+.att-reason{color:#7A6E93}
+.att-actions{gap:4px}
+.att-btn{height:34px;min-width:45px;border-radius:8px;background:#FBF9F2;border:1px solid var(--bd);color:var(--ts);font-weight:850}
+.att-btn.present{background:#5F7F68;color:#fff;border-color:#5F7F68}
+.att-btn.late{background:#C79A45;color:#fff;border-color:#C79A45}
+.att-btn.excused{background:#8E86A8;color:#fff;border-color:#8E86A8}
+.att-btn.absent{background:#C66B6B;color:#fff;border-color:#C66B6B}
+.reason-chip{border-radius:10px;background:#FBF9F2}
+.reason-chip.on{background:var(--pl);border-color:var(--p);color:var(--pd)}
+.late-chip{border-radius:10px}
+.late-chip.late{background:#F2E4C2;border-color:#C79A45;color:#6C4B16}
+.late-chip.present{background:var(--pl);border-color:var(--p);color:var(--pd)}
+@media(min-width:500px){body{max-width:500px;margin:0 auto;box-shadow:0 0 0 1px var(--line)}}
+@media(max-width:390px){
+  .header-title{font-size:16px}
+  .icon-btn{width:34px;height:34px}
+  .att-row{align-items:flex-start;flex-wrap:wrap}
+  .att-info{flex-basis:calc(100% - 58px)}
+  .att-actions{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:6px}
+  .att-btn{width:100%;min-width:0}
+}
+
+/* Readability pass: keep warmth, restore contrast and hierarchy */
+.header{background:var(--p);color:#fff;box-shadow:0 1px 0 rgba(53,75,54,.18)}
+.dark .header{background:#263126}
+.header-title{color:#fff;font-weight:900}
+.icon-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.22);color:#fff}
+.notice-banner{background:#F1DFC0;color:#4A321A;border-bottom-color:#DBC39C;font-weight:750}
+.home-hero{background:var(--pd);box-shadow:0 8px 18px rgba(53,75,54,.18)}
+.home-card,.song-card,.archive-upload-card,.archive-filter-card,.archive-card,.stat-card,.chart-card{background:#FFFDF9;border-color:#D7CEBC;box-shadow:0 8px 24px rgba(47,41,31,.075)}
+.home-card-head,.chart-title,.archive-upload-title{color:var(--tx);font-weight:850}
+.home-card-icon{background:#DCE8D8;color:var(--pd)}
+.home-soft-row,.home-hymn-card,.home-timeline-item,.home-part-item{background:#F1EBDD;border-color:#DDD2BE}
+.home-hymn-card.primary,.home-soft-row.primary{background:#E5EFE1;border-color:#BACBB6}
+.home-hymn-card.primary .home-row-main,.home-soft-row.primary .home-row-main{color:#182017}
+.home-row-label,.home-hymn-label{color:#6B7368;font-weight:750}
+.home-row-main,.home-hymn-card .home-row-main{font-weight:850}
+.search-section{background:#FFFDF8;border-bottom-color:#DCD3C1}
+.search-box,.form-input,.form-sel,.filter-select,.cal-view-select{background:#FFFDF9;border-color:#CDC4B4;color:var(--tx)}
+.filter-label{color:#53604F}
+.result-count{color:#4F5B4C}
+.day-chip,.admin-tab{background:#FFFDF9;border-color:#D2C8B7;color:#566150}
+.day-chip.on,.admin-tab.on{background:var(--pd);border-color:var(--pd);color:#fff}
+.song-card{border-left-color:var(--pd)}
+.song-card-title{font-weight:850;color:var(--tx)}
+.song-card-meta{color:#5D675A}
+.meta-tag,.archive-type-badge{background:#DDE8D9;color:#354B36}
+.bottom-nav{background:rgba(255,253,249,.96);border-top-color:#D7CEBC}
+.nav-item,.home-fab{color:#596354}
+.nav-item.active{background:#E4EDDF;border-color:#BBCAB4;color:#354B36}
+.home-fab.active{background:var(--pd);border-color:var(--pd);color:#fff;box-shadow:0 12px 24px rgba(53,75,54,.24)}
+.cal-nav-title{color:var(--tx)}
+.cal-cell{background:#FFFDF9;border-color:#DCD2BF}
+.cal-cell.today{background:#E4EDDF;border-color:#B9CAB4}
+.cal-cell.today .cal-date{background:var(--pd)}
+.cal-bar{background:var(--pd)!important}
+.cal-bar.song{background:#526E53!important}
+.att-row{background:#FFFDF9;border-color:#D8CEBC}
+.att-btn{background:#FFFDF9;border-color:#CDC4B4;color:#4F5B4B}
+.att-btn.present{background:#4F7657;border-color:#4F7657}
+.att-btn.late{background:#B37B2B;border-color:#B37B2B}
+.att-btn.excused{background:#7D7898;border-color:#7D7898}
+.att-btn.absent{background:#B85F5F;border-color:#B85F5F}
+.att-state-badge.ok{background:#DDEAD8;color:#354B36}
+.att-state-badge.no{background:#F0DFDB;color:#8D4B45}
+
+/* V1 refined: beige-led service style, sage as supporting accent */
+:root{--p:#6F7D4E;--pd:#4E5A35;--pl:#EAEFDF;--bg:#F5EFE2;--sf:#FFFDF8;--tx:#191A15;--ts:#606554;--bd:#D8D0BE;--dg:#B9655F;--sc:#6F7D4E;--wn:#B68035;--sh:0 8px 22px rgba(49,54,35,.065);--accent:#6F7D4E;--soft:#F0E7D7;--line:#E1D7C5}
+body{font-weight:500}
+.header{background:#FFF9EF;color:#191A15;padding:12px 14px;box-shadow:0 1px 0 #E1D7C5;gap:10px}
+.dark .header{background:#2A241B}
+.header-title{font-size:19px;font-weight:850;color:#191A15;line-height:1.15;flex:1;min-width:0;white-space:nowrap}
+.dark .header-title{color:#F7F0E4}
+.header-actions{gap:6px;flex-shrink:0}
+.icon-btn{background:#F0E7D7;border-color:#DED2BE;color:#4E5A35;border-radius:12px;font-size:15px;width:34px;height:34px}
+.notice-banner{background:#F2E9D8;color:#2F3329;border-bottom-color:#DED2BE;font-size:13px;font-weight:650}
+.home-wrap{padding-top:14px}
+.home-hero{background:#6F7D4E;border-radius:12px;padding:11px 14px;font-weight:750;box-shadow:none}
+.home-card,.song-card,.archive-upload-card,.archive-filter-card,.archive-card,.stat-card,.chart-card{background:#FFFDF8;border-color:#D8D0BE;border-radius:12px;box-shadow:0 6px 18px rgba(49,54,35,.055)}
+.home-card{padding:16px}
+.home-card-head{font-size:16px;font-weight:750;margin-bottom:12px}
+.home-card-icon{width:30px;height:30px;border-radius:9px;background:#EAEFDF;color:#4E5A35}
+.home-soft-row,.home-hymn-card,.home-timeline-item,.home-part-item{background:#F8F2E8;border-color:#E1D7C5;border-radius:10px}
+.home-hymn-card.primary,.home-soft-row.primary{background:#EAEFDF;border-color:#C8D0B9}
+.home-hymn-card.primary .home-row-main,.home-soft-row.primary .home-row-main{font-size:18px;font-weight:760;color:#191A15}
+.home-row-label,.home-hymn-label{color:#606554;font-weight:650}
+.home-row-main,.home-hymn-card .home-row-main{font-weight:720;color:#191A15}
+.search-section{background:#FFFDF8;border-bottom-color:#E2D6C5}
+.search-box,.form-input,.form-sel,.filter-select,.cal-view-select{background:#FFFDF8;border-color:#D5C8B6;border-radius:10px;font-weight:560}
+.search-wrap::before{color:#6F7D4E}
+.filter-label{font-weight:700;color:#655E52}
+.day-chip,.admin-tab{background:#FFFDF8;border-color:#D8CAB7;color:#5D554B;border-radius:10px;font-weight:650}
+.day-chip.on,.admin-tab.on{background:#6F7D4E;border-color:#6F7D4E;color:#fff;box-shadow:none}
+.result-count{background:#F4EEE2;color:#655E52;font-weight:700}
+.song-card{border-left-color:#6F7D4E;border-left-width:4px}
+.song-card-title{font-size:16px;font-weight:760;color:#191A15}
+.song-card-meta{color:#606554}
+.meta-tag,.archive-type-badge{background:#EAEFDF;color:#4E5A35;border-radius:8px}
+.bk-star{color:#6F7D4E}
+.bottom-nav{background:rgba(255,253,248,.97);border-top-color:#D8D0BE;box-shadow:0 -10px 28px rgba(49,54,35,.07)}
+.nav-item,.home-fab{color:#606554;font-weight:650}
+.nav-item,.home-fab-label{white-space:nowrap;word-break:keep-all;line-height:1.1}
+.nav-item{font-size:10px;gap:2px;padding-left:2px;padding-right:2px}
+.home-fab{min-width:66px}
+.home-fab-label{font-size:10px}
+.nav-item.active{background:#EAEFDF;border-color:#C8D0B9;color:#4E5A35}
+.home-fab.active{background:#6F7D4E;border-color:#6F7D4E;color:#fff;box-shadow:none}
+.cal-nav-title{font-weight:760}
+.cal-nav button{background:#EAEFDF;border-color:#C8D0B9;color:#4E5A35}
+.cal-cell{background:#FFFDF8;border-color:#DDD2C1;border-radius:9px}
+.cal-cell.today{background:#EAEFDF;border-color:#C8D0B9}
+.cal-cell.today .cal-date{background:#6F7D4E}
+.cal-bar{background:#6F7D4E!important}
+.cal-bar.song{background:#6F7D4E!important}
+.att-row{background:#FFFDF8;border-color:#D8D0BE;border-radius:12px;box-shadow:0 5px 16px rgba(49,54,35,.055)}
+.att-name{font-weight:760}
+.att-btn{background:#FFFDF8;border-color:#D2C4B1;color:#5D554B;font-weight:680}
+.att-btn.present{background:#6F7D4E;border-color:#6F7D4E}
+.att-btn.late{background:#B68035;border-color:#B68035}
+.att-btn.excused{background:#7B7894;border-color:#7B7894}
+.att-btn.absent{background:#B9655F;border-color:#B9655F}
+.att-save-float .btn-p{background:#6F7D4E}
+.home-dashboard{position:relative;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 6px 18px rgba(49,54,35,.055);overflow:hidden}
+.home-dashboard-top{display:block;position:relative;min-height:132px;padding-right:118px}
+.home-kicker{font-size:12px;font-weight:700;color:#606554;margin-bottom:6px;text-align:center}
+.home-main-title{font-size:23px;font-weight:800;color:#191A15;line-height:1.25;word-break:keep-all;text-align:center}
+.home-main-sub{font-size:12px;font-weight:650;color:#606554;margin-top:8px}
+.home-hymn-art{position:absolute;right:0;top:4px;width:122px;height:122px;pointer-events:none}
+.home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
+.home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
+.home-ring-stack{display:grid;gap:8px}
+.home-attendance-rings{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.home-mini-ring{background:#FFF9EE;border:1px solid #E4D2B3;border-radius:12px;padding:9px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:center}
+.home-mini-ring-graph{width:42px;height:42px;border-radius:50%;background:conic-gradient(#B68035 calc(var(--pct)*1%),#ECE4D6 0);position:relative}
+.home-mini-ring-graph::after{content:'';position:absolute;inset:8px;border-radius:50%;background:#FFFDF8}
+.home-mini-ring-label{font-size:11px;font-weight:700;color:#606554}
+.home-mini-ring-value{font-size:20px;font-weight:850;color:#B68035;line-height:1}
+.home-ring-chip{display:inline-flex;align-items:center;justify-content:center;margin-top:5px;border-radius:999px;background:#F4E7CC;color:#7C571E;font-size:10px;font-weight:750;padding:2px 7px;line-height:1.3}
+.home-mini-ring.none{background:#FFF6F4;border-color:#E7C9C3}
+.home-mini-ring.none .home-mini-ring-graph{background:conic-gradient(#B9655F calc(var(--pct)*1%),#F0DFDB 0)}
+.home-mini-ring.none .home-mini-ring-value{color:#B9655F}
+.home-mini-ring.none .home-ring-chip{background:#F0DFDB;color:#8D4B45}
+.home-mini-ring.done .home-mini-ring-graph{background:conic-gradient(#6F7D4E calc(var(--pct)*1%),#ECE4D6 0)}
+.home-mini-ring.done .home-mini-ring-value{color:#4E5A35}
+.home-mini-ring.done .home-ring-chip{background:#EAEFDF;color:#4E5A35}
+.home-mini-ring.excluded .home-mini-ring-graph{background:conic-gradient(#7B7894 calc(var(--pct)*1%),#ECE4D6 0)}
+.home-mini-ring.excluded .home-mini-ring-value{color:#6E6680}
+.home-mini-ring.excluded .home-ring-chip{background:#EFEBF1;color:#6E6680}
+.home-mini-ring.loading-ring{opacity:.72}
+.home-mini-ring.loading-ring .home-mini-ring-value{color:#8A7C67}
+.home-dashboard-bottom{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.home-dashboard-chip{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:10px;padding:10px;text-align:center}
+.home-dashboard-chip .home-row-label{margin-bottom:4px}
+.home-section-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:760;margin-bottom:10px}
+.home-section-title .home-card-icon{width:28px;height:28px}
+.home-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.home-section-head .home-section-title{margin-bottom:0}
+.home-view-link{border:0;background:transparent;color:#7C571E;font-size:12px;font-weight:750;padding:4px 0;white-space:nowrap;font-family:inherit}
+.home-subsection-title{margin:16px 0 8px;color:#606554;font-size:12px;font-weight:760}
+.home-schedule-list,.home-part-list{background:#FFFDF8;border:1px solid #E1D7C5;border-radius:12px;overflow:hidden}
+.home-schedule-row{display:grid;grid-template-columns:86px minmax(0,1fr) 70px 14px;gap:8px;align-items:center;padding:10px 11px;border-bottom:1px solid #EEE2D0;cursor:pointer}
+.home-schedule-row:last-child{border-bottom:0}
+.home-schedule-time{font-size:12px;font-weight:750;color:#7C571E}
+.home-schedule-title{font-size:14px;font-weight:780;color:#191A15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-schedule-place{font-size:12px;font-weight:650;color:#606554;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.home-chevron{color:#9A8D7B;font-size:15px;text-align:right}
+.home-empty-row{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:12px;padding:13px;color:#606554;font-size:13px;text-align:center;font-weight:650}
+.home-part-row{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr) 12px;gap:7px;align-items:center;padding:10px 11px;border-bottom:1px solid #EEE2D0}
+.home-part-row:last-child{border-bottom:0}
+.home-part-row-name{font-size:14px;font-weight:850;color:#191A15}
+.home-part-session{display:flex;align-items:center;gap:5px;min-width:0;color:#606554;font-size:12px;font-weight:700;white-space:nowrap}
+.home-part-session .pct{color:#B68035;font-weight:850}
+.home-part-session.none{color:#8D4B45}
+.home-part-session.done .pct{color:#4E5A35}
+.home-part-session.none .pct{color:#B9655F}
+@media(max-width:390px){
+  .home-dashboard-top{min-height:124px;padding-right:104px}
+  .home-hymn-art{right:-4px;top:8px;width:112px;height:112px}
+  .home-attendance-rings{grid-template-columns:1fr 1fr}
+  .home-schedule-row{grid-template-columns:76px minmax(0,1fr) 54px 12px;gap:6px;padding:10px}
+  .home-schedule-place{font-size:11px}
+  .home-part-row{grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 10px;gap:5px;padding:10px}
+  .home-part-session{font-size:11px}
+}
+.att-summary-card{background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 5px 16px rgba(49,54,35,.055)}
+.att-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.att-summary-title{font-size:15px;font-weight:760;color:#191A15}
+.att-summary-scope{font-size:12px;font-weight:650;color:#606554;background:#F0E7D7;border:1px solid #DED2BE;border-radius:999px;padding:4px 9px;white-space:nowrap}
+.att-ring-wrap{display:grid;grid-template-columns:104px minmax(0,1fr);gap:14px;align-items:center}
+.att-ring{width:96px;height:96px;border-radius:50%;background:conic-gradient(#6F7D4E calc(var(--pct)*1%),#ECE4D6 0);display:grid;place-items:center;position:relative}
+.att-ring::after{content:'';position:absolute;width:72px;height:72px;border-radius:50%;background:#FFFDF8;box-shadow:inset 0 0 0 1px #E2D8C8}
+.att-ring-text{position:relative;z-index:1;text-align:center;line-height:1.1}
+.att-ring-num{font-size:22px;font-weight:800;color:#191A15}
+.att-ring-label{font-size:10px;font-weight:650;color:#606554;margin-top:4px}
+.att-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.att-mini-stat{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:10px;padding:9px 10px}
+.att-mini-label{font-size:11px;font-weight:650;color:#606554;margin-bottom:3px}
+.att-mini-value{font-size:16px;font-weight:780;color:#191A15}
+.att-mini-stat.present{background:#EAEFDF;border-color:#C8D0B9}
+.att-mini-stat.late{background:#F5EBD8;border-color:#E5D2AF}
+.att-mini-stat.excused{background:#EFEBF1;border-color:#D8D0DF}
+.att-mini-stat.unchecked{background:#F0E7D7;border-color:#DED2BE}
+.date-display-wrap{position:relative}
+.date-display{width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FFFDF8;border:1px solid #D5C8B6;border-radius:10px;color:#191A15;padding:10px 12px;font-family:inherit;font-size:15px;font-weight:680;text-align:left;cursor:pointer}
+.date-display-icon{color:#6F7D4E;font-size:13px}
+.native-date-input{position:absolute;inset:0;opacity:0;pointer-events:none}
+@media(max-width:390px){
+  .att-ring-wrap{grid-template-columns:88px minmax(0,1fr);gap:12px}
+  .att-ring{width:84px;height:84px}
+  .att-ring::after{width:62px;height:62px}
+  .att-ring-num{font-size:19px}
+  .att-mini-grid{gap:6px}
+  .att-mini-stat{padding:8px}
+}
+
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-title">© 2026 광주교회 찬양대 ♪</div>
+  <div class="header-title">광주교회 찬양대</div>
   <div class="header-actions">
     <button class="icon-btn" onclick="openUserModal()">👤</button>
     <button class="icon-btn" id="btnDark" onclick="toggleDark()">🌙</button>
@@ -512,6 +799,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
+    <div class="home-credit">Engineered by JY</div>
   </div>
 </div>
 
@@ -737,11 +1025,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
       <div class="admin-tab" data-att="history" onclick="switchAttTab('history')">개인 이력</div>
     </div>
     <div id="attCheck">
-      <div class="form-group"><label class="form-label">날짜 선택 *</label><input class="form-input" id="attDate" type="date" onchange="loadAttendance()"></div>
+      <div class="form-group">
+        <label class="form-label">날짜 선택 *</label>
+        <div class="date-display-wrap">
+          <button type="button" class="date-display" onclick="openDatePicker(document.getElementById('attDate'))"><span id="attDateDisplay">날짜 선택</span><span class="date-display-icon">▾</span></button>
+          <input class="form-input native-date-input" id="attDate" type="date" onchange="loadAttendance()">
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn" id="attSessionAM" style="flex:1;background:var(--p);color:#fff;border:2px solid var(--p)" onclick="setAttSession('오전')">☀️ 오전</button>
         <button class="btn" id="attSessionPM" style="flex:1;background:var(--sf);color:var(--ts);border:2px solid var(--bd)" onclick="setAttSession('오후')">🌙 오후</button>
       </div>
+      <div id="attSummaryCard"></div>
       <label id="attExcludeFromReportWrap" style="display:none;align-items:center;gap:8px;margin:-2px 0 12px;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
         <input type="checkbox" id="attExcludeFromReport" onchange="syncAttExcludeReasonControl();renderAttGuideCard()">
         이 회차는 결산 출석률에서 제외
@@ -967,7 +1262,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 <div class="bottom-nav">
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
-    <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐겨찾기</div>
+    <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐찾</div>
     <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
   </div>
   <button class="home-fab active" data-t="home" type="button" onclick="switchTab('home')"><span class="home-fab-icon">🏠</span><span class="home-fab-label">홈</span></button>
@@ -1010,7 +1305,7 @@ var ARCHIVE_REACTIONS=[
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
 var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
 var activeDays=[];
-var COLORS=['#2563EB','#7C3AED','#059669','#DC2626','#D97706','#EC4899','#0891B2','#4F46E5','#16A34A','#EA580C'];
+var COLORS=['#6F826E','#A26F42','#8E86A8','#C66B6B','#C79A45','#6E8792','#7D8A58','#9A6F63','#5F7F68','#B8794F'];
 var selColor=COLORS[0];
 var toastTimer=null;
 
@@ -1022,7 +1317,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=16').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=18').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -1286,17 +1581,114 @@ function getSaturdayFromSunday(sunday){
   d.setDate(d.getDate()+6);
   return d;
 }
+function getFeaturedSunday(base){
+  var d=new Date(base.getFullYear(),base.getMonth(),base.getDate());
+  if(base.getDay()===0&&base.getHours()<12)return d;
+  d.setDate(d.getDate()+(7-d.getDay()));
+  return d;
+}
 function renderHome(){
   var c=document.getElementById('homeContent');if(!c)return;
   var dateText=document.getElementById('homeDateText');
   var today=new Date();
-  if(dateText)dateText.textContent=today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일 '+homeDowName(today);
-  c.innerHTML='<div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div>';
+  if(dateText)dateText.textContent='📅 '+today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일 '+homeDowName(today);
 
-  var lastSun=getSundayFrom(today,-1), thisSun=getSundayFrom(today,0), nextSun=getSundayFrom(today,1);
-  var thisSunStr=homeInputDate(thisSun);
-  var weekStart=thisSun, weekEnd=getSaturdayFromSunday(thisSun);
+  var currentSun=getSundayFrom(today,0);
+  var featuredSun=getFeaturedSunday(today), lastSun=getSundayFrom(featuredSun,-1), nextSun=getSundayFrom(featuredSun,1);
+  var featuredSunStr=homeInputDate(featuredSun);
+  var currentSunStr=homeInputDate(currentSun);
+  var featuredLabel=(today.getDay()===0&&today.getHours()<12)?'오늘 주일 찬송곡':'돌아오는 주일 찬송곡';
+  var weekStart=currentSun, weekEnd=getSaturdayFromSunday(currentSun);
   var weekStartStr=homeInputDate(weekStart), weekEndStr=homeInputDate(weekEnd);
+
+  function songsFor(hymnSongs,date){
+    var parts=date.split('-');
+    var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
+    var rows=(hymnSongs||[]).filter(function(s){return s.year===y&&s.month===m&&s.day===d});
+    if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
+    return rows.map(function(s){return '<div onclick="openDetail(\''+escAttr(s.id)+'\')"><span style="font-weight:800">'+s.songName+'</span></div>'}).join('<div style="height:6px"></div>');
+  }
+  function statusFor(data, scopeMembers){
+    if(data&&data.excludeFromReport)return {state:'excluded',text:'출석률 제외 · 통계 미반영',rate:null,unchecked:0,checked:0,total:scopeMembers.length,present:0,late:0,attended:0};
+    if(!data||!data.records)return {state:'none',text:'아직 출석부 없음 · 총 '+scopeMembers.length,rate:null,unchecked:scopeMembers.length,checked:0,total:scopeMembers.length,present:0,late:0,attended:0};
+    var present=0,late=0,checked=0,total=scopeMembers.length;
+    scopeMembers.forEach(function(m){var st=data.records[m.id]||'';if(st){checked++;if(st==='출석')present++;else if(st==='지각')late++;}});
+    var unchecked=total-checked;
+    var rate=total>0?Math.round((present+late)/total*100):0;
+    if(checked===0)return {state:'none',text:'아직 체크 없음 · 총 '+total+'명',rate:0,unchecked:unchecked,checked:checked,total:total,present:present,late:late,attended:present+late};
+    if(unchecked>0)return {state:'progress',text:'집계 중 · 체크 '+checked+'/'+total+' · 미체크 '+unchecked+'명',rate:rate,unchecked:unchecked,checked:checked,total:total,present:present,late:late,attended:present+late};
+    return {state:'done',text:'완료 · 출석률 '+rate+'% · 출석 '+(present+late)+'/'+total+'명',rate:rate,unchecked:0,checked:checked,total:total,present:present,late:late,attended:present+late};
+  }
+  function canSeeHomeAttendanceDetail(){
+    return adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role));
+  }
+  function homeRing(label,st){
+    var pct=st&&typeof st.rate==='number'?st.rate:0;
+    var value=(st&&st.state==='excluded')?'제외':pct+'%';
+    var sub=st&&st.total?((st.attended||0)+'/'+st.total+'명'):'대기';
+    var chip=st&&st.state==='done'?'완료':st&&st.state==='progress'?'집계 중':st&&st.state==='excluded'?'제외':'체크 전';
+    var cls=st&&st.state?st.state:'none';
+    return '<div class="home-mini-ring '+cls+'"><div class="home-mini-ring-graph" style="--pct:'+pct+'"></div><div><div class="home-mini-ring-label">'+label+'</div><div class="home-mini-ring-value">'+value+'</div><div class="home-main-sub" style="margin-top:2px">'+sub+'</div><span class="home-ring-chip">'+chip+'</span></div></div>';
+  }
+  function homeRingLoading(label){
+    return '<div class="home-mini-ring loading-ring"><div class="home-mini-ring-graph" style="--pct:0"></div><div><div class="home-mini-ring-label">'+label+'</div><div class="home-mini-ring-value">-</div><div class="home-main-sub" style="margin-top:2px">불러오는 중</div><span class="home-ring-chip">대기</span></div></div>';
+  }
+  function renderHomeShell(hymnSongs, weekSchedules, attendance){
+    hymnSongs=hymnSongs||[];
+    weekSchedules=(weekSchedules||[]).slice().sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
+    var members=attendance&&attendance.members?attendance.members:null;
+    var am=attendance&&attendance.am?attendance.am:null;
+    var pm=attendance&&attendance.pm?attendance.pm:null;
+    var attendanceReady=!!attendance&&!!members;
+
+    var scheduleHtml='';
+    if(weekSchedules.length===0){
+      scheduleHtml='<div class="home-empty-row">이번 주 등록된 일정이 없습니다</div>';
+    }else{
+      scheduleHtml='<div class="home-schedule-list">'+weekSchedules.map(function(s){
+        var d=new Date(s.date+'T00:00:00');
+        return '<div class="home-schedule-row" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div class="home-schedule-time">'+homeDateStr(d)+' '+homeDowName(d)+(s.time?'<br>'+s.time:'')+'</div><div class="home-schedule-title">'+s.title+(s.useBriefing?' <span class="home-ring-chip">브리핑</span>':'')+'</div><div class="home-schedule-place">'+(s.location?'📍 '+s.location:'')+'</div><div class="home-chevron">›</div></div>';
+      }).join('')+'</div>';
+    }
+
+    var ringsHtml=homeRingLoading('오전')+homeRingLoading('오후');
+    var partHtml='<div class="home-empty-row">출결 정보를 불러오는 중입니다</div>';
+    if(attendanceReady){
+      var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
+      ringsHtml=homeRing('오전',amSt)+homeRing('오후',pmSt);
+      var partOrder=['S1','S2','T1','T2','관현악'];
+      var parts=partOrder.filter(function(p){return members.some(function(m){return m.part===p||m.subPart===p})});
+      function partSession(label,st,icon){
+        var text=st.state==='done'?'완료':(st.state==='progress'?st.rate+'%':(st.state==='excluded'?'제외':'체크 전'));
+        var detail=canSeeHomeAttendanceDetail()&&st.total&&typeof st.rate==='number'?' <span style="font-weight:650;color:#606554">('+st.attended+'/'+st.total+')</span>':'';
+        return '<div class="home-part-session '+st.state+'"><span>'+icon+'</span><span>'+label+'</span> <span class="pct">'+text+'</span>'+detail+'</div>';
+      }
+      partHtml=parts.map(function(p){
+        var scoped=members.filter(function(m){return m.part===p||m.subPart===p});
+        var a=statusFor(am,scoped), b=statusFor(pm,scoped);
+        return '<div class="home-part-row"><div class="home-part-row-name">'+p+'</div>'+partSession('오전',a,'☀️')+partSession('오후',b,'☾')+'<div class="home-chevron">›</div></div>';
+      }).join('');
+      partHtml=partHtml?'<div class="home-part-list">'+partHtml+'</div>':'<div class="home-empty-row">표시할 파트가 없습니다</div>';
+    }
+
+    c.innerHTML=''
+      +'<div class="home-dashboard">'
+        +'<div class="home-dashboard-top">'
+          +'<div><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr)+'</div></div>'
+          +'<div class="home-hymn-art" aria-hidden="true"><img src="./assets/hymn-dove-book.png" alt=""></div>'
+        +'</div>'
+        +'<div class="home-dashboard-bottom">'
+          +'<div class="home-dashboard-chip"><div class="home-row-label">지난 주일 '+homeDateStr(lastSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(lastSun))+'</div></div>'
+          +'<div class="home-dashboard-chip"><div class="home-row-label">그 다음 주일 '+homeDateStr(nextSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(nextSun))+'</div></div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
+      +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>';
+  }
+
+  var cachedSongs=allSongs.length>0?allSongs:(loadCache('choir_songs',600000)||[]);
+  var cachedSchedules=allSchedules.length>0?allSchedules:(loadCache('choir_schedules',600000)||[]);
+  renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null);
 
   var songPromise=allSongs.length>0
     ? Promise.resolve(allSongs)
@@ -1315,93 +1707,36 @@ function renderHome(){
         return rows;
       });
 
+  Promise.all([songPromise,schedulePromise]).then(function(res){
+    renderHomeShell(res[0],res[1],null);
+  }).catch(function(e){console.error(e)});
+
   Promise.all([
     songPromise,
     schedulePromise,
     db.collection('members').get(),
-    db.collection('attendance').doc(thisSunStr+'_오전').get(),
-    db.collection('attendance').doc(thisSunStr+'_오후').get()
+    db.collection('attendance').doc(currentSunStr+'_오전').get(),
+    db.collection('attendance').doc(currentSunStr+'_오후').get()
   ]).then(function(res){
     var hymnSongs=res[0];
     var weekSchedules=res[1];
-    weekSchedules.sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
-
     var members=[];res[2].forEach(function(doc){var d=doc.data();if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)})});
     var am=res[3].exists?res[3].data():null;
     var pm=res[4].exists?res[4].data():null;
-
-    function songsFor(date){
-      var parts=date.split('-');
-      var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
-      var rows=hymnSongs.filter(function(s){return s.year===y&&s.month===m&&s.day===d});
-      if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
-      return rows.map(function(s){return '<div onclick="openDetail(\''+escAttr(s.id)+'\')"><span style="font-weight:800">'+s.songName+'</span></div>'}).join('<div style="height:6px"></div>');
-    }
-    function hymGridCard(label,d,primary){
-      return '<div class="home-hymn-card'+(primary?' primary':'')+'"><div class="home-hymn-label">'+label+' '+homeDateStr(d)+'</div><div class="home-row-main">'+songsFor(homeInputDate(d))+'</div></div>';
-    }
-
-    function statusFor(data, scopeMembers){
-      if(data&&data.excludeFromReport)return {state:'excluded',text:'출석률 제외 · 통계 미반영',rate:null,unchecked:0,checked:0,total:scopeMembers.length};
-      if(!data||!data.records)return {state:'none',text:'아직 출석부 없음 · 총 '+scopeMembers.length+'명',rate:null,unchecked:scopeMembers.length,checked:0,total:scopeMembers.length};
-      var present=0,late=0,checked=0,total=scopeMembers.length;
-      scopeMembers.forEach(function(m){var st=data.records[m.id]||'';if(st){checked++;if(st==='출석')present++;else if(st==='지각')late++;}});
-      var unchecked=total-checked;
-      if(checked===0)return {state:'none',text:'아직 체크 없음 · 총 '+total+'명',rate:null,unchecked:unchecked,checked:checked,total:total};
-      if(unchecked>0)return {state:'progress',text:'집계 중 · 체크 '+checked+'/'+total+' · 미체크 '+unchecked+'명',rate:null,unchecked:unchecked,checked:checked,total:total};
-      var rate=total>0?Math.round((present+late)/total*100):0;
-      return {state:'done',text:'완료 · 출석률 '+rate+'% · 출석 '+(present+late)+'/'+total+'명',rate:rate,unchecked:0,checked:checked,total:total};
-    }
-    function canSeeHomeAttendanceDetail(){
-      return adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role));
-    }
-    function publicStatusText(st){
-      if(st.state==='done')return '출석 체크 완료';
-      if(st.state==='progress')return '집계 중';
-      if(st.state==='excluded')return '출석률 제외';
-      if(st.state==='none')return '체크 전';
-      return '준비 중';
-    }
-    function statusBadge(st){
-      var color=st.state==='done'?'#16A34A':st.state==='progress'?'#D97706':st.state==='excluded'?'#2563EB':'var(--ts)';
-      var text=canSeeHomeAttendanceDetail()?st.text:publicStatusText(st);
-      return '<span style="font-size:12px;font-weight:800;color:'+color+'">'+text+'</span>';
-    }
-    var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
-
-    var partOrder=['S1','S2','T1','T2','관현악'];
-    var parts=partOrder.filter(function(p){return members.some(function(m){return m.part===p||m.subPart===p})});
-    var partHtml=parts.map(function(p){
-      var scoped=members.filter(function(m){return m.part===p||m.subPart===p});
-      var a=statusFor(am,scoped), b=statusFor(pm,scoped);
-      return '<div class="home-part-item"><div class="home-part-name">'+p+'</div>'
-        +'<div style="display:flex;flex-direction:column;gap:5px"><div class="home-status-line">☀️ 오전 '+statusBadge(a)+'</div><div class="home-status-line">🌙 오후 '+statusBadge(b)+'</div></div></div>';
-    }).join('') || '<div style="font-size:13px;color:var(--ts)">표시할 파트가 없습니다</div>';
-
-    var scheduleHtml='';
-    if(weekSchedules.length===0){
-      scheduleHtml='<div class="home-soft-row" style="font-size:13px;color:var(--ts)">이번 주 등록된 일정이 없습니다</div>';
-    }else{
-      scheduleHtml=weekSchedules.map(function(s){
-        var d=new Date(s.date+'T00:00:00');
-        return '<div class="home-timeline-item" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div style="font-size:12px;color:var(--ts);margin-bottom:3px;text-align:center">'+homeDateStr(d)+' '+homeDowName(d)+(s.time?' · '+s.time:'')+'</div><div style="font-size:14px;font-weight:850;text-align:center">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">브리핑</span>':'')+'</div>'+(s.location?'<div style="font-size:12px;color:var(--ts);margin-top:2px;text-align:center">📍 '+s.location+'</div>':'')+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px;text-align:center">🎵 '+s.songs+'</div>':'')+'</div>';
-      }).join('');
-    }
-
-    c.innerHTML=''
-      +'<div class="home-card"><div class="home-card-head"><span class="home-card-icon">🎵</span><span>주일 찬송곡</span></div>'
-      +'<div class="home-hymn-grid">'
-      +hymGridCard('이번주',thisSun,true)
-      +hymGridCard('저번주',lastSun)
-      +hymGridCard('다음주',nextSun)
-      +'</div></div>'
-      +'<div class="home-card"><div class="home-card-head"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div>'+scheduleHtml+'</div>'
-      +'<div class="home-card"><div class="home-card-head"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><div style="display:flex;flex-direction:column;gap:8px"><div class="home-soft-row">☀️ 오전 '+statusBadge(amSt)+'</div><div class="home-soft-row">🌙 오후 '+statusBadge(pmSt)+'</div></div></div>'
-      +'<div class="home-card"><div class="home-card-head"><span class="home-card-icon">📊</span><span>파트별 실시간 출석 현황</span></div>'+partHtml+'</div>';
+    renderHomeShell(hymnSongs,weekSchedules,{members:members,am:am,pm:pm});
   }).catch(function(e){
     console.error(e);
-    c.innerHTML='<div class="loading" style="color:#DC2626">홈 정보를 불러오지 못했습니다.</div>';
+    renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null);
   });
+}
+
+function openHomeAttendanceDetail(){
+  if(!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)))){
+    showToast('출결 권한에서 확인 가능합니다');
+    return;
+  }
+  switchTab('admin');
+  switchAdminTab('attendance');
 }
 
 // ==================== 캐시 유틸 ====================
@@ -3088,6 +3423,19 @@ function getTodayInputDate(){
 function ensureAttDate(){
   var el=document.getElementById('attDate');
   if(el&&!el.value)el.value=getTodayInputDate();
+  updateAttDateDisplay();
+}
+
+function formatKoreanAttDate(dateStr){
+  var info=getAttDateInfo(dateStr);
+  if(!info)return '날짜 선택';
+  return info.date.getFullYear()+'년 '+(info.date.getMonth()+1)+'월 '+info.date.getDate()+'일 '+info.dayName;
+}
+
+function updateAttDateDisplay(){
+  var el=document.getElementById('attDate');
+  var display=document.getElementById('attDateDisplay');
+  if(display)display.textContent=formatKoreanAttDate(el?el.value:'');
 }
 
 function setAttSession(s){
@@ -3166,6 +3514,8 @@ function setAttendanceLoading(isLoading,message){
   var count=document.getElementById('attCount');
   if(isLoading){
     if(count)count.innerHTML=message||'출결부 불러오는 중...';
+    var summary=document.getElementById('attSummaryCard');
+    if(summary)summary.innerHTML='';
     if(list)list.innerHTML='<div style="font-size:13px;color:var(--ts);padding:14px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:10px">⏳ '+(message||'불러오는 중입니다...')+'</div>';
   }
 }
@@ -3173,6 +3523,7 @@ function setAttendanceLoading(isLoading,message){
 function loadAttendance(){
   var docId=getAttDocId();
   if(!docId)return;
+  updateAttDateDisplay();
   var seq=++attLoadSeq;
   var date=document.getElementById('attDate').value;
   clearAttRealtimeListeners();
@@ -3259,6 +3610,31 @@ function setAttStatusFilter(status){
   renderAttList();
 }
 
+function renderAttSummaryCard(stats){
+  var el=document.getElementById('attSummaryCard');
+  if(!el)return;
+  if(!stats||!stats.total){
+    el.innerHTML='';
+    return;
+  }
+  var attended=stats.present+stats.late;
+  var rate=stats.total?Math.round(attended/stats.total*100):0;
+  var scope=attPartFilter==='all'?'전체':attPartFilter;
+  var unchecked=stats.unchecked;
+  el.innerHTML='<div class="att-summary-card">'
+    +'<div class="att-summary-head"><div class="att-summary-title">'+attSession+' 출결 요약</div><div class="att-summary-scope">'+scope+' · '+stats.total+'명</div></div>'
+    +'<div class="att-ring-wrap">'
+      +'<div class="att-ring" style="--pct:'+rate+'"><div class="att-ring-text"><div class="att-ring-num">'+rate+'%</div><div class="att-ring-label">출석률</div></div></div>'
+      +'<div class="att-mini-grid">'
+        +'<div class="att-mini-stat present"><div class="att-mini-label">출석</div><div class="att-mini-value">'+stats.present+'</div></div>'
+        +'<div class="att-mini-stat late"><div class="att-mini-label">지각</div><div class="att-mini-value">'+stats.late+'</div></div>'
+        +'<div class="att-mini-stat excused"><div class="att-mini-label">사유</div><div class="att-mini-value">'+stats.excused+'</div></div>'
+        +'<div class="att-mini-stat unchecked"><div class="att-mini-label">미체크</div><div class="att-mini-value">'+unchecked+'</div></div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
 
 function getAttDateInfo(dateStr){
   var parts=String(dateStr||'').split('-');
@@ -3295,10 +3671,10 @@ function renderAttGuideCard(){
   var otherReady=!!otherData && (attPartFilter==='all' || otherChecked>0);
   var excludeEl=document.getElementById('attExcludeFromReport');
   var excludeFromReport=!!((excludeEl&&excludeEl.checked)||(curData&&curData.excludeFromReport));
-  var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ 주일 '+attSession+' 출석부입니다',msg='선택 범위('+scopeLabel+') 기준으로 체크 기록이 있으며, 이 회차는 결산 통계에 포함됩니다.';
+  var bg='#F0FDF4',bd='#BBF7D0',color='#166534',title='✅ '+scopeLabel+' 주일 '+attSession+' 체크 기록이 있습니다',msg='선택 범위('+scopeLabel+') 기준으로 체크 기록이 있으며, 이 회차는 결산 통계에 포함됩니다.';
 
   if(excludeFromReport){
-    bg='#EFF6FF';bd='#BFDBFE';color='#1D4ED8';title='ℹ️ '+attSession+' 출석률 제외 회차입니다';
+    bg='#EFF6FF';bd='#BFDBFE';color='#1D4ED8';title='ℹ️ '+scopeLabel+' '+attSession+' 출석률 제외 회차입니다';
     msg='기록은 보관하지만 월간 결산, 출석 통계, 개인 출석률 계산에는 포함하지 않습니다.';
     var reasonEl=document.getElementById('attExcludeReason');
     var excludeReason=((reasonEl&&reasonEl.value)||(curData&&curData.excludeReason)||'').trim();
@@ -3341,6 +3717,7 @@ function renderAttList(){
     var st=attData[m.id]||'';
     if(st==='출석')present++;else if(st==='지각')late++;else if(st==='사유결석')excused++;else if(st==='무단결석')absent++;else unchecked++;
   });
+  renderAttSummaryCard({total:members.length,present:present,late:late,excused:excused,absent:absent,unchecked:unchecked});
 
   var uncheckedNames=[];
   members.forEach(function(m){if(!attData[m.id])uncheckedNames.push(m.name)});
@@ -4499,7 +4876,7 @@ function generateReport() {
         return '<div style="margin:14px 0 18px; padding:10px 12px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; font-size:12px; color:#166534;"><strong>🔍 출석 데이터 점검:</strong> 주일 기준 결산 통계에 영향을 줄 이상 항목이 없습니다.</div>';
       }
       var items = anomalies.map(function(a){
-        var color = a.level === 'warn' ? '#B45309' : '#2563EB';
+        var color = a.level === 'warn' ? '#A26F42' : '#6E8792';
         var icon = a.level === 'warn' ? '⚠️' : 'ℹ️';
         return '<li style="margin-bottom:6px; line-height:1.45;"><span style="font-weight:700; color:'+color+'">'+icon+' '+a.title+'</span><br><span style="color:#334155;">'+a.message+'</span></li>';
       }).join('');
@@ -4526,7 +4903,7 @@ function generateReport() {
           + '</tr>';
       }).join('');
       return '<div style="margin:14px 0 18px;">'
-        + '<div style="font-size:13px;font-weight:800;color:#1D4ED8;margin-bottom:7px;">ℹ️ 출석률 제외 회차</div>'
+        + '<div style="font-size:13px;font-weight:800;color:#6E8792;margin-bottom:7px;">ℹ️ 출석률 제외 회차</div>'
         + '<table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">'
         + '<tr><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">날짜</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">회차</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">처리</th><th style="border:1px solid #CBD5E1;padding:7px 8px;background:#EFF6FF;">비고</th></tr>'
         + rows
@@ -4619,7 +4996,7 @@ function generateReport() {
         <tr>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700;">${activeMembers.length}명</td>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#16A34A;">${amRate}%</td>
-          <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#2563EB;">${pmRate}%</td>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#6E8792;">${pmRate}%</td>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#DC2626;">${dropRate}%</td>
         </tr>
       </table>
@@ -4715,7 +5092,7 @@ function generateReport() {
     h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">👥 5. 단원 변동 현황</h3>`;
     if(newMembers.length > 0) {
       h += `<ul style="font-size:14px; line-height:1.6; padding-left:20px; margin:0;">
-        <li><strong style="color:#2563EB;">신규 등록 (${newMembers.length}명):</strong> ${newMembers.map(m => m.name + ' (' + m.part + ')').join(', ')}</li>
+        <li><strong style="color:#6F826E;">신규 등록 (${newMembers.length}명):</strong> ${newMembers.map(m => m.name + ' (' + m.part + ')').join(', ')}</li>
       </ul>`;
     } else {
       h += `<p style="font-size:13px; color:#666;">이번 달 신규 등록 단원이 없습니다.</p>`;
