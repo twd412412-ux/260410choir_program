@@ -1317,7 +1317,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=18').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=19').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -4820,22 +4820,13 @@ function generateReport() {
         var info = getLocalDateInfo(d.date);
         var checked = countCheckedRecords(d.records || {});
         if(d.excludeFromReport){
-          anomalies.push({
-            level: 'info',
-            title: '출석률 제외 회차',
-            message: d.date + ' ' + (d.session || '') + ' 출석부 (' + checked + '명 체크)는 운영 기록으로만 보관하고 결산 출석률에서는 제외됩니다.'
-          });
           if(!grouped[d.date]) grouped[d.date] = {};
           if(d.session === '오전') grouped[d.date].amExcluded = true;
           if(d.session === '오후') grouped[d.date].pmExcluded = true;
           return;
         }
         if(info && info.day !== 0){
-          anomalies.push({
-            level: 'info',
-            title: '비주일 출석부 제외',
-            message: d.date + ' ' + info.dayName + ' ' + (d.session || '') + ' 출석부 (' + checked + '명 체크)는 주일 기준 결산 출석 통계에서 제외됩니다.'
-          });
+          return;
         }
         if(!grouped[d.date]) grouped[d.date] = {};
         if(d.session === '오전') grouped[d.date].am = d;
@@ -4866,6 +4857,23 @@ function generateReport() {
               message: date + ' 주일 ' + (d.session || (key==='am'?'오전':'오후')) + ' 출석부 미체크 ' + unchecked + '명 (' + Math.round(ratio*100) + '%) — 저장 전 확인이 필요합니다.'
             });
           }
+          var byPart = {};
+          members.forEach(function(m){
+            if(!byPart[m.part])byPart[m.part]={total:0,unchecked:0};
+            byPart[m.part].total++;
+            if(!records[m.id])byPart[m.part].unchecked++;
+          });
+          Object.keys(byPart).sort().forEach(function(part){
+            var p = byPart[part];
+            var partRatio = p.total ? p.unchecked / p.total : 0;
+            if(p.total >= 5 && p.unchecked >= 5 && partRatio >= 0.8){
+              anomalies.push({
+                level:'warn',
+                title:'파트 미체크 확인',
+                message: date + ' 주일 ' + (d.session || (key==='am'?'오전':'오후')) + ' 출석부에서 ' + part + ' 파트 미체크 ' + p.unchecked + '/' + p.total + '명 (' + Math.round(partRatio*100) + '%) — 파트별 저장 누락 여부를 확인해주세요.'
+              });
+            }
+          });
         });
       });
       return anomalies;
@@ -4882,7 +4890,7 @@ function generateReport() {
       }).join('');
       return '<div style="margin:14px 0 18px; padding:12px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px;">'
         + '<div style="font-size:13px; font-weight:800; color:#92400E; margin-bottom:7px;">🔍 출석 데이터 점검 결과</div>'
-        + '<div style="font-size:11px; color:#64748B; margin-bottom:8px;">출석 통계는 주일 기준으로 계산됩니다. 비주일 출석부는 운영 기록으로 보관하되 결산 출석률에는 포함하지 않습니다.</div>'
+        + '<div style="font-size:11px; color:#64748B; margin-bottom:8px;">출석 통계에 영향을 줄 수 있는 누락 항목만 표시합니다.</div>'
         + '<ul style="font-size:12px; padding-left:18px; margin:0;">'+items+'</ul>'
         + '</div>';
     }
