@@ -1042,8 +1042,8 @@ body{font-weight:500}
         이 회차는 결산 출석률에서 제외
       </label>
       <div class="form-group" id="attExcludeReasonWrap" style="display:none;margin:-4px 0 12px">
-        <label class="form-label">출석률 제외 사유 *</label>
-        <input class="form-input" id="attExcludeReason" placeholder="예: 특별연습, 행사, 체크 기준 미적용 등" oninput="renderAttGuideCard()">
+        <label class="form-label">보고서 비고 *</label>
+        <input class="form-input" id="attExcludeReason" placeholder="예: 운동회/체육활동으로 정규 주일 출석률에서 제외" oninput="renderAttGuideCard()">
       </div>
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
       <div class="form-group" style="margin-bottom:12px"><label class="form-label">상태 필터</label><select class="form-sel" id="attStatusFilter" onchange="setAttStatusFilter(this.value)"><option value="all">전체</option><option value="출석">출석</option><option value="지각">지각</option><option value="사유결석">사유</option><option value="무단결석">무단</option></select></div>
@@ -3678,7 +3678,7 @@ function renderAttGuideCard(){
     msg='기록은 보관하지만 월간 결산, 출석 통계, 개인 출석률 계산에는 포함하지 않습니다.';
     var reasonEl=document.getElementById('attExcludeReason');
     var excludeReason=((reasonEl&&reasonEl.value)||(curData&&curData.excludeReason)||'').trim();
-    if(excludeReason)msg+=' 사유: '+excludeReason;
+    if(excludeReason)msg+=' 보고서 비고: '+excludeReason;
   }else if(info.day!==0){
     bg='#EFF6FF';bd='#BFDBFE';color='#1D4ED8';title='ℹ️ 선택한 날짜는 '+info.dayName+'요일입니다';
     msg='특별연습/토요연습 출석 기록은 저장할 수 있지만, 월간 결산 출석률에는 포함되지 않습니다.';
@@ -3972,7 +3972,7 @@ function saveAttendance(){
   var excludeChecked=canManageAttendanceReportExclusion()&&!!(excludeEl&&excludeEl.checked);
   var excludeReason=excludeReasonEl?excludeReasonEl.value.trim():'';
   if(excludeChecked&&!excludeReason){
-    showToast('출석률 제외 사유를 입력해주세요');
+    showToast('보고서 비고를 입력해주세요');
     if(excludeReasonEl)excludeReasonEl.focus();
     return;
   }
@@ -4894,7 +4894,7 @@ function generateReport() {
       }).map(function(d){
         var checked = countCheckedRecords(d.records || {});
         var session = d.session || '오전';
-        var reason = d.excludeReason || '사유 미입력';
+        var reason = d.excludeReason || '비고 미입력';
         return '<tr>'
           + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+d.date+'</td>'
           + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+session+'</td>'
