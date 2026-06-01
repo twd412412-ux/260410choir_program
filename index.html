@@ -1317,7 +1317,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=19').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=20').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -4999,7 +4999,7 @@ function generateReport() {
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">총원</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전 출석률</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 출석률</th>
-          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">이탈률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전→오후 결석률</th>
         </tr>
         <tr>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700;">${activeMembers.length}명</td>
@@ -5036,13 +5036,14 @@ function generateReport() {
     }
 
     h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">📈 3. 파트별 출석 상세 데이터</h3>
+      <div style="font-size:11px; color:#64748B; line-height:1.5; margin:-4px 0 8px;">오전→오후 결석률은 오전에 출석/지각한 인원 중 오후에 사유결석 또는 무단결석으로 체크된 비율입니다. 미체크는 저장 누락 가능성이 있어 별도 점검 항목으로 표시합니다.</div>
       <table style="width:100%; border-collapse:collapse; font-size:13px; text-align:center;">
         <tr>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">파트</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">인원</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전 출석률</th>
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 출석률</th>
-          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오후 이탈률</th>
+          <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전→오후 결석률</th>
         </tr>`;
     
     var parts = ['S1','S2','T1','T2','임원','관현악','지휘','반주'];
