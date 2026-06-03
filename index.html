@@ -1317,7 +1317,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=21').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=22').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -3414,6 +3414,7 @@ var attStatusFilter='all';
 var attUnsubs=[];
 var attMembersLoaded=false;
 var attLoadSeq=0;
+var attRenderSeq=0;
 var attLoading=false;
 var currentAttReasonId='';
 var currentAttReasonPreset='';
@@ -3567,7 +3568,7 @@ function loadAttendance(){
         attPmData=doc.exists?doc.data():null;
         pmLoaded=true;
       }
-      if(session!==attSession && !(amLoaded&&pmLoaded))return;
+      if(!(amLoaded&&pmLoaded))return;
       if(attSession==='오전'){
         attData=attAmData?attAmData.records||{}:{};
         attReasons=attAmData?attAmData.reasons||{}:{};
@@ -3705,6 +3706,7 @@ function renderAttGuideCard(){
 }
 
 function renderAttList(){
+  var renderSeq=++attRenderSeq;
   renderAttGuideCard();
   var c=document.getElementById('attList');
   var members=attMembers.slice();
@@ -3737,7 +3739,7 @@ function renderAttList(){
   if(members.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">해당 파트에 단원이 없습니다</div>';return}
   if(displayMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px">선택한 상태의 단원이 없습니다</div>';return}
 
-  c.innerHTML=displayMembers.map(function(m){
+  function renderAttRow(m){
     var st=attData[m.id]||'';
     var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<div class="att-reason">사유: '+attReasons[m.id]+'</div>':'';
     var amSt=attAmData&&attAmData.records&&attAmData.records[m.id];
@@ -3755,11 +3757,21 @@ function renderAttList(){
     var partLabel=m.part+(m.subPart?'·'+m.subPart:'');
     
     return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+m.name+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div><div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
-  }).join('');
-
-
-
-
+  }
+  c.innerHTML='<div style="font-size:12px;color:var(--ts);padding:10px 12px">목록을 표시하는 중...</div>';
+  var i=0,chunkSize=35,firstChunk=true;
+  function renderChunk(){
+    if(renderSeq!==attRenderSeq)return;
+    var end=Math.min(i+chunkSize,displayMembers.length);
+    var chunkHtml='';
+    for(;i<end;i++)chunkHtml+=renderAttRow(displayMembers[i]);
+    if(firstChunk){c.innerHTML='';firstChunk=false;}
+    c.insertAdjacentHTML('beforeend',chunkHtml);
+    if(i<displayMembers.length){
+      (window.requestAnimationFrame||function(fn){setTimeout(fn,0)})(renderChunk);
+    }
+  }
+  renderChunk();
 }
 
 var ATT_LATE_CUTOFFS={
