@@ -1,4 +1,4 @@
-const CACHE_NAME = 'choir-app-v20';
+const CACHE_NAME = 'choir-app-v21';
 const urlsToCache = [
   './',
   './index.html',
