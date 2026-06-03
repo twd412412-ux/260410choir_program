@@ -1317,7 +1317,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=22').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=23').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -3442,18 +3442,37 @@ function updateAttDateDisplay(){
   if(display)display.textContent=formatKoreanAttDate(el?el.value:'');
 }
 
-function setAttSession(s){
-  attSession=s;
+function updateAttSessionButtons(){
   var am=document.getElementById('attSessionAM');
   var pm=document.getElementById('attSessionPM');
-  if(s==='오전'){
+  if(!am||!pm)return;
+  if(attSession==='오전'){
     am.style.background='var(--p)';am.style.color='#fff';am.style.borderColor='var(--p)';
     pm.style.background='var(--sf)';pm.style.color='var(--ts)';pm.style.borderColor='var(--bd)';
   }else{
     pm.style.background='var(--p)';pm.style.color='#fff';pm.style.borderColor='var(--p)';
     am.style.background='var(--sf)';am.style.color='var(--ts)';am.style.borderColor='var(--bd)';
   }
-  loadAttendance();
+}
+
+function applyCurrentAttendanceSession(){
+  if(attSession==='오전'){
+    attData=attAmData?attAmData.records||{}:{};
+    attReasons=attAmData?attAmData.reasons||{}:{};
+  }else{
+    attData=attPmData?attPmData.records||{}:{};
+    attReasons=attPmData?attPmData.reasons||{}:{};
+  }
+  syncAttExcludeControl();
+  renderAttList();
+}
+
+function setAttSession(s){
+  if(attSession===s)return;
+  attSession=s;
+  updateAttSessionButtons();
+  if(attLoading)return;
+  applyCurrentAttendanceSession();
 }
 
 function getAttDocId(){
@@ -3528,6 +3547,7 @@ function loadAttendance(){
   var docId=getAttDocId();
   if(!docId)return;
   updateAttDateDisplay();
+  updateAttSessionButtons();
   var seq=++attLoadSeq;
   var date=document.getElementById('attDate').value;
   clearAttRealtimeListeners();
@@ -3558,37 +3578,22 @@ function loadAttendance(){
     }
 
 
-    var amLoaded=false, pmLoaded=false;
-    function applyAttendanceSnapshot(session,doc){
+    Promise.all([
+      db.collection('attendance').doc(date+'_오전').get(),
+      db.collection('attendance').doc(date+'_오후').get()
+    ]).then(function(docs){
       if(seq!==attLoadSeq)return;
-      if(session==='오전'){
-        attAmData=doc.exists?doc.data():null;
-        amLoaded=true;
-      }else{
-        attPmData=doc.exists?doc.data():null;
-        pmLoaded=true;
-      }
-      if(!(amLoaded&&pmLoaded))return;
-      if(attSession==='오전'){
-        attData=attAmData?attAmData.records||{}:{};
-        attReasons=attAmData?attAmData.reasons||{}:{};
-      }else{
-        attData=attPmData?attPmData.records||{}:{};
-        attReasons=attPmData?attPmData.reasons||{}:{};
-      }
-      syncAttExcludeControl();
+      attAmData=docs[0].exists?docs[0].data():null;
+      attPmData=docs[1].exists?docs[1].data():null;
       setAttendanceLoading(false);
-      renderAttList();
-    }
-    function handleAttendanceListenError(){
+      applyCurrentAttendanceSession();
+    }).catch(function(){
       if(seq!==attLoadSeq)return;
       attData={};attReasons={};attAmData=null;attPmData=null;
       syncAttExcludeControl();
       setAttendanceLoading(false);
       renderAttList();
-    }
-    attUnsubs.push(db.collection('attendance').doc(date+'_오전').onSnapshot(function(doc){applyAttendanceSnapshot('오전',doc)},handleAttendanceListenError));
-    attUnsubs.push(db.collection('attendance').doc(date+'_오후').onSnapshot(function(doc){applyAttendanceSnapshot('오후',doc)},handleAttendanceListenError));
+    });
   });
 }
 
