@@ -764,6 +764,25 @@ body{font-weight:500}
 .date-display{width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FFFDF8;border:1px solid #D5C8B6;border-radius:10px;color:#191A15;padding:10px 12px;font-family:inherit;font-size:15px;font-weight:680;text-align:left;cursor:pointer}
 .date-display-icon{color:#6F7D4E;font-size:13px}
 .native-date-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
+@media print{
+  @page{margin:12mm}
+  body.print-report-mode{background:#fff!important;color:#222!important;padding:0!important}
+  body.print-report-mode .header,
+  body.print-report-mode .notice-banner,
+  body.print-report-mode .user-bar,
+  body.print-report-mode .bottom-nav,
+  body.print-report-mode #toast,
+  body.print-report-mode #adminTabRow,
+  body.print-report-mode #btnPrintReport,
+  body.print-report-mode #subReport>h3,
+  body.print-report-mode #subReport>p,
+  body.print-report-mode #subReport>div:not(#reportCanvas){display:none!important}
+  body.print-report-mode #pageAdmin,
+  body.print-report-mode #pageAdmin>div,
+  body.print-report-mode #subReport{display:block!important;background:#fff!important;border:0!important;margin:0!important;padding:0!important}
+  body.print-report-mode #pageAdmin .admin-sub:not(#subReport){display:none!important}
+  body.print-report-mode #reportCanvas{display:block!important;background:#fff!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important}
+}
 @media(max-width:390px){
   .att-ring-wrap{grid-template-columns:88px minmax(0,1fr);gap:12px}
   .att-ring{width:84px;height:84px}
@@ -1317,7 +1336,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=23').catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=24').catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -5139,17 +5158,18 @@ function generateReport() {
 }
 
 function printReport() {
-  var content = document.getElementById('reportCanvas').innerHTML;
-  var win = window.open('', '_blank', 'width=800,height=900');
-  win.document.write('<html><head><title>월간 결산 보고서</title></head><body style="margin:0; padding:20px; background:#fff;">');
-  win.document.write(content);
-  win.document.write('</body></html>');
-  win.document.close();
-  
-  // 브라우저 렌더링 시간 벌어주기
-  setTimeout(function() {
-    win.print();
-  }, 500);
+  var canvas = document.getElementById('reportCanvas');
+  if(!canvas||!canvas.innerHTML.trim())return showToast('먼저 보고서를 생성해주세요');
+  document.body.classList.add('print-report-mode');
+  function cleanup(){
+    document.body.classList.remove('print-report-mode');
+    window.removeEventListener('afterprint',cleanup);
+  }
+  window.addEventListener('afterprint',cleanup);
+  setTimeout(function(){
+    window.print();
+    setTimeout(cleanup,1500);
+  },50);
 }
 </script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
