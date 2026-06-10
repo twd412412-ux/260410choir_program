@@ -197,6 +197,8 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .archive-upload-actions{display:flex;gap:8px;margin-top:12px}
 .archive-preview-note{font-size:11px;color:var(--ts);margin-top:6px}
 .archive-type-badge{background:rgba(37,99,235,.08);color:var(--p);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+#pageArchive{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+#pageArchive #archiveList{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px))}
 .archive-reactions{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative}
 .archive-reaction-pill{border:1px solid #FECDD3;background:#FFF1F2;color:#BE123C;border-radius:14px;padding:3px 7px;font-size:11px;font-weight:700;line-height:1}
 .archive-reaction-btn{border:1px solid #FDA4AF;background:#FFE4E6;color:#BE123C;border-radius:14px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 1px 2px rgba(190,18,60,.12)}
@@ -1546,7 +1548,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v28.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v29.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2127,13 +2129,24 @@ function toggleDay(day){
 }
 
 // ==================== 필터 + 정렬 ====================
+function normalizeSearchText(value){
+  return String(value||'')
+    .toLowerCase()
+    .replace(/[\s\u00a0]+/g,'')
+    .replace(/[·ㆍ.,，、;:/|\\\-_*+~!?'"`‘’“”()[\]{}<>《》「」『』]/g,'');
+}
+
 function doFilter(){
   var q=(document.getElementById('searchInput').value||'').toLowerCase().trim();
+  var qCompact=normalizeSearchText(q);
   var yV=document.getElementById('yearSel').value;
   var cV=document.getElementById('catSel').value;
   var r=allSongs.slice();
 
-  if(q)r=r.filter(function(s){return s.songName.toLowerCase().indexOf(q)>-1||s.members.toLowerCase().indexOf(q)>-1||s.pianist.toLowerCase().indexOf(q)>-1||s.category.toLowerCase().indexOf(q)>-1||s.subCategory.toLowerCase().indexOf(q)>-1||s.location.toLowerCase().indexOf(q)>-1});
+  if(q)r=r.filter(function(s){
+    var text=[s.songName,s.members,s.pianist,s.category,s.subCategory,s.location].join(' ').toLowerCase();
+    return text.indexOf(q)>-1||(qCompact&&normalizeSearchText(text).indexOf(qCompact)>-1);
+  });
   if(yV!=='all')r=r.filter(function(s){return String(s.year)===yV});
   if(cV!=='all')r=r.filter(function(s){return s.category===cV});
   if(activeDays.length>0)r=r.filter(function(s){return activeDays.indexOf(s.dayOfWeek)>-1});
