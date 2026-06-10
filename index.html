@@ -1548,7 +1548,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v29.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v30.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2247,7 +2247,7 @@ function addNewSong(skipMemberLoad){
     return;
   }
   var memberResult=confirmSongMemberRefs('add');
-  if(!memberResult)return;
+  if(!memberResult)return showToast('저장이 취소되었습니다. 미확인 단원을 확인해주세요.');
   db.collection('songs').add({
     songName:name,year:year,month:month,
     day:day,
@@ -2320,7 +2320,7 @@ function saveEdit(skipMemberLoad){
     return;
   }
   var memberResult=confirmSongMemberRefs('edit');
-  if(!memberResult)return;
+  if(!memberResult)return showToast('저장이 취소되었습니다. 미확인 단원을 확인해주세요.');
   var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('editPia').value.trim(),youtube:yt};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
     var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
@@ -2535,6 +2535,34 @@ function splitParticipantEntries(raw){
     .filter(Boolean);
 }
 
+function looksLikeParticipantRolePrefix(value){
+  var key=normalizeHistoryName(value);
+  if(!key)return false;
+  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','반주','반주자','지휘','낭독','내레이션','나레이션'];
+  return roles.some(function(role){return key.indexOf(normalizeHistoryName(role))>-1;})||key.length<=8;
+}
+
+function participantLookupName(entry){
+  var text=String(entry||'').trim();
+  var parts=text.split(/[:：]/);
+  if(parts.length>=2){
+    var prefix=parts.slice(0,parts.length-1).join(':').trim();
+    var name=parts[parts.length-1].trim();
+    if(name&&normalizeHistoryName(name).length>=2&&looksLikeParticipantRolePrefix(prefix)){
+      return name;
+    }
+  }
+  return text;
+}
+
+function participantEntryKey(entry){
+  return normalizeHistoryName(participantLookupName(entry));
+}
+
+function participantHasLookupAlias(entry){
+  return normalizeHistoryName(entry)!==participantEntryKey(entry);
+}
+
 function memberLinkMeta(m){
   return [normalizePartName(m.part)||'',normalizePartName(m.subPart)||'',m.group||'',m.district?(m.district+'교구'):''].filter(Boolean).join(' · ');
 }
@@ -2594,7 +2622,7 @@ function initSongMemberLinker(prefix, refs){
 function pruneSongMemberSelections(prefix){
   var input=document.getElementById(getSongMemberInputId(prefix));
   var keys={};
-  splitParticipantEntries(input?input.value:'').forEach(function(entry){keys[normalizeHistoryName(entry)]=true});
+  splitParticipantEntries(input?input.value:'').forEach(function(entry){keys[participantEntryKey(entry)]=true});
   Object.keys(songMemberSelections[prefix]||{}).forEach(function(key){
     if(!keys[key])delete songMemberSelections[prefix][key];
   });
@@ -2606,7 +2634,7 @@ function onSongMemberInput(prefix){
 }
 
 function findSongMemberCandidates(entry){
-  var key=normalizeHistoryName(entry);
+  var key=participantEntryKey(entry);
   if(!key)return [];
   return songMemberDirectory.filter(function(m){return normalizeHistoryName(m.name)===key});
 }
@@ -2631,7 +2659,9 @@ function renderSongMemberLinkPanel(prefix){
   if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
 
   panel.innerHTML=entries.map(function(entry){
-    var key=normalizeHistoryName(entry);
+    var key=participantEntryKey(entry);
+    var lookupName=participantLookupName(entry);
+    var hasAlias=participantHasLookupAlias(entry);
     var candidates=findSongMemberCandidates(entry);
     var selected=songMemberSelections[prefix][key]||null;
     if(!selected&&candidates.length===1){
@@ -2644,10 +2674,11 @@ function renderSongMemberLinkPanel(prefix){
       stateText='연결됨';
       var selectedMeta=memberLinkMeta(selected);
       note=selected.name+(selectedMeta?' · '+selectedMeta:'');
+      if(hasAlias)note=lookupName+'으로 연결됨 · 입력 표기는 그대로 저장됩니다.';
     }else if(candidates.length>1){
       stateCls='warn';
       stateText='선택 필요';
-      note='동명이인이 있습니다. 실제 단원을 선택해주세요.';
+      note=(hasAlias?lookupName+' 이름에 ':'')+'동명이인이 있습니다. 실제 단원을 선택해주세요.';
     }
     var selectHtml='';
     if(candidates.length>1||selected){
@@ -2677,7 +2708,7 @@ function collectSongMemberRefs(prefix){
   var refs=[],seen={},unresolved=[];
   if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
   entries.forEach(function(entry){
-    var key=normalizeHistoryName(entry);
+    var key=participantEntryKey(entry);
     if(!key)return;
     var candidates=findSongMemberCandidates(entry);
     var selected=songMemberSelections[prefix][key]||null;
@@ -2786,7 +2817,7 @@ function formatMemberAuditCandidate(m){
 }
 
 function hasLinkedRefForEntry(song, entry, candidates){
-  var key=normalizeHistoryName(entry);
+  var key=participantEntryKey(entry);
   var refs=Array.isArray(song.memberRefs)?song.memberRefs:[];
   if(!key||refs.length===0)return false;
   var linkedIds={};
@@ -2803,10 +2834,10 @@ function getMemberLinkExceptions(song){
 }
 
 function getMemberLinkException(song, entry){
-  var key=normalizeHistoryName(entry);
+  var key=participantEntryKey(entry);
   if(!key)return null;
   return getMemberLinkExceptions(song).find(function(item){
-    return normalizeHistoryName(item&&item.name)===key;
+    return participantEntryKey(item&&item.name)===key;
   })||null;
 }
 
@@ -2822,7 +2853,7 @@ function getSongMemberLinkIssues(song){
   if(entries.length===0)return [];
   var issues=[];
   entries.forEach(function(entry){
-    var key=normalizeHistoryName(entry);
+    var key=participantEntryKey(entry);
     if(!key)return;
     if(getMemberLinkException(song,entry))return;
     var candidates=findSongMemberCandidates(entry);
@@ -3020,8 +3051,8 @@ function markMemberLinkException(songId, entry, reason){
   if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
   var song=allSongs.find(function(s){return s.id===songId});
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
-  var key=normalizeHistoryName(entry);
-  var exceptions=getMemberLinkExceptions(song).filter(function(item){return normalizeHistoryName(item&&item.name)!==key;});
+  var key=participantEntryKey(entry);
+  var exceptions=getMemberLinkExceptions(song).filter(function(item){return participantEntryKey(item&&item.name)!==key;});
   exceptions.push({
     name:entry,
     reason:reason||'처리 제외',
@@ -3035,8 +3066,8 @@ function removeMemberLinkException(songId, entry){
   if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
   var song=allSongs.find(function(s){return s.id===songId});
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
-  var key=normalizeHistoryName(entry);
-  var exceptions=getMemberLinkExceptions(song).filter(function(item){return normalizeHistoryName(item&&item.name)!==key;});
+  var key=participantEntryKey(entry);
+  var exceptions=getMemberLinkExceptions(song).filter(function(item){return participantEntryKey(item&&item.name)!==key;});
   saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다.');
 }
 
