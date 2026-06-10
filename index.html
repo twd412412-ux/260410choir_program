@@ -141,6 +141,16 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .suggest-item{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bd)}
 .suggest-item:hover,.suggest-item:active{background:var(--pl)}
 .suggest-item:last-child{border-bottom:none}
+.member-link-panel{margin-top:8px;display:flex;flex-direction:column;gap:7px}
+.member-link-row{background:#FFFDF8;border:1px solid #E1D7C5;border-radius:10px;padding:9px 10px;display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+.member-link-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+.member-link-name{font-weight:850;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-link-state{font-size:10px;font-weight:850;border-radius:999px;padding:3px 7px;white-space:nowrap}
+.member-link-state.ok{background:#EAEFDF;color:#4E5A35}
+.member-link-state.warn{background:#F4E7CC;color:#7C571E}
+.member-link-state.no{background:#F0DFDB;color:#8D4B45}
+.member-link-select{font-size:12px;padding:8px 10px}
+.member-link-note{font-size:11px;color:var(--ts);line-height:1.45}
 .archive-top{padding:12px 16px 0}
 .archive-top p{font-size:13px;color:var(--ts);margin-top:6px;line-height:1.5}
 .archive-upload-card,.archive-filter-card,.archive-card{background:var(--sf);border-radius:var(--r);box-shadow:var(--sh)}
@@ -1053,7 +1063,7 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 용봉, 연제"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대강당" onfocus="showSuggest('addLoc','loc')" oninput="filterSuggest('addLoc','loc')"><div class="suggest-box hidden" id="suggestAddLoc"></div></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 구분)" onfocus="showSuggest('addMem','mem')" oninput="filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 또는 ; 구분)" onfocus="initSongMemberLinker('add');showSuggest('addMem','mem')" oninput="onSongMemberInput('add');filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div><div class="member-link-panel" id="addMemberLinkPanel"></div></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR" onfocus="showSuggest('addPia','pia')" oninput="filterSuggest('addPia','pia')"><div class="suggest-box hidden" id="suggestAddPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="addYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
 
@@ -1286,7 +1296,7 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="editCatSel" onchange="onCatSelect('edit')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="editCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="editSub"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc" onfocus="showSuggest('editLoc','loc')" oninput="filterSuggest('editLoc','loc')"><div class="suggest-box hidden" id="suggestEditLoc"></div></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem" onfocus="showSuggest('editMem','mem')" oninput="filterSuggest('editMem','mem')"><div class="suggest-box hidden" id="suggestEditMem"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem" onfocus="initSongMemberLinker('edit');showSuggest('editMem','mem')" oninput="onSongMemberInput('edit');filterSuggest('editMem','mem')"><div class="suggest-box hidden" id="suggestEditMem"></div><div class="member-link-panel" id="editMemberLinkPanel"></div></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia" onfocus="showSuggest('editPia','pia')" oninput="filterSuggest('editPia','pia')"><div class="suggest-box hidden" id="suggestEditPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="editYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
     <button class="btn btn-p btn-bl" onclick="saveEdit()">저장</button>
@@ -1472,6 +1482,8 @@ var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
+var songMemberSelections={add:{},edit:{}};
 
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
@@ -1910,7 +1922,7 @@ function renderHome(){
       ? songsLoadPromise
     : db.collection('songs').get().then(function(snap){
         var rows=[];
-        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''})});
+        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''})});
         allSongs=rows;songsLoaded=true;saveCache('choir_songs',allSongs);
         return rows;
       });
@@ -1978,7 +1990,7 @@ function initSongs(){
     allSongs=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
     });
     songsLoaded=true;
     saveCache('choir_songs',allSongs);
@@ -2004,7 +2016,7 @@ function refreshData(){
       allSongs=[];
       snap.forEach(function(doc){
         var d=doc.data();
-        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
       });
       songsLoaded=true;
       saveCache('choir_songs',allSongs);
@@ -2154,7 +2166,7 @@ function shareSong(){
 }
 
 // ==================== 곡 추가 ====================
-function addNewSong(){
+function addNewSong(skipMemberLoad){
   var name=document.getElementById('addSongName').value.trim();
   var dateParts=getDateParts(document.getElementById('addDate').value);
   if(!name||!dateParts)return showToast('곡명과 날짜는 필수입니다');
@@ -2163,6 +2175,14 @@ function addNewSong(){
   var day=dateParts.day;
   var cat=getCatValue('add');
   var yt=document.getElementById('addYoutube').value.trim();
+  var memberText=document.getElementById('addMem').value.trim();
+  if(memberText&&!songMemberDirectoryLoaded&&!skipMemberLoad){
+    showToast('단원 명부 확인 중...');
+    loadSongMemberDirectory(function(){addNewSong(true)});
+    return;
+  }
+  var memberResult=confirmSongMemberRefs('add');
+  if(!memberResult)return;
   db.collection('songs').add({
     songName:name,year:year,month:month,
     day:day,
@@ -2170,12 +2190,13 @@ function addNewSong(){
     category:cat,
     subCategory:document.getElementById('addSub').value.trim(),
     location:document.getElementById('addLoc').value.trim(),
-    members:document.getElementById('addMem').value.trim(),
+    members:memberText,
+    memberRefs:memberResult.refs,
     pianist:document.getElementById('addPia').value.trim(),
     youtube:yt,
     createdAt:new Date().toISOString()
   }).then(function(docRef){
-    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:day,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:document.getElementById('addMem').value.trim(),pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:day,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();doFilter();
     // [수정됨] 곡 추가 로그 디테일 강화
@@ -2187,6 +2208,8 @@ function addNewSong(){
     document.getElementById('addCatSel').selectedIndex=0;
     document.getElementById('addCatInput').classList.add('hidden');
     document.getElementById('addCatInput').value='';
+    songMemberSelections.add={};
+    renderSongMemberLinkPanel('add');
   }).catch(function(e){console.error(e);showToast('추가 중 오류 발생')});
 }
 
@@ -2204,6 +2227,7 @@ function openEdit(id){
   document.getElementById('editSub').value=song.subCategory;
   document.getElementById('editLoc').value=song.location;
   document.getElementById('editMem').value=song.members;
+  initSongMemberLinker('edit',song.memberRefs||[]);
   document.getElementById('editPia').value=song.pianist;
   document.getElementById('editYoutube').value=song.youtube||'';
   buildCatOptions();
@@ -2215,7 +2239,7 @@ function openEdit(id){
   closeModal('modalDetail');openModal('modalEdit');
 }
 function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
-function saveEdit(){
+function saveEdit(skipMemberLoad){
   if(!currentDetailSong)return;
   
   // 👇 최고 관리자와 총무부가 아니면 아예 저장을 막고 튕겨냅니다!
@@ -2224,7 +2248,15 @@ function saveEdit(){
   var cat=getCatValue('edit');
   
   var yt=document.getElementById('editYoutube').value.trim();
-  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:document.getElementById('editMem').value.trim(),pianist:document.getElementById('editPia').value.trim(),youtube:yt};
+  var memberText=document.getElementById('editMem').value.trim();
+  if(memberText&&!songMemberDirectoryLoaded&&!skipMemberLoad){
+    showToast('단원 명부 확인 중...');
+    loadSongMemberDirectory(function(){saveEdit(true)});
+    return;
+  }
+  var memberResult=confirmSongMemberRefs('edit');
+  if(!memberResult)return;
+  var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('editPia').value.trim(),youtube:yt};
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
     var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
     if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();buildCatOptions();doFilter()}
@@ -2374,6 +2406,7 @@ function loadHandbook() {
   db.collection('members').orderBy('name').get().then(function(snap) {
     directoryData = [];
     snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
+    setSongMemberDirectory(directoryData);
     renderHandbook(directoryData);
     updatePartSummary(); // 👈 데이터를 다 불러온 후 파트 요약 업데이트!
   });
@@ -2428,6 +2461,188 @@ function normalizeHistoryName(v){
     .trim();
 }
 
+function splitParticipantEntries(raw){
+  return String(raw||'')
+    .split(/[,，、;；\n\r]+/)
+    .map(function(v){return v.trim();})
+    .filter(Boolean);
+}
+
+function memberLinkMeta(m){
+  return [normalizePartName(m.part)||'',normalizePartName(m.subPart)||'',m.group||'',m.district?(m.district+'교구'):''].filter(Boolean).join(' · ');
+}
+
+function memberRefFromMember(m){
+  return {id:m.id,name:m.name||'',part:normalizePartName(m.part),subPart:normalizePartName(m.subPart),group:m.group||''};
+}
+
+function setSongMemberDirectory(rows){
+  songMemberDirectory=(rows||[]).filter(function(m){
+    var part=normalizePartName(m.part);
+    var status=m.status||'active';
+    return m.id&&m.name&&part!=='명단제외'&&status!=='inactive';
+  }).map(function(m){
+    return {id:m.id,name:m.name||'',part:normalizePartName(m.part),subPart:normalizePartName(m.subPart),group:m.group||'',district:m.district||'',area:m.area||'',status:m.status||'active'};
+  }).sort(function(a,b){return a.name.localeCompare(b.name,'ko')||String(a.part).localeCompare(String(b.part),'ko')});
+  songMemberDirectoryLoaded=true;
+}
+
+function loadSongMemberDirectory(callback){
+  if(songMemberDirectoryLoaded){if(callback)callback(songMemberDirectory);return Promise.resolve(songMemberDirectory);}
+  if(songMemberDirectoryPromise){
+    if(callback)songMemberDirectoryPromise.then(function(rows){callback(rows)});
+    return songMemberDirectoryPromise;
+  }
+  songMemberDirectoryPromise=db.collection('members').orderBy('name').get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()))});
+    setSongMemberDirectory(rows);
+    songMemberDirectoryPromise=null;
+    return songMemberDirectory;
+  }).catch(function(e){
+    console.error(e);
+    songMemberDirectoryPromise=null;
+    return songMemberDirectory;
+  });
+  if(callback)songMemberDirectoryPromise.then(function(rows){callback(rows)});
+  return songMemberDirectoryPromise;
+}
+
+function getSongMemberInputId(prefix){return prefix==='edit'?'editMem':'addMem';}
+function getSongMemberPanelId(prefix){return prefix==='edit'?'editMemberLinkPanel':'addMemberLinkPanel';}
+
+function initSongMemberLinker(prefix, refs){
+  if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
+  if(Array.isArray(refs)){
+    songMemberSelections[prefix]={};
+    refs.forEach(function(ref){
+      var key=normalizeHistoryName(ref&&ref.name);
+      if(key)songMemberSelections[prefix][key]=ref;
+    });
+  }
+  loadSongMemberDirectory(function(){renderSongMemberLinkPanel(prefix)});
+  renderSongMemberLinkPanel(prefix);
+}
+
+function pruneSongMemberSelections(prefix){
+  var input=document.getElementById(getSongMemberInputId(prefix));
+  var keys={};
+  splitParticipantEntries(input?input.value:'').forEach(function(entry){keys[normalizeHistoryName(entry)]=true});
+  Object.keys(songMemberSelections[prefix]||{}).forEach(function(key){
+    if(!keys[key])delete songMemberSelections[prefix][key];
+  });
+}
+
+function onSongMemberInput(prefix){
+  pruneSongMemberSelections(prefix);
+  renderSongMemberLinkPanel(prefix);
+}
+
+function findSongMemberCandidates(entry){
+  var key=normalizeHistoryName(entry);
+  if(!key)return [];
+  return songMemberDirectory.filter(function(m){return normalizeHistoryName(m.name)===key});
+}
+
+function selectSongMemberRef(prefix,key,id){
+  if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
+  if(!id){
+    delete songMemberSelections[prefix][key];
+  }else{
+    var member=songMemberDirectory.find(function(m){return m.id===id});
+    if(member)songMemberSelections[prefix][key]=memberRefFromMember(member);
+  }
+  renderSongMemberLinkPanel(prefix);
+}
+
+function renderSongMemberLinkPanel(prefix){
+  var input=document.getElementById(getSongMemberInputId(prefix));
+  var panel=document.getElementById(getSongMemberPanelId(prefix));
+  if(!input||!panel)return;
+  var entries=splitParticipantEntries(input.value);
+  if(entries.length===0){panel.innerHTML='';return;}
+  if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
+
+  panel.innerHTML=entries.map(function(entry){
+    var key=normalizeHistoryName(entry);
+    var candidates=findSongMemberCandidates(entry);
+    var selected=songMemberSelections[prefix][key]||null;
+    if(!selected&&candidates.length===1){
+      selected=memberRefFromMember(candidates[0]);
+      songMemberSelections[prefix][key]=selected;
+    }
+    var stateCls='no',stateText='명부 미확인',note='명부에 없는 이름입니다. 외부/임시 인원이면 그대로 저장할 수 있습니다.';
+    if(selected&&selected.id){
+      stateCls='ok';
+      stateText='연결됨';
+      var selectedMeta=memberLinkMeta(selected);
+      note=selected.name+(selectedMeta?' · '+selectedMeta:'');
+    }else if(candidates.length>1){
+      stateCls='warn';
+      stateText='선택 필요';
+      note='동명이인이 있습니다. 실제 단원을 선택해주세요.';
+    }
+    var selectHtml='';
+    if(candidates.length>1||selected){
+      var selectedId=selected&&selected.id?selected.id:'';
+      selectHtml='<select class="form-sel member-link-select" onchange="selectSongMemberRef(\''+prefix+'\',\''+escAttr(key)+'\',this.value)">'
+        +'<option value="">선택 안 함</option>';
+      candidates.forEach(function(m){
+        var label=m.name+' · '+memberLinkMeta(m);
+        selectHtml+='<option value="'+escHtml(m.id)+'"'+(selectedId===m.id?' selected':'')+'>'+escHtml(label)+'</option>';
+      });
+      if(selectedId&&!candidates.some(function(m){return m.id===selectedId})){
+        selectHtml+='<option value="'+escHtml(selectedId)+'" selected>'+escHtml(selected.name+' · 저장된 단원')+'</option>';
+      }
+      selectHtml+='</select>';
+    }
+    return '<div class="member-link-row">'
+      +'<div class="member-link-head"><span class="member-link-name">'+escHtml(entry)+'</span><span class="member-link-state '+stateCls+'">'+stateText+'</span></div>'
+      +selectHtml
+      +'<div class="member-link-note">'+escHtml(note)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function collectSongMemberRefs(prefix){
+  var input=document.getElementById(getSongMemberInputId(prefix));
+  var entries=splitParticipantEntries(input?input.value:'');
+  var refs=[],seen={},unresolved=[];
+  if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
+  entries.forEach(function(entry){
+    var key=normalizeHistoryName(entry);
+    if(!key)return;
+    var candidates=findSongMemberCandidates(entry);
+    var selected=songMemberSelections[prefix][key]||null;
+    if(!selected&&candidates.length===1){
+      selected=memberRefFromMember(candidates[0]);
+      songMemberSelections[prefix][key]=selected;
+    }
+    if(selected&&selected.id){
+      if(!seen[selected.id]){
+        refs.push(memberRefFromMember(selected));
+        seen[selected.id]=true;
+      }
+    }else{
+      unresolved.push({name:entry,reason:candidates.length>1?'동명이인 선택 필요':'명부 미확인'});
+    }
+  });
+  return {refs:refs,unresolved:unresolved};
+}
+
+function confirmSongMemberRefs(prefix){
+  renderSongMemberLinkPanel(prefix);
+  var result=collectSongMemberRefs(prefix);
+  if(result.unresolved.length===0)return result;
+  var lines=result.unresolved.slice(0,8).map(function(x){return '- '+x.name+' ('+x.reason+')'});
+  if(result.unresolved.length>8)lines.push('- 외 '+(result.unresolved.length-8)+'명');
+  var msg='참여 단원 중 명부와 연결되지 않은 이름이 있습니다.\n\n'
+    +lines.join('\n')
+    +'\n\n문자열은 저장되지만, 단원 활동 이력에는 정확히 연결되지 않을 수 있습니다.\n그래도 저장하시겠습니까?';
+  if(!confirm(msg))return null;
+  return result;
+}
+
 function splitSongMemberNames(raw){
   return String(raw||'')
     .split(/[\s,，、;:/|\\()\[\]{}<>《》「」『』"'\n\r\t]+/)
@@ -2435,13 +2650,21 @@ function splitSongMemberNames(raw){
     .filter(function(v){return v.length>=2});
 }
 
-function songHasMember(song, memberName){
-  var target=normalizeHistoryName(memberName);
+function getSongMemberMatchKind(song, member){
+  var refs=Array.isArray(song.memberRefs)?song.memberRefs:[];
+  if(refs.length>0){
+    return refs.some(function(ref){return ref&&ref.id===member.id})?'linked':'';
+  }
+  var target=normalizeHistoryName(member.name);
   if(!target)return false;
   var tokens=splitSongMemberNames(song.members||'');
-  if(tokens.indexOf(target)>-1)return true;
+  if(tokens.indexOf(target)>-1)return 'name';
   var compact=normalizeHistoryName(song.members||'');
-  return target.length>=3&&compact.indexOf(target)>-1;
+  return target.length>=3&&compact.indexOf(target)>-1?'name':'';
+}
+
+function songHasMember(song, member){
+  return !!getSongMemberMatchKind(song,member);
 }
 
 function songDateValue(s){
@@ -2459,7 +2682,7 @@ function loadSongsForMemberHistory(callback){
     allSongs=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
     });
     saveCache('choir_songs',allSongs);
     callback();
@@ -2487,7 +2710,7 @@ function openSongFromMemberHistory(id){
 function renderMemberSongHistory(member, songs){
   var body=document.getElementById('memberSongHistoryBody');
   if(!body)return;
-  var rows=songs.filter(function(s){return songHasMember(s,member.name)}).sort(function(a,b){return songDateValue(b)-songDateValue(a)});
+  var rows=songs.filter(function(s){return songHasMember(s,member)}).sort(function(a,b){return songDateValue(b)-songDateValue(a)});
   var partText=normalizePartName(member.part||'')+(member.subPart?' · '+normalizePartName(member.subPart):'');
   var latest=rows[0]||null;
 
@@ -2511,7 +2734,8 @@ function renderMemberSongHistory(member, songs){
   h+='<div class="member-history-section-title">최근 참여곡</div>'
     +'<div class="member-history-list">'
     +rows.slice(0,12).map(function(s){
-      var meta=[s.category||'',s.subCategory||'',s.pianist?('반주 '+s.pianist):'',s.location||''].filter(Boolean).join(' · ');
+      var kind=getSongMemberMatchKind(s,member);
+      var meta=[s.category||'',s.subCategory||'',s.pianist?('반주 '+s.pianist):'',s.location||'',kind==='name'?'이름 기준 추정':''].filter(Boolean).join(' · ');
       return '<div class="member-history-row" onclick="openSongFromMemberHistory(\''+escAttr(s.id)+'\')">'
         +'<div class="member-history-date">'+escHtml(songDateLabel(s).replace(/^\d{4}\./,''))+'</div>'
         +'<div><div class="member-history-song">'+escHtml(s.songName||'곡명 없음')+'</div><div class="member-history-sub">'+escHtml(meta||'세부 정보 없음')+'</div></div>'
@@ -3622,6 +3846,11 @@ function getSuggestData(type){
   if(type==='loc'){
     allSongs.forEach(function(s){if(s.location)map[s.location]=(map[s.location]||0)+1});
   }else if(type==='mem'){
+    if(songMemberDirectoryLoaded&&songMemberDirectory.length>0){
+      return songMemberDirectory.map(function(m){
+        return {id:m.id,name:m.name,count:memberLinkMeta(m),meta:memberLinkMeta(m)};
+      });
+    }
     allSongs.forEach(function(s){
       if(s.members){
         s.members.split(/[,，、;/:()[\]<>\s]+/).forEach(function(x){
@@ -3641,6 +3870,9 @@ function getSuggestData(type){
 function showSuggest(inputId,type){
   var box=document.getElementById('suggest'+inputId.charAt(0).toUpperCase()+inputId.slice(1));
   if(!box)return;
+  if(type==='mem'&&!songMemberDirectoryLoaded){
+    loadSongMemberDirectory(function(){showSuggest(inputId,type)});
+  }
   var data=getSuggestData(type);
   var input=document.getElementById(inputId);
   var q=(input.value||'').trim().toLowerCase();
@@ -3655,7 +3887,9 @@ function showSuggest(inputId,type){
   if(filtered.length===0){box.classList.add('hidden');return}
 
   box.innerHTML=filtered.slice(0,20).map(function(d){
-    return '<div class="suggest-item" onmousedown="pickSuggest(\''+inputId+'\',\''+d.name.replace(/'/g,"\\'")+'\',\''+type+'\')">'+d.name+' <span style="color:var(--ts);font-size:11px">('+d.count+'회)</span></div>';
+    var countText=d.id?d.count:(d.count+'회');
+    var idArg=d.id?('\',\''+escAttr(d.id)):'';
+    return '<div class="suggest-item" onmousedown="pickSuggest(\''+inputId+'\',\''+escAttr(d.name)+'\',\''+type+idArg+'\')">'+escHtml(d.name)+' <span style="color:var(--ts);font-size:11px">('+escHtml(countText)+')</span></div>';
   }).join('');
   box.classList.remove('hidden');
 }
@@ -3664,7 +3898,7 @@ function filterSuggest(inputId,type){
   showSuggest(inputId,type);
 }
 
-function pickSuggest(inputId,value,type){
+function pickSuggest(inputId,value,type,memberId){
   var input=document.getElementById(inputId);
   if(type==='mem'){
     // 쉼표 구분으로 이어 붙이기
@@ -3672,6 +3906,15 @@ function pickSuggest(inputId,value,type){
     parts.pop();
     parts.push(value);
     input.value=parts.join(', ')+', ';
+    var prefix=inputId.indexOf('edit')===0?'edit':'add';
+    if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
+    if(memberId){
+      var member=songMemberDirectory.find(function(m){return m.id===memberId});
+      if(member){
+        songMemberSelections[prefix][normalizeHistoryName(value)]=memberRefFromMember(member);
+      }
+    }
+    renderSongMemberLinkPanel(prefix);
   }else{
     input.value=value;
   }
