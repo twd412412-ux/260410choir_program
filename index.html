@@ -1468,6 +1468,10 @@ var activeDays=[];
 var COLORS=['#6F826E','#A26F42','#8E86A8','#C66B6B','#C79A45','#6E8792','#7D8A58','#9A6F63','#5F7F68','#B8794F'];
 var selColor=COLORS[0];
 var toastTimer=null;
+var songsLoaded=false, schedulesLoaded=false;
+var songsLoadPromise=null, schedulesLoadPromise=null;
+var homeRenderTimer=null;
+var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
@@ -1731,6 +1735,49 @@ function isAttendanceTargetMember(d){
   var status=d.status||'active';
   return status==='active'&&part!=='명단제외'&&!d.noAtt;
 }
+function requestHomeRender(){
+  if(currentTab!=='home')return;
+  if(homeRenderTimer)clearTimeout(homeRenderTimer);
+  homeRenderTimer=setTimeout(function(){
+    homeRenderTimer=null;
+    renderHome();
+  },80);
+}
+function invalidateHomeAttendanceCache(){
+  homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+}
+function getHomeAttendanceData(dateKey){
+  var now=Date.now();
+  if(homeAttendanceCache.key===dateKey&&homeAttendanceCache.data&&(now-homeAttendanceCache.ts)<30000){
+    return Promise.resolve(homeAttendanceCache.data);
+  }
+  if(homeAttendanceCache.key===dateKey&&homeAttendanceCache.promise){
+    return homeAttendanceCache.promise;
+  }
+  var promise=Promise.all([
+    db.collection('members').get(),
+    db.collection('attendance').doc(dateKey+'_오전').get(),
+    db.collection('attendance').doc(dateKey+'_오후').get()
+  ]).then(function(res){
+    var members=[];
+    res[0].forEach(function(doc){
+      var d=doc.data();
+      if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)});
+    });
+    var data={
+      members:members,
+      am:res[1].exists?res[1].data():null,
+      pm:res[2].exists?res[2].data():null
+    };
+    homeAttendanceCache={key:dateKey,ts:Date.now(),promise:null,data:data};
+    return data;
+  }).catch(function(err){
+    if(homeAttendanceCache.key===dateKey)homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+    throw err;
+  });
+  homeAttendanceCache={key:dateKey,ts:now,promise:promise,data:null};
+  return promise;
+}
 function getSundayFrom(base, offsetWeeks){
   var d=new Date(base.getFullYear(),base.getMonth(),base.getDate());
   d.setDate(d.getDate()-d.getDay()+(offsetWeeks*7));
@@ -1761,7 +1808,8 @@ function renderHome(){
   var weekStart=currentSun, weekEnd=getSaturdayFromSunday(currentSun);
   var weekStartStr=homeInputDate(weekStart), weekEndStr=homeInputDate(weekEnd);
 
-  function songsFor(hymnSongs,date){
+  function songsFor(hymnSongs,date,songsPending){
+    if(songsPending)return '<span style="color:var(--ts)">찬송곡 불러오는 중...</span>';
     var parts=date.split('-');
     var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
     var rows=(hymnSongs||[]).filter(function(s){return s.year===y&&s.month===m&&s.day===d});
@@ -1793,7 +1841,8 @@ function renderHome(){
   function homeRingLoading(label){
     return '<div class="home-mini-ring loading-ring"><div class="home-mini-ring-graph" style="--pct:0"></div><div><div class="home-mini-ring-label">'+label+'</div><div class="home-mini-ring-value">-</div><div class="home-main-sub" style="margin-top:2px">불러오는 중</div><span class="home-ring-chip">대기</span></div></div>';
   }
-  function renderHomeShell(hymnSongs, weekSchedules, attendance){
+  function renderHomeShell(hymnSongs, weekSchedules, attendance, state){
+    state=state||{};
     hymnSongs=hymnSongs||[];
     weekSchedules=(weekSchedules||[]).slice().sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
     var members=attendance&&attendance.members?attendance.members:null;
@@ -1802,7 +1851,9 @@ function renderHome(){
     var attendanceReady=!!attendance&&!!members;
 
     var scheduleHtml='';
-    if(weekSchedules.length===0){
+    if(state.schedulesPending&&weekSchedules.length===0){
+      scheduleHtml='<div class="home-empty-row">일정 정보를 불러오는 중입니다</div>';
+    }else if(weekSchedules.length===0){
       scheduleHtml='<div class="home-empty-row">이번 주 등록된 일정이 없습니다</div>';
     }else{
       scheduleHtml='<div class="home-schedule-list">'+weekSchedules.map(function(s){
@@ -1834,35 +1885,43 @@ function renderHome(){
     c.innerHTML=''
       +'<div class="home-dashboard">'
         +'<div class="home-dashboard-top">'
-          +'<div><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr)+'</div></div>'
+          +'<div><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
           +'<div class="home-hymn-art" aria-hidden="true"><img src="./assets/hymn-dove-book.png" alt=""></div>'
         +'</div>'
         +'<div class="home-dashboard-bottom">'
-          +'<div class="home-dashboard-chip"><div class="home-row-label">지난 주일 '+homeDateStr(lastSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(lastSun))+'</div></div>'
-          +'<div class="home-dashboard-chip"><div class="home-row-label">그 다음 주일 '+homeDateStr(nextSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(nextSun))+'</div></div>'
+          +'<div class="home-dashboard-chip"><div class="home-row-label">지난 주일 '+homeDateStr(lastSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(lastSun),state.songsPending)+'</div></div>'
+          +'<div class="home-dashboard-chip"><div class="home-row-label">그 다음 주일 '+homeDateStr(nextSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(nextSun),state.songsPending)+'</div></div>'
         +'</div>'
       +'</div>'
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>';
   }
 
-  var cachedSongs=allSongs.length>0?allSongs:(loadCache('choir_songs',600000)||[]);
-  var cachedSchedules=allSchedules.length>0?allSchedules:(loadCache('choir_schedules',600000)||[]);
-  renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null);
+  var songCache=allSongs.length>0?allSongs:loadCache('choir_songs',600000);
+  var scheduleCache=allSchedules.length>0?allSchedules:loadCache('choir_schedules',600000);
+  var cachedSongs=Array.isArray(songCache)?songCache:[];
+  var cachedSchedules=Array.isArray(scheduleCache)?scheduleCache:[];
+  var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache};
+  renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
 
   var songPromise=allSongs.length>0
     ? Promise.resolve(allSongs)
+    : songsLoadPromise
+      ? songsLoadPromise
     : db.collection('songs').get().then(function(snap){
         var rows=[];
         snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''})});
-        allSongs=rows;saveCache('choir_songs',allSongs);
+        allSongs=rows;songsLoaded=true;saveCache('choir_songs',allSongs);
         return rows;
       });
   var schedulePromise=allSchedules.length>0
     ? Promise.resolve(allSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}))
+    : schedulesLoadPromise
+      ? schedulesLoadPromise.then(function(rows){return rows.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr})})
     : db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get().then(function(snap){
         var rows=[];
         snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
+        schedulesLoaded=true;
         rows.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch)});
         return rows;
       });
@@ -1874,19 +1933,14 @@ function renderHome(){
   Promise.all([
     songPromise,
     schedulePromise,
-    db.collection('members').get(),
-    db.collection('attendance').doc(currentSunStr+'_오전').get(),
-    db.collection('attendance').doc(currentSunStr+'_오후').get()
+    getHomeAttendanceData(currentSunStr)
   ]).then(function(res){
     var hymnSongs=res[0];
     var weekSchedules=res[1];
-    var members=[];res[2].forEach(function(doc){var d=doc.data();if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)})});
-    var am=res[3].exists?res[3].data():null;
-    var pm=res[4].exists?res[4].data():null;
-    renderHomeShell(hymnSongs,weekSchedules,{members:members,am:am,pm:pm});
+    renderHomeShell(hymnSongs,weekSchedules,res[2]);
   }).catch(function(e){
     console.error(e);
-    renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null);
+    renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
   });
 }
 
@@ -1914,24 +1968,29 @@ function loadCache(key,maxAge){
 // ==================== Firestore: 곡 로드 (get + 캐시) ====================
 function initSongs(){
   var cached=loadCache('choir_songs',600000);
-  if(cached&&cached.length>0){
+  if(Array.isArray(cached)){
     allSongs=cached;
+    songsLoaded=true;
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
+    requestHomeRender();
   }
-  db.collection('songs').get().then(function(snap){
+  songsLoadPromise=db.collection('songs').get().then(function(snap){
     allSongs=[];
     snap.forEach(function(doc){
       var d=doc.data();
       allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
     });
+    songsLoaded=true;
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
-    if(currentTab==='home')renderHome();
+    requestHomeRender();
+    return allSongs;
   }).catch(function(err){
     console.error(err);
-    if(!cached||cached.length===0){
+    if(!Array.isArray(cached)||cached.length===0){
       document.getElementById('songList').innerHTML='<div class="loading">데이터를 불러올 수 없습니다.</div>';
     }
+    return allSongs;
   });
 }
 
@@ -1939,6 +1998,7 @@ function initSongs(){
 // ==================== 데이터 새로고침 ====================
 function refreshData(){
   showToast('새로고침 중...');
+  invalidateHomeAttendanceCache();
   Promise.all([
     db.collection('songs').get().then(function(snap){
       allSongs=[];
@@ -1946,15 +2006,18 @@ function refreshData(){
         var d=doc.data();
         allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
       });
+      songsLoaded=true;
       saveCache('choir_songs',allSongs);
       buildFilters();doFilter();
-      if(currentTab==='home')renderHome();
+      return allSongs;
     }),
     db.collection('schedules').get().then(function(snap){
       allSchedules=[];
       snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0]})});
+      schedulesLoaded=true;
       saveCache('choir_schedules',allSchedules);
-      if(currentTab==='calendar')renderCal(); if(currentTab==='home')renderHome();
+      if(currentTab==='calendar')renderCal();
+      return allSchedules;
     }),
     db.collection('settings').doc('notice').get().then(function(doc){
       var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
@@ -1962,6 +2025,7 @@ function refreshData(){
       else{b.classList.add('hidden');t.textContent='';localStorage.removeItem('choir_notice')}
     })
   ]).then(function(){
+    requestHomeRender();
     showToast('최신 데이터로 업데이트 완료!');
   }).catch(function(){
     showToast('일부 데이터를 불러오지 못했습니다');
@@ -2755,14 +2819,22 @@ function delNotice(){
 // ==================== 일정 (get + 캐시) ====================
 function initSchedules(){
   var cached=loadCache('choir_schedules',600000);
-  if(cached&&cached.length>0){allSchedules=cached;if(currentTab==='calendar')renderCal(); if(currentTab==='home')renderHome()}
+  if(Array.isArray(cached)){
+    allSchedules=cached;
+    schedulesLoaded=true;
+    if(currentTab==='calendar')renderCal();
+    requestHomeRender();
+  }
 
-  db.collection('schedules').get().then(function(snap){
+  schedulesLoadPromise=db.collection('schedules').get().then(function(snap){
     allSchedules=[];
     snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
+    schedulesLoaded=true;
     saveCache('choir_schedules',allSchedules);
-    if(currentTab==='calendar')renderCal(); if(currentTab==='home')renderHome();
-  }).catch(function(){});
+    if(currentTab==='calendar')renderCal();
+    requestHomeRender();
+    return allSchedules;
+  }).catch(function(){return allSchedules;});
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -3628,6 +3700,7 @@ function init(){
   initAdminSettings();
   initNotice();
   initSchedules();
+  if(currentTab==='home')renderHome();
   initColorPicker();
   buildCatOptions();
   buildYearOptions();
@@ -4348,6 +4421,7 @@ function saveAttendance(){
     }
 
     showToast(date+' '+attSession+' 출석이 저장되었습니다!');
+    invalidateHomeAttendanceCache();
     loadAttendance();
   }).catch(function(e){
     if(saveBtn){
@@ -4834,6 +4908,7 @@ function deleteAttendance(){
   if(!confirm(date+' '+attSession+' 출석 기록을 완전히 삭제할까요?'))return;
   db.collection('attendance').doc(docId).delete().then(function(){
     showToast(date+' '+attSession+' 기록이 삭제되었습니다!');
+    invalidateHomeAttendanceCache();
     document.getElementById('attDate').value='';
     attData={};attReasons={};
     document.getElementById('attList').innerHTML='';
