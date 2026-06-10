@@ -1549,7 +1549,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v32.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v33.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2249,6 +2249,8 @@ function addNewSong(skipMemberLoad){
   }
   var memberResult=confirmSongMemberRefs('add');
   if(!memberResult)return showToast('저장이 취소되었습니다. 미확인 단원을 확인해주세요.');
+  var unresolvedCount=memberResult.unresolved.length;
+  showToast(unresolvedCount>0?'미연결 '+unresolvedCount+'명 포함 저장 중...':'곡 저장 중...');
   db.collection('songs').add({
     songName:name,year:year,month:month,
     day:day,
@@ -2268,7 +2270,7 @@ function addNewSong(skipMemberLoad){
     // [수정됨] 곡 추가 로그 디테일 강화
     var logPia = document.getElementById('addPia').value || '반주 미정';
     writeLog('곡 추가', `🎵 [${name}] 등록\n👉 예정일: ${year}.${month}.${day} | 🎹 반주: ${logPia}`);
-    showToast('곡이 추가되었습니다!');
+    showToast(unresolvedCount>0?'곡이 추가되었습니다. 미연결 단원은 문자열만 저장되었습니다.':'곡이 추가되었습니다!');
     ['addSongName','addDate','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('addDow').value='';
     document.getElementById('addCatSel').selectedIndex=0;
@@ -2322,13 +2324,15 @@ function saveEdit(skipMemberLoad){
   }
   var memberResult=confirmSongMemberRefs('edit');
   if(!memberResult)return showToast('저장이 취소되었습니다. 미확인 단원을 확인해주세요.');
+  var unresolvedCount=memberResult.unresolved.length;
   var data={songName:document.getElementById('editName').value.trim(),year:parseInt(document.getElementById('editYear').value,10)||0,month:parseInt(document.getElementById('editMonth').value,10)||0,day:parseInt(document.getElementById('editDay').value,10)||null,dayOfWeek:document.getElementById('editDow').value,category:cat,subCategory:document.getElementById('editSub').value.trim(),location:document.getElementById('editLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('editPia').value.trim(),youtube:yt};
+  showToast(unresolvedCount>0?'미연결 '+unresolvedCount+'명 포함 저장 중...':'수정 저장 중...');
   db.collection('songs').doc(currentDetailSong.id).update(data).then(function(){
     var idx=allSongs.findIndex(function(s){return s.id===currentDetailSong.id});
     if(idx>-1){Object.assign(allSongs[idx],data);saveCache('choir_songs',allSongs);buildFilters();buildCatOptions();doFilter()}
     var auditSub=document.getElementById('subMemberLinkAudit');
     if(auditSub&&!auditSub.classList.contains('hidden'))renderMemberLinkAudit(allSongs);
-    writeLog('곡 수정','"'+data.songName+'" 수정됨');closeModal('modalEdit');showToast('수정되었습니다');
+    writeLog('곡 수정','"'+data.songName+'" 수정됨');closeModal('modalEdit');showToast(unresolvedCount>0?'수정되었습니다. 미연결 단원은 문자열만 저장되었습니다.':'수정되었습니다');
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
 
@@ -2767,12 +2771,7 @@ function confirmSongMemberRefs(prefix){
   renderSongMemberLinkPanel(prefix);
   var result=collectSongMemberRefs(prefix);
   if(result.unresolved.length===0)return result;
-  var lines=result.unresolved.slice(0,8).map(function(x){return '- '+x.name+' ('+x.reason+')'});
-  if(result.unresolved.length>8)lines.push('- 외 '+(result.unresolved.length-8)+'명');
-  var msg='참여 단원 중 명부와 연결되지 않은 이름이 있습니다.\n\n'
-    +lines.join('\n')
-    +'\n\n문자열은 저장되지만, 단원 활동 이력에는 정확히 연결되지 않을 수 있습니다.\n그래도 저장하시겠습니까?';
-  if(!confirm(msg))return null;
+  showToast('미연결 '+result.unresolved.length+'명은 단원 이력 없이 문자열만 저장됩니다.');
   return result;
 }
 
@@ -3097,7 +3096,8 @@ function markMemberLinkException(songId, entry, reason){
     createdAt:new Date().toISOString(),
     createdBy:currentUser?currentUser.name:(adminRole||'관리자')
   });
-  saveMemberLinkExceptions(song,exceptions,(reason||'처리 제외')+'로 처리했습니다.');
+  memberLinkAuditFilter='ignored';
+  saveMemberLinkExceptions(song,exceptions,'처리 제외 항목으로 저장했습니다. ('+(reason||'처리 제외')+') 취소하려면 제외 취소를 누르세요.');
 }
 
 function removeMemberLinkException(songId, entry){
@@ -3106,7 +3106,8 @@ function removeMemberLinkException(songId, entry){
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
   var key=participantEntryKey(entry);
   var exceptions=getMemberLinkExceptions(song).filter(function(item){return participantEntryKey(item&&item.name)!==key;});
-  saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다.');
+  memberLinkAuditFilter='unlinked';
+  saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다. 다시 점검 목록에 표시됩니다.');
 }
 
 function renderMemberLinkAudit(songs){
