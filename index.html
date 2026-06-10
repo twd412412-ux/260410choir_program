@@ -1095,7 +1095,7 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="addCatSel" onchange="onCatSelect('add')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="addCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="addSub" placeholder="예: 용봉, 연제"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="addLoc" placeholder="예: 본당 대강당" onfocus="showSuggest('addLoc','loc')" oninput="filterSuggest('addLoc','loc')"><div class="suggest-box hidden" id="suggestAddLoc"></div></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표 또는 ; 구분)" onfocus="initSongMemberLinker('add');showSuggest('addMem','mem')" oninput="onSongMemberInput('add');filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div><div class="member-link-panel" id="addMemberLinkPanel"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="addMem" placeholder="이름 (쉼표, ;, / 구분)" onfocus="initSongMemberLinker('add');showSuggest('addMem','mem')" oninput="onSongMemberInput('add');filterSuggest('addMem','mem')"><div class="suggest-box hidden" id="suggestAddMem"></div><div class="member-link-panel" id="addMemberLinkPanel"></div></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="addPia" placeholder="반주자 이름 또는 MR" onfocus="showSuggest('addPia','pia')" oninput="filterSuggest('addPia','pia')"><div class="suggest-box hidden" id="suggestAddPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="addYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
 
@@ -1349,7 +1349,7 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="editCatSel" onchange="onCatSelect('edit')"><option value="">선택</option><option value="__custom">✏️ 직접 입력</option></select><input class="form-input hidden" id="editCatInput" placeholder="새 카테고리 입력" style="margin-top:6px"></div>
     <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="editSub"></div>
     <div class="form-group"><label class="form-label">장소</label><input class="form-input" id="editLoc" onfocus="showSuggest('editLoc','loc')" oninput="filterSuggest('editLoc','loc')"><div class="suggest-box hidden" id="suggestEditLoc"></div></div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem" onfocus="initSongMemberLinker('edit');showSuggest('editMem','mem')" oninput="onSongMemberInput('edit');filterSuggest('editMem','mem')"><div class="suggest-box hidden" id="suggestEditMem"></div><div class="member-link-panel" id="editMemberLinkPanel"></div></div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="editMem" placeholder="이름 (쉼표, ;, / 구분)" onfocus="initSongMemberLinker('edit');showSuggest('editMem','mem')" oninput="onSongMemberInput('edit');filterSuggest('editMem','mem')"><div class="suggest-box hidden" id="suggestEditMem"></div><div class="member-link-panel" id="editMemberLinkPanel"></div></div>
     <div class="form-group"><label class="form-label">반주자</label><input class="form-input" id="editPia" onfocus="showSuggest('editPia','pia')" oninput="filterSuggest('editPia','pia')"><div class="suggest-box hidden" id="suggestEditPia"></div></div>
     <div class="form-group"><label class="form-label">유튜브 링크</label><input class="form-input" id="editYoutube" placeholder="https://youtu.be/... 또는 검색어"></div>
     <button class="btn btn-p btn-bl" onclick="saveEdit()">저장</button>
@@ -1549,7 +1549,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v31.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v32.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2531,7 +2531,7 @@ function normalizeHistoryName(v){
 
 function splitParticipantEntries(raw){
   return String(raw||'')
-    .split(/[,，、;；\n\r]+/)
+    .split(/[,，、;；/／\n\r]+/)
     .map(function(v){return v.trim();})
     .filter(Boolean);
 }
