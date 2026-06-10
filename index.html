@@ -149,6 +149,7 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .member-link-state.ok{background:#EAEFDF;color:#4E5A35}
 .member-link-state.warn{background:#F4E7CC;color:#7C571E}
 .member-link-state.no{background:#F0DFDB;color:#8D4B45}
+.member-link-state.skip{background:#ECE7DA;color:#655E52}
 .member-link-select{font-size:12px;padding:8px 10px}
 .member-link-note{font-size:11px;color:var(--ts);line-height:1.45}
 .member-audit-intro{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.55;color:var(--ts)}
@@ -1548,7 +1549,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v30.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v31.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2563,6 +2564,29 @@ function participantHasLookupAlias(entry){
   return normalizeHistoryName(entry)!==participantEntryKey(entry);
 }
 
+function isGenericParticipantLabel(value){
+  var key=normalizeHistoryName(value);
+  if(!key)return false;
+  var labels=[
+    '팀원','싱어','보컬','찬양팀','중창팀','합창','합창단','성가대','찬양대',
+    '관현악','관현악단원','오케스트라','오케스트라단원','연주자','악기','현악','관악',
+    '외부','외부인원','외부단원','객원','객원단원','게스트','임시','지원',
+    '단원','전체','남성','여성','남자','여자'
+  ];
+  return labels.some(function(label){return key===normalizeHistoryName(label);})||(/단원$/.test(key)&&key.length<=8);
+}
+
+function participantEntryInfo(entry){
+  var lookupName=participantLookupName(entry);
+  return {
+    raw:String(entry||'').trim(),
+    lookupName:lookupName,
+    key:normalizeHistoryName(lookupName),
+    hasAlias:participantHasLookupAlias(entry),
+    isGeneric:isGenericParticipantLabel(lookupName)
+  };
+}
+
 function memberLinkMeta(m){
   return [normalizePartName(m.part)||'',normalizePartName(m.subPart)||'',m.group||'',m.district?(m.district+'교구'):''].filter(Boolean).join(' · ');
 }
@@ -2634,7 +2658,9 @@ function onSongMemberInput(prefix){
 }
 
 function findSongMemberCandidates(entry){
-  var key=participantEntryKey(entry);
+  var info=participantEntryInfo(entry);
+  var key=info.key;
+  if(info.isGeneric)return [];
   if(!key)return [];
   return songMemberDirectory.filter(function(m){return normalizeHistoryName(m.name)===key});
 }
@@ -2659,17 +2685,24 @@ function renderSongMemberLinkPanel(prefix){
   if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
 
   panel.innerHTML=entries.map(function(entry){
-    var key=participantEntryKey(entry);
-    var lookupName=participantLookupName(entry);
-    var hasAlias=participantHasLookupAlias(entry);
+    var info=participantEntryInfo(entry);
+    var key=info.key;
+    var lookupName=info.lookupName;
+    var hasAlias=info.hasAlias;
     var candidates=findSongMemberCandidates(entry);
     var selected=songMemberSelections[prefix][key]||null;
-    if(!selected&&candidates.length===1){
+    if(info.isGeneric){
+      selected=null;
+    }else if(!selected&&candidates.length===1){
       selected=memberRefFromMember(candidates[0]);
       songMemberSelections[prefix][key]=selected;
     }
     var stateCls='no',stateText='명부 미확인',note='명부에 없는 이름입니다. 외부/임시 인원이면 그대로 저장할 수 있습니다.';
-    if(selected&&selected.id){
+    if(info.isGeneric){
+      stateCls='skip';
+      stateText='역할 표기';
+      note=(hasAlias?lookupName:'개인 이름이 아닌 항목')+'은 단원 활동 이력에 연결하지 않고 입력 표기만 저장됩니다.';
+    }else if(selected&&selected.id){
       stateCls='ok';
       stateText='연결됨';
       var selectedMeta=memberLinkMeta(selected);
@@ -2708,8 +2741,10 @@ function collectSongMemberRefs(prefix){
   var refs=[],seen={},unresolved=[];
   if(!songMemberSelections[prefix])songMemberSelections[prefix]={};
   entries.forEach(function(entry){
-    var key=participantEntryKey(entry);
+    var info=participantEntryInfo(entry);
+    var key=info.key;
     if(!key)return;
+    if(info.isGeneric)return;
     var candidates=findSongMemberCandidates(entry);
     var selected=songMemberSelections[prefix][key]||null;
     if(!selected&&candidates.length===1){
@@ -2817,9 +2852,10 @@ function formatMemberAuditCandidate(m){
 }
 
 function hasLinkedRefForEntry(song, entry, candidates){
-  var key=participantEntryKey(entry);
+  var info=participantEntryInfo(entry);
+  var key=info.key;
   var refs=Array.isArray(song.memberRefs)?song.memberRefs:[];
-  if(!key||refs.length===0)return false;
+  if(info.isGeneric||!key||refs.length===0)return false;
   var linkedIds={};
   for(var i=0;i<refs.length;i++){
     var ref=refs[i]||{};
@@ -2853,8 +2889,10 @@ function getSongMemberLinkIssues(song){
   if(entries.length===0)return [];
   var issues=[];
   entries.forEach(function(entry){
-    var key=participantEntryKey(entry);
+    var info=participantEntryInfo(entry);
+    var key=info.key;
     if(!key)return;
+    if(info.isGeneric)return;
     if(getMemberLinkException(song,entry))return;
     var candidates=findSongMemberCandidates(entry);
     if(hasLinkedRefForEntry(song,entry,candidates))return;
