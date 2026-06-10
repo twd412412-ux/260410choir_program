@@ -154,6 +154,9 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .member-audit-intro{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.55;color:var(--ts)}
 .member-audit-controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .member-audit-controls .form-sel{flex:1;min-width:150px}
+.member-audit-status{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:10px;padding:9px 10px;margin:-2px 0 12px;font-size:11px;line-height:1.45;color:#655E52;font-weight:700}
+.member-audit-status.warn{background:#F4E7CC;color:#7C571E;border-color:#E5C88F}
+.member-audit-status.no{background:#F0DFDB;color:#8D4B45;border-color:#E4C3BE}
 .member-audit-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .member-audit-stat{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:12px;padding:10px}
 .member-audit-stat-num{font-size:22px;font-weight:850;color:#4E5A35;line-height:1}
@@ -1112,6 +1115,7 @@ body{font-weight:500}
       <button class="btn btn-sm" id="memberAutoLinkBtn" style="background:var(--p);color:#fff;white-space:nowrap" onclick="autoLinkSongMembers()">자동 연결</button>
       <button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="loadMemberLinkAudit(true)">다시 점검</button>
     </div>
+    <div id="memberLinkAuditStatus" class="member-audit-status hidden"></div>
     <div id="memberLinkAuditSummary"></div>
     <div id="memberLinkAuditList" class="member-audit-list"></div>
   </div>
@@ -1530,6 +1534,8 @@ var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
+var memberLinkAuditRequestId=0;
+var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
 
 // ==================== 토스트 ====================
@@ -1540,7 +1546,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v27.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v28.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -2711,6 +2717,56 @@ function getSongsForMemberLinkAudit(force){
   });
 }
 
+function withMemberAuditTimeout(promise, fallbackValue, label){
+  return new Promise(function(resolve){
+    var settled=false;
+    var timer=setTimeout(function(){
+      if(settled)return;
+      settled=true;
+      resolve({value:fallbackValue,timedOut:true,label:label});
+    },MEMBER_LINK_AUDIT_TIMEOUT_MS);
+    promise.then(function(value){
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      resolve({value:value,timedOut:false,label:label});
+    }).catch(function(e){
+      console.error(e);
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      resolve({value:fallbackValue,timedOut:false,error:true,label:label});
+    });
+  });
+}
+
+function setMemberLinkAuditStatus(message,state){
+  var el=document.getElementById('memberLinkAuditStatus');
+  if(!el)return;
+  if(!message){
+    el.classList.add('hidden');
+    el.textContent='';
+    el.classList.remove('warn','no');
+    return;
+  }
+  el.textContent=message;
+  el.classList.remove('hidden','warn','no');
+  if(state)el.classList.add(state);
+}
+
+function getSongMemberDirectoryForAudit(force){
+  if(!force)return loadSongMemberDirectory();
+  return db.collection('members').orderBy('name').get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()))});
+    setSongMemberDirectory(rows);
+    return songMemberDirectory;
+  }).catch(function(e){
+    console.error(e);
+    return songMemberDirectory;
+  });
+}
+
 function formatMemberAuditCandidate(m){
   var meta=memberLinkMeta(m);
   return (m.name||'이름 없음')+(meta?' · '+meta:'');
@@ -2977,18 +3033,48 @@ function renderMemberLinkAudit(songs){
 }
 
 function loadMemberLinkAudit(force){
+  var requestId=++memberLinkAuditRequestId;
   var list=document.getElementById('memberLinkAuditList');
-  var summary=document.getElementById('memberLinkAuditSummary');
-  if(list)list.innerHTML='<div class="loading" style="padding:24px"><div class="spinner"></div>단원 연결 상태를 점검하는 중...</div>';
-  if(summary)summary.innerHTML='';
-  if(force){
-    songMemberDirectoryLoaded=false;
-    songMemberDirectoryPromise=null;
+  var hasRenderableCache=allSongs.length>0&&songMemberDirectory.length>0;
+  if(hasRenderableCache){
+    renderMemberLinkAudit(allSongs);
+    setMemberLinkAuditStatus(force?'최신 데이터로 다시 점검하는 중입니다. 기존 결과를 먼저 표시합니다.':'단원 연결 상태를 확인하는 중입니다.');
+  }else if(list){
+    list.innerHTML='<div class="loading" style="padding:24px"><div class="spinner"></div>단원 연결 상태를 점검하는 중...</div>';
+    setMemberLinkAuditStatus('');
   }
-  Promise.all([getSongsForMemberLinkAudit(!!force),loadSongMemberDirectory()]).then(function(results){
-    renderMemberLinkAudit(results[0]||allSongs);
+
+  Promise.all([
+    withMemberAuditTimeout(getSongsForMemberLinkAudit(!!force),allSongs,'songs'),
+    withMemberAuditTimeout(getSongMemberDirectoryForAudit(!!force),songMemberDirectory,'members')
+  ]).then(function(results){
+    if(requestId!==memberLinkAuditRequestId)return;
+    var songsResult=results[0], membersResult=results[1];
+    if(!membersResult.value||membersResult.value.length===0){
+      setMemberLinkAuditStatus('단원 명부 조회가 지연되어 점검을 완료하지 못했습니다. 잠시 후 다시 점검해주세요.','no');
+      if(list)list.innerHTML='<div class="member-audit-empty">단원 명부를 아직 불러오지 못했습니다.</div>';
+      return;
+    }
+    if(!songsResult.value||songsResult.value.length===0){
+      setMemberLinkAuditStatus('곡 데이터 조회가 지연되어 점검할 항목을 불러오지 못했습니다. 잠시 후 다시 점검해주세요.','no');
+      if(list)list.innerHTML='<div class="member-audit-empty">곡 데이터를 아직 불러오지 못했습니다.</div>';
+      return;
+    }
+    renderMemberLinkAudit(songsResult.value||allSongs);
+    if(songsResult.timedOut||membersResult.timedOut){
+      setMemberLinkAuditStatus('최신 조회가 지연되어 현재 기기에 있는 데이터 기준으로 표시합니다. 다시 점검을 누르면 재시도합니다.','warn');
+    }else if(songsResult.error||membersResult.error){
+      setMemberLinkAuditStatus('일부 데이터를 새로 불러오지 못해 현재 보유 데이터 기준으로 표시합니다.','warn');
+    }else{
+      setMemberLinkAuditStatus(force?'최신 데이터로 점검했습니다.':'');
+    }
   }).catch(function(e){
     console.error(e);
+    setMemberLinkAuditStatus('점검 중 오류가 발생했습니다. 현재 보유 데이터가 있으면 그 기준으로 표시합니다.','no');
+    if(allSongs.length>0&&songMemberDirectory.length>0){
+      renderMemberLinkAudit(allSongs);
+      return;
+    }
     if(list)list.innerHTML='<div class="member-audit-empty">점검 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';
   });
 }
