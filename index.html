@@ -411,6 +411,139 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
   overflow-wrap:anywhere;
 }
 
+.hb-activity-btn{
+  background:#EAEFDF!important;
+  color:#4E5A35!important;
+  border:1px solid #C8D0B9!important;
+}
+
+.member-history-hero{
+  background:#F8F2E8;
+  border:1px solid #E1D7C5;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px;
+}
+
+.member-history-name{
+  font-size:20px;
+  font-weight:850;
+  line-height:1.25;
+  margin-bottom:4px;
+}
+
+.member-history-meta{
+  color:var(--ts);
+  font-size:13px;
+  font-weight:650;
+}
+
+.member-history-stats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0;
+}
+
+.member-history-stat{
+  background:#FFFDF8;
+  border:1px solid #E1D7C5;
+  border-radius:12px;
+  padding:10px 8px;
+  text-align:center;
+  min-width:0;
+}
+
+.member-history-stat-num{
+  color:#6F7D4E;
+  font-size:19px;
+  font-weight:850;
+  line-height:1.15;
+  word-break:keep-all;
+}
+
+.member-history-stat-label{
+  color:var(--ts);
+  font-size:11px;
+  font-weight:700;
+  margin-top:3px;
+}
+
+.member-history-section-title{
+  font-size:14px;
+  font-weight:850;
+  margin:14px 0 8px;
+}
+
+.member-history-list{
+  border:1px solid #E1D7C5;
+  border-radius:12px;
+  overflow:hidden;
+  background:#FFFDF8;
+}
+
+.member-history-row{
+  display:grid;
+  grid-template-columns:74px minmax(0,1fr) 20px;
+  gap:8px;
+  align-items:center;
+  padding:10px 12px;
+  border-bottom:1px solid #EDE3D3;
+  cursor:pointer;
+}
+
+.member-history-row:last-child{border-bottom:0}
+
+.member-history-date{
+  color:#606554;
+  font-size:12px;
+  font-weight:800;
+}
+
+.member-history-song{
+  font-size:14px;
+  font-weight:820;
+  line-height:1.35;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.member-history-sub{
+  color:var(--ts);
+  font-size:11px;
+  margin-top:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.member-history-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.member-history-chip{
+  background:#EAEFDF;
+  color:#4E5A35;
+  border:1px solid #C8D0B9;
+  border-radius:999px;
+  padding:5px 9px;
+  font-size:12px;
+  font-weight:780;
+}
+
+.member-history-empty{
+  color:var(--ts);
+  background:#F8F2E8;
+  border:1px solid #E1D7C5;
+  border-radius:12px;
+  padding:16px 14px;
+  font-size:13px;
+  line-height:1.55;
+}
+
 /* 일정관리 */
 #subSchedule > .form-group{
   min-width:0;
@@ -1128,6 +1261,14 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">👤 내 프로필</span><button class="modal-close" onclick="closeModal('modalUser')">✕</button></div>
     <div id="userModalBody"></div>
+  </div>
+</div>
+
+<!-- MODAL: 단원 활동 이력 -->
+<div class="modal-overlay modal-center" id="modalMemberSongHistory">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">🎵 단원 활동 이력</span><button class="modal-close" onclick="closeModal('modalMemberSongHistory')">✕</button></div>
+    <div id="memberSongHistoryBody"></div>
   </div>
 </div>
 
@@ -2200,6 +2341,7 @@ ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#
           </div>
           <div class="hb-card-actions">
             <div style="display:flex; gap:2px">
+               <button class="btn btn-sm hb-activity-btn" style="padding:4px 8px; font-size:10px" onclick="openMemberSongHistory('${escAttr(m.id)}')">활동</button>
                <button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${m.id}')">✏️</button>
                <button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${m.id}', '${m.name}')">🗑️</button>
             </div>
@@ -2211,6 +2353,131 @@ ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#
         </div>
       </div>`;
   }).join('');
+}
+
+function normalizeHistoryName(v){
+  return String(v||'')
+    .toLowerCase()
+    .replace(/\s+/g,'')
+    .replace(/[()（）\[\]{}<>《》「」『』"']/g,'')
+    .replace(/[·ㆍ.,，、;:/|\\\-_*+~!?]/g,'')
+    .trim();
+}
+
+function splitSongMemberNames(raw){
+  return String(raw||'')
+    .split(/[\s,，、;:/|\\()\[\]{}<>《》「」『』"'\n\r\t]+/)
+    .map(function(v){return normalizeHistoryName(v)})
+    .filter(function(v){return v.length>=2});
+}
+
+function songHasMember(song, memberName){
+  var target=normalizeHistoryName(memberName);
+  if(!target)return false;
+  var tokens=splitSongMemberNames(song.members||'');
+  if(tokens.indexOf(target)>-1)return true;
+  var compact=normalizeHistoryName(song.members||'');
+  return target.length>=3&&compact.indexOf(target)>-1;
+}
+
+function songDateValue(s){
+  return (Number(s.year)||0)*10000+(Number(s.month)||0)*100+(Number(s.day)||0);
+}
+
+function songDateLabel(s){
+  if(!s||!s.year)return '날짜 미입력';
+  return s.year+'.'+String(s.month||0).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'');
+}
+
+function loadSongsForMemberHistory(callback){
+  if(allSongs.length>0){callback();return;}
+  db.collection('songs').get().then(function(snap){
+    allSongs=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+    });
+    saveCache('choir_songs',allSongs);
+    callback();
+  }).catch(function(e){
+    console.error(e);
+    var body=document.getElementById('memberSongHistoryBody');
+    if(body)body.innerHTML='<div class="member-history-empty">곡 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';
+  });
+}
+
+function countMemberHistoryBy(rows, keyFn){
+  var map={};
+  rows.forEach(function(s){
+    var key=keyFn(s)||'미분류';
+    map[key]=(map[key]||0)+1;
+  });
+  return Object.entries(map).sort(function(a,b){return b[1]-a[1]||String(a[0]).localeCompare(String(b[0]),'ko')});
+}
+
+function openSongFromMemberHistory(id){
+  closeModal('modalMemberSongHistory');
+  openDetail(id);
+}
+
+function renderMemberSongHistory(member, songs){
+  var body=document.getElementById('memberSongHistoryBody');
+  if(!body)return;
+  var rows=songs.filter(function(s){return songHasMember(s,member.name)}).sort(function(a,b){return songDateValue(b)-songDateValue(a)});
+  var partText=normalizePartName(member.part||'')+(member.subPart?' · '+normalizePartName(member.subPart):'');
+  var latest=rows[0]||null;
+
+  var h='<div class="member-history-hero">'
+    +'<div class="member-history-name">'+escHtml(member.name||'이름 없음')+'</div>'
+    +'<div class="member-history-meta">'+escHtml(partText||'파트 미입력')+(member.group?' · '+escHtml(member.group):'')+'</div>'
+    +'</div>';
+
+  h+='<div class="member-history-stats">'
+    +'<div class="member-history-stat"><div class="member-history-stat-num">'+rows.length+'</div><div class="member-history-stat-label">참여 기록</div></div>'
+    +'<div class="member-history-stat"><div class="member-history-stat-num">'+(latest?escHtml(songDateLabel(latest).replace(/^\d{4}\./,'')):'-')+'</div><div class="member-history-stat-label">최근 참여</div></div>'
+    +'<div class="member-history-stat"><div class="member-history-stat-num">'+(rows.length?countMemberHistoryBy(rows,function(s){return s.year})[0][0]:'-')+'</div><div class="member-history-stat-label">최다 연도</div></div>'
+    +'</div>';
+
+  if(rows.length===0){
+    h+='<div class="member-history-empty">곡 기록의 참여 단원 항목에서 이 단원 이름을 찾지 못했습니다.<br>이름 표기가 다르게 저장된 경우에는 누락될 수 있습니다.</div>';
+    body.innerHTML=h;
+    return;
+  }
+
+  h+='<div class="member-history-section-title">최근 참여곡</div>'
+    +'<div class="member-history-list">'
+    +rows.slice(0,12).map(function(s){
+      var meta=[s.category||'',s.subCategory||'',s.pianist?('반주 '+s.pianist):'',s.location||''].filter(Boolean).join(' · ');
+      return '<div class="member-history-row" onclick="openSongFromMemberHistory(\''+escAttr(s.id)+'\')">'
+        +'<div class="member-history-date">'+escHtml(songDateLabel(s).replace(/^\d{4}\./,''))+'</div>'
+        +'<div><div class="member-history-song">'+escHtml(s.songName||'곡명 없음')+'</div><div class="member-history-sub">'+escHtml(meta||'세부 정보 없음')+'</div></div>'
+        +'<div class="home-chevron">›</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+
+  var categories=countMemberHistoryBy(rows,function(s){return s.category||'미분류'}).slice(0,8);
+  h+='<div class="member-history-section-title">분류별 참여</div><div class="member-history-chip-row">'
+    +categories.map(function(x){return '<span class="member-history-chip">'+escHtml(x[0])+' '+x[1]+'회</span>';}).join('')
+    +'</div>';
+
+  var years=countMemberHistoryBy(rows,function(s){return s.year||'연도 미입력'}).slice(0,8);
+  h+='<div class="member-history-section-title">연도별 참여</div><div class="member-history-chip-row">'
+    +years.map(function(x){return '<span class="member-history-chip">'+escHtml(x[0])+'년 '+x[1]+'회</span>';}).join('')
+    +'</div>';
+
+  body.innerHTML=h;
+}
+
+function openMemberSongHistory(id){
+  var member=directoryData.find(function(x){return x.id===id});
+  if(!member)return showToast('단원 정보를 찾을 수 없습니다');
+  var body=document.getElementById('memberSongHistoryBody');
+  if(body)body.innerHTML='<div class="loading" style="padding:24px"><div class="spinner"></div>활동 이력을 불러오는 중...</div>';
+  openModal('modalMemberSongHistory');
+  loadSongsForMemberHistory(function(){
+    renderMemberSongHistory(member,allSongs);
+  });
 }
 
 // 현재 선택된 파트 필터를 기억하는 변수
