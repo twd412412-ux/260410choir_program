@@ -152,8 +152,8 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .member-link-select{font-size:12px;padding:8px 10px}
 .member-link-note{font-size:11px;color:var(--ts);line-height:1.45}
 .member-audit-intro{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.55;color:var(--ts)}
-.member-audit-controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-.member-audit-controls .form-sel{flex:1}
+.member-audit-controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.member-audit-controls .form-sel{flex:1;min-width:150px}
 .member-audit-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .member-audit-stat{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:12px;padding:10px}
 .member-audit-stat-num{font-size:22px;font-weight:850;color:#4E5A35;line-height:1}
@@ -170,6 +170,11 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .member-audit-chip.ambiguous{background:#F4E7CC;color:#7C571E}
 .member-audit-chip.missing{background:#F0DFDB;color:#8D4B45}
 .member-audit-chip.auto{background:#EAEFDF;color:#4E5A35}
+.member-audit-chip.ignored{background:#ECE7DA;color:#655E52}
+.member-audit-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.member-audit-mini{border:1px solid #D8CAB7;background:#FFFDF8;color:#4E5A35;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:850;cursor:pointer}
+.member-audit-mini.warn{background:#F4E7CC;color:#7C571E}
+.member-audit-mini.no{background:#F0DFDB;color:#8D4B45}
 .member-audit-empty{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:12px;padding:24px 12px;text-align:center;color:var(--ts);font-size:13px;font-weight:700}
 .archive-top{padding:12px 16px 0}
 .archive-top p{font-size:13px;color:var(--ts);margin-top:6px;line-height:1.5}
@@ -1093,7 +1098,7 @@ body{font-weight:500}
   <div class="admin-sub hidden" id="subMemberLinkAudit">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🔎 단원 연결 점검</h3>
     <div class="member-audit-intro">
-      참여 단원 이름이 명부의 실제 단원과 연결되어 있는지 확인합니다. 이 화면은 점검만 하고 자동 저장은 하지 않습니다.
+      참여 단원 이름이 명부의 실제 단원과 연결되어 있는지 확인합니다. 이름이 정확히 1명과 일치하면 자동 연결할 수 있고, 실제 단원이 아닌 이름은 예외로 처리할 수 있습니다.
     </div>
     <div class="member-audit-controls">
       <select class="form-sel" id="memberLinkAuditFilter" onchange="changeMemberLinkAuditFilter(this.value)">
@@ -1102,7 +1107,9 @@ body{font-weight:500}
         <option value="ambiguous">동명이인 선택 필요</option>
         <option value="missing">명부 미확인</option>
         <option value="auto">자동 연결 가능</option>
+        <option value="ignored">처리 제외</option>
       </select>
+      <button class="btn btn-sm" id="memberAutoLinkBtn" style="background:var(--p);color:#fff;white-space:nowrap" onclick="autoLinkSongMembers()">자동 연결</button>
       <button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="loadMemberLinkAudit(true)">다시 점검</button>
     </div>
     <div id="memberLinkAuditSummary"></div>
@@ -1533,7 +1540,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v26.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v27.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -1963,7 +1970,7 @@ function renderHome(){
       ? songsLoadPromise
     : db.collection('songs').get().then(function(snap){
         var rows=[];
-        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''})});
+        snap.forEach(function(doc){rows.push(songRowFromDoc(doc))});
         allSongs=rows;songsLoaded=true;saveCache('choir_songs',allSongs);
         return rows;
       });
@@ -2030,8 +2037,7 @@ function initSongs(){
   songsLoadPromise=db.collection('songs').get().then(function(snap){
     allSongs=[];
     snap.forEach(function(doc){
-      var d=doc.data();
-      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+      allSongs.push(songRowFromDoc(doc));
     });
     songsLoaded=true;
     saveCache('choir_songs',allSongs);
@@ -2056,8 +2062,7 @@ function refreshData(){
     db.collection('songs').get().then(function(snap){
       allSongs=[];
       snap.forEach(function(doc){
-        var d=doc.data();
-        allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+        allSongs.push(songRowFromDoc(doc));
       });
       songsLoaded=true;
       saveCache('choir_songs',allSongs);
@@ -2688,7 +2693,7 @@ function confirmSongMemberRefs(prefix){
 
 function songRowFromDoc(doc){
   var d=doc.data();
-  return {id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''};
+  return {id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],memberLinkExceptions:d.memberLinkExceptions||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''};
 }
 
 function getSongsForMemberLinkAudit(force){
@@ -2724,6 +2729,25 @@ function hasLinkedRefForEntry(song, entry, candidates){
   return (candidates||[]).some(function(m){return linkedIds[m.id];});
 }
 
+function getMemberLinkExceptions(song){
+  return Array.isArray(song&&song.memberLinkExceptions)?song.memberLinkExceptions:[];
+}
+
+function getMemberLinkException(song, entry){
+  var key=normalizeHistoryName(entry);
+  if(!key)return null;
+  return getMemberLinkExceptions(song).find(function(item){
+    return normalizeHistoryName(item&&item.name)===key;
+  })||null;
+}
+
+function getSongMemberIgnoredItems(song){
+  return splitParticipantEntries(song.members||'').map(function(entry){
+    var ex=getMemberLinkException(song,entry);
+    return ex?{kind:'ignored',entry:entry,reason:ex.reason||'처리 제외',createdAt:ex.createdAt||''}:null;
+  }).filter(Boolean);
+}
+
 function getSongMemberLinkIssues(song){
   var entries=splitParticipantEntries(song.members||'');
   if(entries.length===0)return [];
@@ -2731,6 +2755,7 @@ function getSongMemberLinkIssues(song){
   entries.forEach(function(entry){
     var key=normalizeHistoryName(entry);
     if(!key)return;
+    if(getMemberLinkException(song,entry))return;
     var candidates=findSongMemberCandidates(entry);
     if(hasLinkedRefForEntry(song,entry,candidates))return;
     if(candidates.length===1){
@@ -2746,12 +2771,13 @@ function getSongMemberLinkIssues(song){
 
 function buildMemberLinkAuditRows(songs){
   return (songs||[]).map(function(song){
-    return {song:song,issues:getSongMemberLinkIssues(song)};
-  }).filter(function(row){return row.issues.length>0;})
+    return {song:song,issues:getSongMemberLinkIssues(song),ignored:getSongMemberIgnoredItems(song)};
+  }).filter(function(row){return row.issues.length>0||row.ignored.length>0;})
     .sort(function(a,b){return songDateValue(b.song)-songDateValue(a.song)||String(a.song.songName).localeCompare(String(b.song.songName),'ko')});
 }
 
 function memberLinkIssueMatchesFilter(issue){
+  if(memberLinkAuditFilter==='ignored')return issue.kind==='ignored';
   if(memberLinkAuditFilter==='needs')return issue.kind==='ambiguous'||issue.kind==='missing';
   if(memberLinkAuditFilter==='ambiguous')return issue.kind==='ambiguous';
   if(memberLinkAuditFilter==='missing')return issue.kind==='missing';
@@ -2763,6 +2789,7 @@ function memberLinkAuditKindLabel(kind){
   if(kind==='ambiguous')return '선택 필요';
   if(kind==='missing')return '명부 미확인';
   if(kind==='auto')return '자동 연결 가능';
+  if(kind==='ignored')return '처리 제외';
   return '미연결';
 }
 
@@ -2771,17 +2798,27 @@ function memberLinkAuditFilterLabel(){
   if(memberLinkAuditFilter==='ambiguous')return '동명이인';
   if(memberLinkAuditFilter==='missing')return '명부 미확인';
   if(memberLinkAuditFilter==='auto')return '자동 연결 가능';
+  if(memberLinkAuditFilter==='ignored')return '처리 제외';
   return '미연결 전체';
 }
 
-function memberLinkAuditIssueText(issue){
+function memberLinkAuditIssueText(issue, song){
   if(issue.kind==='ambiguous'){
     return '<b>'+escHtml(issue.entry)+'</b> 이름의 단원이 여러 명입니다.<br><span style="color:var(--ts)">후보: '+escHtml(issue.candidates.map(formatMemberAuditCandidate).join(' / '))+'</span>';
   }
   if(issue.kind==='missing'){
-    return '<b>'+escHtml(issue.entry)+'</b> 이름을 현재 단원 명부에서 찾지 못했습니다.<br><span style="color:var(--ts)">외부 인원이면 그대로 둘 수 있고, 실제 단원이면 이름 표기를 확인해주세요.</span>';
+    return '<b>'+escHtml(issue.entry)+'</b> 이름을 현재 단원 명부에서 찾지 못했습니다.<br><span style="color:var(--ts)">실제 단원이 아니면 아래에서 예외 처리하면 미연결 목록에서 빠집니다.</span>'
+      +'<div class="member-audit-actions">'
+      +'<button class="member-audit-mini" onclick="markMemberLinkException(\''+escAttr(song.id)+'\',\''+escAttr(issue.entry)+'\',\'이전 단원\')">이전 단원</button>'
+      +'<button class="member-audit-mini" onclick="markMemberLinkException(\''+escAttr(song.id)+'\',\''+escAttr(issue.entry)+'\',\'외부 인원\')">외부 인원</button>'
+      +'<button class="member-audit-mini no" onclick="markMemberLinkException(\''+escAttr(song.id)+'\',\''+escAttr(issue.entry)+'\',\'기타 제외\')">기타 제외</button>'
+      +'</div>';
   }
-  return '<b>'+escHtml(issue.entry)+'</b> 항목은 명부의 단원 1명과 일치하지만 아직 저장된 연결값이 없습니다.<br><span style="color:var(--ts)">후보: '+escHtml(formatMemberAuditCandidate(issue.candidates[0]))+'</span>';
+  if(issue.kind==='ignored'){
+    return '<b>'+escHtml(issue.entry)+'</b> 항목은 <b>'+escHtml(issue.reason||'처리 제외')+'</b>로 분류되어 미연결 집계에서 제외됩니다.'
+      +'<div class="member-audit-actions"><button class="member-audit-mini warn" onclick="removeMemberLinkException(\''+escAttr(song.id)+'\',\''+escAttr(issue.entry)+'\')">제외 취소</button></div>';
+  }
+  return '<b>'+escHtml(issue.entry)+'</b> 항목은 명부의 단원 1명과 일치하지만 아직 저장된 연결값이 없습니다.<br><span style="color:var(--ts)">후보: '+escHtml(formatMemberAuditCandidate(issue.candidates[0]))+' · 상단 자동 연결 버튼으로 저장할 수 있습니다.</span>';
 }
 
 function changeMemberLinkAuditFilter(value){
@@ -2793,30 +2830,42 @@ function renderMemberLinkAuditRows(){
   var summary=document.getElementById('memberLinkAuditSummary');
   var list=document.getElementById('memberLinkAuditList');
   var sel=document.getElementById('memberLinkAuditFilter');
+  var autoBtn=document.getElementById('memberAutoLinkBtn');
   if(sel&&sel.value!==memberLinkAuditFilter)sel.value=memberLinkAuditFilter;
   if(!summary||!list)return;
 
-  var totals={songs:memberLinkAuditRows.length,issues:0,needs:0,auto:0};
+  var totals={songs:0,issues:0,needs:0,auto:0,ignored:0};
   memberLinkAuditRows.forEach(function(row){
+    if(row.issues.length>0)totals.songs++;
     row.issues.forEach(function(issue){
       totals.issues++;
       if(issue.kind==='auto')totals.auto++;
       else totals.needs++;
     });
+    totals.ignored+=(row.ignored||[]).length;
   });
+  if(autoBtn){
+    autoBtn.textContent=totals.auto>0?('자동 연결 '+totals.auto+'건'):'자동 연결 없음';
+    autoBtn.disabled=totals.auto===0;
+    autoBtn.style.opacity=totals.auto>0?'1':'.45';
+    autoBtn.style.cursor=totals.auto>0?'pointer':'not-allowed';
+  }
 
   var visibleRows=memberLinkAuditRows.map(function(row){
-    return {song:row.song,issues:row.issues.filter(memberLinkIssueMatchesFilter)};
+    var items=memberLinkAuditFilter==='ignored'
+      ? (row.ignored||[]).filter(memberLinkIssueMatchesFilter)
+      : row.issues.filter(memberLinkIssueMatchesFilter);
+    return {song:row.song,issues:items};
   }).filter(function(row){return row.issues.length>0;});
 
   summary.innerHTML='<div class="member-audit-summary">'
     +'<div class="member-audit-stat"><div class="member-audit-stat-num">'+totals.songs+'</div><div class="member-audit-stat-label">미연결 곡</div></div>'
     +'<div class="member-audit-stat"><div class="member-audit-stat-num">'+totals.needs+'</div><div class="member-audit-stat-label">직접 확인 필요</div></div>'
     +'<div class="member-audit-stat"><div class="member-audit-stat-num">'+totals.auto+'</div><div class="member-audit-stat-label">자동 연결 가능</div></div>'
-    +'<div class="member-audit-stat"><div class="member-audit-stat-num">'+visibleRows.length+'</div><div class="member-audit-stat-label">현재 표시</div></div>'
+    +'<div class="member-audit-stat"><div class="member-audit-stat-num">'+totals.ignored+'</div><div class="member-audit-stat-label">처리 제외</div></div>'
     +'</div>';
 
-  if(memberLinkAuditRows.length===0){
+  if(totals.songs===0&&memberLinkAuditFilter!=='ignored'){
     list.innerHTML='<div class="member-audit-empty">점검할 미연결 항목이 없습니다.</div>';
     return;
   }
@@ -2836,10 +2885,90 @@ function renderMemberLinkAuditRows(){
       +'<div class="member-audit-current">현재 입력: '+escHtml(s.members||'참여 단원 없음')+'</div>'
       +'<div class="member-audit-issues">'
       +row.issues.map(function(issue){
-        return '<div class="member-audit-issue"><span class="member-audit-chip '+issue.kind+'">'+memberLinkAuditKindLabel(issue.kind)+'</span><div>'+memberLinkAuditIssueText(issue)+'</div></div>';
+        return '<div class="member-audit-issue"><span class="member-audit-chip '+issue.kind+'">'+memberLinkAuditKindLabel(issue.kind)+'</span><div>'+memberLinkAuditIssueText(issue,s)+'</div></div>';
       }).join('')
       +'</div></div>';
   }).join('');
+}
+
+function mergeMemberRefsForAuto(song, issues){
+  var refs=Array.isArray(song.memberRefs)?song.memberRefs.slice():[];
+  var seen={};
+  refs.forEach(function(ref){if(ref&&ref.id)seen[ref.id]=true;});
+  issues.forEach(function(issue){
+    var member=issue.candidates&&issue.candidates[0];
+    if(member&&member.id&&!seen[member.id]){
+      refs.push(memberRefFromMember(member));
+      seen[member.id]=true;
+    }
+  });
+  return refs;
+}
+
+function collectAutoMemberLinkUpdates(){
+  return memberLinkAuditRows.map(function(row){
+    var autoIssues=row.issues.filter(function(issue){return issue.kind==='auto';});
+    if(autoIssues.length===0)return null;
+    return {song:row.song,issues:autoIssues,refs:mergeMemberRefsForAuto(row.song,autoIssues)};
+  }).filter(Boolean);
+}
+
+function autoLinkSongMembers(){
+  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  var updates=collectAutoMemberLinkUpdates();
+  if(updates.length===0)return showToast('자동 연결할 항목이 없습니다.');
+  var count=updates.reduce(function(sum,u){return sum+u.issues.length;},0);
+  showToast('자동 연결 저장 중...');
+  Promise.all(updates.map(function(u){
+    return db.collection('songs').doc(u.song.id).update({memberRefs:u.refs}).then(function(){
+      var idx=allSongs.findIndex(function(s){return s.id===u.song.id});
+      if(idx>-1)allSongs[idx].memberRefs=u.refs;
+    });
+  })).then(function(){
+    saveCache('choir_songs',allSongs);
+    renderMemberLinkAudit(allSongs);
+    showToast(count+'건 자동 연결 완료');
+  }).catch(function(e){
+    console.error(e);
+    showToast('자동 연결 중 오류가 발생했습니다.');
+  });
+}
+
+function saveMemberLinkExceptions(song, exceptions, message){
+  db.collection('songs').doc(song.id).update({memberLinkExceptions:exceptions}).then(function(){
+    var idx=allSongs.findIndex(function(s){return s.id===song.id});
+    if(idx>-1)allSongs[idx].memberLinkExceptions=exceptions;
+    saveCache('choir_songs',allSongs);
+    renderMemberLinkAudit(allSongs);
+    showToast(message);
+  }).catch(function(e){
+    console.error(e);
+    showToast('처리 중 오류가 발생했습니다.');
+  });
+}
+
+function markMemberLinkException(songId, entry, reason){
+  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  var song=allSongs.find(function(s){return s.id===songId});
+  if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
+  var key=normalizeHistoryName(entry);
+  var exceptions=getMemberLinkExceptions(song).filter(function(item){return normalizeHistoryName(item&&item.name)!==key;});
+  exceptions.push({
+    name:entry,
+    reason:reason||'처리 제외',
+    createdAt:new Date().toISOString(),
+    createdBy:currentUser?currentUser.name:(adminRole||'관리자')
+  });
+  saveMemberLinkExceptions(song,exceptions,(reason||'처리 제외')+'로 처리했습니다.');
+}
+
+function removeMemberLinkException(songId, entry){
+  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  var song=allSongs.find(function(s){return s.id===songId});
+  if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
+  var key=normalizeHistoryName(entry);
+  var exceptions=getMemberLinkExceptions(song).filter(function(item){return normalizeHistoryName(item&&item.name)!==key;});
+  saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다.');
 }
 
 function renderMemberLinkAudit(songs){
@@ -2909,8 +3038,7 @@ function loadSongsForMemberHistory(callback){
   db.collection('songs').get().then(function(snap){
     allSongs=[];
     snap.forEach(function(doc){
-      var d=doc.data();
-      allSongs.push({id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''});
+      allSongs.push(songRowFromDoc(doc));
     });
     saveCache('choir_songs',allSongs);
     callback();
