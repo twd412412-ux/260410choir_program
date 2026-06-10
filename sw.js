@@ -1,4 +1,4 @@
-const CACHE_NAME = 'choir-app-v24';
+const CACHE_NAME = 'choir-app-v25';
 const urlsToCache = [
   './',
   './index.html',
@@ -23,9 +23,16 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Network first, fallback to cache
+  if (event.request.method !== 'GET') return;
+
+  // Network first, fallback to cache. Navigations bypass the HTTP cache so
+  // newly deployed HTML is picked up quickly on iOS/PWA browsers.
+  const request = event.request.mode === 'navigate'
+    ? new Request(event.request, { cache: 'no-store' })
+    : event.request;
+
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then(response => {
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
