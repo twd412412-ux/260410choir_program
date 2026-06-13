@@ -1161,7 +1161,7 @@ body{font-weight:500}
   <div class="admin-sub hidden" id="subSongRecommend">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎼 선곡 도우미</h3>
     <div class="member-audit-intro">
-      날짜, 요일, 카테고리, 참여 단원, 최근 사용 이력을 기준으로 선곡 후보를 추천합니다. 추천은 기존 곡 기록만 분석하며 저장 데이터는 변경하지 않습니다.
+      날짜, 요일, 카테고리, 최근 사용 이력과 반주자 로테이션을 기준으로 선곡 후보를 추천합니다. 추천은 기존 곡 기록만 분석하며 저장 데이터는 변경하지 않습니다.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-group"><label class="form-label">선곡 날짜</label><input class="form-input" id="recDate" type="date" onchange="updateSongRecommendDow()" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
@@ -1171,11 +1171,12 @@ body{font-weight:500}
       <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="recCatSel"><option value="">전체</option></select></div>
       <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="recSub" placeholder="예: 교구, 대집회, 특송"></div>
     </div>
-    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="recMembers" placeholder="이름 입력, 쉼표/세미콜론 구분"></div>
+    <div class="form-group"><label class="form-label">참여 단원 (곡 추가에 같이 넣기)</label><input class="form-input" id="recMembers" placeholder="추천 점수에는 반영하지 않고 곡 추가 화면에 함께 넣습니다"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-group"><label class="form-label">최근 사용 제외</label><select class="form-sel" id="recExcludeWeeks"><option value="1">최근 1주 제외</option><option value="2" selected>최근 2주 제외</option><option value="3">최근 3주 제외</option><option value="4">최근 4주 제외</option><option value="0">제외 안 함</option></select></div>
       <div class="form-group"><label class="form-label">반주자 추천</label><select class="form-sel" id="recPianistMode"><option value="yes" selected>함께 보기</option><option value="no">곡만 보기</option></select></div>
     </div>
+    <div class="form-group"><label class="form-label">제외 반주자</label><input class="form-input" id="recExcludePianists" placeholder="예: 조하영, 홍길동"></div>
     <button class="btn btn-p btn-bl" onclick="runSongRecommendation()">추천곡 찾기</button>
     <div id="songRecommendStatus" class="member-audit-status hidden"></div>
     <div id="songRecommendResults" style="margin-top:12px"></div>
@@ -1662,7 +1663,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v47.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v48.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -4757,10 +4758,11 @@ function getSongRecommendInput(){
   var targetDate=parts?new Date(parts.year,parts.month-1,parts.day):null;
   var dow=parts?DOW_NAMES[targetDate.getDay()]:'';
   var memberText=(document.getElementById('recMembers')||{}).value||'';
-  var memberKeys={};
-  splitParticipantEntries(memberText).forEach(function(entry){
-    var info=participantEntryInfo(entry);
-    if(info.key&&!info.isGeneric)memberKeys[info.key]=true;
+  var excludePianistText=(document.getElementById('recExcludePianists')||{}).value||'';
+  var excludePianistKeys={};
+  excludePianistText.split(/[,，、;；/／\n\r\s]+/).forEach(function(name){
+    var key=normalizeHistoryName(name);
+    if(key)excludePianistKeys[key]=true;
   });
   return {
     dateValue:dateValue,
@@ -4769,7 +4771,8 @@ function getSongRecommendInput(){
     category:(document.getElementById('recCatSel')||{}).value||'',
     subCategory:((document.getElementById('recSub')||{}).value||'').trim(),
     memberText:memberText.trim(),
-    memberKeys:memberKeys,
+    excludePianistText:excludePianistText.trim(),
+    excludePianistKeys:excludePianistKeys,
     excludeWeeks:parseInt((document.getElementById('recExcludeWeeks')||{}).value,10)||0,
     pianistMode:((document.getElementById('recPianistMode')||{}).value||'yes')
   };
@@ -4788,26 +4791,6 @@ function songRecommendDayDiff(targetDate,song){
 
 function songRecommendGroupKey(song){
   return normalizeSearchText(song&&song.songName)||String(song&&song.songName||'').trim();
-}
-
-function songRecommendRecordMemberKeys(song){
-  var keys={};
-  splitParticipantEntries(song&&song.members||'').forEach(function(entry){
-    var info=participantEntryInfo(entry);
-    if(info.key&&!info.isGeneric)keys[info.key]=true;
-  });
-  (Array.isArray(song&&song.memberRefs)?song.memberRefs:[]).forEach(function(ref){
-    var key=normalizeHistoryName(ref&&ref.name);
-    if(key)keys[key]=true;
-  });
-  return keys;
-}
-
-function songRecommendMemberHits(song,input){
-  var wanted=Object.keys(input.memberKeys||{});
-  if(wanted.length===0)return [];
-  var keys=songRecommendRecordMemberKeys(song);
-  return wanted.filter(function(key){return !!keys[key];});
 }
 
 function songRecommendHasText(value,needle){
@@ -4844,11 +4827,6 @@ function collectSongRecommendationCandidates(songs,input){
     var subCount=input.subCategory?records.filter(function(s){
       return songRecommendHasText([s.subCategory,s.category,s.location].join(' '),input.subCategory);
     }).length:0;
-    var memberHitMap={};
-    records.forEach(function(s){
-      songRecommendMemberHits(s,input).forEach(function(key){memberHitMap[key]=true;});
-    });
-    var memberHitCount=Object.keys(memberHitMap).length;
     var recentBlocked=songRecommendIsRecentBlocked(records,input);
     var lastDiff=songRecommendDayDiff(input.targetDate,last);
     var score=0, reasons=[];
@@ -4857,7 +4835,6 @@ function collectSongRecommendationCandidates(songs,input){
     if(dowCount>0){score+=dowCount*22;reasons.push(input.dow+'요일 '+dowCount+'회');}
     if(catCount>0){score+=catCount*15;reasons.push(input.category+' '+catCount+'회');}
     if(subCount>0){score+=subCount*12;reasons.push('세부 조건 '+subCount+'회');}
-    if(memberHitCount>0){score+=memberHitCount*14;reasons.push('참여 단원 이력 '+memberHitCount+'명');}
     if(lastDiff!==null){
       if(lastDiff>365){score+=8;reasons.push('1년 이상 미사용');}
       else if(lastDiff>180){score+=5;reasons.push('6개월 이상 미사용');}
@@ -4876,7 +4853,6 @@ function collectSongRecommendationCandidates(songs,input){
       dowCount:dowCount,
       catCount:catCount,
       subCount:subCount,
-      memberHitCount:memberHitCount,
       recentBlocked:recentBlocked,
       score:score,
       reasons:reasons
@@ -4935,6 +4911,7 @@ function recommendPianistsForSong(item,input){
     var name=normalizePianistName(song.pianist);
     if(!name)return;
     var key=normalizeHistoryName(name);
+    if(input.excludePianistKeys&&input.excludePianistKeys[key])return;
     if(hasDirectoryPianists&&!directoryMap[key])return;
     if(!stats[key])stats[key]={name:name,total:0,songCount:0,last:null,lastValue:0};
     stats[key].total++;
@@ -4981,8 +4958,7 @@ function renderSongRecommendationResults(items,input,usedFallback){
       '총 '+item.total+'회',
       input.dow?(input.dow+'요일 '+item.dowCount+'회'):'',
       input.category?(input.category+' '+item.catCount+'회'):'',
-      input.subCategory?('세부 '+item.subCount+'회'):'',
-      item.memberHitCount?('단원 이력 '+item.memberHitCount+'명'):''
+      input.subCategory?('세부 '+item.subCount+'회'):''
     ].filter(Boolean).join(' · ');
     return '<div class="song-card" style="cursor:default">'
       +'<div class="song-card-title"><span>'+escHtml(item.songName)+'</span><span class="meta-tag">점수 '+Math.round(item.score)+'</span></div>'
