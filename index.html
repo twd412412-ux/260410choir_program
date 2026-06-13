@@ -1638,7 +1638,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v42.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v43.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2717,7 +2717,7 @@ function normalizeHistoryName(v){
 function isParticipantRoleToken(value){
   var key=normalizeHistoryName(value);
   if(!key)return false;
-  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','반주','반주자','지휘','낭독','내레이션','나레이션','싱어','보컬','팀원'];
+  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','solo','반주','반주자','지휘','낭독','내레이션','나레이션','싱어','보컬','팀원'];
   return roles.some(function(role){
     var roleKey=normalizeHistoryName(role);
     return key===roleKey||key.indexOf(roleKey)>-1;
@@ -2744,14 +2744,17 @@ function splitParticipantNameList(raw){
 
 function expandParticipantGroupEntries(raw){
   var text=String(raw||'');
-  var groupPattern=/((?:남성|여성|형제|자매|교구|전체)?\s*(?:트리오|듀엣|중창|합창|찬양단|솔로|solo))\s*[(（]([^()（）]+)[)）]?/gi;
-  text=text.replace(groupPattern,function(match,label,names){
+  var groupLabel='((?:남성|여성|형제|자매|교구|전체)?\\s*(?:트리오|듀엣|중창|합창|찬양단|솔로|solo))';
+  var entryStart='(^|[,，、;；/／\\n\\r])\\s*';
+  var groupDescriptor='(?:(?:성가곡|찬송가|찬양곡|특송|찬양)\\s*)?';
+  var groupPattern=new RegExp(entryStart+groupDescriptor+groupLabel+'\\s*[(（]([^()（）]+)[)）]?', 'gi');
+  text=text.replace(groupPattern,function(match,sep,label,names){
     var list=splitParticipantNameList(names);
-    return list.length?list.join(','):'';
+    return list.length?(sep||'')+list.join(','):match;
   });
-  text=text.replace(/((?:남성|여성|형제|자매|교구|전체)?\s*(?:트리오|듀엣|중창|합창|찬양단|솔로|solo))\s*[:：]\s*([^,，、;；/／\n\r]+)/gi,function(match,label,names){
+  text=text.replace(new RegExp(entryStart+groupDescriptor+groupLabel+'\\s*[:：]\\s*([^,，、;；/／\\n\\r]+)', 'gi'),function(match,sep,label,names){
     var list=splitParticipantNameList(names);
-    return list.length?list.join(','):match;
+    return list.length?(sep||'')+list.join(','):match;
   });
   return text;
 }
@@ -2767,7 +2770,7 @@ function splitParticipantEntries(raw){
 function looksLikeParticipantRolePrefix(value){
   var key=normalizeHistoryName(value);
   if(!key)return false;
-  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','반주','반주자','지휘','낭독','내레이션','나레이션'];
+  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','solo','반주','반주자','지휘','낭독','내레이션','나레이션'];
   return roles.some(function(role){return key.indexOf(normalizeHistoryName(role))>-1;})||key.length<=8;
 }
 
