@@ -59,10 +59,10 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
 body.modal-open{overflow:hidden}
 body.modal-open .bottom-nav{display:none!important}
-body.admin-tab-active{padding-bottom:0}
-body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:36px}
-body.admin-tab-active .bottom-nav{position:static;left:auto;right:auto;bottom:auto;margin:18px 12px calc(env(safe-area-inset-bottom,0px) + 12px);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 24px rgba(49,54,35,.08)}
-body.admin-tab-active .att-save-float{bottom:12px}
+body.admin-tab-active{padding-bottom:92px}
+body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+body.admin-tab-active .bottom-nav{position:fixed;left:0;right:0;bottom:0;margin:0}
+body.admin-tab-active .att-save-float{bottom:84px}
 #modalMemberEdit{align-items:flex-end;justify-content:center}
 #modalMemberEdit .modal-content{width:100%;max-width:500px;max-height:calc(100dvh - 18px);border-radius:18px 18px 0 0;margin:0;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #modalMemberEdit .modal-header{position:sticky;top:0;z-index:2;background:var(--sf);margin:-20px -20px 16px;padding:16px 20px 12px}
@@ -1626,7 +1626,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v37.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v38.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function syncLayoutState(){
