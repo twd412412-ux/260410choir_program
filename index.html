@@ -59,6 +59,7 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
 body.modal-open{overflow:hidden}
 body.modal-open .bottom-nav{display:none!important}
+body.member-add-open .bottom-nav{display:none!important}
 body.admin-tab-active{padding-bottom:92px}
 body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
 body.admin-tab-active .bottom-nav{position:fixed;left:0;right:0;bottom:0;margin:0}
@@ -83,6 +84,13 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .handbook-extra-body{padding:0 12px 12px}
 .handbook-extra-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .handbook-extra-grid .span-2{grid-column:1/-1}
+.handbook-add-panel{background:var(--pl);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.handbook-add-panel summary{cursor:pointer;list-style:none;padding:14px;font-size:14px;font-weight:850;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.handbook-add-panel summary::-webkit-details-marker{display:none}
+.handbook-add-panel summary::after{content:'펼치기';font-size:11px;font-weight:850;color:var(--ts);background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:4px 9px;white-space:nowrap}
+.handbook-add-panel[open] summary::after{content:'접기'}
+.handbook-add-body{padding:0 14px 14px}
+.handbook-add-panel:not([open]) .handbook-add-body{display:none}
 @media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
@@ -1153,8 +1161,9 @@ body{font-weight:500}
     <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 (<span id="handbookCount">0</span>명)</h3>
     <div id="handbookPartSummary"></div>
     
-    <div style="background:var(--pl); padding:14px; border-radius:12px; margin-bottom:16px">
-      <div style="font-weight:700; font-size:14px; margin-bottom:10px; color:var(--pd)">➕ 신규 단원 등록</div>
+    <details class="handbook-add-panel" id="hbAddPanel" ontoggle="syncMemberAddOpen()">
+      <summary>➕ 신규 단원 등록</summary>
+      <div class="handbook-add-body">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
         <input class="form-input" id="hbName" placeholder="이름 *">
         <select class="form-sel" id="hbPart">
@@ -1210,7 +1219,8 @@ body{font-weight:500}
         <input class="form-input hidden" id="hbPhotoUrl" readonly placeholder="업로드 성공 시 주소가 자동 입력됩니다">
       </div>
       <button class="btn btn-p btn-bl" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
-    </div>
+      </div>
+    </details>
   
     <div class="search-wrap" style="margin-bottom:12px">
       <input class="search-box" id="handbookSearch" type="text" placeholder="이름, 교구 등으로 검색..." oninput="filterHandbook()">
@@ -1628,12 +1638,20 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v39.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v40.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
+function isMemberAddOpen(){
+  var panel=document.getElementById('hbAddPanel');
+  return !!(panel&&panel.open&&currentTab==='admin');
+}
+function syncMemberAddOpen(){
+  syncLayoutState();
+}
 function syncLayoutState(){
   document.body.classList.toggle('admin-tab-active',currentTab==='admin');
   document.body.classList.toggle('modal-open',!!document.querySelector('.modal-overlay.active'));
+  document.body.classList.toggle('member-add-open',isMemberAddOpen());
 }
 function openModal(id){
   var modal=document.getElementById(id);
@@ -3573,6 +3591,9 @@ function addHandbookMember(){
     document.getElementById('hbNoAtt').checked = false;
     clearHandbookProfileFields('add');
     if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
+    var addPanel=document.getElementById('hbAddPanel');
+    if(addPanel)addPanel.open=false;
+    syncMemberAddOpen();
     invalidateAttendanceMemberCache();
     loadHandbook();
     writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 🏠 ${distInfo}`);
