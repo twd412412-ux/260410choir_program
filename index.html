@@ -70,6 +70,9 @@ body.admin-tab-active .att-save-float{bottom:12px}
 #modalMemberEdit input[type=file]{width:100%;min-width:0;overflow:hidden}
 #modalMemberEdit [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
 #modalMemberEdit [style*="display:flex"]{min-width:0}
+.account-action-note{font-size:12px;color:var(--ts);line-height:1.45;margin:-4px 0 12px}
+.account-action-actions{display:flex;gap:8px;margin-top:16px}
+.account-action-actions .btn{flex:1}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
@@ -1452,6 +1455,15 @@ body{font-weight:500}
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
   </div>
 </div>
+<div class="modal-overlay modal-center" id="modalAccountAction">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title" id="accountActionTitle">계정 관리</span>
+      <button class="modal-close" onclick="closeModal('modalAccountAction')">✕</button>
+    </div>
+    <div id="accountActionBody"></div>
+  </div>
+</div>
 <div class="modal-overlay modal-center" id="modalAttReason">
   <div class="modal-content">
     <div class="modal-header">
@@ -1562,7 +1574,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v34.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v35.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function syncLayoutState(){
@@ -2427,87 +2439,145 @@ function loadMembers(){
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
         <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}<div style="font-size:12px;color:var(--ts);margin-top:4px">PIN: <b style="color:var(--p);letter-spacing:1px">${m.pin}</b></div></div>
         <div style="display:flex;gap:4px">
-          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editAccount('${m.id}','${m.name}','${m.part}')">수정</button>
-          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="changeRole('${m.id}','${m.name}','${m.role}')">권한</button>
-          <button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="resetPin('${m.id}','${m.name}','${m.pin}')">PIN</button>
-          <button class="btn btn-sm btn-d" onclick="delMember('${m.id}','${m.name}')">삭제</button>
+          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>
+          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>
+          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>
+          <button type="button" class="btn btn-sm btn-d" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>
         </div>
       </div>`;
     }).join('');
   });
 }
-// [신규] 로그인 계정의 이름과 파트를 수정하는 기능
-function editAccount(id, currentName, currentPart) {
-  // 1. 새 이름 입력받기 (기본값: 원래 이름)
-  var newName = prompt('수정할 이름을 입력하세요:', currentName);
-  if(!newName || !newName.trim()) return;
+var accountActionId='';
 
-  // 2. 새 파트 입력받기 (기본값: 원래 파트)
-  var newPart = prompt(newName + '님의 수정할 파트를 입력하세요\n(예: S1, S2, T1, T2, 지휘, 반주, 관현악, 임원):', currentPart);
-  if(!newPart || !newPart.trim()) return;
-
-  // 3. 파이어베이스(accounts 방)에 업데이트
-  db.collection('accounts').doc(id).update({
-    name: newName.trim(),
-    part: newPart.trim()
-  }).then(function(){
-    showToast(newName + '님의 정보가 수정되었습니다!');
-    
-    // 0.5초 뒤에 목록 새로고침
-    setTimeout(function() { loadMembers(); }, 500); 
-    
-    // 활동 로그 기록
-    writeLog('계정 수정', currentName + '(' + currentPart + ') ➔ ' + newName + '(' + newPart + ')');
-  }).catch(function(e){
-    console.error(e);
-    showToast('수정 중 오류가 발생했습니다');
-  });
+function getAccountActionMember(id){
+  return allMembers.find(function(m){return m.id===id})||null;
 }
 
-function delMember(id,name){
-  if(!confirm('"'+name+'"님 계정을 삭제하시겠습니까?'))return;
-  // 👇 'accounts' 방에서 삭제!
-  db.collection('accounts').doc(id).delete().then(function(){ 
-    showToast('삭제되었습니다'); 
-    setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
-    writeLog('계정 삭제', name + '님 계정 삭제됨');
-  });
+function openAccountAction(title, bodyHtml){
+  document.getElementById('accountActionTitle').textContent=title;
+  document.getElementById('accountActionBody').innerHTML=bodyHtml;
+  openModal('modalAccountAction');
 }
 
-function resetPin(id,name,currentPin){
-  var p=prompt(name+'님의 새 PIN(4자리):', currentPin||'');
-  if(!p||p.length!==4)return showToast('PIN은 4자리여야 합니다');
-  // 👇 'accounts' 방에서 수정!
-  db.collection('accounts').doc(id).update({pin:p}).then(function(){ 
+function openAccountEdit(id){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var m=getAccountActionMember(id);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  accountActionId=id;
+  var partOptions=['지휘','파트장','총무','S1','S2','T1','T2','반주','관현악','임원'].map(function(p){
+    return '<option value="'+escHtml(p)+'"'+(m.part===p?' selected':'')+'>'+escHtml(p)+'</option>';
+  }).join('');
+  openAccountAction('로그인 계정 수정',
+    '<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="accountEditName" value="'+escHtml(m.name)+'"></div>'
+    +'<div class="form-group"><label class="form-label">파트</label><select class="form-sel" id="accountEditPart">'+partOptions+'</select></div>'
+    +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountEdit()">저장</button></div>'
+  );
+}
+
+function saveAccountEdit(){
+  var m=getAccountActionMember(accountActionId);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  var newName=document.getElementById('accountEditName').value.trim();
+  var newPart=document.getElementById('accountEditPart').value.trim();
+  if(!newName||!newPart)return showToast('이름과 파트는 필수입니다');
+  showToast('저장 중...');
+  db.collection('accounts').doc(accountActionId).update({name:newName,part:newPart}).then(function(){
+    showToast(newName+'님의 정보가 수정되었습니다');
+    closeModal('modalAccountAction');
+    loadMembers();
+    writeLog('계정 수정',m.name+'('+m.part+') ➔ '+newName+'('+newPart+')');
+  }).catch(function(e){console.error(e);showToast('수정 중 오류가 발생했습니다')});
+}
+
+function openAccountRole(id){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var m=getAccountActionMember(id);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  accountActionId=id;
+  var value=m.canArchiveUpload&&!m.role?'archive':(m.role||'');
+  openAccountAction('계정 권한 변경',
+    '<div class="account-action-note">'+escHtml(m.name)+'님의 로그인 권한을 선택하세요.</div>'
+    +'<div class="form-group"><label class="form-label">권한</label><select class="form-sel" id="accountRoleValue">'
+    +'<option value=""'+(value===''?' selected':'')+'>없음 (일반 단원)</option>'
+    +'<option value="attendance"'+(value==='attendance'?' selected':'')+'>출결 관리</option>'
+    +'<option value="chongmu"'+(value==='chongmu'?' selected':'')+'>총무부</option>'
+    +'<option value="songschedule"'+(value==='songschedule'?' selected':'')+'>곡+일정</option>'
+    +'<option value="archive"'+(value==='archive'?' selected':'')+'>아카이브 업로드만</option>'
+    +'</select></div>'
+    +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountRole()">저장</button></div>'
+  );
+}
+
+function saveAccountRole(){
+  var m=getAccountActionMember(accountActionId);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  var value=document.getElementById('accountRoleValue').value;
+  var role=value==='archive'?'':value;
+  var canArchiveUpload=value==='archive';
+  showToast('저장 중...');
+  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload}).then(function(){
+    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':(canArchiveUpload?'일반 단원 + 아카이브':'없음');
+    showToast(m.name+'님 권한: '+label);
+    closeModal('modalAccountAction');
+    loadMembers();
+    writeLog('권한 변경',m.name+'님 → '+label);
+  }).catch(function(e){console.error(e);showToast('변경 중 오류 발생')});
+}
+
+function openAccountPin(id){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var m=getAccountActionMember(id);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  accountActionId=id;
+  openAccountAction('PIN 변경',
+    '<div class="account-action-note">'+escHtml(m.name)+'님의 새 PIN 4자리를 입력하세요.</div>'
+    +'<div class="form-group"><label class="form-label">PIN</label><input class="form-input" id="accountPinValue" type="password" inputmode="numeric" maxlength="4" value="'+escHtml(m.pin||'')+'"></div>'
+    +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountPin()">저장</button></div>'
+  );
+}
+
+function saveAccountPin(){
+  var m=getAccountActionMember(accountActionId);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  var pin=document.getElementById('accountPinValue').value.trim();
+  if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
+  showToast('저장 중...');
+  db.collection('accounts').doc(accountActionId).update({pin:pin}).then(function(){
     showToast('PIN 변경 완료');
-    setTimeout(function() { loadMembers(); }, 500);
-    writeLog('PIN 변경', name + '님 PIN 초기화');
-  });
+    closeModal('modalAccountAction');
+    loadMembers();
+    writeLog('PIN 변경',m.name+'님 PIN 초기화');
+  }).catch(function(e){console.error(e);showToast('PIN 변경 중 오류 발생')});
 }
-function changeRole(id,name,currentRole){
-  db.collection('accounts').doc(id).get().then(function(docSnap){
-    var data=docSnap.exists?(docSnap.data()||{}):{};
-    var currentArchive = !!data.canArchiveUpload;
-    var currentRoleLabel=currentRole==='attendance'?'출결 관리':currentRole==='chongmu'?'총무부':currentRole==='songschedule'?'곡+일정':'없음';
-    var msg=name+'님 현재 권한: '+currentRoleLabel+(currentArchive?' + 아카이브 업로드':'')+'\n\n선택하세요:\n0 = 없음 (일반 단원)\n1 = 출결 관리 (출결부만)\n2 = 총무부 (곡추가+일정+명부+출결)\n3 = 곡+일정 (곡추가+일정만)\n4 = 일반 단원 + 아카이브 업로드만 허용';
-    var input=prompt(msg);
-    if(input===null)return;
-    var role='';
-    var canArchiveUpload=false;
-    if(input==='1')role='attendance';
-    else if(input==='2')role='chongmu';
-    else if(input==='3')role='songschedule';
-    else if(input==='4'){role='';canArchiveUpload=true;}
-    else if(input==='0')role='';
-    else return showToast('0, 1, 2, 3, 4 중에 입력해주세요');
-    db.collection('accounts').doc(id).update({role:role,canArchiveUpload:canArchiveUpload}).then(function(){
-      var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':(canArchiveUpload?'일반 단원 + 아카이브':'없음');
-      showToast(name+'님 권한: '+label);
-      loadMembers();
-      writeLog('권한 변경',name+'님 → '+label);
-    }).catch(function(){showToast('변경 중 오류 발생')});
-  }).catch(function(){showToast('권한 조회 중 오류 발생')});
+
+function openAccountDelete(id){
+  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  var m=getAccountActionMember(id);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  accountActionId=id;
+  openAccountAction('계정 삭제',
+    '<div class="account-action-note"><b>'+escHtml(m.name)+'</b>님 로그인 계정을 삭제합니다. 단원 명부 자체는 삭제되지 않습니다.</div>'
+    +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-d" onclick="confirmAccountDelete()">삭제</button></div>'
+  );
 }
+
+function confirmAccountDelete(){
+  var m=getAccountActionMember(accountActionId);
+  if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  showToast('삭제 중...');
+  db.collection('accounts').doc(accountActionId).delete().then(function(){
+    showToast('삭제되었습니다');
+    closeModal('modalAccountAction');
+    loadMembers();
+    writeLog('계정 삭제',m.name+'님 계정 삭제됨');
+  }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
+}
+
+function editAccount(id){openAccountEdit(id)}
+function changeRole(id){openAccountRole(id)}
+function resetPin(id){openAccountPin(id)}
+function delMember(id){openAccountDelete(id)}
 
 
 // ==================== [정리됨] 2. 단원 명부 (행정용 상세 조회) ====================
