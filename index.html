@@ -1638,7 +1638,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v44.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v45.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1704,7 +1704,24 @@ function switchTab(tab){
     if(adminPage) adminPage.scrollTop=0;
   }
 }
+
+function canUseMemberLinkAudit(){
+  return adminRole==='admin';
+}
+
+function canUseReport(){
+  return adminRole==='admin';
+}
+
 function switchAdminTab(sub){
+  if(sub==='memberLinkAudit'&&!canUseMemberLinkAudit()){
+    showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
+    return;
+  }
+  if(sub==='report'&&!canUseReport()){
+    showToast('결산 보고서는 관리자만 생성할 수 있습니다.');
+    return;
+  }
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
   document.querySelectorAll('[data-at]').forEach(function(el){el.classList.toggle('on',el.dataset.at===sub)});
   
@@ -1727,9 +1744,9 @@ function updateAdminTabs(){
     if(adminRole==='attendance'){
       t.style.display=(k==='attendance') ? '' : 'none';
     }else if(adminRole==='songschedule'){
-      t.style.display=(k==='addSong' || k==='memberLinkAudit' || k==='schedule') ? '' : 'none';
+      t.style.display=(k==='addSong' || k==='schedule') ? '' : 'none';
     }else if(adminRole==='chongmu'){
-      t.style.display=(k==='addSong' || k==='memberLinkAudit' || k==='schedule' || k==='memberHandbook' || k==='attendance' || k==='report') ? '' : 'none';
+      t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook' || k==='attendance') ? '' : 'none';
     }else{
       t.style.display='';
     }
@@ -1741,9 +1758,9 @@ function showFirstAdminTab(){
   var preferredOrder = adminRole==='attendance'
     ? ['attendance']
     : adminRole==='songschedule'
-      ? ['addSong','memberLinkAudit','schedule']
+      ? ['addSong','schedule']
       : adminRole==='chongmu'
-        ? ['attendance','memberHandbook','memberLinkAudit','addSong','schedule','report']
+        ? ['attendance','memberHandbook','addSong','schedule']
         : ['members','attendance','memberHandbook','memberLinkAudit','notice','addSong','schedule','logs','export','report'];
 
   var visible = [];
@@ -3287,7 +3304,7 @@ function collectAutoMemberLinkUpdates(){
 }
 
 function autoLinkSongMembers(){
-  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canUseMemberLinkAudit())return showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
   var updates=collectAutoMemberLinkUpdates();
   if(updates.length===0)return showToast('자동 연결할 항목이 없습니다.');
   var count=updates.reduce(function(sum,u){return sum+u.issues.length;},0);
@@ -3321,7 +3338,7 @@ function saveMemberLinkExceptions(song, exceptions, message){
 }
 
 function markMemberLinkException(songId, entry, reason){
-  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canUseMemberLinkAudit())return showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
   var song=allSongs.find(function(s){return s.id===songId});
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
   var key=participantEntryKey(entry);
@@ -3337,7 +3354,7 @@ function markMemberLinkException(songId, entry, reason){
 }
 
 function removeMemberLinkException(songId, entry){
-  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canUseMemberLinkAudit())return showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
   var song=allSongs.find(function(s){return s.id===songId});
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
   var key=participantEntryKey(entry);
@@ -3352,6 +3369,12 @@ function renderMemberLinkAudit(songs){
 }
 
 function loadMemberLinkAudit(force){
+  if(!canUseMemberLinkAudit()){
+    setMemberLinkAuditStatus('단원 연결 점검은 관리자만 이용할 수 있습니다.','no');
+    var blockedList=document.getElementById('memberLinkAuditList');
+    if(blockedList)blockedList.innerHTML='<div class="member-audit-empty">관리자 권한에서만 확인할 수 있습니다.</div>';
+    return;
+  }
   var requestId=++memberLinkAuditRequestId;
   var list=document.getElementById('memberLinkAuditList');
   var hasRenderableCache=allSongs.length>0&&songMemberDirectory.length>0;
@@ -3399,7 +3422,7 @@ function loadMemberLinkAudit(force){
 }
 
 function openEditFromMemberLinkAudit(id){
-  if(adminRole!=='admin'&&adminRole!=='chongmu'&&adminRole!=='songschedule')return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canUseMemberLinkAudit())return showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
   var song=allSongs.find(function(s){return s.id===id});
   if(!song)return showToast('곡 정보를 찾을 수 없습니다.');
   openEdit(id);
@@ -6174,6 +6197,7 @@ function downloadViewerPhoto(){
 
 // ==================== [신규] 월간 결산 보고서 ====================
 function generateReport() {
+  if(!canUseReport())return showToast('결산 보고서는 관리자만 생성할 수 있습니다.');
   var monthVal = document.getElementById('reportMonthSel').value;
   if(!monthVal) return showToast('보고서를 생성할 연도와 월을 선택해주세요.');
   
@@ -6570,6 +6594,7 @@ function generateReport() {
 }
 
 function printReport() {
+  if(!canUseReport())return showToast('결산 보고서는 관리자만 출력할 수 있습니다.');
   var canvas = document.getElementById('reportCanvas');
   if(!canvas||!canvas.innerHTML.trim())return showToast('먼저 보고서를 생성해주세요');
   document.body.classList.add('print-report-mode');
