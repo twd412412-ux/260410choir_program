@@ -1638,7 +1638,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v40.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v41.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2730,6 +2730,10 @@ function looksLikeParticipantRolePrefix(value){
 
 function participantLookupName(entry){
   var text=String(entry||'').trim();
+  var groupedName=text.match(/(?:트리오|듀엣|중창|합창|찬양단|솔로|solo)\s*[(（]\s*([가-힣]{2,5})/i);
+  if(groupedName)return groupedName[1].trim();
+  var extra=text.match(/^(.+?)\s*외\s*\d+\s*명$/);
+  if(extra&&normalizeHistoryName(extra[1]).length>=2)return extra[1].trim();
   var parts=text.split(/[:：]/);
   if(parts.length>=2){
     var prefix=parts.slice(0,parts.length-1).join(':').trim();
@@ -2752,11 +2756,17 @@ function participantHasLookupAlias(entry){
 function isGenericParticipantLabel(value){
   var key=normalizeHistoryName(value);
   if(!key)return false;
+  if(/^\d+여?명$/.test(key)||/^\d+명(내외|이상|이하)?$/.test(key)||/^\d+인$/.test(key))return true;
+  if(/^(남성|여성|남자|여자|형제|자매)?\d+명$/.test(key))return true;
+  if(/(찬양단|중창|합창|합창단|성가대|트리오|듀엣|이중창|삼중창|사중창)$/.test(key))return true;
   var labels=[
     '팀원','싱어','보컬','찬양팀','중창팀','합창','합창단','성가대','찬양대',
     '관현악','관현악단원','오케스트라','오케스트라단원','연주자','악기','현악','관악',
     '외부','외부인원','외부단원','객원','객원단원','게스트','임시','지원',
-    '단원','전체','남성','여성','남자','여자'
+    '단원','전체','남성','여성','남자','여자',
+    '여성중창','남성중창','자매중창','형제중창','혼성중창','여성합창','남성합창','전체합창',
+    '여성트리오','남성트리오','형제트리오','자매트리오','교구트리오',
+    '엘림','엘림찬양단','에클레시아'
   ];
   return labels.some(function(label){return key===normalizeHistoryName(label);})||(/단원$/.test(key)&&key.length<=8);
 }
@@ -3427,7 +3437,7 @@ function renderMemberSongHistory(member, songs){
 
   h+='<div class="member-history-stats">'
     +'<div class="member-history-stat"><div class="member-history-stat-num">'+rows.length+'</div><div class="member-history-stat-label">참여 기록</div></div>'
-    +'<div class="member-history-stat"><div class="member-history-stat-num">'+(latest?escHtml(songDateLabel(latest).replace(/^\d{4}\./,'')):'-')+'</div><div class="member-history-stat-label">최근 참여</div></div>'
+    +'<div class="member-history-stat"><div class="member-history-stat-num">'+(latest?escHtml(songDateLabel(latest)):'-')+'</div><div class="member-history-stat-label">최근 참여</div></div>'
     +'<div class="member-history-stat"><div class="member-history-stat-num">'+(rows.length?countMemberHistoryBy(rows,function(s){return s.year})[0][0]:'-')+'</div><div class="member-history-stat-label">최다 연도</div></div>'
     +'</div>';
 
@@ -3443,7 +3453,7 @@ function renderMemberSongHistory(member, songs){
       var kind=getSongMemberMatchKind(s,member);
       var meta=[s.category||'',s.subCategory||'',s.pianist?('반주 '+s.pianist):'',s.location||'',kind==='name'?'이름 기준 추정':''].filter(Boolean).join(' · ');
       return '<div class="member-history-row" onclick="openSongFromMemberHistory(\''+escAttr(s.id)+'\')">'
-        +'<div class="member-history-date">'+escHtml(songDateLabel(s).replace(/^\d{4}\./,''))+'</div>'
+        +'<div class="member-history-date">'+escHtml(songDateLabel(s))+'</div>'
         +'<div><div class="member-history-song">'+escHtml(s.songName||'곡명 없음')+'</div><div class="member-history-sub">'+escHtml(meta||'세부 정보 없음')+'</div></div>'
         +'<div class="home-chevron">›</div>'
         +'</div>';
