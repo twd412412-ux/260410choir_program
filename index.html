@@ -1178,7 +1178,7 @@ body{font-weight:500}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-group"><label class="form-label">반주자 추천</label><select class="form-sel" id="recPianistMode"><option value="yes" selected>함께 보기</option><option value="no">곡만 보기</option></select></div>
-      <div class="form-group"><label class="form-label">선호 반주자</label><input class="form-input" id="recPreferredPianists" placeholder="예: 허우림, 강진영"></div>
+      <div class="form-group"><label class="form-label">선호 반주자</label><input class="form-input" id="recPreferredPianists" placeholder="예: 허우림"></div>
     </div>
     <div class="form-group"><label class="form-label">제외 반주자</label><input class="form-input" id="recExcludePianists" placeholder="예: 조하영, 홍길동"></div>
     <div class="form-group"><label class="form-label">제외 곡</label><input class="form-input" id="recExcludeSongs" placeholder="이번 선곡에서 빼고 싶은 곡명, 쉼표/세미콜론 구분"></div>
@@ -1668,7 +1668,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v50.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v51.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
