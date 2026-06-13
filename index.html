@@ -64,8 +64,10 @@ body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:calc(132px + env(safe
 body.admin-tab-active .bottom-nav{position:fixed;left:0;right:0;bottom:0;margin:0}
 body.admin-tab-active .att-save-float{bottom:84px}
 #modalMemberEdit{align-items:flex-end;justify-content:center}
-#modalMemberEdit .modal-content{width:100%;max-width:500px;max-height:calc(100dvh - 18px);border-radius:18px 18px 0 0;margin:0;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-#modalMemberEdit .modal-header{position:sticky;top:0;z-index:2;background:var(--sf);margin:-20px -20px 16px;padding:16px 20px 12px}
+#modalMemberEdit .modal-content{width:100%;max-width:500px;max-height:calc(100dvh - 48px);border-radius:18px 18px 0 0;margin:0;padding:16px 20px calc(24px + env(safe-area-inset-bottom,0px));overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#modalMemberEdit .modal-header{position:sticky;top:0;z-index:2;background:var(--sf);margin:0 -20px 16px;padding:8px 20px 12px;min-height:52px;gap:12px}
+#modalMemberEdit .modal-title{line-height:1.25;min-width:0}
+#modalMemberEdit .modal-close{width:40px;height:40px;flex:0 0 40px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:1}
 #modalMemberEdit input,#modalMemberEdit select,#modalMemberEdit button{min-width:0}
 #modalMemberEdit input[type=file]{width:100%;min-width:0;overflow:hidden}
 #modalMemberEdit [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
@@ -1626,7 +1628,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v38.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v39.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function syncLayoutState(){
