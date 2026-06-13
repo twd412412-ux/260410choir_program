@@ -57,6 +57,19 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-center{align-items:center}
 .modal-content{background:var(--sf);width:100%;max-width:500px;max-height:85vh;border-radius:20px 20px 0 0;padding:20px;overflow-y:auto;animation:slideUp .3s}
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
+body.modal-open{overflow:hidden}
+body.modal-open .bottom-nav{display:none!important}
+body.admin-tab-active{padding-bottom:0}
+body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:36px}
+body.admin-tab-active .bottom-nav{position:static;left:auto;right:auto;bottom:auto;margin:18px 12px calc(env(safe-area-inset-bottom,0px) + 12px);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 24px rgba(49,54,35,.08)}
+body.admin-tab-active .att-save-float{bottom:12px}
+#modalMemberEdit{align-items:flex-end;justify-content:center}
+#modalMemberEdit .modal-content{width:100%;max-width:500px;max-height:calc(100dvh - 18px);border-radius:18px 18px 0 0;margin:0;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#modalMemberEdit .modal-header{position:sticky;top:0;z-index:2;background:var(--sf);margin:-20px -20px 16px;padding:16px 20px 12px}
+#modalMemberEdit input,#modalMemberEdit select,#modalMemberEdit button{min-width:0}
+#modalMemberEdit input[type=file]{width:100%;min-width:0;overflow:hidden}
+#modalMemberEdit [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+#modalMemberEdit [style*="display:flex"]{min-width:0}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
@@ -1549,12 +1562,37 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v33.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v34.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
-function openModal(id){document.getElementById(id).classList.add('active')}
-function closeModal(id){document.getElementById(id).classList.remove('active')}
-document.addEventListener('click',function(e){if(e.target.classList.contains('modal-overlay')&&e.target.classList.contains('active'))e.target.classList.remove('active')});
+function syncLayoutState(){
+  document.body.classList.toggle('admin-tab-active',currentTab==='admin');
+  document.body.classList.toggle('modal-open',!!document.querySelector('.modal-overlay.active'));
+}
+function openModal(id){
+  var modal=document.getElementById(id);
+  if(!modal)return;
+  modal.classList.add('active');
+  syncLayoutState();
+  if(id==='modalMemberEdit'){
+    setTimeout(function(){
+      var content=modal.querySelector('.modal-content');
+      if(content)content.scrollTop=0;
+    },0);
+  }
+}
+function closeModal(id){
+  var modal=document.getElementById(id);
+  if(!modal)return;
+  modal.classList.remove('active');
+  syncLayoutState();
+}
+document.addEventListener('click',function(e){
+  if(e.target.classList.contains('modal-overlay')&&e.target.classList.contains('active')){
+    e.target.classList.remove('active');
+    syncLayoutState();
+  }
+});
 
 // ==================== 탭 전환 ====================
 function switchTab(tab){
@@ -1565,6 +1603,7 @@ function switchTab(tab){
     return;
   }
   currentTab=tab;
+  syncLayoutState();
   ['pageHome','pageSongs','pageFavorites','pageCalendar','pageArchive','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
   document.querySelectorAll('.nav-item,.home-fab').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
   var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
@@ -4473,6 +4512,7 @@ function init(){
   buildCatOptions();
   buildYearOptions();
   initPhotoViewerTouch();
+  syncLayoutState();
 }
 init();
 
