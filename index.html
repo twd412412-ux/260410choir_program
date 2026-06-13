@@ -1638,7 +1638,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v41.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v42.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2714,7 +2714,50 @@ function normalizeHistoryName(v){
     .trim();
 }
 
+function isParticipantRoleToken(value){
+  var key=normalizeHistoryName(value);
+  if(!key)return false;
+  var roles=['바이올린','비올라','첼로','플룻','플루트','클라리넷','오보에','트럼펫','트롬본','호른','관현악','현악','관악','악기','독창','솔로','반주','반주자','지휘','낭독','내레이션','나레이션','싱어','보컬','팀원'];
+  return roles.some(function(role){
+    var roleKey=normalizeHistoryName(role);
+    return key===roleKey||key.indexOf(roleKey)>-1;
+  });
+}
+
+function splitParticipantNameList(raw){
+  var names=[];
+  String(raw||'').split(/[,，、;；/／·ㆍ\n\r]+/).forEach(function(piece){
+    piece=piece.trim();
+    if(!piece)return;
+    var colon=piece.split(/[:：]/);
+    if(colon.length>=2&&isParticipantRoleToken(colon.slice(0,colon.length-1).join(':'))){
+      piece=colon[colon.length-1].trim();
+    }
+    (piece.match(/[가-힣]{2,5}/g)||[piece]).forEach(function(name){
+      name=String(name||'').trim();
+      if(!name||isParticipantRoleToken(name)||isGenericParticipantLabel(name))return;
+      if(normalizeHistoryName(name).length>=2)names.push(name);
+    });
+  });
+  return names;
+}
+
+function expandParticipantGroupEntries(raw){
+  var text=String(raw||'');
+  var groupPattern=/((?:남성|여성|형제|자매|교구|전체)?\s*(?:트리오|듀엣|중창|합창|찬양단|솔로|solo))\s*[(（]([^()（）]+)[)）]?/gi;
+  text=text.replace(groupPattern,function(match,label,names){
+    var list=splitParticipantNameList(names);
+    return list.length?list.join(','):'';
+  });
+  text=text.replace(/((?:남성|여성|형제|자매|교구|전체)?\s*(?:트리오|듀엣|중창|합창|찬양단|솔로|solo))\s*[:：]\s*([^,，、;；/／\n\r]+)/gi,function(match,label,names){
+    var list=splitParticipantNameList(names);
+    return list.length?list.join(','):match;
+  });
+  return text;
+}
+
 function splitParticipantEntries(raw){
+  raw=expandParticipantGroupEntries(raw);
   return String(raw||'')
     .split(/[,，、;；/／\n\r]+/)
     .map(function(v){return v.trim();})
