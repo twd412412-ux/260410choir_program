@@ -1114,6 +1114,7 @@ body{font-weight:500}
     <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지/설정</div>
     <div class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="memberLinkAudit" onclick="switchAdminTab('memberLinkAudit')">단원 연결 점검</div>
+    <div class="admin-tab" data-at="songRecommend" onclick="switchAdminTab('songRecommend')">선곡 도우미</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
     <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
@@ -1156,6 +1157,28 @@ body{font-weight:500}
     <div id="memberLinkAuditStatus" class="member-audit-status hidden"></div>
     <div id="memberLinkAuditSummary"></div>
     <div id="memberLinkAuditList" class="member-audit-list"></div>
+  </div>
+  <div class="admin-sub hidden" id="subSongRecommend">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎼 선곡 도우미</h3>
+    <div class="member-audit-intro">
+      날짜, 요일, 카테고리, 참여 단원, 최근 사용 이력을 기준으로 선곡 후보를 추천합니다. 추천은 기존 곡 기록만 분석하며 저장 데이터는 변경하지 않습니다.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">선곡 날짜</label><input class="form-input" id="recDate" type="date" onchange="updateSongRecommendDow()" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
+      <div class="form-group"><label class="form-label">요일</label><input class="form-input" id="recDow" readonly style="background:var(--pl);font-weight:700"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="recCatSel"><option value="">전체</option></select></div>
+      <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="recSub" placeholder="예: 교구, 대집회, 특송"></div>
+    </div>
+    <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="recMembers" placeholder="이름 입력, 쉼표/세미콜론 구분"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">최근 사용 제외</label><select class="form-sel" id="recExcludeWeeks"><option value="4">최근 4주 제외</option><option value="8" selected>최근 8주 제외</option><option value="13">최근 3개월 제외</option><option value="26">최근 6개월 제외</option><option value="0">제외 안 함</option></select></div>
+      <div class="form-group"><label class="form-label">반주자 추천</label><select class="form-sel" id="recPianistMode"><option value="yes" selected>함께 보기</option><option value="no">곡만 보기</option></select></div>
+    </div>
+    <button class="btn btn-p btn-bl" onclick="runSongRecommendation()">추천곡 찾기</button>
+    <div id="songRecommendStatus" class="member-audit-status hidden"></div>
+    <div id="songRecommendResults" style="margin-top:12px"></div>
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
     <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 (<span id="handbookCount">0</span>명)</h3>
@@ -1600,6 +1623,7 @@ var db = firebase.firestore();
 var storage = firebase.storage();
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='home';
+var songRecommendCache=[];
 var adminRole=null;
 var chongmuPassword='0412';
 var currentUser=null, currentDetailSong=null;
@@ -1638,7 +1662,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v45.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v46.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1713,6 +1737,10 @@ function canUseReport(){
   return adminRole==='admin';
 }
 
+function canUseSongRecommend(){
+  return adminRole==='admin';
+}
+
 function switchAdminTab(sub){
   if(sub==='memberLinkAudit'&&!canUseMemberLinkAudit()){
     showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
@@ -1720,6 +1748,10 @@ function switchAdminTab(sub){
   }
   if(sub==='report'&&!canUseReport()){
     showToast('결산 보고서는 관리자만 생성할 수 있습니다.');
+    return;
+  }
+  if(sub==='songRecommend'&&!canUseSongRecommend()){
+    showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
     return;
   }
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
@@ -1735,6 +1767,7 @@ function switchAdminTab(sub){
 
   if(sub === 'memberHandbook') loadHandbook();
   if(sub === 'memberLinkAudit') loadMemberLinkAudit();
+  if(sub === 'songRecommend') initSongRecommendTool();
   if(sub === 'attendance'){ensureAttDate();loadAttendance()}
 }
 function updateAdminTabs(){
@@ -1761,7 +1794,7 @@ function showFirstAdminTab(){
       ? ['addSong','schedule']
       : adminRole==='chongmu'
         ? ['attendance','memberHandbook','addSong','schedule']
-        : ['members','attendance','memberHandbook','memberLinkAudit','notice','addSong','schedule','logs','export','report'];
+        : ['members','attendance','memberHandbook','memberLinkAudit','songRecommend','notice','addSong','schedule','logs','export','report'];
 
   var visible = [];
   tabs.querySelectorAll('[data-at]').forEach(function(t){
@@ -4669,6 +4702,341 @@ function buildCatOptions(){
     sel.innerHTML+='<option value="__custom">✏️ 직접 입력</option>';
   });
 }
+
+function setSongRecommendStatus(message,state){
+  var el=document.getElementById('songRecommendStatus');
+  if(!el)return;
+  if(!message){
+    el.classList.add('hidden');
+    el.textContent='';
+    el.classList.remove('warn','no');
+    return;
+  }
+  el.textContent=message;
+  el.classList.remove('hidden','warn','no');
+  if(state)el.classList.add(state);
+}
+
+function initSongRecommendTool(){
+  if(!canUseSongRecommend())return;
+  var dateEl=document.getElementById('recDate');
+  if(dateEl&&!dateEl.value)dateEl.value=getTodayInputDate();
+  updateSongRecommendDow();
+  buildSongRecommendCatOptions();
+  var resultEl=document.getElementById('songRecommendResults');
+  if(resultEl&&!resultEl.innerHTML){
+    resultEl.innerHTML='<div class="member-audit-empty">선곡 조건을 입력하고 추천곡 찾기를 눌러주세요.</div>';
+  }
+}
+
+function updateSongRecommendDow(){
+  var dateEl=document.getElementById('recDate');
+  var dowEl=document.getElementById('recDow');
+  var parts=getDateParts(dateEl?dateEl.value:'');
+  if(!dowEl)return;
+  if(!parts){dowEl.value='';return;}
+  dowEl.value=DOW_NAMES[new Date(parts.year,parts.month-1,parts.day).getDay()];
+}
+
+function buildSongRecommendCatOptions(){
+  var sel=document.getElementById('recCatSel');
+  if(!sel)return;
+  var cur=sel.value;
+  var catMap={};
+  allSongs.forEach(function(s){if(s.category)catMap[s.category]=(catMap[s.category]||0)+1});
+  var sorted=Object.entries(catMap).sort(function(a,b){return b[1]-a[1]||String(a[0]).localeCompare(String(b[0]),'ko')});
+  sel.innerHTML='<option value="">전체</option>';
+  sorted.forEach(function(e){
+    sel.innerHTML+='<option value="'+escAttr(e[0])+'"'+(cur===e[0]?' selected':'')+'>'+escHtml(e[0])+' ('+e[1]+'곡)</option>';
+  });
+}
+
+function getSongRecommendInput(){
+  var dateValue=(document.getElementById('recDate')||{}).value||'';
+  var parts=getDateParts(dateValue);
+  var targetDate=parts?new Date(parts.year,parts.month-1,parts.day):null;
+  var dow=parts?DOW_NAMES[targetDate.getDay()]:'';
+  var memberText=(document.getElementById('recMembers')||{}).value||'';
+  var memberKeys={};
+  splitParticipantEntries(memberText).forEach(function(entry){
+    var info=participantEntryInfo(entry);
+    if(info.key&&!info.isGeneric)memberKeys[info.key]=true;
+  });
+  return {
+    dateValue:dateValue,
+    targetDate:targetDate,
+    dow:dow,
+    category:(document.getElementById('recCatSel')||{}).value||'',
+    subCategory:((document.getElementById('recSub')||{}).value||'').trim(),
+    memberText:memberText.trim(),
+    memberKeys:memberKeys,
+    excludeWeeks:parseInt((document.getElementById('recExcludeWeeks')||{}).value,10)||0,
+    pianistMode:((document.getElementById('recPianistMode')||{}).value||'yes')
+  };
+}
+
+function songRecommendDate(song){
+  if(!song||!song.year||!song.month||!song.day)return null;
+  return new Date(Number(song.year),Number(song.month)-1,Number(song.day));
+}
+
+function songRecommendDayDiff(targetDate,song){
+  var d=songRecommendDate(song);
+  if(!targetDate||!d)return null;
+  return Math.floor((targetDate.getTime()-d.getTime())/86400000);
+}
+
+function songRecommendGroupKey(song){
+  return normalizeSearchText(song&&song.songName)||String(song&&song.songName||'').trim();
+}
+
+function songRecommendRecordMemberKeys(song){
+  var keys={};
+  splitParticipantEntries(song&&song.members||'').forEach(function(entry){
+    var info=participantEntryInfo(entry);
+    if(info.key&&!info.isGeneric)keys[info.key]=true;
+  });
+  (Array.isArray(song&&song.memberRefs)?song.memberRefs:[]).forEach(function(ref){
+    var key=normalizeHistoryName(ref&&ref.name);
+    if(key)keys[key]=true;
+  });
+  return keys;
+}
+
+function songRecommendMemberHits(song,input){
+  var wanted=Object.keys(input.memberKeys||{});
+  if(wanted.length===0)return [];
+  var keys=songRecommendRecordMemberKeys(song);
+  return wanted.filter(function(key){return !!keys[key];});
+}
+
+function songRecommendHasText(value,needle){
+  var n=normalizeSearchText(needle);
+  if(!n)return false;
+  return normalizeSearchText(value).indexOf(n)>-1;
+}
+
+function songRecommendIsRecentBlocked(records,input){
+  if(!input.targetDate||!input.excludeWeeks)return false;
+  var limit=input.excludeWeeks*7;
+  return records.some(function(s){
+    var diff=songRecommendDayDiff(input.targetDate,s);
+    return diff!==null&&diff>=0&&diff<=limit;
+  });
+}
+
+function collectSongRecommendationCandidates(songs,input){
+  var groups={};
+  (songs||[]).forEach(function(song){
+    if(!song||!song.songName)return;
+    var key=songRecommendGroupKey(song);
+    if(!key)return;
+    if(!groups[key])groups[key]={key:key,songName:song.songName,records:[]};
+    groups[key].records.push(song);
+  });
+
+  var raw=Object.keys(groups).map(function(key){
+    var group=groups[key];
+    var records=group.records.sort(function(a,b){return songDateValue(b)-songDateValue(a)});
+    var last=records[0]||{};
+    var dowCount=input.dow?records.filter(function(s){return s.dayOfWeek===input.dow}).length:0;
+    var catCount=input.category?records.filter(function(s){return s.category===input.category}).length:0;
+    var subCount=input.subCategory?records.filter(function(s){
+      return songRecommendHasText([s.subCategory,s.category,s.location].join(' '),input.subCategory);
+    }).length:0;
+    var memberHitMap={};
+    records.forEach(function(s){
+      songRecommendMemberHits(s,input).forEach(function(key){memberHitMap[key]=true;});
+    });
+    var memberHitCount=Object.keys(memberHitMap).length;
+    var recentBlocked=songRecommendIsRecentBlocked(records,input);
+    var lastDiff=songRecommendDayDiff(input.targetDate,last);
+    var score=0, reasons=[];
+    score+=records.length*3;
+    reasons.push('총 '+records.length+'회 기록');
+    if(dowCount>0){score+=dowCount*22;reasons.push(input.dow+'요일 '+dowCount+'회');}
+    if(catCount>0){score+=catCount*15;reasons.push(input.category+' '+catCount+'회');}
+    if(subCount>0){score+=subCount*12;reasons.push('세부 조건 '+subCount+'회');}
+    if(memberHitCount>0){score+=memberHitCount*14;reasons.push('참여 단원 이력 '+memberHitCount+'명');}
+    if(lastDiff!==null){
+      if(lastDiff>365){score+=8;reasons.push('1년 이상 미사용');}
+      else if(lastDiff>180){score+=5;reasons.push('6개월 이상 미사용');}
+      else if(lastDiff>60){score+=2;reasons.push('최근 2개월 미사용');}
+      reasons.push('마지막 '+songDateLabel(last));
+    }else{
+      reasons.push('마지막 날짜 미확인');
+    }
+    if(records.some(function(s){return !!s.youtube;}))score+=2;
+    return {
+      key:group.key,
+      songName:group.songName,
+      records:records,
+      last:last,
+      total:records.length,
+      dowCount:dowCount,
+      catCount:catCount,
+      subCount:subCount,
+      memberHitCount:memberHitCount,
+      recentBlocked:recentBlocked,
+      score:score,
+      reasons:reasons
+    };
+  });
+
+  var notRecent=raw.filter(function(item){return !item.recentBlocked});
+  var pool=notRecent;
+  if(input.dow){
+    var dowPool=pool.filter(function(item){return item.dowCount>0});
+    if(dowPool.length>0)pool=dowPool;
+  }
+  if(input.category){
+    var catPool=pool.filter(function(item){return item.catCount>0});
+    if(catPool.length>0)pool=catPool;
+  }
+  if(input.subCategory){
+    var subPool=pool.filter(function(item){return item.subCount>0});
+    if(subPool.length>0)pool=subPool;
+  }
+  return pool.sort(function(a,b){
+    return b.score-a.score||songDateValue(a.last)-songDateValue(b.last)||String(a.songName).localeCompare(String(b.songName),'ko');
+  }).slice(0,12);
+}
+
+function normalizePianistName(value){
+  var p=String(value||'').trim();
+  if(!p)return '';
+  var key=normalizeHistoryName(p);
+  if(!key||key==='mr'||key.indexOf('음원')>-1||key.indexOf('없음')>-1||key.indexOf('미정')>-1)return '';
+  return p;
+}
+
+function recommendPianistsForSong(item,input){
+  if(input.pianistMode==='no')return [];
+  var stats={};
+  allSongs.forEach(function(song){
+    var name=normalizePianistName(song.pianist);
+    if(!name)return;
+    var key=normalizeHistoryName(name);
+    if(!stats[key])stats[key]={name:name,total:0,songCount:0,last:null,lastValue:0};
+    stats[key].total++;
+    if(songRecommendGroupKey(song)===item.key)stats[key].songCount++;
+    var value=songDateValue(song);
+    if(value>stats[key].lastValue){stats[key].lastValue=value;stats[key].last=song;}
+  });
+  var excludeDays=input.excludeWeeks*7;
+  return Object.keys(stats).map(function(key){
+    var st=stats[key];
+    var diff=st.last?songRecommendDayDiff(input.targetDate,st.last):null;
+    var recent=diff!==null&&diff>=0&&excludeDays>0&&diff<=excludeDays;
+    var score=(st.songCount*10)-st.total;
+    if(diff!==null)score+=Math.min(Math.max(diff,0),365)/18;
+    if(recent)score-=40;
+    var reason=[];
+    if(st.songCount>0)reason.push('이 곡 반주 '+st.songCount+'회');
+    if(st.last)reason.push('최근 '+songDateLabel(st.last));
+    if(recent)reason.push('최근 사용 감점');
+    else reason.push('로테이션 여유');
+    return {name:st.name,score:score,reason:reason.join(' · ')};
+  }).sort(function(a,b){return b.score-a.score||a.name.localeCompare(b.name,'ko')}).slice(0,3);
+}
+
+function renderSongRecommendationResults(items,input,usedFallback){
+  var el=document.getElementById('songRecommendResults');
+  if(!el)return;
+  songRecommendCache=items.map(function(item){
+    item.pianists=recommendPianistsForSong(item,input);
+    return item;
+  });
+  if(items.length===0){
+    el.innerHTML='<div class="member-audit-empty">조건에 맞는 추천 후보가 없습니다. 최근 제외 기간을 줄이거나 카테고리를 비워보세요.</div>';
+    return;
+  }
+  var note=usedFallback?'<div class="member-audit-status warn" style="margin-bottom:10px">같은 요일 기록이 부족해 최근 사용을 제외한 전체 기록에서 후보를 표시합니다.</div>':'';
+  el.innerHTML=note+songRecommendCache.map(function(item,idx){
+    var pianistHtml=item.pianists&&item.pianists.length
+      ? '<div style="font-size:12px;color:var(--ts);margin-top:7px">🎹 추천 반주: '+item.pianists.map(function(p){return '<b>'+escHtml(p.name)+'</b> <span style="color:var(--ts)">('+escHtml(p.reason)+')</span>';}).join(' / ')+'</div>'
+      : '';
+    var stats=[
+      '마지막 '+songDateLabel(item.last),
+      '총 '+item.total+'회',
+      input.dow?(input.dow+'요일 '+item.dowCount+'회'):'',
+      input.category?(input.category+' '+item.catCount+'회'):'',
+      input.subCategory?('세부 '+item.subCount+'회'):'',
+      item.memberHitCount?('단원 이력 '+item.memberHitCount+'명'):''
+    ].filter(Boolean).join(' · ');
+    return '<div class="song-card" style="cursor:default">'
+      +'<div class="song-card-title"><span>'+escHtml(item.songName)+'</span><span class="meta-tag">점수 '+Math.round(item.score)+'</span></div>'
+      +'<div class="song-card-meta"><span>'+escHtml(stats)+'</span></div>'
+      +'<div style="font-size:12px;color:var(--ts);line-height:1.55;margin-top:8px">'+escHtml(item.reasons.join(' · '))+'</div>'
+      +pianistHtml
+      +'<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">'
+      +'<button class="btn btn-sm" style="background:var(--p);color:#fff" onclick="applySongRecommendation('+idx+')">곡 추가에 넣기</button>'
+      +(item.last&&item.last.id?'<button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="openDetail(\''+escAttr(item.last.id)+'\')">최근 기록 보기</button>':'')
+      +'</div></div>';
+  }).join('');
+}
+
+function runSongRecommendation(){
+  if(!canUseSongRecommend())return showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
+  var input=getSongRecommendInput();
+  if(!input.targetDate)return showToast('선곡 날짜를 입력해주세요.');
+  var resultEl=document.getElementById('songRecommendResults');
+  if(resultEl)resultEl.innerHTML='<div class="loading" style="padding:24px"><div class="spinner"></div>추천 후보를 분석하는 중...</div>';
+  setSongRecommendStatus('곡 기록을 분석하는 중입니다.');
+  getSongsForMemberLinkAudit(false).then(function(songs){
+    buildSongRecommendCatOptions();
+    var all=collectSongRecommendationCandidates(songs||allSongs,input);
+    var fallback=false;
+    if(input.dow&&all.length>0&&!all.some(function(item){return item.dowCount>0}))fallback=true;
+    renderSongRecommendationResults(all,input,fallback);
+    setSongRecommendStatus(all.length?('추천 후보 '+all.length+'곡을 찾았습니다.'):'조건에 맞는 추천 후보가 없습니다.',all.length?'':'warn');
+  }).catch(function(e){
+    console.error(e);
+    setSongRecommendStatus('추천 후보 분석 중 오류가 발생했습니다.','no');
+    if(resultEl)resultEl.innerHTML='<div class="member-audit-empty">추천 데이터를 불러오지 못했습니다.</div>';
+  });
+}
+
+function setCategoryFieldValue(prefix,value){
+  var sel=document.getElementById(prefix+'CatSel');
+  var input=document.getElementById(prefix+'CatInput');
+  if(!sel||!input)return;
+  buildCatOptions();
+  var found=false;
+  for(var i=0;i<sel.options.length;i++){
+    if(sel.options[i].value===value){sel.selectedIndex=i;found=true;break;}
+  }
+  if(!value){
+    sel.value='';
+    input.classList.add('hidden');
+    input.value='';
+  }else if(!found){
+    sel.value='__custom';
+    input.classList.remove('hidden');
+    input.value=value;
+  }else{
+    input.classList.add('hidden');
+    input.value='';
+  }
+}
+
+function applySongRecommendation(index){
+  if(!canUseSongRecommend())return showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
+  var item=songRecommendCache[index];
+  if(!item)return showToast('추천 항목을 찾을 수 없습니다.');
+  var input=getSongRecommendInput();
+  switchAdminTab('addSong');
+  document.getElementById('addSongName').value=item.songName;
+  document.getElementById('addDate').value=input.dateValue;
+  calcDow('add');
+  setCategoryFieldValue('add',input.category||item.last.category||'');
+  document.getElementById('addSub').value=input.subCategory||'';
+  document.getElementById('addMem').value=input.memberText||'';
+  if(item.pianists&&item.pianists.length)document.getElementById('addPia').value=item.pianists[0].name;
+  onSongMemberInput('add');
+  showToast('추천곡을 곡 추가 화면에 넣었습니다.');
+}
+
 function buildYearOptions(){
   var years=[];
   allSongs.forEach(function(s){if(s.year&&years.indexOf(s.year)===-1)years.push(s.year)});
