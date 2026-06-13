@@ -1638,7 +1638,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v43.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v44.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2778,8 +2778,6 @@ function participantLookupName(entry){
   var text=String(entry||'').trim();
   var groupedName=text.match(/(?:트리오|듀엣|중창|합창|찬양단|솔로|solo)\s*[(（]\s*([가-힣]{2,5})/i);
   if(groupedName)return groupedName[1].trim();
-  var extra=text.match(/^(.+?)\s*외\s*\d+\s*명$/);
-  if(extra&&normalizeHistoryName(extra[1]).length>=2)return extra[1].trim();
   var parts=text.split(/[:：]/);
   if(parts.length>=2){
     var prefix=parts.slice(0,parts.length-1).join(':').trim();
@@ -2802,6 +2800,7 @@ function participantHasLookupAlias(entry){
 function isGenericParticipantLabel(value){
   var key=normalizeHistoryName(value);
   if(!key)return false;
+  if(/^[가-힣]{2,5}외(?:다수|\d*(?:명|인)?)$/.test(key))return true;
   if(/^\d+여?명$/.test(key)||/^\d+명(내외|이상|이하)?$/.test(key)||/^\d+인$/.test(key))return true;
   if(/^(남성|여성|남자|여자|형제|자매)?\d+명$/.test(key))return true;
   if(/(찬양단|중창|합창|합창단|성가대|트리오|듀엣|이중창|삼중창|사중창)$/.test(key))return true;
