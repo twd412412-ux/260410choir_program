@@ -1153,6 +1153,14 @@ body{font-weight:500}
         </select>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+        <select class="form-sel" id="hbGroup">
+          <option value="">회별 선택</option><option>어머니회</option><option>봉사회</option><option>청년회</option><option>대학회</option>
+        </select>
+        <select class="form-sel" id="hbSub">
+          <option value="">겸직 없음</option><option value="임원">겸직: 임원</option><option value="지휘">겸직: 지휘</option><option value="반주">겸직: 반주</option><option value="준단원">겸직: 준단원</option><option value="신입단원">겸직: 신입단원</option>
+        </select>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
         <input class="form-input" id="hbPhone" placeholder="전화번호">
         <input class="form-input" id="hbBirth" type="text" placeholder="생년월일" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
 
@@ -1162,6 +1170,9 @@ body{font-weight:500}
         <input class="form-input" id="hbArea" placeholder="구역">
         <input class="form-input" id="hbJob" placeholder="직업">
       </div>
+      <label style="font-size:13px;font-weight:700;color:var(--ts);display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
+        <input type="checkbox" id="hbNoAtt" style="width:18px;height:18px"> 출결부에서 제외
+      </label>
       <div class="form-group" style="margin-top:8px;">
         <label class="form-label" style="font-size:12px; color:var(--p)">📷 프로필 사진 등록</label>
         <div style="text-align:center; margin-bottom:10px;"><img id="hbPhotoPreview" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--bd); margin:0 auto;"></div>
@@ -1574,7 +1585,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v35.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v36.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function syncLayoutState(){
@@ -3439,9 +3450,15 @@ function toggleHbPart(part) {
   filterHandbook();    // 명부 목록 다시 그리기
 }
 
+function cleanMemberSubPart(part, subPart){
+  var sub=normalizePartName(subPart);
+  return sub&&sub!==part?sub:'';
+}
+
 function addHandbookMember(){
   var name = document.getElementById('hbName').value.trim();
   var part = normalizePartName(document.getElementById('hbPart').value);
+  var subPart = cleanMemberSubPart(part, document.getElementById('hbSub').value);
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
   
   // 👇 photo 항목이 추가되었습니다!
@@ -3453,18 +3470,25 @@ function addHandbookMember(){
     district: document.getElementById('hbDist').value.trim(),
     area: document.getElementById('hbArea').value.trim(),
     job: document.getElementById('hbJob').value.trim(),
-    status: 'active', createdAt: new Date().toISOString()
+    group: document.getElementById('hbGroup').value||'',
+    subPart: subPart,
+    noAtt: document.getElementById('hbNoAtt').checked || false,
+    status: part==='명단제외' ? 'inactive' : 'active',
+    createdAt: new Date().toISOString()
   };
   
   db.collection('members').add(data).then(function(){ 
     showToast(name + '님 명부 등록 완료');
+    var distInfo = data.district ? `${data.district}교구` : '교구 미입력';
     ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('hbPart').selectedIndex = 0;
+    document.getElementById('hbGroup').selectedIndex = 0;
+    document.getElementById('hbSub').selectedIndex = 0;
+    document.getElementById('hbNoAtt').checked = false;
     if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
     invalidateAttendanceMemberCache();
     loadHandbook();
-    var distInfo = document.getElementById('hbDist').value ? `${document.getElementById('hbDist').value}교구` : '교구 미입력';
-    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part} | 🏠 ${distInfo}`);
+    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 🏠 ${distInfo}`);
   });
 }
 
@@ -3492,7 +3516,7 @@ function editHandbookMember(id){
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
-  document.getElementById('editHbSub').value = m.subPart || '';
+  document.getElementById('editHbSub').value = normalizePartName(m.subPart) || '';
   document.getElementById('editHbNoAtt').checked = m.noAtt || false;
 
 
@@ -3518,6 +3542,7 @@ function updateHandbookMember(){
   var id = document.getElementById('editHbId').value;
   var name = document.getElementById('editHbName').value.trim();
   var part = normalizePartName(document.getElementById('editHbPart').value);
+  var subPart = cleanMemberSubPart(part, document.getElementById('editHbSub').value);
   if(!id) return showToast('수정할 단원을 찾을 수 없습니다');
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
   
@@ -3531,7 +3556,7 @@ function updateHandbookMember(){
     area: document.getElementById('editHbArea').value.trim(), 
     job: document.getElementById('editHbJob').value.trim(),
     group: document.getElementById('editHbGroup').value||'',
-    subPart: document.getElementById('editHbSub').value||'',
+    subPart: subPart,
     noAtt: document.getElementById('editHbNoAtt').checked || false,
     status: part==='명단제외' ? 'inactive' : 'active'
 
@@ -3543,7 +3568,7 @@ function updateHandbookMember(){
     closeModal('modalMemberEdit');
     invalidateAttendanceMemberCache();
     loadHandbook();
-    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}`);
+    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
