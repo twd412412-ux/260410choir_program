@@ -1319,6 +1319,14 @@ body{font-weight:500}
 
   <div class="admin-sub hidden" id="subLogs">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📝 활동 로그</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:10px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:12px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:750;color:var(--tx)">
+        <input type="checkbox" id="logHideAdmin" onchange="toggleLogHideAdmin(this.checked)">
+        관리자 로그 숨김
+      </label>
+      <button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="loadLogs()">새로고침</button>
+    </div>
+    <div id="logSummary" style="font-size:12px;color:var(--ts);margin-bottom:8px"></div>
     <div id="logList"></div>
   </div>
   <div class="admin-sub hidden" id="subExport">
@@ -1677,6 +1685,7 @@ var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
+var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
@@ -1686,7 +1695,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v60.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v61.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -3463,6 +3472,7 @@ function autoLinkSongMembers(){
   })).then(function(){
     saveCache('choir_songs',allSongs);
     renderMemberLinkAudit(allSongs);
+    writeLog('단원 연결 자동연결','자동 연결 '+count+'건 저장\n대상 곡 '+updates.length+'곡: '+updates.slice(0,5).map(function(u){return u.song.songName||'곡명 없음';}).join(', ')+(updates.length>5?' 외 '+(updates.length-5)+'곡':''));
     showToast(count+'건 자동 연결 완료');
   }).catch(function(e){
     console.error(e);
@@ -3470,12 +3480,13 @@ function autoLinkSongMembers(){
   });
 }
 
-function saveMemberLinkExceptions(song, exceptions, message){
+function saveMemberLinkExceptions(song, exceptions, message, logDetail){
   db.collection('songs').doc(song.id).update({memberLinkExceptions:exceptions}).then(function(){
     var idx=allSongs.findIndex(function(s){return s.id===song.id});
     if(idx>-1)allSongs[idx].memberLinkExceptions=exceptions;
     saveCache('choir_songs',allSongs);
     renderMemberLinkAudit(allSongs);
+    if(logDetail)writeLog('단원 연결 예외 처리',logDetail);
     showToast(message);
   }).catch(function(e){
     console.error(e);
@@ -3496,7 +3507,7 @@ function markMemberLinkException(songId, entry, reason){
     createdBy:currentUser?currentUser.name:(adminRole||'관리자')
   });
   memberLinkAuditFilter='ignored';
-  saveMemberLinkExceptions(song,exceptions,'처리 제외 항목으로 저장했습니다. ('+(reason||'처리 제외')+') 취소하려면 제외 취소를 누르세요.');
+  saveMemberLinkExceptions(song,exceptions,'처리 제외 항목으로 저장했습니다. ('+(reason||'처리 제외')+') 취소하려면 제외 취소를 누르세요.','곡: '+(song.songName||'곡명 없음')+'\n항목: '+entry+'\n처리: '+(reason||'처리 제외'));
 }
 
 function removeMemberLinkException(songId, entry){
@@ -3506,7 +3517,7 @@ function removeMemberLinkException(songId, entry){
   var key=participantEntryKey(entry);
   var exceptions=getMemberLinkExceptions(song).filter(function(item){return participantEntryKey(item&&item.name)!==key;});
   memberLinkAuditFilter='unlinked';
-  saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다. 다시 점검 목록에 표시됩니다.');
+  saveMemberLinkExceptions(song,exceptions,'처리 제외를 취소했습니다. 다시 점검 목록에 표시됩니다.','곡: '+(song.songName||'곡명 없음')+'\n항목: '+entry+'\n처리 제외 취소');
 }
 
 function renderMemberLinkAudit(songs){
@@ -4671,33 +4682,110 @@ function barChart(id,data,unit){
 }
 
 // ==================== 활동 로그 ====================
+function logRoleLabel(role){
+  if(role==='admin')return '관리자';
+  if(role==='chongmu')return '총무부';
+  if(role==='attendance')return '출결';
+  if(role==='songschedule')return '곡+일정';
+  return role||'일반';
+}
+function getLogActor(){
+  var role=adminRole||(currentUser&&currentUser.role)||'';
+  var isAdmin=adminRole==='admin'||role==='admin';
+  var name=isAdmin?'관리자':(currentUser&&currentUser.name?currentUser.name:logRoleLabel(role));
+  return {
+    name:name||'비회원',
+    role:role||'guest',
+    roleLabel:isAdmin?'관리자':logRoleLabel(role),
+    part:currentUser&&currentUser.part?currentUser.part:'',
+    id:currentUser&&currentUser.id?currentUser.id:'',
+    isAdminAction:!!isAdmin
+  };
+}
 function writeLog(action,detail){
-  var user=adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'비회원');
-  db.collection('activityLogs').add({action:action,detail:detail,user:user,timestamp:new Date().toISOString()}).catch(function(){});
+  var actor=getLogActor();
+  db.collection('activityLogs').add({
+    action:action,
+    detail:detail,
+    user:actor.name,
+    actorName:actor.name,
+    actorRole:actor.role,
+    actorRoleLabel:actor.roleLabel,
+    actorPart:actor.part,
+    actorId:actor.id,
+    isAdminAction:actor.isAdminAction,
+    timestamp:new Date().toISOString()
+  }).catch(function(){});
+}
+function toggleLogHideAdmin(checked){
+  logHideAdmin=!!checked;
+  localStorage.setItem('choir_log_hide_admin',logHideAdmin?'true':'false');
+  loadLogs();
+}
+function isAdminLogEntry(d){
+  if(d.isAdminAction===true)return true;
+  var role=String(d.actorRole||'');
+  var user=String(d.actorName||d.user||'');
+  return role==='admin'||user==='관리자';
+}
+function logEntryIcon(action){
+  action=String(action||'');
+  if(action.indexOf('삭제')>-1)return '🗑️';
+  if(action.indexOf('수정')>-1||action.indexOf('변경')>-1||action.indexOf('PIN')>-1)return '✏️';
+  if(action.indexOf('추가')>-1||action.indexOf('등록')>-1||action.indexOf('발급')>-1)return '➕';
+  if(action.indexOf('공지')>-1)return '📢';
+  if(action.indexOf('일정')>-1)return '📅';
+  if(action.indexOf('출석')>-1||action.indexOf('출결')>-1)return '📋';
+  if(action.indexOf('아카이브')>-1)return '🗂️';
+  if(action.indexOf('백업')>-1)return '💾';
+  if(action.indexOf('보고서')>-1)return '🖨️';
+  return '📝';
+}
+function logTimestampLabel(value){
+  var t=value?new Date(value):new Date();
+  if(isNaN(t.getTime()))t=new Date();
+  return t.getFullYear()+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+}
+function renderLogCards(rows,totalCount){
+  var c=document.getElementById('logList');if(!c)return;
+  var summary=document.getElementById('logSummary');
+  var visible=rows.filter(function(d){return !logHideAdmin||!isAdminLogEntry(d);}).slice(0,50);
+  if(summary){
+    summary.textContent=(logHideAdmin?'관리자 로그를 제외하고 ':'전체 로그 중 ')+visible.length+'건 표시 · 최근 조회 '+totalCount+'건 기준';
+  }
+  if(visible.length===0){
+    c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">표시할 활동 로그가 없습니다</div>';
+    return;
+  }
+  c.innerHTML=visible.map(function(d){
+    var ts=logTimestampLabel(d.timestamp);
+    var icon=logEntryIcon(d.action);
+    var name=d.actorName||d.user||'알 수 없음';
+    var role=d.actorRoleLabel||logRoleLabel(d.actorRole||'');
+    var part=d.actorPart?(' · '+d.actorPart):'';
+    var userLine=role&&role!=='일반'?name+' · '+role+part:name+part;
+    return '<div style="padding:12px;background:var(--sf);border-radius:12px;margin-bottom:8px;box-shadow:var(--sh);border-left:4px solid '+(isAdminLogEntry(d)?'#9A8D7B':'var(--p)')+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">'
+        +'<div style="font-weight:800;font-size:14px;color:var(--tx)">'+icon+' '+escHtml(d.action||'활동')+'</div>'
+        +'<div style="font-size:11px;color:var(--ts);text-align:right;white-space:nowrap">'+escHtml(ts)+'</div>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--ts);margin-bottom:7px">👤 '+escHtml(userLine)+'</div>'
+      +'<div style="font-size:13px;color:var(--ts);background:var(--bg);padding:8px;border-radius:8px;line-height:1.45;white-space:pre-line">'+escHtml(d.detail||'상세 내용 없음')+'</div>'
+      +'</div>';
+  }).join('');
 }
 function loadLogs(){
-  db.collection('activityLogs').orderBy('timestamp','desc').limit(50).get().then(function(snap){
+  var chk=document.getElementById('logHideAdmin');
+  if(chk)chk.checked=logHideAdmin;
+  db.collection('activityLogs').orderBy('timestamp','desc').limit(150).get().then(function(snap){
     var c=document.getElementById('logList');if(!c)return;
     if(snap.empty){c.innerHTML='<div style="font-size:13px;color:var(--ts)">활동 로그가 없습니다</div>';return}
-    c.innerHTML='';
-    snap.forEach(function(doc){
-      var d=doc.data();var t=d.timestamp?new Date(d.timestamp):new Date();
-      var ts=t.getFullYear()+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
-      var icon=d.action.indexOf('추가')>-1?'➕':d.action.indexOf('수정')>-1||d.action.indexOf('변경')>-1?'✏️':d.action.indexOf('삭제')>-1?'🗑️':d.action.indexOf('등록')>-1?'👤':d.action.indexOf('공지')>-1?'📢':d.action.indexOf('일정')>-1?'📅':'📝';
-      
-      // [업그레이드] 예쁜 카드형 디자인 적용
-      c.innerHTML += `
-      <div style="padding:12px; background:var(--sf); border-radius:12px; margin-bottom:8px; box-shadow:var(--sh); border-left:4px solid var(--p);">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-          <div style="font-weight:700; font-size:14px; color:var(--tx);">${icon} ${d.action}</div>
-          <div style="font-size:11px; color:var(--ts); text-align:right;">${ts}<br/>👤 ${d.user||'알 수 없음'}</div>
-        </div>
-        <div style="font-size:13px; color:var(--ts); background:var(--bg); padding:8px; border-radius:8px; line-height:1.4; white-space:pre-line;">
-          ${d.detail}
-        </div>
-      </div>`;
-    });
-  }).catch(function(){ /* ... 생략 ... */ });
+    var rows=[];
+    snap.forEach(function(doc){rows.push(doc.data()||{});});
+    renderLogCards(rows,rows.length);
+  }).catch(function(){
+    var c=document.getElementById('logList');if(c)c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">활동 로그를 불러오지 못했습니다</div>';
+  });
 }
 
 // ==================== CSV ====================
@@ -4709,7 +4797,9 @@ function exportCSV(){
     csv+=[s.songName,s.year,s.month,s.day||'',s.dayOfWeek,s.category,s.subCategory,s.location,s.members,s.pianist].map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(',')+'\n';
   });
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='광주교회찬양대_'+new Date().toISOString().split('T')[0]+'.csv';a.click();showToast('CSV 다운로드 완료');
+  a.download='광주교회찬양대_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+  writeLog('백업 다운로드','곡 CSV 다운로드\n곡 기록 '+allSongs.length+'건');
+  showToast('CSV 다운로드 완료');
 }
 function exportAttCSV(){
   showToast('출석 데이터 불러오는 중...');
@@ -4737,6 +4827,7 @@ function exportAttCSV(){
       a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
       a.download='찬양대_출석_'+new Date().toISOString().split('T')[0]+'.csv';
       a.click();
+      writeLog('백업 다운로드','출석 CSV 다운로드\n대상 단원 '+attMembers.length+'명 / 출석 회차 '+allRecords.length+'건');
       showToast('출석 CSV 다운로드 완료');
     }).catch(function(){showToast('출석 데이터를 불러올 수 없습니다')});
   });
@@ -5258,6 +5349,7 @@ function applySongRecommendation(index){
   document.getElementById('addMem').value=input.memberText||'';
   if(item.pianists&&item.pianists.length)document.getElementById('addPia').value=item.pianists[0].name;
   onSongMemberInput('add');
+  writeLog('선곡 도우미 적용','추천곡 ['+(item.songName||'곡명 없음')+']을 곡 추가 화면에 반영\n날짜: '+(input.dateValue||'-')+'\n분류: '+(input.category||item.last.category||'-')+(input.subCategory?' · '+input.subCategory:'')+(item.pianists&&item.pianists.length?'\n추천 반주: '+item.pianists[0].name:''));
   showToast('추천곡을 곡 추가 화면에 넣었습니다.');
 }
 
@@ -7254,6 +7346,7 @@ function generateReport() {
 
     canvas.innerHTML = h;
     printBtn.style.display = 'block'; // 인쇄 버튼 보이기
+    writeLog('결산 보고서 생성',year+'년 '+month+'월 보고서 생성\n곡 '+songs.length+'건 / 출석 회차 '+rawAttDocs.length+'건 / 단원 '+activeMembers.length+'명 기준');
     
   }).catch(function(err) {
     console.error(err);
@@ -7270,6 +7363,8 @@ function printReport() {
     document.body.classList.remove('print-report-mode');
     window.removeEventListener('afterprint',cleanup);
   }
+  var monthVal=document.getElementById('reportMonthSel')?document.getElementById('reportMonthSel').value:'';
+  writeLog('결산 보고서 인쇄',monthVal?monthVal+' 보고서 인쇄/PDF 저장 실행':'보고서 인쇄/PDF 저장 실행');
   window.addEventListener('afterprint',cleanup);
   setTimeout(function(){
     window.print();
