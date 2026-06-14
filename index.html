@@ -1668,7 +1668,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v53.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v54.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -4905,7 +4905,7 @@ function collectSongRecommendationCandidates(songs,input){
     var dowCount=input.dow?records.filter(function(s){return s.dayOfWeek===input.dow}).length:0;
     var catCount=input.category?records.filter(function(s){return s.category===input.category}).length:0;
     var subCount=input.subCategory?records.filter(function(s){
-      return songRecommendHasText([s.subCategory,s.category,s.location].join(' '),input.subCategory);
+      return songRecommendHasText([s.subCategory,s.location].join(' '),input.subCategory);
     }).length:0;
     var memberHitMap={};
     records.forEach(function(s){
