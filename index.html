@@ -1458,7 +1458,7 @@ body{font-weight:500}
       <button class="btn" style="flex:1;background:var(--pl);color:var(--pd)" onclick="toggleBkDetail()">⭐ 즐겨찾기</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px" id="detailAdmin">
-      <button class="btn btn-sm btn-p" style="flex:1" onclick="editFromDetail()">✏️ 수정</button>
+      <button class="btn btn-sm btn-p" style="flex:1" id="detailEditBtn" onclick="editFromDetail()">✏️ 수정</button>
       <button class="btn btn-sm btn-d" style="flex:1" id="detailDelBtn" onclick="delFromDetail()">🗑️ 삭제</button>
     </div>
   </div>
@@ -1728,8 +1728,8 @@ var scheduleEditId='';
 // ==================== 권한 정의 ====================
 var PERMISSION_GROUPS=[
   {title:'곡 / 일정',items:[
-    {key:'song.manage',label:'곡 관리',desc:'곡 조회, 추가, 수정, 본인 등록곡 삭제'},
-    {key:'schedule.manage',label:'일정 관리',desc:'일정 조회, 추가, 수정, 본인 등록 일정 삭제'}
+    {key:'song.manage',label:'곡 관리',desc:'곡 추가, 본인 등록곡 수정/삭제'},
+    {key:'schedule.manage',label:'일정 관리',desc:'일정 추가, 본인 등록 일정 수정/삭제'}
   ]},
   {title:'출결',items:[
     {key:'attendance.view',label:'출결 조회',desc:'담당 범위 출결과 통계 조회'},
@@ -1783,7 +1783,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v66.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v67.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1902,16 +1902,27 @@ function canUseStats(){
 function canManageSongs(){
   return adminRole==='admin'||hasPermission('song.manage');
 }
+function isOwnCreatedItem(item){
+  return !!(currentUser&&item&&(item.createdById===currentUser.id||(!item.createdById&&item.createdByName===currentUser.name)));
+}
+function canEditSongItem(song){
+  if(adminRole==='admin')return true;
+  return !!(canManageSongs()&&isOwnCreatedItem(song));
+}
 function canDeleteSongItem(song){
   if(adminRole==='admin')return true;
-  return !!(canManageSongs()&&currentUser&&song&&(song.createdById===currentUser.id||(!song.createdById&&song.createdByName===currentUser.name)));
+  return !!(canManageSongs()&&isOwnCreatedItem(song));
 }
 function canManageSchedules(){
   return adminRole==='admin'||hasPermission('schedule.manage');
 }
+function canEditScheduleItem(schedule){
+  if(adminRole==='admin')return true;
+  return !!(canManageSchedules()&&isOwnCreatedItem(schedule));
+}
 function canDeleteScheduleItem(schedule){
   if(adminRole==='admin')return true;
-  return !!(canManageSchedules()&&currentUser&&schedule&&(schedule.createdById===currentUser.id||(!schedule.createdById&&schedule.createdByName===currentUser.name)));
+  return !!(canManageSchedules()&&isOwnCreatedItem(schedule));
 }
 function canUseMemberLinkAudit(){
   return adminRole==='admin';
@@ -2722,8 +2733,10 @@ function renderSongList(){
 function renderSongAdminActions(song){
   if(!canManageSongs())return '';
   var name=String(song.songName||'').replace(/'/g,"\\'");
+  var edit=canEditSongItem(song)?'<button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+song.id+'\')">✏️</button>':'';
   var del=canDeleteSongItem(song)?'<button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+song.id+'\',\''+name+'\')">🗑️</button>':'';
-  return '<span style="display:flex;gap:2px"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+song.id+'\')">✏️</button>'+del+'</span>';
+  if(!edit&&!del)return '';
+  return '<span style="display:flex;gap:2px">'+edit+del+'</span>';
 }
 
 
@@ -2747,8 +2760,11 @@ function openDetail(id){
   localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
 
   document.getElementById('detailTitle').textContent=song.songName;
-  document.getElementById('detailAdmin').style.display=canManageSongs() ? 'flex' : 'none';
-  document.getElementById('detailDelBtn').style.display=canDeleteSongItem(song) ? '' : 'none';
+  var canEditDetail=canEditSongItem(song);
+  var canDeleteDetail=canDeleteSongItem(song);
+  document.getElementById('detailAdmin').style.display=(canEditDetail||canDeleteDetail) ? 'flex' : 'none';
+  document.getElementById('detailEditBtn').style.display=canEditDetail ? '' : 'none';
+  document.getElementById('detailDelBtn').style.display=canDeleteDetail ? '' : 'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
   var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
@@ -2839,6 +2855,7 @@ function addNewSong(skipMemberLoad){
 function openEdit(id){
   if(!canManageSongs())return showToast('곡 관리 권한이 필요합니다');
   var song=allSongs.find(function(s){return s.id===id});if(!song)return;
+  if(!canEditSongItem(song))return showToast('본인이 등록한 곡만 수정할 수 있습니다');
   currentDetailSong=song;
   document.getElementById('editName').value=song.songName;
   buildYearOptions();
@@ -2865,8 +2882,7 @@ function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
 function saveEdit(skipMemberLoad){
   if(!currentDetailSong)return;
   
-  // 👇 최고 관리자와 총무부가 아니면 아예 저장을 막고 튕겨냅니다!
-  if(!canManageSongs()) return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canEditSongItem(currentDetailSong)) return showToast('본인이 등록한 곡만 수정할 수 있습니다');
   
   var cat=getCatValue('edit');
   
@@ -4519,6 +4535,10 @@ function toggleScheduleBriefing(){
 
 function addSchedule(){
   if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
+  if(scheduleEditId){
+    var editingSchedule=allSchedules.find(function(s){return s.id===scheduleEditId});
+    if(!canEditScheduleItem(editingSchedule))return showToast('본인이 등록한 일정만 수정할 수 있습니다');
+  }
   var date=document.getElementById('schDate').value;
   var title=document.getElementById('schTitle').value.trim();
   if(!date||!title)return showToast('날짜와 제목은 필수입니다');
@@ -4557,13 +4577,15 @@ function loadSchAdmin(){
   var today=new Date().toISOString().split('T')[0];
   c.innerHTML=sorted.map(function(s){
     var past=s.date<today;
+    var editBtn=canEditScheduleItem(s)?'<button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button>':'';
     var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button>':'';
-    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button>'+delBtn+'</div></div>';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
   }).join('');
 }
 function editSchedule(id){
   if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
+  if(!canEditScheduleItem(s))return showToast('본인이 등록한 일정만 수정할 수 있습니다');
   scheduleEditId=id;
   document.getElementById('schDate').value=s.date;
   document.getElementById('schTitle').value=s.title;
