@@ -1782,7 +1782,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v64.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v65.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2971,13 +2971,8 @@ function renderAccountPermissionBadges(m){
   var perms=getUserPermissions(m);
   if(perms.length===0)return '';
   var badges=[];
-  var presetKey=m.permissionPreset&&m.permissionPreset!=='none'?m.permissionPreset:legacyPresetForAccount(m);
-  if(presetKey&&presetKey!=='none'&&presetKey!=='custom'){
-    badges.push('<span class="perm-badge preset">'+escHtml(permissionPresetLabel(presetKey))+'</span>');
-  }else if(perms.length){
-    badges.push('<span class="perm-badge preset">직접 설정</span>');
-  }
   var featureLabels=accountFeatureLabels(perms);
+  if(featureLabels.length===0)return '';
   featureLabels.forEach(function(label){
     badges.push('<span class="perm-badge">'+escHtml(label)+'</span>');
   });
@@ -3151,8 +3146,9 @@ function openAccountRole(id){
   var preset=m.permissionPreset||legacyPresetForAccount(m);
   var perms=permissionEditorPermissionsFor(m,preset);
   var scope=permissionEditorScopeFor(m,preset,perms);
+  var presetLabel=permissionPresetLabel(preset);
   openAccountAction('계정 권한 변경',
-    '<div class="account-action-note">'+escHtml(m.name)+'님의 권한을 지정합니다. 출결 범위는 여기서 정한 값만 사용할 수 있습니다.</div>'
+    '<div class="account-action-note"><b>현재 프리셋: '+escHtml(presetLabel)+'</b><br>'+escHtml(m.name)+'님의 권한을 지정합니다. 출결 범위는 여기서 정한 값만 사용할 수 있습니다.</div>'
     +renderPermissionEditor(preset,perms,scope)
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountRole()">저장</button></div>'
   );
