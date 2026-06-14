@@ -1169,7 +1169,7 @@ body{font-weight:500}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-group"><label class="form-label">카테고리</label><select class="form-sel" id="recCatSel"><option value="">전체</option></select></div>
-      <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="recSub" placeholder="예: 용봉, 연제, 청년회, 대집회"></div>
+      <div class="form-group"><label class="form-label">세부 분류</label><input class="form-input" id="recSub" placeholder="예: 용봉, 연제"></div>
     </div>
     <div class="form-group"><label class="form-label">참여 단원</label><input class="form-input" id="recMembers" placeholder="같이 넣고 싶은 단원 이름, 쉼표/세미콜론 구분"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1668,7 +1668,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v52.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v53.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
