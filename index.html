@@ -1198,7 +1198,7 @@ body{font-weight:500}
         <select class="form-sel" id="hbPart">
           <option value="">파트 선택 *</option>
           <option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option>
-          <option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option><option>명단제외</option>
+          <option>지휘</option><option>반주</option><option>임원</option><option>명단제외</option>
         </select>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
@@ -1485,8 +1485,9 @@ body{font-weight:500}
     <div class="form-group">
       <label class="form-label">파트 *</label>
       <select class="form-sel" id="editHbPart">
+        <option value="">파트 선택 *</option>
         <option>S1</option><option>S2</option><option>T1</option><option>T2</option>
-        <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option><option>준단원</option><option>신입단원</option><option>명단제외</option>
+        <option>지휘</option><option>반주</option><option>관현악</option><option>임원</option><option>명단제외</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
@@ -1510,7 +1511,7 @@ body{font-weight:500}
         <option value="준단원">준단원</option>
         <option value="신입단원">신입단원</option>
       </select>
-      <div style="font-size:11px;color:var(--ts);margin-top:4px">예: 파트 T2 + 겸직 임원 → T2 · 임원</div>
+      <div style="font-size:11px;color:var(--ts);margin-top:4px">예: 파트 S1 + 겸직 신입단원 → S1 · 신입단원</div>
     </div>
 
     <div class="form-group" style="margin-top:8px;">
@@ -1668,7 +1669,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v54.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v55.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -3633,6 +3634,11 @@ function cleanMemberSubPart(part, subPart){
   return sub&&sub!==part?sub:'';
 }
 
+function isMemberStatusPart(part){
+  var p=normalizePartName(part);
+  return p==='준단원'||p==='신입단원';
+}
+
 function handbookFieldBase(prefix){
   return prefix==='edit'?'editHb':'hb';
 }
@@ -3680,6 +3686,7 @@ function addHandbookMember(){
   var part = normalizePartName(document.getElementById('hbPart').value);
   var subPart = cleanMemberSubPart(part, document.getElementById('hbSub').value);
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  if(isMemberStatusPart(part)) return showToast('신입단원/준단원은 파트가 아니라 겸직에서 선택해주세요');
   
   // 👇 photo 항목이 추가되었습니다!
   var data = {
@@ -3732,16 +3739,19 @@ function editHandbookMember(id){
   var prevPreview = document.getElementById('editHbPhotoPreview');
   if(prevPreview){prevPreview.src='';prevPreview.style.display='none'}
   var m = directoryData.find(x => x.id === id); if(!m) return;
+  var mainPart=normalizePartName(m.part) || '';
+  var statusPart=isMemberStatusPart(mainPart)?mainPart:'';
+  var subPart=normalizePartName(m.subPart) || '';
   document.getElementById('editHbId').value = id;
   document.getElementById('editHbName').value = m.name || '';
-  document.getElementById('editHbPart').value = normalizePartName(m.part) || '';
+  document.getElementById('editHbPart').value = statusPart ? '' : mainPart;
   document.getElementById('editHbPhone').value = m.phone || '';
   document.getElementById('editHbBirth').value = m.birthday || '';
   document.getElementById('editHbDist').value = m.district || '';
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
-  document.getElementById('editHbSub').value = normalizePartName(m.subPart) || '';
+  document.getElementById('editHbSub').value = subPart || statusPart;
   document.getElementById('editHbNoAtt').checked = m.noAtt || false;
   fillHandbookProfileFields('edit', m);
   var profileExtra=document.getElementById('editHbProfileExtra');
@@ -3773,6 +3783,7 @@ function updateHandbookMember(){
   var subPart = cleanMemberSubPart(part, document.getElementById('editHbSub').value);
   if(!id) return showToast('수정할 단원을 찾을 수 없습니다');
   if(!name || !part) return showToast('이름과 파트는 필수입니다');
+  if(isMemberStatusPart(part)) return showToast('신입단원/준단원은 파트가 아니라 겸직에서 선택해주세요');
   
   // 👇 photo 항목이 추가되었습니다!
   var data = {
