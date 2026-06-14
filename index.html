@@ -926,6 +926,16 @@ body{font-weight:500}
 .home-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .home-section-head .home-section-title{margin-bottom:0}
 .home-view-link{border:0;background:transparent;color:#7C571E;font-size:12px;font-weight:750;padding:4px 0;white-space:nowrap;font-family:inherit}
+.home-shortcut-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.home-shortcut-btn{width:100%;border:1px solid #D8D0BE;background:#F8F2E8;color:#191A15;border-radius:12px;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;font-size:14px;font-weight:820;text-align:left}
+.home-shortcut-btn span:first-child{display:flex;align-items:center;gap:8px;min-width:0}
+.home-shortcut-btn .home-chevron{font-size:17px}
+.home-pianist-list{background:#FFFDF8;border:1px solid #E1D7C5;border-radius:12px;overflow:hidden}
+.home-pianist-row{display:grid;grid-template-columns:72px minmax(0,1fr) 14px;gap:8px;align-items:center;padding:10px 11px;border-bottom:1px solid #EEE2D0;cursor:pointer}
+.home-pianist-row:last-child{border-bottom:0}
+.home-pianist-name{font-size:13px;font-weight:850;color:#7C571E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-pianist-song{font-size:13px;font-weight:780;color:#191A15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-pianist-meta{font-size:11px;font-weight:650;color:#606554;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .home-subsection-title{margin:16px 0 8px;color:#606554;font-size:12px;font-weight:760}
 .home-schedule-list,.home-part-list{background:#FFFDF8;border:1px solid #E1D7C5;border-radius:12px;overflow:hidden}
 .home-schedule-row{display:grid;grid-template-columns:86px minmax(0,1fr) 70px 14px;gap:8px;align-items:center;padding:10px 11px;border-bottom:1px solid #EEE2D0;cursor:pointer}
@@ -1676,7 +1686,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v59.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v60.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1747,6 +1757,10 @@ function canUseMemberLinkAudit(){
   return adminRole==='admin';
 }
 
+function canUseMemberHandbook(){
+  return adminRole==='admin'||adminRole==='chongmu';
+}
+
 function canUseReport(){
   return adminRole==='admin';
 }
@@ -1756,6 +1770,10 @@ function canUseSongRecommend(){
 }
 
 function switchAdminTab(sub){
+  if(sub==='memberHandbook'&&!canUseMemberHandbook()){
+    showToast('단원 명부는 관리자/총무부 권한에서 이용할 수 있습니다.');
+    return;
+  }
   if(sub==='memberLinkAudit'&&!canUseMemberLinkAudit()){
     showToast('단원 연결 점검은 관리자만 이용할 수 있습니다.');
     return;
@@ -2019,6 +2037,9 @@ function invalidateHomeAttendanceCache(){
 function canAccessHomeAttendance(){
   return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)));
 }
+function canSeeHomePianistAssignments(){
+  return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='songschedule'||(currentUser&&['admin','chongmu','songschedule'].includes(currentUser.role)));
+}
 function refreshHomeAccessState(){
   invalidateHomeAttendanceCache();
   requestHomeRender();
@@ -2119,6 +2140,35 @@ function renderHome(){
   function homeRingLoading(label){
     return '<div class="home-mini-ring loading-ring"><div class="home-mini-ring-graph" style="--pct:0"></div><div><div class="home-mini-ring-label">'+label+'</div><div class="home-mini-ring-value">-</div><div class="home-main-sub" style="margin-top:2px">불러오는 중</div><span class="home-ring-chip">대기</span></div></div>';
   }
+  function homePianistRows(hymnSongs,songsPending){
+    var rows=(hymnSongs||[]).filter(function(s){return String(s.pianist||'').trim();})
+      .sort(function(a,b){return songDateValue(b)-songDateValue(a);})
+      .slice(0,4);
+    if(songsPending&&rows.length===0)return '<div class="home-empty-row">반주자 배정 정보를 불러오는 중입니다</div>';
+    if(rows.length===0)return '<div class="home-empty-row">최근 반주자 배정 기록이 없습니다</div>';
+    return '<div class="home-pianist-list">'+rows.map(function(s){
+      var meta=[songDateLabel(s),s.category||'',s.subCategory||''].filter(Boolean).join(' · ');
+      return '<div class="home-pianist-row" onclick="openDetail(\''+escAttr(s.id)+'\')">'
+        +'<div class="home-pianist-name">'+escHtml(s.pianist||'-')+'</div>'
+        +'<div><div class="home-pianist-song">'+escHtml(s.songName||'곡명 없음')+'</div><div class="home-pianist-meta">'+escHtml(meta||'세부 정보 없음')+'</div></div>'
+        +'<div class="home-chevron">›</div>'
+        +'</div>';
+    }).join('')+'</div>';
+  }
+  function homeAdminTools(hymnSongs,state){
+    var shortcuts='';
+    if(canUseMemberHandbook()){
+      shortcuts+='<button class="home-shortcut-btn" onclick="openHomeMemberSearch()"><span><span>🔎</span><span>단원 검색</span></span><span class="home-chevron">›</span></button>';
+    }
+    var pianistHtml=canSeeHomePianistAssignments()
+      ? '<div class="home-subsection-title">반주자 최근 배정</div>'+homePianistRows(hymnSongs,state&&state.songsPending)
+      : '';
+    if(!shortcuts&&!pianistHtml)return '';
+    return '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🧭</span><span>권한자 도구</span></div></div>'
+      +(shortcuts?'<div class="home-shortcut-grid">'+shortcuts+'</div>':'')
+      +pianistHtml
+      +'</div>';
+  }
   function renderHomeShell(hymnSongs, weekSchedules, attendance, state){
     state=state||{};
     hymnSongs=hymnSongs||[];
@@ -2163,6 +2213,7 @@ function renderHome(){
     var attendanceSection=showHomeAttendance
       ? '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>'
       : '';
+    var adminToolsSection=homeAdminTools(hymnSongs,state);
 
     c.innerHTML=''
       +'<div class="home-dashboard">'
@@ -2176,6 +2227,7 @@ function renderHome(){
         +'</div>'
       +'</div>'
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
+      +adminToolsSection
       +attendanceSection;
   }
 
@@ -2238,6 +2290,22 @@ function openHomeAttendanceDetail(){
   }
   switchTab('admin');
   switchAdminTab('attendance');
+}
+
+function openHomeMemberSearch(){
+  if(!canUseMemberHandbook()){
+    showToast('단원 명부는 관리자/총무부 권한에서 이용할 수 있습니다.');
+    return;
+  }
+  switchTab('admin');
+  switchAdminTab('memberHandbook');
+  setTimeout(function(){
+    var input=document.getElementById('handbookSearch');
+    if(input){
+      input.focus();
+      input.scrollIntoView({block:'center',behavior:'smooth'});
+    }
+  },220);
 }
 
 // ==================== 캐시 유틸 ====================
