@@ -76,6 +76,19 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-action-note{font-size:12px;color:var(--ts);line-height:1.45;margin:-4px 0 12px}
 .account-action-actions{display:flex;gap:8px;margin-top:16px}
 .account-action-actions .btn{flex:1}
+.perm-preset-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 12px}
+.perm-group{border:1px solid var(--bd);border-radius:12px;background:var(--bg);padding:10px;margin-bottom:8px}
+.perm-group-title{font-size:12px;font-weight:850;color:var(--tx);margin-bottom:7px}
+.perm-check{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ts);font-weight:700;line-height:1.35;margin:7px 0}
+.perm-check input{width:17px;height:17px;margin-top:0;flex-shrink:0}
+.perm-check span{color:var(--tx)}
+.perm-scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.perm-scope-item{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--sf);border-radius:10px;padding:8px;font-size:12px;font-weight:750;color:var(--tx)}
+.perm-scope-item input{width:16px;height:16px}
+.perm-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.perm-badge{font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:8px;font-weight:850}
+.perm-badge.warn{background:#F4E7CC;color:#7C571E}
+.perm-badge.safe{background:#EAEFDF;color:#4E5A35}
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .handbook-extra summary::-webkit-details-marker{display:none}
@@ -1284,7 +1297,7 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">공지 내용</label><input class="form-input" id="noticeInput" placeholder="상단에 표시할 공지사항"></div>
     <div style="display:flex;gap:8px"><button class="btn btn-p" onclick="saveNotice()">저장</button><button class="btn btn-d" onclick="delNotice()">삭제</button></div>
     <div style="margin-top:16px"><h4 style="font-size:14px;font-weight:700;margin-bottom:4px">현재 공지</h4><div id="curNotice" style="font-size:14px;color:var(--ts)">없음</div></div>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
+    <div id="chongmuPasswordSection" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
       <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🔐 총무부 비밀번호 변경</h3>
       <div class="form-group"><label class="form-label">새 총무부 비밀번호 *</label><input class="form-input" id="chongmuPwNew" type="password" placeholder="새 비밀번호 입력" autocomplete="new-password"></div>
       <div class="form-group"><label class="form-label">새 비밀번호 확인 *</label><input class="form-input" id="chongmuPwConfirm" type="password" placeholder="한 번 더 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter')saveChongmuPassword()"></div>
@@ -1312,7 +1325,7 @@ body{font-weight:500}
       </div>
     </div>
     <div class="form-group"><label class="form-label">색상</label><div class="color-opts" id="colorOpts"></div></div>
-    <button class="btn btn-p btn-bl" onclick="addSchedule()" style="margin-bottom:20px">일정 추가</button>
+    <button class="btn btn-p btn-bl" id="schSaveBtn" onclick="addSchedule()" style="margin-bottom:20px">일정 추가</button>
     <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 일정</h4>
     <div id="schList"></div>
   </div>
@@ -1380,6 +1393,7 @@ body{font-weight:500}
       <div id="attGuideCard" style="display:none;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
+        <button class="btn btn-sm btn-d hidden" id="attDeleteBtn" onclick="deleteAttendance()">회차 삭제</button>
       </div>
       <div id="attList"></div>
 
@@ -1686,6 +1700,56 @@ var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
+var scheduleEditId='';
+
+// ==================== 권한 정의 ====================
+var PERMISSION_GROUPS=[
+  {title:'곡 / 일정',items:[
+    {key:'song.manage',label:'곡 관리',desc:'곡 조회, 추가, 수정, 본인 등록곡 삭제'},
+    {key:'schedule.manage',label:'일정 관리',desc:'일정 조회, 추가, 수정, 본인 등록 일정 삭제'}
+  ]},
+  {title:'출결',items:[
+    {key:'attendance.view',label:'출결 조회',desc:'담당 범위 출결과 통계 조회'},
+    {key:'attendance.check',label:'출결 체크/수정',desc:'담당 범위 출결 저장'},
+    {key:'attendance.delete',label:'출결 삭제/초기화',desc:'지정 회차 출결 기록 삭제'}
+  ]},
+  {title:'단원 관리',items:[
+    {key:'member.view',label:'단원 조회',desc:'단원 명부 보기'},
+    {key:'member.history',label:'활동 조회',desc:'단원별 참여곡 이력 보기'},
+    {key:'member.manage',label:'단원 추가/수정',desc:'명부 신규 등록과 정보 수정'},
+    {key:'member.delete',label:'단원 삭제',desc:'명부에서 단원 삭제'},
+    {key:'account.manage',label:'로그인 계정/PIN 관리',desc:'계정 등록, 정보 수정, PIN 변경'}
+  ]},
+  {title:'아카이브',items:[
+    {key:'archive.view',label:'아카이브 조회',desc:'사진 자료 보기'},
+    {key:'archive.upload',label:'아카이브 업로드',desc:'사진 자료 업로드'},
+    {key:'archive.manageMine',label:'본인 자료 수정/삭제',desc:'본인이 올린 자료만 수정/삭제'}
+  ]},
+  {title:'관리 도구',items:[
+    {key:'notice.manage',label:'공지 관리',desc:'상단 공지 저장/삭제'},
+    {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'}
+  ]}
+];
+var PERMISSION_LABELS={};
+PERMISSION_GROUPS.forEach(function(group){group.items.forEach(function(item){PERMISSION_LABELS[item.key]=item.label;});});
+var PERMISSION_PRESETS={
+  none:{label:'일반 단원',desc:'관리 메뉴 없이 곡 목록과 일정만 이용',permissions:[],scope:[]},
+  partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine'],scope:['S_GROUP']},
+  operations:{label:'운영 스태프',desc:'곡/일정 관리와 선곡 도우미',permissions:['song.manage','schedule.manage','song.recommend','archive.view','archive.upload','archive.manageMine'],scope:[]},
+  chongmu:{label:'총무 스태프',desc:'곡/일정, 출결, 명부 조회, 공지 관리',permissions:['song.manage','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.view','archive.upload','archive.manageMine'],scope:['ALL']},
+  handbook:{label:'명부 스태프',desc:'단원 조회와 명부 추가/수정',permissions:['member.view','member.history','member.manage'],scope:[]},
+  custom:{label:'직접 설정',desc:'필요한 항목만 직접 선택',permissions:[],scope:[]}
+};
+var ATTENDANCE_SCOPE_OPTIONS=[
+  {key:'ALL',label:'전체'},
+  {key:'S_GROUP',label:'S1/S2'},
+  {key:'T1',label:'T1'},
+  {key:'T2',label:'T2'},
+  {key:'관현악',label:'관현악'},
+  {key:'지휘',label:'지휘'},
+  {key:'반주',label:'반주'},
+  {key:'임원',label:'임원'}
+];
 
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
@@ -1695,7 +1759,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v61.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v62.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1735,10 +1799,191 @@ document.addEventListener('click',function(e){
   }
 });
 
+function uniqueArray(arr){
+  var seen={};
+  return (arr||[]).filter(function(v){
+    v=String(v||'').trim();
+    if(!v||seen[v])return false;
+    seen[v]=true;
+    return true;
+  });
+}
+function normalizePermissionArray(list){
+  return uniqueArray(Array.isArray(list)?list:[]);
+}
+function legacyPermissionsForRole(role, canArchiveUpload){
+  var perms=[];
+  if(role==='attendance')perms=perms.concat(['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine']);
+  if(role==='songschedule')perms=perms.concat(['song.manage','schedule.manage','archive.view','archive.upload','archive.manageMine']);
+  if(role==='chongmu')perms=perms.concat(['song.manage','schedule.manage','attendance.view','attendance.check','member.view','member.history','archive.view','archive.upload','archive.manageMine']);
+  if(canArchiveUpload)perms=perms.concat(['archive.view','archive.upload','archive.manageMine']);
+  return uniqueArray(perms);
+}
+function getUserPermissions(user){
+  user=user||currentUser||{};
+  if(Array.isArray(user.permissions))return normalizePermissionArray(user.permissions);
+  return legacyPermissionsForRole(user.role||'',!!user.canArchiveUpload);
+}
+function getCurrentPermissions(){
+  if(adminRole==='admin')return Object.keys(PERMISSION_LABELS);
+  return getUserPermissions(currentUser);
+}
+function hasPermission(key){
+  if(adminRole==='admin')return true;
+  if(adminRole==='chongmu'&&!currentUser)return legacyPermissionsForRole('chongmu',true).indexOf(key)!==-1;
+  if(adminRole==='attendance'&&!currentUser)return legacyPermissionsForRole('attendance',false).indexOf(key)!==-1;
+  if(adminRole==='songschedule'&&!currentUser)return legacyPermissionsForRole('songschedule',false).indexOf(key)!==-1;
+  return getCurrentPermissions().indexOf(key)!==-1;
+}
+function hasAnyPermission(user){
+  return getUserPermissions(user||currentUser).length>0;
+}
+function permissionPresetLabel(preset){
+  return (PERMISSION_PRESETS[preset]&&PERMISSION_PRESETS[preset].label)||'직접 설정';
+}
+function getSessionRoleForUser(user){
+  user=user||currentUser;
+  if(!user)return '';
+  if(user.role==='attendance'||user.role==='chongmu'||user.role==='songschedule')return user.role;
+  return hasAnyPermission(user)?'custom':'';
+}
+function currentActorName(){
+  if(currentUser&&currentUser.name)return currentUser.name;
+  if(adminRole==='admin')return '관리자';
+  if(adminRole==='chongmu')return '총무부';
+  return '권한자';
+}
+function currentActorId(){
+  return currentUser&&currentUser.id?currentUser.id:(adminRole||'');
+}
+function canOpenAdminArea(){
+  return adminRole==='admin'||adminRole==='chongmu'||hasAnyPermission();
+}
+function canUseStats(){
+  return adminRole==='admin'||adminRole==='chongmu'||hasPermission('song.manage');
+}
+function canManageSongs(){
+  return adminRole==='admin'||hasPermission('song.manage');
+}
+function canDeleteSongItem(song){
+  if(adminRole==='admin')return true;
+  return !!(canManageSongs()&&currentUser&&song&&(song.createdById===currentUser.id||(!song.createdById&&song.createdByName===currentUser.name)));
+}
+function canManageSchedules(){
+  return adminRole==='admin'||hasPermission('schedule.manage');
+}
+function canDeleteScheduleItem(schedule){
+  if(adminRole==='admin')return true;
+  return !!(canManageSchedules()&&currentUser&&schedule&&(schedule.createdById===currentUser.id||(!schedule.createdById&&schedule.createdByName===currentUser.name)));
+}
+function canUseMemberLinkAudit(){
+  return adminRole==='admin';
+}
+function canUseMemberHandbook(){
+  return adminRole==='admin'||hasPermission('member.view')||hasPermission('member.history')||hasPermission('member.manage')||hasPermission('member.delete');
+}
+function canViewMemberHistory(){
+  return adminRole==='admin'||hasPermission('member.history')||hasPermission('member.view');
+}
+function canManageHandbookMembers(){
+  return adminRole==='admin'||hasPermission('member.manage');
+}
+function canDeleteHandbookMembers(){
+  return adminRole==='admin'||hasPermission('member.delete');
+}
+function canManageLoginAccounts(){
+  return adminRole==='admin'||hasPermission('account.manage');
+}
+function canDeleteLoginAccount(){
+  return adminRole==='admin';
+}
+function canManageAccountPermissions(){
+  return adminRole==='admin';
+}
+function canUseReport(){
+  return adminRole==='admin';
+}
+function canUseSongRecommend(){
+  return adminRole==='admin'||hasPermission('song.recommend');
+}
+function canManageNotice(){
+  return adminRole==='admin'||hasPermission('notice.manage');
+}
+function canViewAttendance(){
+  return adminRole==='admin'||adminRole==='chongmu'||hasPermission('attendance.view')||hasPermission('attendance.check')||hasPermission('attendance.delete');
+}
+function canCheckAttendance(){
+  return adminRole==='admin'||adminRole==='chongmu'||hasPermission('attendance.check');
+}
+function canDeleteAttendanceRecord(){
+  return adminRole==='admin'||hasPermission('attendance.delete');
+}
+function canManageAttendanceReportExclusion(){
+  return adminRole==='admin';
+}
+function hasArchiveView(){
+  return !!(currentUser||adminRole==='admin'||adminRole==='chongmu'||hasPermission('archive.view')||hasPermission('archive.upload'));
+}
+function canUploadArchive(){
+  return adminRole==='admin'||hasPermission('archive.upload');
+}
+function canManageArchiveItem(item){
+  if(adminRole==='admin')return true;
+  return !!(hasPermission('archive.manageMine')&&currentUser&&item&&item.uploadedBy===currentUser.name);
+}
+function scopeFromAccountPart(part){
+  part=normalizePartName(part);
+  if(part==='S1'||part==='S2')return ['S_GROUP'];
+  return part?[part]:[];
+}
+function expandAttendanceScope(scope){
+  scope=uniqueArray(scope||[]);
+  if(scope.indexOf('ALL')!==-1)return ['ALL'];
+  var parts=[];
+  scope.forEach(function(s){
+    if(s==='S_GROUP')parts=parts.concat(['S1','S2']);
+    else if(s)parts.push(normalizePartName(s));
+  });
+  return uniqueArray(parts);
+}
+function getAttendanceScopeKeys(){
+  if(adminRole==='admin'||adminRole==='chongmu')return ['ALL'];
+  if(currentUser&&Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length)return uniqueArray(currentUser.attendanceScope);
+  if(currentUser&&(currentUser.role==='attendance'||hasPermission('attendance.view')||hasPermission('attendance.check')))return scopeFromAccountPart(currentUser.part);
+  return [];
+}
+function getAttendanceAllowedParts(){
+  var keys=getAttendanceScopeKeys();
+  if(keys.indexOf('ALL')!==-1)return ['all','임원','S1','S2','T1','T2','관현악','지휘','반주'];
+  return expandAttendanceScope(keys);
+}
+function isMemberInAttendanceScope(member){
+  var allowed=getAttendanceAllowedParts();
+  if(allowed.indexOf('all')!==-1)return true;
+  return allowed.indexOf(member.part)!==-1||allowed.indexOf(member.subPart)!==-1;
+}
+function syncAccessShell(){
+  var body=document.body;
+  body.classList.remove('admin-mode','chongmu-mode','songschedule-mode','permission-mode');
+  if(adminRole==='admin')body.classList.add('admin-mode');
+  else if(adminRole==='chongmu')body.classList.add('chongmu-mode');
+  else if(adminRole==='songschedule')body.classList.add('songschedule-mode');
+  if(canOpenAdminArea()&&adminRole!=='admin')body.classList.add('permission-mode');
+  var navAdmin=document.getElementById('navAdmin');
+  var navStats=document.getElementById('navStats');
+  var navArchive=document.getElementById('navArchive');
+  var btnLock=document.getElementById('btnLock');
+  if(navAdmin)navAdmin.classList.toggle('hidden',!canOpenAdminArea());
+  if(navStats)navStats.classList.toggle('hidden',!canUseStats());
+  if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
+  if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
+}
+
 // ==================== 탭 전환 ====================
 function switchTab(tab){
-  if((tab==='admin'||tab==='stats')&&!adminRole)return;
-  if(tab==='archive'&&!currentUser&&adminRole!=='admin'&&adminRole!=='chongmu'){
+  if(tab==='admin'&&!canOpenAdminArea())return;
+  if(tab==='stats'&&!canUseStats())return;
+  if(tab==='archive'&&!hasArchiveView()){
     showToast('로그인 후 이용 가능합니다');
     openUserModal();
     return;
@@ -1755,32 +2000,19 @@ function switchTab(tab){
   if(tab==='archive')renderArchivePage();
   if(tab==='stats')renderStats();
   if(tab==='admin'){
-    loadMembers();loadLogs();loadSchAdmin();updateAdminTabs();showFirstAdminTab();
+    if(canManageLoginAccounts()||canManageAccountPermissions())loadMembers();
+    if(adminRole==='admin')loadLogs();
+    if(canManageSchedules())loadSchAdmin();
+    updateAdminTabs();showFirstAdminTab();
     window.scrollTo({top:0,behavior:'auto'});
     var adminPage=document.getElementById('pageAdmin');
     if(adminPage) adminPage.scrollTop=0;
   }
 }
 
-function canUseMemberLinkAudit(){
-  return adminRole==='admin';
-}
-
-function canUseMemberHandbook(){
-  return adminRole==='admin'||adminRole==='chongmu';
-}
-
-function canUseReport(){
-  return adminRole==='admin';
-}
-
-function canUseSongRecommend(){
-  return adminRole==='admin';
-}
-
 function switchAdminTab(sub){
   if(sub==='memberHandbook'&&!canUseMemberHandbook()){
-    showToast('단원 명부는 관리자/총무부 권한에서 이용할 수 있습니다.');
+    showToast('단원 명부 권한이 필요합니다.');
     return;
   }
   if(sub==='memberLinkAudit'&&!canUseMemberLinkAudit()){
@@ -1792,7 +2024,31 @@ function switchAdminTab(sub){
     return;
   }
   if(sub==='songRecommend'&&!canUseSongRecommend()){
-    showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
+    showToast('선곡 도우미 권한이 필요합니다.');
+    return;
+  }
+  if(sub==='members'&&!canManageLoginAccounts()&&!canManageAccountPermissions()){
+    showToast('로그인 계정 관리 권한이 필요합니다.');
+    return;
+  }
+  if(sub==='attendance'&&!canViewAttendance()){
+    showToast('출결 권한이 필요합니다.');
+    return;
+  }
+  if(sub==='addSong'&&!canManageSongs()){
+    showToast('곡 관리 권한이 필요합니다.');
+    return;
+  }
+  if(sub==='schedule'&&!canManageSchedules()){
+    showToast('일정 관리 권한이 필요합니다.');
+    return;
+  }
+  if(sub==='notice'&&!canManageNotice()){
+    showToast('공지 관리 권한이 필요합니다.');
+    return;
+  }
+  if((sub==='logs'||sub==='export')&&adminRole!=='admin'){
+    showToast('관리자만 이용할 수 있습니다.');
     return;
   }
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
@@ -1801,6 +2057,8 @@ function switchAdminTab(sub){
   var elId = 'sub' + sub.charAt(0).toUpperCase() + sub.slice(1);
   var el = document.getElementById(elId);
   if(el) el.classList.remove('hidden');
+  var pwSection=document.getElementById('chongmuPasswordSection');
+  if(pwSection)pwSection.style.display=adminRole==='admin'?'block':'none';
 
   window.scrollTo({top:0,behavior:'auto'});
   var adminPage=document.getElementById('pageAdmin');
@@ -1813,29 +2071,27 @@ function switchAdminTab(sub){
 }
 function updateAdminTabs(){
   var tabs=document.getElementById('adminTabRow'); if(!tabs) return;
+  var visibleMap={
+    members: canManageLoginAccounts()||canManageAccountPermissions(),
+    attendance: canViewAttendance(),
+    memberHandbook: canUseMemberHandbook(),
+    notice: canManageNotice(),
+    addSong: canManageSongs(),
+    memberLinkAudit: canUseMemberLinkAudit(),
+    songRecommend: canUseSongRecommend(),
+    schedule: canManageSchedules(),
+    logs: adminRole==='admin',
+    export: adminRole==='admin',
+    report: canUseReport()
+  };
   tabs.querySelectorAll('[data-at]').forEach(function(t){
-    var k=t.dataset.at;
-    if(adminRole==='attendance'){
-      t.style.display=(k==='attendance') ? '' : 'none';
-    }else if(adminRole==='songschedule'){
-      t.style.display=(k==='addSong' || k==='schedule') ? '' : 'none';
-    }else if(adminRole==='chongmu'){
-      t.style.display=(k==='addSong' || k==='schedule' || k==='memberHandbook' || k==='attendance') ? '' : 'none';
-    }else{
-      t.style.display='';
-    }
+    t.style.display=visibleMap[t.dataset.at] ? '' : 'none';
   });
 }
 
 function showFirstAdminTab(){
   var tabs=document.getElementById('adminTabRow');if(!tabs)return;
-  var preferredOrder = adminRole==='attendance'
-    ? ['attendance']
-    : adminRole==='songschedule'
-      ? ['addSong','schedule']
-      : adminRole==='chongmu'
-        ? ['attendance','memberHandbook','addSong','schedule']
-        : ['members','attendance','memberHandbook','memberLinkAudit','songRecommend','notice','addSong','schedule','logs','export','report'];
+  var preferredOrder = ['attendance','memberHandbook','addSong','schedule','songRecommend','notice','members','memberLinkAudit','logs','export','report'];
 
   var visible = [];
   tabs.querySelectorAll('[data-at]').forEach(function(t){
@@ -1850,13 +2106,10 @@ function showFirstAdminTab(){
 
 // ==================== 관리자 로그인 ====================
 function openAdminLogin(){
-  if(adminRole){
-    adminRole=null;
-    document.body.classList.remove('admin-mode','chongmu-mode','songschedule-mode');
-    document.getElementById('navAdmin').classList.add('hidden');
-    document.getElementById('navStats').classList.add('hidden');
-    document.getElementById('navArchive').classList.toggle('hidden',!currentUser);
-    document.getElementById('btnLock').textContent='🔒';
+  var userSessionRole=getSessionRoleForUser(currentUser);
+  if(adminRole&&(!currentUser||adminRole==='admin'||(adminRole==='chongmu'&&userSessionRole!=='chongmu'))){
+    adminRole=getSessionRoleForUser(currentUser)||null;
+    syncAccessShell();
     showToast('관리자 모드 종료');
     if(currentTab==='admin'||currentTab==='stats')switchTab('songs');
     renderSongList();
@@ -1871,22 +2124,14 @@ function checkAdminPw(){
   var pw=document.getElementById('adminPw').value;
   if(role==='admin'&&pw==='9917'){
     adminRole='admin';
-    document.body.classList.add('admin-mode');document.body.classList.remove('chongmu-mode','songschedule-mode');
-    document.getElementById('navAdmin').classList.remove('hidden');
-    document.getElementById('navStats').classList.remove('hidden');
-    document.getElementById('navArchive').classList.remove('hidden');
-    document.getElementById('btnLock').textContent='🔓';
+    syncAccessShell();
     document.getElementById('adminPw').value='';
     closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();refreshHomeAccessState();
   }else if(role==='chongmu'){
     loadAdminSettings().then(function(){
       if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
       adminRole='chongmu';
-      document.body.classList.add('chongmu-mode');document.body.classList.remove('admin-mode','songschedule-mode');
-      document.getElementById('navAdmin').classList.remove('hidden');
-      document.getElementById('navStats').classList.remove('hidden');
-      document.getElementById('navArchive').classList.remove('hidden');
-      document.getElementById('btnLock').textContent='🔓';
+      syncAccessShell();
       document.getElementById('adminPw').value='';
       closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();refreshHomeAccessState();
     }).catch(function(){showToast('비밀번호 확인 중 오류 발생')});
@@ -1920,49 +2165,28 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||'',canArchiveUpload:!!data.canArchiveUpload};
+    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:uniqueArray(data.attendanceScope||[])};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
     showToast(data.name+'님 환영합니다!');renderSongList();
 
-    if(data.role==='attendance'){
-      adminRole='attendance';
-      document.getElementById('navAdmin').classList.remove('hidden');
-      document.getElementById('btnLock').textContent='🔓';
-      updateAdminTabs();
-    }else if(data.role==='chongmu'){
-      adminRole='chongmu';
-      document.body.classList.add('chongmu-mode');
-      document.body.classList.remove('admin-mode','songschedule-mode');
-      document.getElementById('navAdmin').classList.remove('hidden');
-      document.getElementById('navStats').classList.remove('hidden');
-      document.getElementById('btnLock').textContent='🔓';
-      updateAdminTabs();
-    }else if(data.role==='songschedule'){
-      adminRole='songschedule';
-      document.body.classList.add('songschedule-mode');
-      document.body.classList.remove('admin-mode','chongmu-mode');
-      document.getElementById('navAdmin').classList.remove('hidden');
-      document.getElementById('btnLock').textContent='🔓';
-      updateAdminTabs();
-    }
+    adminRole=getSessionRoleForUser(currentUser)||null;
+    syncAccessShell();
+    updateAdminTabs();
     refreshHomeAccessState();
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
 function logoutUser(){
-  var roleToClear=currentUser&&currentUser.role;
+  var roleToClear=getSessionRoleForUser(currentUser);
   if(roleToClear&&adminRole===roleToClear){
     adminRole=null;
-    document.body.classList.remove('admin-mode','chongmu-mode','songschedule-mode');
-    document.getElementById('navAdmin').classList.add('hidden');
-    document.getElementById('navStats').classList.add('hidden');
-    document.getElementById('btnLock').textContent='🔒';
     if(currentTab==='admin'||currentTab==='stats')switchTab('songs');
   }
   currentUser=null;
   localStorage.removeItem('choir_user');
+  syncAccessShell();
   updateUserBar();
   closeModal('modalUser');
   if(currentTab==='archive')switchTab('songs');
@@ -1974,8 +2198,7 @@ function updateUserBar(){
   var bar=document.getElementById('userBar');
   if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+currentUser.part+')'}
   else{bar.classList.add('hidden')}
-  var navArchive=document.getElementById('navArchive');
-  if(navArchive)navArchive.classList.toggle('hidden',!(currentUser||adminRole==='admin'||adminRole==='chongmu'));
+  syncAccessShell();
 }
 // [수정됨] 앱을 다시 켰을 때, 이름뿐만 아니라 '권한(하단 탭)'까지 완벽하게 기억해내는 기능
 function restoreUser() {
@@ -1983,27 +2206,11 @@ function restoreUser() {
   if (s) {
     try {
       currentUser = JSON.parse(s);
+      currentUser.permissions=normalizePermissionArray(currentUser.permissions);
+      currentUser.attendanceScope=uniqueArray(currentUser.attendanceScope||[]);
       updateUserBar();
-
-      // 👇 이 아래 부분(권한 검사 및 탭 복구)이 추가되었습니다!
-      if (currentUser.role === 'attendance') {
-        adminRole = 'attendance';
-        document.getElementById('navAdmin').classList.remove('hidden');
-        document.getElementById('btnLock').textContent = '🔓';
-      } else if (currentUser.role === 'chongmu') {
-        adminRole = 'chongmu';
-        document.body.classList.add('chongmu-mode');
-        document.body.classList.remove('admin-mode','songschedule-mode');
-        document.getElementById('navAdmin').classList.remove('hidden');
-        document.getElementById('navStats').classList.remove('hidden');
-        document.getElementById('btnLock').textContent = '🔓';
-      } else if (currentUser.role === 'songschedule') {
-        adminRole = 'songschedule';
-        document.body.classList.add('songschedule-mode');
-        document.body.classList.remove('admin-mode','chongmu-mode');
-        document.getElementById('navAdmin').classList.remove('hidden');
-        document.getElementById('btnLock').textContent = '🔓';
-      }
+      adminRole=getSessionRoleForUser(currentUser)||null;
+      syncAccessShell();
     } catch (e) {
       console.error(e);
     }
@@ -2044,10 +2251,10 @@ function invalidateHomeAttendanceCache(){
   homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 }
 function canAccessHomeAttendance(){
-  return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)));
+  return canViewAttendance();
 }
 function canSeeHomePianistAssignments(){
-  return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='songschedule'||(currentUser&&['admin','chongmu','songschedule'].includes(currentUser.role)));
+  return !!(adminRole==='admin'||hasPermission('song.manage')||hasPermission('schedule.manage')||hasPermission('song.recommend'));
 }
 function refreshHomeAccessState(){
   invalidateHomeAttendanceCache();
@@ -2071,6 +2278,9 @@ function getHomeAttendanceData(dateKey){
       var d=doc.data();
       if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)});
     });
+    if(getAttendanceAllowedParts().indexOf('all')===-1){
+      members=members.filter(function(m){return isMemberInAttendanceScope(m);});
+    }
     var data={
       members:members,
       am:res[1].exists?res[1].data():null,
@@ -2303,7 +2513,7 @@ function openHomeAttendanceDetail(){
 
 function openHomeMemberSearch(){
   if(!canUseMemberHandbook()){
-    showToast('단원 명부는 관리자/총무부 권한에서 이용할 수 있습니다.');
+    showToast('단원 명부 권한이 필요합니다.');
     return;
   }
   switchTab('admin');
@@ -2375,7 +2585,7 @@ function refreshData(){
     }),
     db.collection('schedules').get().then(function(snap){
       allSchedules=[];
-      snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0]})});
+      snap.forEach(function(doc){allSchedules.push(scheduleRowFromDoc(doc))});
       schedulesLoaded=true;
       saveCache('choir_schedules',allSchedules);
       if(currentTab==='calendar')renderCal();
@@ -2468,9 +2678,16 @@ function renderSongList(){
   c.innerHTML=show.map(function(s){
     var fav=favorites.indexOf(s.id)>-1;
     var ytIcon=s.youtube?'<span style="color:#FF0000;font-size:14px;margin-right:4px" title="YouTube 링크 있음">▶</span>':'';
-    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+ytIcon+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button><span class="admin-actions"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+s.id+'\')">✏️</button><button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+s.id+'\',\''+s.songName.replace(/'/g,"\\'")+'\')">🗑️</button></span></span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
+    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+ytIcon+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button>'+renderSongAdminActions(s)+'</span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
   }).join('');
   if(filteredSongs.length>200)c.innerHTML+='<div style="text-align:center;padding:16px;color:var(--ts);font-size:13px">외 '+(filteredSongs.length-200)+'곡 — 검색으로 좁혀보세요</div>';
+}
+
+function renderSongAdminActions(song){
+  if(!canManageSongs())return '';
+  var name=String(song.songName||'').replace(/'/g,"\\'");
+  var del=canDeleteSongItem(song)?'<button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+song.id+'\',\''+name+'\')">🗑️</button>':'';
+  return '<span style="display:flex;gap:2px"><button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+song.id+'\')">✏️</button>'+del+'</span>';
 }
 
 
@@ -2494,8 +2711,8 @@ function openDetail(id){
   localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
 
   document.getElementById('detailTitle').textContent=song.songName;
-  document.getElementById('detailAdmin').style.display=(adminRole==='admin' || adminRole==='chongmu' || adminRole==='songschedule') ? 'flex' : 'none';
-  document.getElementById('detailDelBtn').style.display=(adminRole==='admin' || adminRole==='chongmu' || adminRole==='songschedule') ? '' : 'none';
+  document.getElementById('detailAdmin').style.display=canManageSongs() ? 'flex' : 'none';
+  document.getElementById('detailDelBtn').style.display=canDeleteSongItem(song) ? '' : 'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
   var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
@@ -2528,6 +2745,7 @@ function shareSong(){
 
 // ==================== 곡 추가 ====================
 function addNewSong(skipMemberLoad){
+  if(!canManageSongs())return showToast('곡 관리 권한이 필요합니다');
   var name=document.getElementById('addSongName').value.trim();
   var dateParts=getDateParts(document.getElementById('addDate').value);
   if(!name||!dateParts)return showToast('곡명과 날짜는 필수입니다');
@@ -2546,6 +2764,9 @@ function addNewSong(skipMemberLoad){
   if(!memberResult)return showToast('저장이 취소되었습니다. 미확인 단원을 확인해주세요.');
   var unresolvedCount=memberResult.unresolved.length;
   showToast(unresolvedCount>0?'미연결 '+unresolvedCount+'명 포함 저장 중...':'곡 저장 중...');
+  var createdAt=new Date().toISOString();
+  var actorName=currentActorName();
+  var actorId=currentActorId();
   db.collection('songs').add({
     songName:name,year:year,month:month,
     day:day,
@@ -2557,9 +2778,11 @@ function addNewSong(skipMemberLoad){
     memberRefs:memberResult.refs,
     pianist:document.getElementById('addPia').value.trim(),
     youtube:yt,
-    createdAt:new Date().toISOString()
+    createdAt:createdAt,
+    createdById:actorId,
+    createdByName:actorName
   }).then(function(docRef){
-    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:day,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:new Date().toISOString()});
+    allSongs.push({id:docRef.id,songName:name,year:year,month:month,day:day,dayOfWeek:document.getElementById('addDow').value,category:cat,subCategory:document.getElementById('addSub').value.trim(),location:document.getElementById('addLoc').value.trim(),members:memberText,memberRefs:memberResult.refs,pianist:document.getElementById('addPia').value.trim(),youtube:yt,createdAt:createdAt,createdById:actorId,createdByName:actorName});
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();doFilter();
     // [수정됨] 곡 추가 로그 디테일 강화
@@ -2578,6 +2801,7 @@ function addNewSong(skipMemberLoad){
 
 // ==================== 곡 수정 ====================
 function openEdit(id){
+  if(!canManageSongs())return showToast('곡 관리 권한이 필요합니다');
   var song=allSongs.find(function(s){return s.id===id});if(!song)return;
   currentDetailSong=song;
   document.getElementById('editName').value=song.songName;
@@ -2606,7 +2830,7 @@ function saveEdit(skipMemberLoad){
   if(!currentDetailSong)return;
   
   // 👇 최고 관리자와 총무부가 아니면 아예 저장을 막고 튕겨냅니다!
-  if(adminRole !== 'admin' && adminRole !== 'chongmu' && adminRole !== 'songschedule') return showToast('곡을 수정할 권한이 없습니다.');
+  if(!canManageSongs()) return showToast('곡을 수정할 권한이 없습니다.');
   
   var cat=getCatValue('edit');
   
@@ -2634,7 +2858,8 @@ function saveEdit(skipMemberLoad){
 
 // ==================== 곡 삭제 ====================
 function delSong(id,name){
-  if(adminRole!=='admin' && adminRole!=='chongmu' && adminRole!=='songschedule')return showToast('삭제 권한이 없습니다');
+  var song=allSongs.find(function(s){return s.id===id});
+  if(!canDeleteSongItem(song))return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+name+'" 삭제하시겠습니까?'))return;
   db.collection('songs').doc(id).delete().then(function(){
     // 로컬 캐시에서도 제거
@@ -2644,11 +2869,11 @@ function delSong(id,name){
     favorites=favorites.filter(function(x){return x!==id});syncFav();showToast('삭제되었습니다');
   }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
 }
-function delFromDetail(){if(currentDetailSong){delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
+function delFromDetail(){if(currentDetailSong){if(!canDeleteSongItem(currentDetailSong))return showToast('삭제 권한이 없습니다');delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
 
 // ==================== 1. 단원 관리 (로그인 계정용 - 'accounts' 방 사용) ====================
 function addMember(){
-  if(adminRole!=='admin') return showToast('권한이 없습니다');
+  if(!canManageLoginAccounts()) return showToast('로그인 계정 관리 권한이 없습니다');
   var name=document.getElementById('memName').value.trim();
   var part=document.getElementById('memPart').value;
   var pin=document.getElementById('memPin').value.trim();
@@ -2670,29 +2895,134 @@ function addMember(){
 }
 
 function loadMembers(){
+  if(!canManageLoginAccounts()&&!canManageAccountPermissions())return;
   db.collection('accounts').orderBy('name').get().then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:uniqueArray(m.attendanceScope||[])}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
-      var roleBadge=m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':m.role==='songschedule'?' <span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">곡+일정</span>':'';
-      if(m.canArchiveUpload) roleBadge += ' <span style="font-size:10px;background:#8B5CF6;color:#fff;padding:1px 6px;border-radius:8px">아카이브</span>';
+      var roleBadge=renderAccountPermissionBadges(m);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
         <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}<div style="font-size:12px;color:var(--ts);margin-top:4px">PIN: <b style="color:var(--p);letter-spacing:1px">${m.pin}</b></div></div>
         <div style="display:flex;gap:4px">
-          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>
-          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>
-          <button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>
-          <button type="button" class="btn btn-sm btn-d" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>
+          ${canManageLoginAccounts()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
+          ${canManageAccountPermissions()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>`:''}
+          ${canManageLoginAccounts()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>`:''}
+          ${canDeleteLoginAccount()?`<button type="button" class="btn btn-sm btn-d" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>`:''}
         </div>
       </div>`;
     }).join('');
   });
 }
 var accountActionId='';
+
+function renderAccountPermissionBadges(m){
+  var perms=getUserPermissions(m);
+  var badges=[];
+  if(m.permissionPreset)badges.push('<span class="perm-badge safe">'+escHtml(permissionPresetLabel(m.permissionPreset))+'</span>');
+  else if(m.role==='attendance')badges.push('<span class="perm-badge safe">출결</span>');
+  else if(m.role==='chongmu')badges.push('<span class="perm-badge safe">총무부</span>');
+  else if(m.role==='songschedule')badges.push('<span class="perm-badge warn">곡+일정</span>');
+  if(perms.indexOf('song.manage')>-1)badges.push('<span class="perm-badge">곡</span>');
+  if(perms.indexOf('schedule.manage')>-1)badges.push('<span class="perm-badge">일정</span>');
+  if(perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.view')>-1)badges.push('<span class="perm-badge">출결</span>');
+  if(perms.indexOf('member.view')>-1||perms.indexOf('member.manage')>-1)badges.push('<span class="perm-badge">명부</span>');
+  if(perms.indexOf('archive.upload')>-1)badges.push('<span class="perm-badge">아카이브</span>');
+  if(perms.length===0)badges.push('<span class="perm-badge">일반</span>');
+  return '<div class="perm-badges">'+badges.join('')+'</div>';
+}
+
+function legacyPresetForAccount(m){
+  if(m.permissionPreset)return m.permissionPreset;
+  if(m.role==='attendance')return 'partLeader';
+  if(m.role==='songschedule')return 'operations';
+  if(m.role==='chongmu')return 'chongmu';
+  if(m.canArchiveUpload)return 'custom';
+  return 'none';
+}
+
+function renderPermissionEditor(preset, permissions, scope){
+  permissions=normalizePermissionArray(permissions);
+  scope=uniqueArray(scope||[]);
+  var presetOptions=Object.keys(PERMISSION_PRESETS).map(function(key){
+    var p=PERMISSION_PRESETS[key];
+    return '<option value="'+key+'"'+(preset===key?' selected':'')+'>'+escHtml(p.label)+' - '+escHtml(p.desc)+'</option>';
+  }).join('');
+  var html='<div class="form-group"><label class="form-label">권한 프리셋</label><select class="form-sel" id="accountPermPreset" onchange="syncPermissionEditorFromPreset(true)">'+presetOptions+'</select></div>';
+  html+='<div class="perm-preset-grid">';
+  PERMISSION_GROUPS.forEach(function(group){
+    html+='<div class="perm-group"><div class="perm-group-title">'+escHtml(group.title)+'</div>';
+    group.items.forEach(function(item){
+      html+='<label class="perm-check"><input type="checkbox" class="perm-check-input" value="'+escHtml(item.key)+'" '+(permissions.indexOf(item.key)>-1?'checked':'')+' onchange="markPermissionCustom();syncAttendanceScopeVisibility()"><div><span>'+escHtml(item.label)+'</span><br>'+escHtml(item.desc)+'</div></label>';
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">출결 담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">권한을 받은 사람이 직접 범위를 바꾸는 것이 아니라, 관리자가 여기서 지정한 범위만 열립니다.</div><div class="perm-scope-grid">';
+  ATTENDANCE_SCOPE_OPTIONS.forEach(function(opt){
+    html+='<label class="perm-scope-item"><input type="checkbox" class="perm-scope-input" value="'+escHtml(opt.key)+'" '+(scope.indexOf(opt.key)>-1?'checked':'')+'><span>'+escHtml(opt.label)+'</span></label>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+function syncPermissionEditorFromPreset(forceApply){
+  var sel=document.getElementById('accountPermPreset');
+  if(!sel)return;
+  var preset=PERMISSION_PRESETS[sel.value]||PERMISSION_PRESETS.custom;
+  if(forceApply&&sel.value!=='custom'){
+    document.querySelectorAll('.perm-check-input').forEach(function(input){
+      input.checked=preset.permissions.indexOf(input.value)>-1;
+    });
+    document.querySelectorAll('.perm-scope-input').forEach(function(input){
+      input.checked=(preset.scope||[]).indexOf(input.value)>-1;
+    });
+  }
+  syncAttendanceScopeVisibility();
+}
+
+function markPermissionCustom(){
+  var sel=document.getElementById('accountPermPreset');
+  if(sel&&sel.value!=='custom')sel.value='custom';
+}
+
+function readPermissionEditorChecks(){
+  var list=[];
+  document.querySelectorAll('.perm-check-input').forEach(function(input){
+    if(input.checked)list.push(input.value);
+  });
+  return uniqueArray(list);
+}
+
+function readAttendanceScopeChecks(){
+  var list=[];
+  document.querySelectorAll('.perm-scope-input').forEach(function(input){
+    if(input.checked)list.push(input.value);
+  });
+  if(list.indexOf('ALL')>-1)return ['ALL'];
+  return uniqueArray(list);
+}
+
+function syncAttendanceScopeVisibility(){
+  var box=document.getElementById('attendanceScopeBox');
+  if(!box)return;
+  var perms=readPermissionEditorChecks();
+  var needs=perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1;
+  box.style.display=needs?'block':'none';
+}
+
+function legacyRoleFromPermissions(permissions,preset){
+  permissions=permissions||[];
+  if(preset==='chongmu')return 'chongmu';
+  if(preset==='partLeader')return 'attendance';
+  if(preset==='operations')return 'songschedule';
+  if(permissions.indexOf('attendance.check')>-1&&permissions.length<=5)return 'attendance';
+  if(permissions.indexOf('song.manage')>-1&&permissions.indexOf('schedule.manage')>-1&&permissions.indexOf('attendance.view')===-1)return 'songschedule';
+  return '';
+}
 
 function getAccountActionMember(id){
   return allMembers.find(function(m){return m.id===id})||null;
@@ -2705,7 +3035,7 @@ function openAccountAction(title, bodyHtml){
 }
 
 function openAccountEdit(id){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canManageLoginAccounts())return showToast('로그인 계정 관리 권한이 없습니다');
   var m=getAccountActionMember(id);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   accountActionId=id;
@@ -2735,42 +3065,45 @@ function saveAccountEdit(){
 }
 
 function openAccountRole(id){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canManageAccountPermissions())return showToast('권한 변경은 관리자만 가능합니다');
   var m=getAccountActionMember(id);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   accountActionId=id;
-  var value=m.canArchiveUpload&&!m.role?'archive':(m.role||'');
+  var preset=m.permissionPreset||legacyPresetForAccount(m);
+  var perms=getUserPermissions(m);
+  var scope=m.attendanceScope&&m.attendanceScope.length?m.attendanceScope:((m.role==='attendance'||perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1)?scopeFromAccountPart(m.part):[]);
   openAccountAction('계정 권한 변경',
-    '<div class="account-action-note">'+escHtml(m.name)+'님의 로그인 권한을 선택하세요.</div>'
-    +'<div class="form-group"><label class="form-label">권한</label><select class="form-sel" id="accountRoleValue">'
-    +'<option value=""'+(value===''?' selected':'')+'>없음 (일반 단원)</option>'
-    +'<option value="attendance"'+(value==='attendance'?' selected':'')+'>출결 관리</option>'
-    +'<option value="chongmu"'+(value==='chongmu'?' selected':'')+'>총무부</option>'
-    +'<option value="songschedule"'+(value==='songschedule'?' selected':'')+'>곡+일정</option>'
-    +'<option value="archive"'+(value==='archive'?' selected':'')+'>아카이브 업로드만</option>'
-    +'</select></div>'
+    '<div class="account-action-note">'+escHtml(m.name)+'님의 권한을 지정합니다. 출결 범위는 여기서 정한 값만 사용할 수 있습니다.</div>'
+    +renderPermissionEditor(preset,perms,scope)
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountRole()">저장</button></div>'
   );
+  setTimeout(function(){syncPermissionEditorFromPreset(false);},0);
 }
 
 function saveAccountRole(){
   var m=getAccountActionMember(accountActionId);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
-  var value=document.getElementById('accountRoleValue').value;
-  var role=value==='archive'?'':value;
-  var canArchiveUpload=value==='archive';
+  var preset=document.getElementById('accountPermPreset').value||'custom';
+  var permissions=readPermissionEditorChecks();
+  var attendanceScope=readAttendanceScopeChecks();
+  if((permissions.indexOf('attendance.view')>-1||permissions.indexOf('attendance.check')>-1||permissions.indexOf('attendance.delete')>-1)&&attendanceScope.length===0){
+    showToast('출결 권한은 담당 범위를 선택해야 합니다');
+    return;
+  }
+  var role=legacyRoleFromPermissions(permissions,preset);
+  var canArchiveUpload=permissions.indexOf('archive.upload')>-1;
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload}).then(function(){
-    var label=role==='attendance'?'출결 관리':role==='chongmu'?'총무부':role==='songschedule'?'곡+일정':(canArchiveUpload?'일반 단원 + 아카이브':'없음');
+  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,permissionsUpdatedAt:new Date().toISOString(),permissionsUpdatedBy:currentActorName()}).then(function(){
+    var label=permissionPresetLabel(preset);
     showToast(m.name+'님 권한: '+label);
     closeModal('modalAccountAction');
     loadMembers();
-    writeLog('권한 변경',m.name+'님 → '+label);
+    writeLog('권한 변경',m.name+'님 → '+label+'\n권한: '+permissions.map(function(p){return PERMISSION_LABELS[p]||p}).join(', ')+(attendanceScope.length?'\n출결 범위: '+attendanceScope.map(function(s){return s==='S_GROUP'?'S1/S2':s}).join(', '):''));
   }).catch(function(e){console.error(e);showToast('변경 중 오류 발생')});
 }
 
 function openAccountPin(id){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canManageLoginAccounts())return showToast('로그인 계정 관리 권한이 없습니다');
   var m=getAccountActionMember(id);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   accountActionId=id;
@@ -2796,7 +3129,7 @@ function saveAccountPin(){
 }
 
 function openAccountDelete(id){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canDeleteLoginAccount())return showToast('계정 삭제는 관리자만 가능합니다');
   var m=getAccountActionMember(id);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   accountActionId=id;
@@ -2828,6 +3161,7 @@ function delMember(id){openAccountDelete(id)}
 var directoryData = []; 
 
 function loadHandbook() {
+  if(!canUseMemberHandbook())return showToast('단원 명부 권한이 필요합니다');
   db.collection('members').orderBy('name').get().then(function(snap) {
     directoryData = [];
     snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
@@ -2841,6 +3175,8 @@ function renderHandbook(list) {
   var countEl = document.getElementById('handbookCount');
   if(countEl) countEl.textContent = list.length; 
   var c = document.getElementById('handbookList'); if(!c) return;
+  var addPanel=document.getElementById('hbAddPanel');
+  if(addPanel)addPanel.style.display=canManageHandbookMembers()?'block':'none';
 
   c.innerHTML = list.map(function(m) {
     // 👇 사진 HTML 동적 생성 (여기 추가됨)
@@ -2850,6 +3186,9 @@ function renderHandbook(list) {
     var photoHtml = safePhoto
       ? '<img src="' + safePhoto + '" onclick="viewLargePhoto(\'' + safePhoto + '\')" onerror="this.style.display=\'none\'" style="width:50px;height:50px;border-radius:50%;object-fit:cover;margin-right:12px;border:2px solid var(--pl);cursor:pointer;flex-shrink:0">'
       : '<div style="width:50px;height:50px;border-radius:50%;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:24px;margin-right:12px;flex-shrink:0">👤</div>';
+    var activityBtn=canViewMemberHistory()?`<button class="btn btn-sm hb-activity-btn" style="padding:4px 8px; font-size:10px" onclick="openMemberSongHistory('${escAttr(m.id)}')">활동</button>`:'';
+    var editBtn=canManageHandbookMembers()?`<button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${escAttr(m.id)}')">✏️</button>`:'';
+    var delBtn=canDeleteHandbookMembers()?`<button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${escAttr(m.id)}', '${escAttr(m.name)}')">🗑️</button>`:'';
 
     return `
       <div class="song-card" style="border-left-color: ${(m.status||'active') === 'active' ? 'var(--p)' : 'var(--ts)'}">
@@ -2863,9 +3202,7 @@ ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#
           </div>
           <div class="hb-card-actions">
             <div style="display:flex; gap:2px">
-               <button class="btn btn-sm hb-activity-btn" style="padding:4px 8px; font-size:10px" onclick="openMemberSongHistory('${escAttr(m.id)}')">활동</button>
-               <button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${m.id}')">✏️</button>
-               <button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${m.id}', '${m.name}')">🗑️</button>
+               ${activityBtn}${editBtn}${delBtn}
             </div>
           </div>
         </div>
@@ -3185,7 +3522,7 @@ function confirmSongMemberRefs(prefix){
 
 function songRowFromDoc(doc){
   var d=doc.data();
-  return {id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],memberLinkExceptions:d.memberLinkExceptions||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||''};
+  return {id:doc.id,songName:d.songName||'',year:d.year||0,month:d.month||0,day:d.day||null,dayOfWeek:d.dayOfWeek||'',category:d.category||'',subCategory:d.subCategory||'',location:d.location||'',members:d.members||'',memberRefs:d.memberRefs||[],memberLinkExceptions:d.memberLinkExceptions||[],pianist:d.pianist||'',youtube:d.youtube||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||''};
 }
 
 function getSongsForMemberLinkAudit(force){
@@ -3699,6 +4036,7 @@ function renderMemberSongHistory(member, songs){
 }
 
 function openMemberSongHistory(id){
+  if(!canViewMemberHistory())return showToast('단원 활동 조회 권한이 필요합니다');
   var member=directoryData.find(function(x){return x.id===id});
   if(!member)return showToast('단원 정보를 찾을 수 없습니다');
   var body=document.getElementById('memberSongHistoryBody');
@@ -3799,6 +4137,7 @@ function hasHandbookProfileFields(member){
 }
 
 function addHandbookMember(){
+  if(!canManageHandbookMembers())return showToast('단원 추가/수정 권한이 필요합니다');
   var name = document.getElementById('hbName').value.trim();
   var part = normalizePartName(document.getElementById('hbPart').value);
   var subPart = cleanMemberSubPart(part, document.getElementById('hbSub').value);
@@ -3842,6 +4181,7 @@ function addHandbookMember(){
 }
 
 function deleteHandbookMember(id, name){
+  if(!canDeleteHandbookMembers())return showToast('단원 삭제 권한이 없습니다');
   if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
   db.collection('members').doc(id).delete().then(function(){ 
     showToast('삭제되었습니다'); 
@@ -3852,6 +4192,7 @@ function deleteHandbookMember(id, name){
   });
 }
 function editHandbookMember(id){
+  if(!canManageHandbookMembers())return showToast('단원 추가/수정 권한이 필요합니다');
   document.getElementById('editHbPhotoFile').value = '';
   var prevPreview = document.getElementById('editHbPhotoPreview');
   if(prevPreview){prevPreview.src='';prevPreview.style.display='none'}
@@ -3894,6 +4235,7 @@ function editHandbookMember(id){
   openModal('modalMemberEdit');
 }
 function updateHandbookMember(){
+  if(!canManageHandbookMembers())return showToast('단원 추가/수정 권한이 필요합니다');
   var id = document.getElementById('editHbId').value;
   var name = document.getElementById('editHbName').value.trim();
   var part = normalizePartName(document.getElementById('editHbPart').value);
@@ -4033,7 +4375,7 @@ function initNotice(){
   }).catch(function(){});
 }
 function saveNotice(){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canManageNotice())return showToast('공지 관리 권한이 없습니다');
   var t=document.getElementById('noticeInput').value.trim();if(!t)return showToast('공지 내용을 입력해주세요');
   db.collection('settings').doc('notice').set({text:t,updatedAt:new Date().toISOString()}).then(function(){
     saveCache('choir_notice',t);
@@ -4044,7 +4386,7 @@ function saveNotice(){
   });
 }
 function delNotice(){
-  if(adminRole!=='admin')return showToast('권한이 없습니다');
+  if(!canManageNotice())return showToast('공지 관리 권한이 없습니다');
   if(!confirm('공지를 삭제하시겠습니까?'))return;
   db.collection('settings').doc('notice').delete().then(function(){
     localStorage.removeItem('choir_notice');
@@ -4068,13 +4410,17 @@ function initSchedules(){
 
   schedulesLoadPromise=db.collection('schedules').get().then(function(snap){
     allSchedules=[];
-    snap.forEach(function(doc){var d=doc.data();allSchedules.push({id:doc.id,date:d.date,title:d.title,time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
+    snap.forEach(function(doc){allSchedules.push(scheduleRowFromDoc(doc))});
     schedulesLoaded=true;
     saveCache('choir_schedules',allSchedules);
     if(currentTab==='calendar')renderCal();
     requestHomeRender();
     return allSchedules;
   }).catch(function(){return allSchedules;});
+}
+function scheduleRowFromDoc(doc){
+  var d=doc.data()||{};
+  return {id:doc.id,date:d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -4088,36 +4434,53 @@ function toggleScheduleBriefing(){
 }
 
 function addSchedule(){
+  if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   var date=document.getElementById('schDate').value;
   var title=document.getElementById('schTitle').value.trim();
   if(!date||!title)return showToast('날짜와 제목은 필수입니다');
   var useBriefing=!!document.getElementById('schUseBriefing').checked;
-  var scheduleData={date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',createdAt:new Date().toISOString()};
-  db.collection('schedules').add(scheduleData).then(function(docRef){
-    allSchedules.push({id:docRef.id,date:date,title:title,time:scheduleData.time,location:scheduleData.location,songs:scheduleData.songs,memo:scheduleData.memo,color:selColor,useBriefing:useBriefing,program:scheduleData.program,dress:scheduleData.dress,briefingMemo:scheduleData.briefingMemo});
+  var now=new Date().toISOString();
+  var actorName=currentActorName();
+  var actorId=currentActorId();
+  var scheduleData={date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
+  var write=scheduleEditId
+    ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
+    : db.collection('schedules').add(Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName})).then(function(docRef){return {id:docRef.id,updated:false};});
+  write.then(function(result){
+    var row=Object.assign({id:result.id,createdAt:now,createdById:actorId,createdByName:actorName},scheduleData);
+    var idx=allSchedules.findIndex(function(x){return x.id===result.id});
+    if(idx>-1)allSchedules[idx]=Object.assign({},allSchedules[idx],scheduleData,{id:result.id});
+    else allSchedules.push(row);
     saveCache('choir_schedules',allSchedules);
     var logTime = scheduleData.time ? ` 🕐 ${scheduleData.time}` : '';
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
-    writeLog('일정 추가', `📅 [${title}]\n👉 일시: ${date}${logTime}${logLoc}${logBrief}`);
+    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${date}${logTime}${logLoc}${logBrief}`);
     ['schDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('schUseBriefing').checked=false;
     toggleScheduleBriefing();
+    scheduleEditId='';
+    var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 추가';
     loadSchAdmin();
+    if(currentTab==='calendar')renderCal();
   });
 }
 function loadSchAdmin(){
+  if(!canManageSchedules())return;
   var c=document.getElementById('schList');if(!c)return;
   var sorted=allSchedules.slice().sort(function(a,b){return b.date>a.date?-1:1});
   if(sorted.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts)">등록된 일정이 없습니다</div>';return}
   var today=new Date().toISOString().split('T')[0];
   c.innerHTML=sorted.map(function(s){
     var past=s.date<today;
-    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button><button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button></div></div>';
+    var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button>':'';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions"><button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button>'+delBtn+'</div></div>';
   }).join('');
 }
 function editSchedule(id){
+  if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
+  scheduleEditId=id;
   document.getElementById('schDate').value=s.date;
   document.getElementById('schTitle').value=s.title;
   document.getElementById('schTime').value=s.time||'';
@@ -4131,19 +4494,15 @@ function editSchedule(id){
   toggleScheduleBriefing();
   selColor=s.color||COLORS[0];
   document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
-  if(confirm('기존 일정을 삭제하고 수정된 내용으로 다시 저장합니다.\n계속하시겠습니까?')){
-    db.collection('schedules').doc(id).delete().then(function(){
-      allSchedules=allSchedules.filter(function(x){return x.id!==id});
-      saveCache('choir_schedules',allSchedules);
-      loadSchAdmin();
-      showToast('일정이 수정 모드로 전환되었습니다. 내용 확인 후 "일정 추가" 버튼을 눌러주세요.');
-      writeLog('일정 수정','"'+s.title+'" 수정 시작');
-    });
-  }
+  var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 수정 저장';
+  document.getElementById('schTitle').scrollIntoView({block:'center',behavior:'smooth'});
+  showToast('수정할 내용을 확인한 뒤 저장해주세요');
 }
 
   
 function delSchedule(id,title){
+  var schedule=allSchedules.find(function(s){return s.id===id});
+  if(!canDeleteScheduleItem(schedule))return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+title+'" 삭제하시겠습니까?'))return;
   db.collection('schedules').doc(id).delete().then(function(){
     allSchedules=allSchedules.filter(function(s){return s.id!==id});
@@ -4228,15 +4587,6 @@ function openSchDetail(id){
 }
 
 // ==================== 파트 아카이브 ====================
-function canUploadArchive(){
-  return adminRole==='admin' || adminRole==='chongmu' || (!!currentUser && (
-    currentUser.role==='attendance' ||
-    currentUser.role==='songschedule' ||
-    currentUser.role==='chongmu' ||
-    currentUser.canArchiveUpload===true
-  ));
-}
-
 function escHtml(str){
   return String(str||'').replace(/[&<>"']/g,function(ch){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
@@ -4327,9 +4677,7 @@ function renderArchiveList(){
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
-    var canManage=false;
-    if(adminRole==='admin'||adminRole==='chongmu') canManage=true;
-    else if(currentUser && item.uploadedBy===currentUser.name) canManage=true;
+    var canManage=canManageArchiveItem(item);
     var safeTitle=escHtml(item.title).replace(/'/g,"\\'");
     var safePath=(item.path||'').replace(/'/g,"\\'");
     var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
@@ -4378,7 +4726,7 @@ function renderArchiveReactions(item){
   var choices=ARCHIVE_REACTIONS.map(function(r){
     return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')">'+r.emoji+'</button>';
   }).join('');
-  var adminList=(adminRole==='admin'||adminRole==='chongmu')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
+  var adminList=(adminRole==='admin')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
   return '<div class="archive-reactions" id="archiveReactions-'+item.id+'">'+chips+'<button class="archive-reaction-btn '+(selected?'on':'')+'" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')">공감하기</button>'+adminList+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
 }
 function openArchiveReactionPicker(id){
@@ -4426,7 +4774,7 @@ function updateArchiveReactionView(item){
 function showArchiveReactionUsers(id){
   var item=archiveItems.find(function(x){return x.id===id});
   if(!item)return showToast('자료를 찾을 수 없습니다');
-  if(adminRole!=='admin'&&adminRole!=='chongmu')return showToast('관리자만 볼 수 있습니다');
+  if(adminRole!=='admin')return showToast('관리자만 볼 수 있습니다');
   var grouped={};
   ARCHIVE_REACTIONS.forEach(function(r){grouped[r.key]=[]});
   Object.keys(item.reactionUsers||{}).forEach(function(uid){
@@ -4488,10 +4836,6 @@ function compressArchiveImage(file){
     reader.readAsDataURL(file);
   });
 }
-function canManageArchiveItem(item){
-  if(adminRole==='admin'||adminRole==='chongmu')return true;
-  return !!(currentUser&&item&&item.uploadedBy===currentUser.name);
-}
 function openArchiveEdit(id){
   var item=archiveItems.find(function(x){return x.id===id});
   if(!item)return showToast('수정할 자료를 찾을 수 없습니다');
@@ -4520,6 +4864,8 @@ function saveArchiveEdit(){
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
 function deleteArchiveItem(id,title,path){
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!canManageArchiveItem(item))return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+title+'" 사진을 삭제하시겠습니까?'))return;
   db.collection('mediaArchive').doc(id).delete().then(function(){
     if(path){
@@ -4687,16 +5033,18 @@ function logRoleLabel(role){
   if(role==='chongmu')return '총무부';
   if(role==='attendance')return '출결';
   if(role==='songschedule')return '곡+일정';
+  if(role==='custom')return currentUser&&currentUser.permissionPreset?permissionPresetLabel(currentUser.permissionPreset):'권한자';
   return role||'일반';
 }
 function getLogActor(){
   var role=adminRole||(currentUser&&currentUser.role)||'';
   var isAdmin=adminRole==='admin'||role==='admin';
   var name=isAdmin?'관리자':(currentUser&&currentUser.name?currentUser.name:logRoleLabel(role));
+  var roleLabel=isAdmin?'관리자':logRoleLabel(role);
   return {
     name:name||'비회원',
     role:role||'guest',
-    roleLabel:isAdmin?'관리자':logRoleLabel(role),
+    roleLabel:roleLabel,
     part:currentUser&&currentUser.part?currentUser.part:'',
     id:currentUser&&currentUser.id?currentUser.id:'',
     isAdminAction:!!isAdmin
@@ -4775,6 +5123,7 @@ function renderLogCards(rows,totalCount){
   }).join('');
 }
 function loadLogs(){
+  if(adminRole!=='admin')return;
   var chk=document.getElementById('logHideAdmin');
   if(chk)chk.checked=logHideAdmin;
   db.collection('activityLogs').orderBy('timestamp','desc').limit(150).get().then(function(snap){
@@ -4790,6 +5139,7 @@ function loadLogs(){
 
 // ==================== CSV ====================
 function exportCSV(){
+  if(adminRole!=='admin')return showToast('백업은 관리자만 다운로드할 수 있습니다');
   if(allSongs.length===0)return showToast('데이터가 없습니다');
   var hd=['곡명','연도','월','일','요일','카테고리','세부분류','장소','참여단원','반주자'];
   var csv='\uFEFF'+hd.join(',')+'\n';
@@ -4802,6 +5152,7 @@ function exportCSV(){
   showToast('CSV 다운로드 완료');
 }
 function exportAttCSV(){
+  if(adminRole!=='admin')return showToast('백업은 관리자만 다운로드할 수 있습니다');
   showToast('출석 데이터 불러오는 중...');
   loadAttMembers(function(){
     db.collection('attendance').orderBy('date').get().then(function(snap){
@@ -5288,7 +5639,7 @@ function renderSongRecommendationResults(items,input,usedFallback){
 }
 
 function runSongRecommendation(){
-  if(!canUseSongRecommend())return showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
+  if(!canUseSongRecommend())return showToast('선곡 도우미 권한이 필요합니다.');
   var input=getSongRecommendInput();
   if(!input.targetDate)return showToast('선곡 날짜를 입력해주세요.');
   var resultEl=document.getElementById('songRecommendResults');
@@ -5336,7 +5687,7 @@ function setCategoryFieldValue(prefix,value){
 }
 
 function applySongRecommendation(index){
-  if(!canUseSongRecommend())return showToast('선곡 도우미는 관리자만 이용할 수 있습니다.');
+  if(!canUseSongRecommend())return showToast('선곡 도우미 권한이 필요합니다.');
   var item=songRecommendCache[index];
   if(!item)return showToast('추천 항목을 찾을 수 없습니다.');
   var input=getSongRecommendInput();
@@ -5621,10 +5972,6 @@ function getCurrentAttDocData(){
   return attSession==='오전'?attAmData:attPmData;
 }
 
-function canManageAttendanceReportExclusion(){
-  return adminRole==='admin';
-}
-
 function syncAttExcludeControl(){
   var el=document.getElementById('attExcludeFromReport');
   var wrap=document.getElementById('attExcludeFromReportWrap');
@@ -5644,6 +5991,7 @@ function syncAttExcludeReasonControl(){
 }
 
 function switchAttTab(tab){
+  if(!canViewAttendance())return showToast('출결 권한이 필요합니다');
   ['attCheck','attStats','attHistory'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
   document.querySelectorAll('[data-att]').forEach(function(el){el.classList.toggle('on',el.dataset.att===tab)});
   if(tab==='check')document.getElementById('attCheck').classList.remove('hidden');
@@ -5680,6 +6028,7 @@ function setAttendanceLoading(isLoading,message){
 }
 
 function loadAttendance(){
+  if(!canViewAttendance())return showToast('출결 권한이 필요합니다');
   var docId=getAttDocId();
   if(!docId)return;
   updateAttDateDisplay();
@@ -5694,24 +6043,13 @@ function loadAttendance(){
   setAttendanceLoading(true,'불러오는 중...');
   loadAttMembers(function(){
     if(seq!==attLoadSeq)return;
-    var parts=['all','임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
+    var parts=getAttendanceAllowedParts();
     var pf=document.getElementById('attPartFilter');
-    if(adminRole==='attendance'&&currentUser){
-      var allowedParts = (currentUser.part==='S1' || currentUser.part==='S2') ? ['S1','S2'] : [currentUser.part];
-    
-      if(allowedParts.indexOf(attPartFilter)===-1){
-        attPartFilter = allowedParts[0];
-      }
-    
-      pf.innerHTML = allowedParts.map(function(p){
-        return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+p+'</div>';
-      }).join('');
-    }else{
-      if(!parts.includes(attPartFilter))attPartFilter='all';
-      pf.innerHTML=parts.map(function(p){
-        return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
-      }).join('');
-    }
+    if(parts.length===0)parts=['all'];
+    if(parts.indexOf(attPartFilter)===-1)attPartFilter=parts[0];
+    pf.innerHTML=parts.map(function(p){
+      return '<div class="day-chip'+(attPartFilter===p?' on':'')+'" onclick="setAttPartFilter(\''+p+'\')">'+(p==='all'?'전체':p)+'</div>';
+    }).join('');
 
 
     Promise.all([
@@ -5795,7 +6133,7 @@ function renderAttGuideCard(){
   var dateEl=document.getElementById('attDate');
   var date=dateEl?dateEl.value:'';
   if(!date){el.style.display='none';el.innerHTML='';return;}
-  if(!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance')){el.style.display='none';el.innerHTML='';return;}
+  if(!canViewAttendance()){el.style.display='none';el.innerHTML='';return;}
   var info=getAttDateInfo(date);
   if(!info){el.style.display='none';el.innerHTML='';return;}
 
@@ -5850,6 +6188,10 @@ function renderAttList(){
   var renderSeq=++attRenderSeq;
   renderAttGuideCard();
   var c=document.getElementById('attList');
+  var saveWrap=document.querySelector('.att-save-float');
+  if(saveWrap)saveWrap.style.display=canCheckAttendance()?'block':'none';
+  var deleteBtn=document.getElementById('attDeleteBtn');
+  if(deleteBtn)deleteBtn.classList.toggle('hidden',!canDeleteAttendanceRecord());
   var members=attMembers.slice();
   if(attPartFilter!=='all')members=members.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
   members.sort(function(a,b){
@@ -5897,7 +6239,8 @@ function renderAttList(){
     var statusBar=amBadge+'<span class="att-state-sep">|</span>'+pmBadge;
     var partLabel=m.part+(m.subPart?'·'+m.subPart:'');
     
-    return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+m.name+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div><div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div></div>';
+    var actions=canCheckAttendance()?'<div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div>':'';
+    return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+m.name+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div>'+actions+'</div>';
   }
   c.innerHTML='<div style="font-size:12px;color:var(--ts);padding:10px 12px">목록을 표시하는 중...</div>';
   var i=0,chunkSize=35,firstChunk=true;
@@ -5989,6 +6332,7 @@ function shouldStopForLateAttendancePrompt(id,status,currentStatus){
 }
 
 function setAtt(id,status){
+  if(!canCheckAttendance())return showToast('출결 체크/수정 권한이 필요합니다');
   var currentStatus=attData[id]||'';
 
   if(currentStatus===status){
@@ -6109,6 +6453,7 @@ function confirmAttReason(){
 
 
 function saveAttendance(){
+  if(!canCheckAttendance())return showToast('출결 체크/수정 권한이 필요합니다');
   ensureAttDate();
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 선택해주세요');
@@ -6149,12 +6494,12 @@ function saveAttendance(){
     var existingReasons=doc.exists&&doc.data().reasons?doc.data().reasons:{};
     saveData.excludeFromReport=canManageAttendanceReportExclusion()?excludeChecked:!!(existingData&&existingData.excludeFromReport);
     saveData.excludeReason=saveData.excludeFromReport?(canManageAttendanceReportExclusion()?excludeReason:(existingData.excludeReason||'')):'';
-    if(adminRole==='admin'||adminRole==='chongmu'){
+    if(getAttendanceAllowedParts().indexOf('all')!==-1){
       saveData.records=attData;
       saveData.reasons=attReasons;
     }else{
       attMembers.forEach(function(m){
-        if(m.part===attPartFilter||m.subPart===attPartFilter){
+        if((attPartFilter==='all'&&isMemberInAttendanceScope(m))||m.part===attPartFilter||m.subPart===attPartFilter){
           if(attData[m.id])existingRecords[m.id]=attData[m.id];
           else delete existingRecords[m.id];
           if(attReasons[m.id])existingReasons[m.id]=attReasons[m.id];
@@ -6238,9 +6583,8 @@ function togglePrevWeekCard(btn){
 
 function getAttendanceStatsScopeMembers(){
   var members=attMembers.slice();
-  if(adminRole==='attendance'&&currentUser){
-    var allowedParts=(currentUser.part==='S1'||currentUser.part==='S2')?['S1','S2']:[currentUser.part];
-    members=members.filter(function(m){return allowedParts.indexOf(m.part)!==-1||allowedParts.indexOf(m.subPart)!==-1});
+  if(getAttendanceAllowedParts().indexOf('all')===-1){
+    members=members.filter(function(m){return isMemberInAttendanceScope(m);});
   }
   return members;
 }
@@ -6286,7 +6630,8 @@ function loadAttDashboard(){
       if(am3&&am3.excludeFromReport)am3=null;
       if(pm3&&pm3.excludeFromReport)pm3=null;
 
-      var total=attMembers.length;
+      var dashboardMembers=getAttendanceStatsScopeMembers();
+      var total=dashboardMembers.length;
       var hasCurrentWeekData=!!(am1||pm1);
 
       var amPresent=0, amAbsent=0, pmPresent=0, pmAbsent=0;
@@ -6294,7 +6639,7 @@ function loadAttDashboard(){
       var dropOuts=[];       // 이탈자 (오전 출석 -> 오후 결석)
       var longAbsentees=[];  // 3주 연속 결석자
 
-      attMembers.forEach(function(m){
+      dashboardMembers.forEach(function(m){
         // [1] 이번 주 현황 분석
         var amSt=am1&&am1.records?am1.records[m.id]||'무단결석':'미확인';
         var pmSt=pm1&&pm1.records?pm1.records[m.id]||'무단결석':'미확인';
@@ -6378,7 +6723,7 @@ function loadAttDashboard(){
         var both2Absent=[];
         var drop2Outs=[];
 
-        attMembers.forEach(function(m){
+        dashboardMembers.forEach(function(m){
           var a2St=am2&&am2.records?am2.records[m.id]||'무단결석':'미확인';
           var p2St=pm2&&pm2.records?pm2.records[m.id]||'무단결석':'미확인';
           var a2Ok=a2St==='출석'||a2St==='지각';
@@ -6521,7 +6866,7 @@ function renderLateAttendanceStats(records,from,to){
   });
 
   var totalLate=lateRows.length;
-  var scopeLabel=(adminRole==='attendance'&&currentUser)?'담당 파트':'전체 파트';
+  var scopeLabel=getAttendanceAllowedParts().indexOf('all')===-1?'담당 범위':'전체 파트';
   var h='<div style="font-size:11px;color:var(--ts);line-height:1.5;margin-bottom:10px">공식 지각률이 아니라, 선택 기간에 <b>지각으로 기록된 횟수</b>입니다. 파트별 체크 기준 차이로 참고용입니다. ('+from+' ~ '+to+' · '+scopeLabel+')</div>';
 
   if(totalLate===0){
@@ -6564,7 +6909,7 @@ function populateAttMemSel(){
     var sel=document.getElementById('attMemSel');
     sel.innerHTML='<option value="">선택...</option>';
     var parts=['임원','S1','S2','T1','T2','관현악','지휘','반주','준단원','신입단원'];
-    var sorted=attMembers.slice().sort(function(a,b){
+    var sorted=getAttendanceStatsScopeMembers().sort(function(a,b){
       var diff=parts.indexOf(a.part)-parts.indexOf(b.part);
       if(diff!==0)return diff;return a.name.localeCompare(b.name,'ko');
     });
@@ -6702,7 +7047,7 @@ function loadMemHistory(){
 
     var stats=collectForMember(mem,true);
     var peerPart=mem.part;
-    var partPeers=attMembers.filter(function(m){return m.part===peerPart||m.subPart===peerPart});
+    var partPeers=getAttendanceStatsScopeMembers().filter(function(m){return m.part===peerPart||m.subPart===peerPart});
     var partAgg={total:0,present:0,partial:0,members:0};
     partPeers.forEach(function(peer){
       var peerStats=collectForMember(peer,false);
@@ -6755,19 +7100,45 @@ function getMemHistoryRangeInfo(){
 
 // [신규] 잘못 만든 날짜의 출석 기록을 통째로 날려버리는 기능
 function deleteAttendance(){
+  if(!canDeleteAttendanceRecord())return showToast('출결 삭제/초기화 권한이 없습니다');
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 먼저 선택해주세요');
   var date=document.getElementById('attDate').value;
-  if(!confirm(date+' '+attSession+' 출석 기록을 완전히 삭제할까요?'))return;
-  db.collection('attendance').doc(docId).delete().then(function(){
-    showToast(date+' '+attSession+' 기록이 삭제되었습니다!');
-    invalidateHomeAttendanceCache();
-    document.getElementById('attDate').value='';
-    attData={};attReasons={};
-    document.getElementById('attList').innerHTML='';
-    document.getElementById('attCount').textContent='';
-    writeLog('출석 삭제',date+' '+attSession+' 기록 삭제됨');
-  }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
+  if(adminRole==='admin'){
+    if(!confirm(date+' '+attSession+' 출석 기록을 완전히 삭제할까요?'))return;
+    db.collection('attendance').doc(docId).delete().then(function(){
+      showToast(date+' '+attSession+' 기록이 삭제되었습니다!');
+      invalidateHomeAttendanceCache();
+      document.getElementById('attDate').value='';
+      attData={};attReasons={};
+      document.getElementById('attList').innerHTML='';
+      document.getElementById('attCount').textContent='';
+      writeLog('출석 삭제',date+' '+attSession+' 기록 전체 삭제됨');
+    }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
+    return;
+  }
+  loadAttMembers(function(){
+    var scopeMembers=attMembers.filter(function(m){
+      if(!isMemberInAttendanceScope(m))return false;
+      return attPartFilter==='all'||m.part===attPartFilter||m.subPart===attPartFilter;
+    });
+    var scopeLabel=attPartFilter==='all'?'담당 범위':attPartFilter;
+    if(scopeMembers.length===0)return showToast('초기화할 담당 범위가 없습니다');
+    if(!confirm(date+' '+attSession+' '+scopeLabel+' 출석 기록 '+scopeMembers.length+'명을 초기화할까요?'))return;
+    db.collection('attendance').doc(docId).get().then(function(doc){
+      if(!doc.exists)return showToast('초기화할 출석 기록이 없습니다');
+      var data=doc.data()||{};
+      var records=Object.assign({},data.records||{});
+      var reasons=Object.assign({},data.reasons||{});
+      scopeMembers.forEach(function(m){delete records[m.id];delete reasons[m.id];});
+      return db.collection('attendance').doc(docId).set(Object.assign({},data,{records:records,reasons:reasons,updatedAt:new Date().toISOString(),updatedBy:currentActorName()}));
+    }).then(function(){
+      showToast(scopeLabel+' 기록이 초기화되었습니다');
+      invalidateHomeAttendanceCache();
+      writeLog('출석 초기화',date+' '+attSession+' ['+scopeLabel+'] 기록 초기화');
+      loadAttendance();
+    }).catch(function(e){console.error(e);showToast('초기화 중 오류 발생')});
+  });
 }
 
 // [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
