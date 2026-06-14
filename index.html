@@ -1676,7 +1676,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v58.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v59.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2184,7 +2184,15 @@ function renderHome(){
   var cachedSongs=Array.isArray(songCache)?songCache:[];
   var cachedSchedules=Array.isArray(scheduleCache)?scheduleCache:[];
   var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache};
-  renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
+  var currentHomeAttendance=null;
+  function latestHomeSongs(){
+    return allSongs.length>0?allSongs:cachedSongs;
+  }
+  function latestHomeSchedules(){
+    var rows=allSchedules.length>0?allSchedules:cachedSchedules;
+    return rows.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr});
+  }
+  renderHomeShell(cachedSongs,latestHomeSchedules(),null,shellState);
 
   var songPromise=allSongs.length>0
     ? Promise.resolve(allSongs)
@@ -2209,21 +2217,16 @@ function renderHome(){
       });
 
   Promise.all([songPromise,schedulePromise]).then(function(res){
-    renderHomeShell(res[0],res[1],null);
+    renderHomeShell(res[0],res[1],currentHomeAttendance);
   }).catch(function(e){console.error(e)});
 
   if(showHomeAttendance){
-    Promise.all([
-      songPromise,
-      schedulePromise,
-      getHomeAttendanceData(currentSunStr)
-    ]).then(function(res){
-      var hymnSongs=res[0];
-      var weekSchedules=res[1];
-      renderHomeShell(hymnSongs,weekSchedules,res[2]);
+    getHomeAttendanceData(currentSunStr).then(function(attendance){
+      currentHomeAttendance=attendance;
+      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),attendance);
     }).catch(function(e){
       console.error(e);
-      renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
+      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),null,shellState);
     });
   }
 }
