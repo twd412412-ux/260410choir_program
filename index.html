@@ -76,6 +76,22 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-action-note{font-size:12px;color:var(--ts);line-height:1.45;margin:-4px 0 12px}
 .account-action-actions{display:flex;gap:8px;margin-top:16px}
 .account-action-actions .btn{flex:1}
+.account-create-panel{background:rgba(255,253,248,.76);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:16px;box-shadow:0 8px 18px rgba(47,41,31,.05)}
+.dark .account-create-panel{background:rgba(29,33,27,.76)}
+.account-list-title{font-size:14px;font-weight:850;margin:2px 0 10px;color:var(--tx)}
+.account-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--sf);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;box-shadow:0 8px 20px rgba(47,41,31,.055)}
+.account-main{min-width:0}
+.account-name-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.account-name{font-size:15px;font-weight:850;color:var(--tx)}
+.account-pin{font-size:12px;color:var(--ts);margin-top:5px}
+.account-pin b{color:var(--pd);letter-spacing:1px}
+.account-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.account-action-btn{min-width:46px;padding:7px 10px;border:1px solid #CFC4AE;border-radius:10px;background:#F9F5EC;color:#465034;font-size:12px;font-weight:850;line-height:1;cursor:pointer}
+.account-action-btn.primary{background:var(--p);border-color:var(--p);color:#fff}
+.account-action-btn.danger{background:var(--dg);border-color:var(--dg);color:#fff}
+.dark .account-action-btn{background:#2A3026;border-color:#46513F;color:var(--tx)}
+.dark .account-action-btn.primary{background:var(--p);border-color:var(--p);color:#172016}
+.dark .account-action-btn.danger{background:var(--dg);border-color:var(--dg);color:#fff}
 .perm-preset-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 12px}
 .perm-group{border:1px solid var(--bd);border-radius:12px;background:var(--bg);padding:10px;margin-bottom:8px}
 .perm-group-title{font-size:12px;font-weight:850;color:var(--tx);margin-bottom:7px}
@@ -85,10 +101,15 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .perm-scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
 .perm-scope-item{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--sf);border-radius:10px;padding:8px;font-size:12px;font-weight:750;color:var(--tx)}
 .perm-scope-item input{width:16px;height:16px}
-.perm-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
-.perm-badge{font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:8px;font-weight:850}
-.perm-badge.warn{background:#F4E7CC;color:#7C571E}
-.perm-badge.safe{background:#EAEFDF;color:#4E5A35}
+.perm-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.perm-badge{font-size:10px;background:#F3EAD9;color:#5F512D;border:1px solid #DED0B8;padding:3px 7px;border-radius:999px;font-weight:850;line-height:1.2;white-space:nowrap}
+.perm-badge.preset{background:#65754A;color:#fff;border-color:#65754A}
+.perm-badge.scope{background:#E7EBDD;color:#445532;border-color:#CAD3B9}
+.perm-badge.warn{background:#F4E7CC;color:#7C571E;border-color:#E8D2A7}
+.perm-badge.safe{background:#EAEFDF;color:#4E5A35;border-color:#CBD7BE}
+.dark .perm-badge{background:#302B20;color:#EAD8B9;border-color:#514733}
+.dark .perm-badge.preset{background:var(--p);color:#172016;border-color:var(--p)}
+.dark .perm-badge.scope{background:#2D3729;color:#D6E0CD;border-color:#49553F}
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .handbook-extra summary::-webkit-details-marker{display:none}
@@ -104,7 +125,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .handbook-add-panel[open] summary::after{content:'접기'}
 .handbook-add-body{padding:0 14px 14px}
 .handbook-add-panel:not([open]) .handbook-add-body{display:none}
-@media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}}
+@media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}.account-row{grid-template-columns:1fr}.account-actions{justify-content:flex-start}.account-action-btn{min-width:54px}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
@@ -1284,11 +1305,13 @@ body{font-weight:500}
     <div id="handbookList"></div>
   </div>
   <div class="admin-sub hidden" id="subMembers">
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">👥 단원 관리</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
-    <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
-    <button class="btn btn-p btn-bl" onclick="addMember()" style="margin-bottom:20px">단원 등록</button>
-    <h4 style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 단원</h4>
+    <div class="account-create-panel">
+      <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 단원 관리</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
+      <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
+      <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
+    </div>
+    <h4 class="account-list-title">등록된 단원</h4>
     <div id="memberList"></div>
   </div>
 
@@ -1759,7 +1782,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v62.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v63.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1821,7 +1844,10 @@ function legacyPermissionsForRole(role, canArchiveUpload){
 }
 function getUserPermissions(user){
   user=user||currentUser||{};
-  if(Array.isArray(user.permissions))return normalizePermissionArray(user.permissions);
+  if(Array.isArray(user.permissions)){
+    var stored=normalizePermissionArray(user.permissions);
+    if(stored.length||user.permissionPreset||(!user.role&&!user.canArchiveUpload))return stored;
+  }
   return legacyPermissionsForRole(user.role||'',!!user.canArchiveUpload);
 }
 function getCurrentPermissions(){
@@ -2905,13 +2931,17 @@ function loadMembers(){
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
       var roleBadge=renderAccountPermissionBadges(m);
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
-        <div><span style="font-weight:700;font-size:14px">${m.name}</span><span class="meta-tag" style="margin-left:6px">${m.part}</span>${roleBadge}<div style="font-size:12px;color:var(--ts);margin-top:4px">PIN: <b style="color:var(--p);letter-spacing:1px">${m.pin}</b></div></div>
-        <div style="display:flex;gap:4px">
-          ${canManageLoginAccounts()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
-          ${canManageAccountPermissions()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>`:''}
-          ${canManageLoginAccounts()?`<button type="button" class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>`:''}
-          ${canDeleteLoginAccount()?`<button type="button" class="btn btn-sm btn-d" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>`:''}
+      return `<div class="account-row">
+        <div class="account-main">
+          <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span><span class="meta-tag">${escHtml(m.part)}</span></div>
+          ${roleBadge}
+          <div class="account-pin">PIN: <b>${escHtml(m.pin)}</b></div>
+        </div>
+        <div class="account-actions">
+          ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
+          ${canManageAccountPermissions()?`<button type="button" class="account-action-btn primary" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>`:''}
+          ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>`:''}
+          ${canDeleteLoginAccount()?`<button type="button" class="account-action-btn danger" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -2919,19 +2949,37 @@ function loadMembers(){
 }
 var accountActionId='';
 
+function accountScopeLabel(scope){
+  scope=uniqueArray(scope||[]);
+  if(scope.indexOf('ALL')>-1)return '범위 전체';
+  var labels=scope.map(function(v){return v==='S_GROUP'?'S1/S2':v});
+  return labels.length?'범위 '+labels.join('/'):'';
+}
+
+function accountFeatureLabels(perms){
+  perms=normalizePermissionArray(perms);
+  var labels=[];
+  if(perms.indexOf('song.manage')>-1||perms.indexOf('schedule.manage')>-1)labels.push('곡/일정');
+  if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
+  if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1||perms.indexOf('account.manage')>-1)labels.push('명부');
+  if(perms.indexOf('archive.view')>-1||perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1)labels.push('아카이브');
+  if(perms.indexOf('notice.manage')>-1||perms.indexOf('song.recommend')>-1)labels.push('도구');
+  return labels;
+}
+
 function renderAccountPermissionBadges(m){
   var perms=getUserPermissions(m);
+  if(perms.length===0)return '';
   var badges=[];
-  if(m.permissionPreset)badges.push('<span class="perm-badge safe">'+escHtml(permissionPresetLabel(m.permissionPreset))+'</span>');
+  if(m.permissionPreset&&m.permissionPreset!=='none')badges.push('<span class="perm-badge preset">'+escHtml(permissionPresetLabel(m.permissionPreset))+'</span>');
   else if(m.role==='attendance')badges.push('<span class="perm-badge safe">출결</span>');
   else if(m.role==='chongmu')badges.push('<span class="perm-badge safe">총무부</span>');
   else if(m.role==='songschedule')badges.push('<span class="perm-badge warn">곡+일정</span>');
-  if(perms.indexOf('song.manage')>-1)badges.push('<span class="perm-badge">곡</span>');
-  if(perms.indexOf('schedule.manage')>-1)badges.push('<span class="perm-badge">일정</span>');
-  if(perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.view')>-1)badges.push('<span class="perm-badge">출결</span>');
-  if(perms.indexOf('member.view')>-1||perms.indexOf('member.manage')>-1)badges.push('<span class="perm-badge">명부</span>');
-  if(perms.indexOf('archive.upload')>-1)badges.push('<span class="perm-badge">아카이브</span>');
-  if(perms.length===0)badges.push('<span class="perm-badge">일반</span>');
+  accountFeatureLabels(perms).forEach(function(label){
+    badges.push('<span class="perm-badge">'+escHtml(label)+'</span>');
+  });
+  var scopeText=accountScopeLabel(m.attendanceScope);
+  if(scopeText&&accountFeatureLabels(perms).indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
   return '<div class="perm-badges">'+badges.join('')+'</div>';
 }
 
@@ -2942,6 +2990,33 @@ function legacyPresetForAccount(m){
   if(m.role==='chongmu')return 'chongmu';
   if(m.canArchiveUpload)return 'custom';
   return 'none';
+}
+
+function permissionPresetDefaultScope(presetKey){
+  var preset=PERMISSION_PRESETS[presetKey]||PERMISSION_PRESETS.custom;
+  if(presetKey==='partLeader'){
+    var m=getAccountActionMember(accountActionId);
+    if(m)return scopeFromAccountPart(m.part);
+  }
+  return uniqueArray(preset.scope||[]);
+}
+
+function permissionEditorPermissionsFor(m,preset){
+  var perms=getUserPermissions(m);
+  if(perms.length===0&&preset&&preset!=='none'&&preset!=='custom'&&PERMISSION_PRESETS[preset]){
+    return normalizePermissionArray(PERMISSION_PRESETS[preset].permissions);
+  }
+  return perms;
+}
+
+function permissionEditorScopeFor(m,preset,permissions){
+  var scope=m.attendanceScope&&m.attendanceScope.length?uniqueArray(m.attendanceScope):[];
+  if(scope.length)return scope;
+  if(m.role==='attendance'||permissions.indexOf('attendance.view')>-1||permissions.indexOf('attendance.check')>-1||permissions.indexOf('attendance.delete')>-1){
+    return preset==='chongmu'?['ALL']:scopeFromAccountPart(m.part);
+  }
+  if(preset&&preset!=='none'&&preset!=='custom')return permissionPresetDefaultScope(preset);
+  return [];
 }
 
 function renderPermissionEditor(preset, permissions, scope){
@@ -2974,11 +3049,12 @@ function syncPermissionEditorFromPreset(forceApply){
   if(!sel)return;
   var preset=PERMISSION_PRESETS[sel.value]||PERMISSION_PRESETS.custom;
   if(forceApply&&sel.value!=='custom'){
+    var presetScope=permissionPresetDefaultScope(sel.value);
     document.querySelectorAll('.perm-check-input').forEach(function(input){
       input.checked=preset.permissions.indexOf(input.value)>-1;
     });
     document.querySelectorAll('.perm-scope-input').forEach(function(input){
-      input.checked=(preset.scope||[]).indexOf(input.value)>-1;
+      input.checked=presetScope.indexOf(input.value)>-1;
     });
   }
   syncAttendanceScopeVisibility();
@@ -3070,8 +3146,8 @@ function openAccountRole(id){
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   accountActionId=id;
   var preset=m.permissionPreset||legacyPresetForAccount(m);
-  var perms=getUserPermissions(m);
-  var scope=m.attendanceScope&&m.attendanceScope.length?m.attendanceScope:((m.role==='attendance'||perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1)?scopeFromAccountPart(m.part):[]);
+  var perms=permissionEditorPermissionsFor(m,preset);
+  var scope=permissionEditorScopeFor(m,preset,perms);
   openAccountAction('계정 권한 변경',
     '<div class="account-action-note">'+escHtml(m.name)+'님의 권한을 지정합니다. 출결 범위는 여기서 정한 값만 사용할 수 있습니다.</div>'
     +renderPermissionEditor(preset,perms,scope)
