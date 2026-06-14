@@ -889,12 +889,13 @@ body{font-weight:500}
 .att-btn.excused{background:#7B7894;border-color:#7B7894}
 .att-btn.absent{background:#B9655F;border-color:#B9655F}
 .att-save-float .btn-p{background:#6F7D4E}
-.home-dashboard{position:relative;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 6px 18px rgba(49,54,35,.055);overflow:hidden}
-.home-dashboard-top{display:block;position:relative;min-height:132px;padding-right:118px}
-.home-kicker{font-size:12px;font-weight:700;color:#606554;margin-bottom:6px;text-align:center}
-.home-main-title{font-size:23px;font-weight:800;color:#191A15;line-height:1.25;word-break:keep-all;text-align:center}
+.home-dashboard{position:relative;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:16px 16px 14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(49,54,35,.055);overflow:hidden}
+.home-dashboard-top{display:grid;grid-template-columns:minmax(0,1fr) 96px;align-items:center;gap:10px;min-height:98px}
+.home-feature-copy{min-width:0}
+.home-kicker{font-size:13px;font-weight:780;color:#606554;margin-bottom:7px;text-align:left}
+.home-main-title{font-size:28px;font-weight:850;color:#191A15;line-height:1.16;word-break:keep-all;text-align:left}
 .home-main-sub{font-size:12px;font-weight:650;color:#606554;margin-top:8px}
-.home-hymn-art{position:absolute;right:0;top:4px;width:122px;height:122px;pointer-events:none}
+.home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
 .home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
 .home-ring-stack{display:grid;gap:8px}
@@ -943,8 +944,11 @@ body{font-weight:500}
 .home-part-session.done .pct{color:#4E5A35}
 .home-part-session.none .pct{color:#B9655F}
 @media(max-width:390px){
-  .home-dashboard-top{min-height:124px;padding-right:104px}
-  .home-hymn-art{right:-4px;top:8px;width:112px;height:112px}
+  .home-dashboard{padding:14px 14px 13px}
+  .home-dashboard-top{grid-template-columns:minmax(0,1fr) 84px;min-height:92px;gap:8px}
+  .home-kicker{font-size:12px}
+  .home-main-title{font-size:25px}
+  .home-hymn-art{width:84px;height:84px}
   .home-attendance-rings{grid-template-columns:1fr 1fr}
   .home-schedule-row{grid-template-columns:76px minmax(0,1fr) 54px 12px;gap:6px;padding:10px}
   .home-schedule-place{font-size:11px}
@@ -1672,7 +1676,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v57.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v58.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1828,7 +1832,9 @@ function openAdminLogin(){
     document.getElementById('btnLock').textContent='🔒';
     showToast('관리자 모드 종료');
     if(currentTab==='admin'||currentTab==='stats')switchTab('songs');
-    renderSongList();return;
+    renderSongList();
+    refreshHomeAccessState();
+    return;
   }
   openModal('modalAdmin');
   setTimeout(function(){document.getElementById('adminPw').focus()},300);
@@ -1844,7 +1850,7 @@ function checkAdminPw(){
     document.getElementById('navArchive').classList.remove('hidden');
     document.getElementById('btnLock').textContent='🔓';
     document.getElementById('adminPw').value='';
-    closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();
+    closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();refreshHomeAccessState();
   }else if(role==='chongmu'){
     loadAdminSettings().then(function(){
       if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
@@ -1855,7 +1861,7 @@ function checkAdminPw(){
       document.getElementById('navArchive').classList.remove('hidden');
       document.getElementById('btnLock').textContent='🔓';
       document.getElementById('adminPw').value='';
-      closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();
+      closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();refreshHomeAccessState();
     }).catch(function(){showToast('비밀번호 확인 중 오류 발생')});
   }else{showToast('비밀번호가 틀렸습니다')}
 }
@@ -1914,15 +1920,27 @@ function loginUser(){
       document.getElementById('btnLock').textContent='🔓';
       updateAdminTabs();
     }
+    refreshHomeAccessState();
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
 function logoutUser(){
+  var roleToClear=currentUser&&currentUser.role;
+  if(roleToClear&&adminRole===roleToClear){
+    adminRole=null;
+    document.body.classList.remove('admin-mode','chongmu-mode','songschedule-mode');
+    document.getElementById('navAdmin').classList.add('hidden');
+    document.getElementById('navStats').classList.add('hidden');
+    document.getElementById('btnLock').textContent='🔒';
+    if(currentTab==='admin'||currentTab==='stats')switchTab('songs');
+  }
   currentUser=null;
   localStorage.removeItem('choir_user');
   updateUserBar();
   closeModal('modalUser');
   if(currentTab==='archive')switchTab('songs');
+  renderSongList();
+  refreshHomeAccessState();
   showToast('로그아웃 되었습니다');
 }
 function updateUserBar(){
@@ -2000,6 +2018,10 @@ function invalidateHomeAttendanceCache(){
 }
 function canAccessHomeAttendance(){
   return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)));
+}
+function refreshHomeAccessState(){
+  invalidateHomeAttendanceCache();
+  requestHomeRender();
 }
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
@@ -2145,7 +2167,7 @@ function renderHome(){
     c.innerHTML=''
       +'<div class="home-dashboard">'
         +'<div class="home-dashboard-top">'
-          +'<div><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
+          +'<div class="home-feature-copy"><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
           +'<div class="home-hymn-art" aria-hidden="true"><img src="./assets/hymn-dove-book.png" alt=""></div>'
         +'</div>'
         +'<div class="home-dashboard-bottom">'
