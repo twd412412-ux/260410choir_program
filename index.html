@@ -1782,7 +1782,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v63.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v64.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2971,15 +2971,18 @@ function renderAccountPermissionBadges(m){
   var perms=getUserPermissions(m);
   if(perms.length===0)return '';
   var badges=[];
-  if(m.permissionPreset&&m.permissionPreset!=='none')badges.push('<span class="perm-badge preset">'+escHtml(permissionPresetLabel(m.permissionPreset))+'</span>');
-  else if(m.role==='attendance')badges.push('<span class="perm-badge safe">출결</span>');
-  else if(m.role==='chongmu')badges.push('<span class="perm-badge safe">총무부</span>');
-  else if(m.role==='songschedule')badges.push('<span class="perm-badge warn">곡+일정</span>');
-  accountFeatureLabels(perms).forEach(function(label){
+  var presetKey=m.permissionPreset&&m.permissionPreset!=='none'?m.permissionPreset:legacyPresetForAccount(m);
+  if(presetKey&&presetKey!=='none'&&presetKey!=='custom'){
+    badges.push('<span class="perm-badge preset">'+escHtml(permissionPresetLabel(presetKey))+'</span>');
+  }else if(perms.length){
+    badges.push('<span class="perm-badge preset">직접 설정</span>');
+  }
+  var featureLabels=accountFeatureLabels(perms);
+  featureLabels.forEach(function(label){
     badges.push('<span class="perm-badge">'+escHtml(label)+'</span>');
   });
   var scopeText=accountScopeLabel(m.attendanceScope);
-  if(scopeText&&accountFeatureLabels(perms).indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
+  if(scopeText&&featureLabels.indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
   return '<div class="perm-badges">'+badges.join('')+'</div>';
 }
 
