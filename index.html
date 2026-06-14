@@ -1672,7 +1672,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v56.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v57.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1998,6 +1998,9 @@ function requestHomeRender(){
 function invalidateHomeAttendanceCache(){
   homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 }
+function canAccessHomeAttendance(){
+  return !!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)));
+}
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
   if(homeAttendanceCache.key===dateKey&&homeAttendanceCache.data&&(now-homeAttendanceCache.ts)<30000){
@@ -2059,6 +2062,7 @@ function renderHome(){
   var featuredLabel=(today.getDay()===0&&today.getHours()<12)?'오늘 주일 찬송곡':'돌아오는 주일 찬송곡';
   var weekStart=currentSun, weekEnd=getSaturdayFromSunday(currentSun);
   var weekStartStr=homeInputDate(weekStart), weekEndStr=homeInputDate(weekEnd);
+  var showHomeAttendance=canAccessHomeAttendance();
 
   function songsFor(hymnSongs,date,songsPending){
     if(songsPending)return '<span style="color:var(--ts)">찬송곡 불러오는 중...</span>';
@@ -2080,7 +2084,7 @@ function renderHome(){
     return {state:'done',text:'완료 · 출석률 '+rate+'% · 출석 '+(present+late)+'/'+total+'명',rate:rate,unchecked:0,checked:checked,total:total,present:present,late:late,attended:present+late};
   }
   function canSeeHomeAttendanceDetail(){
-    return adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role));
+    return showHomeAttendance;
   }
   function homeRing(label,st){
     var pct=st&&typeof st.rate==='number'?st.rate:0;
@@ -2134,6 +2138,10 @@ function renderHome(){
       partHtml=partHtml?'<div class="home-part-list">'+partHtml+'</div>':'<div class="home-empty-row">표시할 파트가 없습니다</div>';
     }
 
+    var attendanceSection=showHomeAttendance
+      ? '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>'
+      : '';
+
     c.innerHTML=''
       +'<div class="home-dashboard">'
         +'<div class="home-dashboard-top">'
@@ -2146,7 +2154,7 @@ function renderHome(){
         +'</div>'
       +'</div>'
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
-      +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>';
+      +attendanceSection;
   }
 
   var songCache=allSongs.length>0?allSongs:loadCache('choir_songs',600000);
@@ -2182,22 +2190,24 @@ function renderHome(){
     renderHomeShell(res[0],res[1],null);
   }).catch(function(e){console.error(e)});
 
-  Promise.all([
-    songPromise,
-    schedulePromise,
-    getHomeAttendanceData(currentSunStr)
-  ]).then(function(res){
-    var hymnSongs=res[0];
-    var weekSchedules=res[1];
-    renderHomeShell(hymnSongs,weekSchedules,res[2]);
-  }).catch(function(e){
-    console.error(e);
-    renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
-  });
+  if(showHomeAttendance){
+    Promise.all([
+      songPromise,
+      schedulePromise,
+      getHomeAttendanceData(currentSunStr)
+    ]).then(function(res){
+      var hymnSongs=res[0];
+      var weekSchedules=res[1];
+      renderHomeShell(hymnSongs,weekSchedules,res[2]);
+    }).catch(function(e){
+      console.error(e);
+      renderHomeShell(cachedSongs,cachedSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}),null,shellState);
+    });
+  }
 }
 
 function openHomeAttendanceDetail(){
-  if(!(adminRole==='admin'||adminRole==='chongmu'||adminRole==='attendance'||(currentUser&&['admin','chongmu','attendance'].includes(currentUser.role)))){
+  if(!canAccessHomeAttendance()){
     showToast('출결 권한에서 확인 가능합니다');
     return;
   }
