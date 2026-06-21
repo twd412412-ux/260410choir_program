@@ -1783,7 +1783,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v68.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v69.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2286,6 +2286,22 @@ function isAttendanceTargetMember(d){
   var status=d.status||'active';
   return status==='active'&&part!=='명단제외'&&!d.noAtt;
 }
+function normalizeDateKey(v){
+  var s=String(v||'').trim().slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s)?s:'';
+}
+function memberAttendanceStartDate(member){
+  return normalizeDateKey(member&&member.attendanceStartDate)||normalizeDateKey(member&&member.createdAt);
+}
+function isMemberActiveOnAttendanceDate(member,dateKey){
+  if(!isAttendanceTargetMember(member))return false;
+  var start=memberAttendanceStartDate(member);
+  var date=normalizeDateKey(dateKey);
+  return !start||!date||date>=start;
+}
+function filterAttendanceMembersForDate(members,dateKey){
+  return (members||[]).filter(function(m){return isMemberActiveOnAttendanceDate(m,dateKey);});
+}
 function requestHomeRender(){
   if(currentTab!=='home')return;
   if(homeRenderTimer)clearTimeout(homeRenderTimer);
@@ -2323,7 +2339,7 @@ function getHomeAttendanceData(dateKey){
     var members=[];
     res[0].forEach(function(doc){
       var d=doc.data();
-      if(isAttendanceTargetMember(d))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart)});
+      if(isMemberActiveOnAttendanceDate(d,dateKey))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),attendanceStartDate:memberAttendanceStartDate(d)});
     });
     if(getAttendanceAllowedParts().indexOf('all')===-1){
       members=members.filter(function(m){return isMemberInAttendanceScope(m);});
@@ -4257,6 +4273,7 @@ function addHandbookMember(){
     subPart: subPart,
     noAtt: document.getElementById('hbNoAtt').checked || false,
     status: part==='명단제외' ? 'inactive' : 'active',
+    attendanceStartDate: getTodayInputDate(),
     createdAt: new Date().toISOString()
   };
   Object.assign(data, readHandbookProfileFields('add'));
@@ -5274,7 +5291,7 @@ function exportAttCSV(){
       attMembers.forEach(function(m){
         var row=['"'+m.name+'"','"'+m.part+'"'];
         allRecords.forEach(function(r){
-          var st=r.records[m.id]||'무단결석';
+          var st=isMemberActiveOnAttendanceDate(m,r.date)?(r.records[m.id]||'무단결석'):'';
           var reason=(st==='사유결석'&&r.reasons[m.id])?'('+r.reasons[m.id]+')':'';
           row.push('"'+st+reason+'"');
         });
@@ -5287,7 +5304,7 @@ function exportAttCSV(){
       writeLog('백업 다운로드','출석 CSV 다운로드\n대상 단원 '+attMembers.length+'명 / 출석 회차 '+allRecords.length+'건');
       showToast('출석 CSV 다운로드 완료');
     }).catch(function(){showToast('출석 데이터를 불러올 수 없습니다')});
-  });
+  },'');
 }
 
 
@@ -5999,6 +6016,7 @@ function showGuide(){
 var attData={};
 var attPartFilter='all';
 var attMembers=[];
+var attAllMembers=[];
 var attReasons={};
 var attAmData=null;
 var attPmData=null;
@@ -6006,6 +6024,8 @@ var attSession='오전';
 var attStatusFilter='all';
 var attUnsubs=[];
 var attMembersLoaded=false;
+var attMembersSourceLoaded=false;
+var attMembersLoadedFor='';
 var attLoadSeq=0;
 var attRenderSeq=0;
 var attLoading=false;
@@ -6105,19 +6125,30 @@ function switchAttTab(tab){
   if(tab==='history'){document.getElementById('attHistory').classList.remove('hidden');populateAttMemSel()}
 }
 
-function loadAttMembers(callback){
-  if(attMembersLoaded){
+function loadAttMembers(callback,dateKey){
+  var targetDate=(dateKey===undefined)?((document.getElementById('attDate')||{}).value||''):dateKey;
+  function applyLoadedMembers(){
+    attMembers=filterAttendanceMembersForDate(attAllMembers,targetDate);
+    attMembersLoaded=true;
+    attMembersLoadedFor=targetDate;
+    if(callback)callback();
+  }
+  if(attMembersLoaded&&attMembersLoadedFor===targetDate){
     if(callback)callback();
     return;
   }
+  if(attMembersSourceLoaded){
+    applyLoadedMembers();
+    return;
+  }
   db.collection('members').orderBy('name').get().then(function(snap){
-    attMembers=[];
+    attAllMembers=[];
     snap.forEach(function(doc){
       var d=doc.data();
-      if(isAttendanceTargetMember(d))attMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||''});
+      if(isAttendanceTargetMember(d))attAllMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
     });
-    attMembersLoaded=true;
-    if(callback)callback();
+    attMembersSourceLoaded=true;
+    applyLoadedMembers();
   });
 }
 
@@ -6174,7 +6205,7 @@ function loadAttendance(){
       setAttendanceLoading(false);
       renderAttList();
     });
-  });
+  },date);
 }
 
 function clearAttRealtimeListeners(){
@@ -6184,6 +6215,9 @@ function clearAttRealtimeListeners(){
 
 function invalidateAttendanceMemberCache(){
   attMembersLoaded=false;
+  attMembersSourceLoaded=false;
+  attMembersLoadedFor='';
+  attAllMembers=[];
 }
 
 
@@ -6687,8 +6721,8 @@ function togglePrevWeekCard(btn){
   }
 }
 
-function getAttendanceStatsScopeMembers(){
-  var members=attMembers.slice();
+function getAttendanceStatsScopeMembers(dateKey){
+  var members=dateKey?filterAttendanceMembersForDate(attMembers,dateKey):attMembers.slice();
   if(getAttendanceAllowedParts().indexOf('all')===-1){
     members=members.filter(function(m){return isMemberInAttendanceScope(m);});
   }
@@ -6736,7 +6770,8 @@ function loadAttDashboard(){
       if(am3&&am3.excludeFromReport)am3=null;
       if(pm3&&pm3.excludeFromReport)pm3=null;
 
-      var dashboardMembers=getAttendanceStatsScopeMembers();
+      var dashboardMembers=getAttendanceStatsScopeMembers(s1);
+      var week2Members=getAttendanceStatsScopeMembers(s2);
       var total=dashboardMembers.length;
       var hasCurrentWeekData=!!(am1||pm1);
 
@@ -6769,7 +6804,7 @@ function loadAttDashboard(){
            if(a==='출석'||a==='지각'||p==='출석'||p==='지각') return false; // 한 번이라도 왔으면 아님
            return true; 
         }
-        if((am1||pm1) && (am2||pm2) && (am3||pm3)){
+        if((am1||pm1) && (am2||pm2) && (am3||pm3) && isMemberActiveOnAttendanceDate(m,s2) && isMemberActiveOnAttendanceDate(m,s3)){
            if(isAbsent(am1,pm1) && isAbsent(am2,pm2) && isAbsent(am3,pm3)){
               longAbsentees.push(m);
            }
@@ -6829,7 +6864,7 @@ function loadAttDashboard(){
         var both2Absent=[];
         var drop2Outs=[];
 
-        dashboardMembers.forEach(function(m){
+        week2Members.forEach(function(m){
           var a2St=am2&&am2.records?am2.records[m.id]||'무단결석':'미확인';
           var p2St=pm2&&pm2.records?pm2.records[m.id]||'무단결석':'미확인';
           var a2Ok=a2St==='출석'||a2St==='지각';
@@ -6852,11 +6887,11 @@ function loadAttDashboard(){
         h+='<div class="chart-card" style="margin:0">';
 
         if(am2){
-          var am2Rate=total>0?Math.round(am2Present/total*100):0;
+          var am2Rate=week2Members.length>0?Math.round(am2Present/week2Members.length*100):0;
           h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span style="font-size:14px;font-weight:700">☀️ 오전</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+am2Present+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+am2Absent+'</span> ('+am2Rate+'%)</span></div>';
         }
         if(pm2){
-          var pm2Rate=total>0?Math.round(pm2Present/total*100):0;
+          var pm2Rate=week2Members.length>0?Math.round(pm2Present/week2Members.length*100):0;
           h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px"><span style="font-size:14px;font-weight:700">🌙 오후</span><span style="font-size:14px">출석 <span style="color:#22C55E;font-weight:700">'+pm2Present+'</span> / 결석 <span style="color:#EF4444;font-weight:700">'+pm2Absent+'</span> ('+pm2Rate+'%)</span></div>';
         }
 
@@ -6887,7 +6922,7 @@ function loadAttDashboard(){
       console.error(e);
       el.innerHTML='<div style="font-size:13px;color:var(--dg);text-align:center;padding:10px">데이터를 분석하는 중 오류가 발생했습니다.</div>';
     });
-  });
+  },'');
 }
 
 
@@ -6913,7 +6948,7 @@ function loadAttStats(){
       var partStats={};
       var scopedMembers=getAttendanceStatsScopeMembers();
       scopedMembers.forEach(function(m){if(!partStats[m.part])partStats[m.part]={total:0,present:0}});
-      records.forEach(function(r){scopedMembers.forEach(function(m){
+      records.forEach(function(r){getAttendanceStatsScopeMembers(r.date).forEach(function(m){
         if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
         var st=r.records[m.id];
         partStats[m.part].total++;
@@ -6926,8 +6961,9 @@ function loadAttStats(){
 
       var memStats={};
       scopedMembers.forEach(function(m){memStats[m.id]={name:m.name,part:m.part,total:0,present:0}});
-      records.forEach(function(r){scopedMembers.forEach(function(m){
+      records.forEach(function(r){getAttendanceStatsScopeMembers(r.date).forEach(function(m){
         if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;
+        if(!memStats[m.id])memStats[m.id]={name:m.name,part:m.part,total:0,present:0};
         var st=r.records[m.id];
         memStats[m.id].total++;
         if(st==='출석'||st==='지각')memStats[m.id].present++;
@@ -6940,13 +6976,13 @@ function loadAttStats(){
       var weekData=records.map(function(r){
         return{label:r.date.substring(5)+' '+r.session,value:(function(){
           var total=0,present=0;
-          scopedMembers.forEach(function(m){if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
+          getAttendanceStatsScopeMembers(r.date).forEach(function(m){if(!Object.prototype.hasOwnProperty.call(r.records,m.id))return;total++;var st=r.records[m.id];if(st==='출석'||st==='지각')present++});
           return total>0?Math.round(present/total*100):0;
         })()};
       });
       barChart('chWeekAtt',weekData,'%');
     }).catch(function(e){console.error(e);showToast('통계 조회 중 오류 발생')});
-  });
+  },'');
 }
 
 function renderLateAttendanceStats(records,from,to){
@@ -6963,6 +6999,7 @@ function renderLateAttendanceStats(records,from,to){
     Object.keys(r.records||{}).forEach(function(id){
       if(r.records[id]!=='지각'||!memberMap[id])return;
       var m=memberMap[id];
+      if(!isMemberActiveOnAttendanceDate(m,r.date))return;
       if(!byMember[id])byMember[id]={name:m.name,part:m.part,count:0,dates:[]};
       byMember[id].count++;
       byMember[id].dates.push(r.date+' '+r.session);
@@ -7020,7 +7057,7 @@ function populateAttMemSel(){
       if(diff!==0)return diff;return a.name.localeCompare(b.name,'ko');
     });
     sorted.forEach(function(m){sel.innerHTML+='<option value="'+m.id+'">'+m.name+' ('+m.part+')</option>'});
-  });
+  },'');
 }
 
 function loadMemHistory(){
@@ -7081,6 +7118,7 @@ function loadMemHistory(){
         var d=item.data;
         if(d.excludeFromReport||!targetMatches(d,member))return;
         var date=d.date;
+        if(!isMemberActiveOnAttendanceDate(member,date))return;
         if(!dayMeta[date])dayMeta[date]={hasAM:false,hasPM:false};
         var session=d.session||'';
         if(session==='오전')dayMeta[date].hasAM=true;
@@ -7092,6 +7130,7 @@ function loadMemHistory(){
         var d=item.data;
         if(d.excludeFromReport||!targetMatches(d,member))return;
         var date=d.date;
+        if(!isMemberActiveOnAttendanceDate(member,date))return;
         var session=d.session||'오전';
         var meta=dayMeta[date]||{hasAM:false,hasPM:false};
         var isLegacyDoc=!d.session||d.session==='';
@@ -7244,7 +7283,7 @@ function deleteAttendance(){
       writeLog('출석 초기화',date+' '+attSession+' ['+scopeLabel+'] 기록 초기화');
       loadAttendance();
     }).catch(function(e){console.error(e);showToast('초기화 중 오류 발생')});
-  });
+  },date);
 }
 
 // [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
@@ -7500,7 +7539,7 @@ function generateReport() {
     res[2].forEach(doc => {
        var d = doc.data();
        if(isAttendanceTargetMember(d)) {
-           activeMembers.push({id: doc.id, name: d.name, part: normalizePartName(d.part)});
+           activeMembers.push({id: doc.id, name: d.name, part: normalizePartName(d.part), attendanceStartDate: memberAttendanceStartDate(d)});
            memStats[doc.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
        }
        // 신규 입단자 추출 (등록일이 이번 달인 사람)
@@ -7508,6 +7547,8 @@ function generateReport() {
            newMembers.push(d);
        }
     });
+    var activeMemberById = {};
+    activeMembers.forEach(function(m){ activeMemberById[m.id] = m; });
 
     function getLocalDateInfo(dateStr){
       var parts = String(dateStr || '').split('-');
@@ -7549,6 +7590,7 @@ function generateReport() {
         var info = getLocalDateInfo(date);
         if(!info || info.day !== 0) return;
         var g = grouped[date];
+        var dateMembers = filterAttendanceMembersForDate(members,date);
         if(g.am && !g.pm && !g.pmExcluded){
           anomalies.push({level:'warn', title:'주일 오후 출석부 없음', message: date + ' 주일은 오전 출석부만 있습니다. 오후 출석률 계산에서는 오후 회차가 제외됩니다.'});
         }else if(!g.am && g.pm && !g.amExcluded){
@@ -7557,11 +7599,11 @@ function generateReport() {
 
         ['am','pm'].forEach(function(key){
           var d = g[key];
-          if(!d || !members.length) return;
+          if(!d || !dateMembers.length) return;
           var records = d.records || {};
           var unchecked = 0;
-          members.forEach(function(m){ if(!records[m.id]) unchecked++; });
-          var ratio = unchecked / members.length;
+          dateMembers.forEach(function(m){ if(!records[m.id]) unchecked++; });
+          var ratio = unchecked / dateMembers.length;
           if(ratio >= 0.3){
             anomalies.push({
               level:'warn',
@@ -7570,7 +7612,7 @@ function generateReport() {
             });
           }
           var byPart = {};
-          members.forEach(function(m){
+          dateMembers.forEach(function(m){
             if(!byPart[m.part])byPart[m.part]={total:0,unchecked:0};
             byPart[m.part].total++;
             if(!records[m.id])byPart[m.part].unchecked++;
@@ -7641,6 +7683,7 @@ function generateReport() {
 
        var reasons = d.reasons || {};
        Object.keys(reasons).forEach(id => {
+          if(!activeMemberById[id]||!isMemberActiveOnAttendanceDate(activeMemberById[id],d.date)) return;
           if((d.records || {})[id] === '사유결석') {
              var cat = normalizeReasonCategory(reasons[id]);
              if(cat) reasonStats[cat]++;
@@ -7652,7 +7695,8 @@ function generateReport() {
     Object.keys(dateMap).forEach(date => {
        var amRec = dateMap[date].am;
        var pmRec = dateMap[date].pm;
-       activeMembers.forEach(m => {
+       var dateMembers = filterAttendanceMembersForDate(activeMembers,date);
+       dateMembers.forEach(m => {
            var amOk = false, pmOk = false;
            if(amRec) {
                memStats[m.id].amTotal++;
@@ -7674,8 +7718,9 @@ function generateReport() {
     var partStats = {};
     var totAmP=0, totAmT=0, totPmP=0, totPmT=0, totDrops=0;
     var longAbsentees = [];
+    var reportMembers = filterAttendanceMembersForDate(activeMembers,prefix + '-31');
     
-    activeMembers.forEach(m => {
+    reportMembers.forEach(m => {
        var s = memStats[m.id];
        if(!partStats[m.part]) partStats[m.part] = { amP:0, amT:0, pmP:0, pmT:0, drops:0 };
        
@@ -7714,7 +7759,7 @@ function generateReport() {
           <th style="border:1px solid #ccc; padding:8px; background:#f8fafc;">오전→오후 결석률</th>
         </tr>
         <tr>
-          <td style="border:1px solid #ccc; padding:10px; font-weight:700;">${activeMembers.length}명</td>
+          <td style="border:1px solid #ccc; padding:10px; font-weight:700;">${reportMembers.length}명</td>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#16A34A;">${amRate}%</td>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#6E8792;">${pmRate}%</td>
           <td style="border:1px solid #ccc; padding:10px; font-weight:700; color:#DC2626;">${dropRate}%</td>
@@ -7765,7 +7810,7 @@ function generateReport() {
         var pAmRate = st.amT > 0 ? Math.round((st.amP / st.amT) * 100) : 0;
         var pPmRate = st.pmT > 0 ? Math.round((st.pmP / st.pmT) * 100) : 0;
         var pDropRate = st.amP > 0 ? Math.round((st.drops / st.amP) * 100) : 0;
-        var pCount = activeMembers.filter(m => m.part === p).length;
+        var pCount = reportMembers.filter(m => m.part === p).length;
         
         h += `<tr>
           <td style="border:1px solid #ccc; padding:8px; font-weight:700;">${p}</td>
@@ -7823,7 +7868,7 @@ function generateReport() {
 
     canvas.innerHTML = h;
     printBtn.style.display = 'block'; // 인쇄 버튼 보이기
-    writeLog('결산 보고서 생성',year+'년 '+month+'월 보고서 생성\n곡 '+songs.length+'건 / 출석 회차 '+rawAttDocs.length+'건 / 단원 '+activeMembers.length+'명 기준');
+    writeLog('결산 보고서 생성',year+'년 '+month+'월 보고서 생성\n곡 '+songs.length+'건 / 출석 회차 '+rawAttDocs.length+'건 / 단원 '+reportMembers.length+'명 기준');
     
   }).catch(function(err) {
     console.error(err);
