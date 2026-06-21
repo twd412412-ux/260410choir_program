@@ -1783,7 +1783,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v69.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v70.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -4354,6 +4354,7 @@ function editHandbookMember(id){
 function updateHandbookMember(){
   if(!canManageHandbookMembers())return showToast('단원 추가/수정 권한이 필요합니다');
   var id = document.getElementById('editHbId').value;
+  var previousMember = directoryData.find(function(x){return x.id===id}) || null;
   var name = document.getElementById('editHbName').value.trim();
   var part = normalizePartName(document.getElementById('editHbPart').value);
   var subPart = cleanMemberSubPart(part, document.getElementById('editHbSub').value);
@@ -4377,6 +4378,8 @@ function updateHandbookMember(){
 
   };
   Object.assign(data, readHandbookProfileFields('edit'));
+  var reactivatedForAttendance=previousMember&&!isAttendanceTargetMember(previousMember)&&isAttendanceTargetMember(data);
+  if(reactivatedForAttendance)data.attendanceStartDate=getTodayInputDate();
   
   showToast('저장 중...');
   db.collection('members').doc(id).update(data).then(function(){
@@ -4384,7 +4387,7 @@ function updateHandbookMember(){
     closeModal('modalMemberEdit');
     invalidateAttendanceMemberCache();
     loadHandbook();
-    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}`);
+    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}${reactivatedForAttendance?' | 출결 시작일 '+data.attendanceStartDate:''}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
