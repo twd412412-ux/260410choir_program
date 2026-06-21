@@ -129,14 +129,15 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-status{font-size:12px;color:var(--ts);line-height:1.5;margin-top:8px}
 .seating-stage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
 .seating-zoom{display:flex;align-items:center;gap:6px;white-space:nowrap}
-.seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative}
+.seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
+.seating-board-scroll:focus{outline:none}
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
 .seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
 .seating-row.offset .seating-line{transform:translateX(28px)}
-.seating-row-label{width:62px;font-size:11px;font-weight:850;color:var(--ts);flex:0 0 62px;white-space:nowrap}
-.seating-row-count{width:30px;height:30px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;margin-right:5px}
+.seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
+.seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px}
 .seating-line{display:flex;gap:4px}
 .seating-seat{width:52px;height:34px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 2px;color:#202018}
 .seating-seat.empty{background:#FFFDF8;color:#B7B09E}
@@ -152,7 +153,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-inline-item{width:100%;text-align:left;border:0;background:var(--bg);color:var(--tx);border-radius:8px;padding:7px 8px;margin-bottom:4px;font-size:12px;font-weight:850;cursor:pointer}
 .seating-inline-item small{font-size:10px;color:var(--ts);font-weight:800}
 .seating-mic-row{display:flex;align-items:center;margin-top:10px;position:relative;z-index:1}
-.seating-mic-label{width:97px;font-size:12px;font-weight:850;color:var(--ts);flex:0 0 97px}
+.seating-mic-label{width:61px;font-size:12px;font-weight:850;color:var(--ts);flex:0 0 61px}
 .seating-mic-line{display:flex;gap:4px}
 .seating-mic-slot{width:52px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
 .seating-mic-slot.on{background:#4F7FB7;border-style:solid;border-color:#4F7FB7;color:#fff}
@@ -161,11 +162,18 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
 .seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
-#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:14px;overflow:auto}
-#subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
-#subSeatingPlan.seating-fullscreen .seating-panel{padding:10px}
-#subSeatingPlan.seating-fullscreen .seating-member-list{max-height:130px}
-#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:calc(100vh - 245px)}
+#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow:hidden;height:100dvh;display:flex;flex-direction:column}
+#subSeatingPlan.seating-fullscreen>.seating-stage-head{flex:0 0 auto;margin-bottom:8px}
+#subSeatingPlan.seating-fullscreen>div[style*="grid-template-columns"]{display:none!important}
+#subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;gap:8px}
+#subSeatingPlan.seating-fullscreen .seating-panel{display:none}
+#subSeatingPlan.seating-fullscreen .seating-stage-card{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:10px}
+#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
+#subSeatingPlan.seating-fullscreen .seating-toolbar .btn{flex:0 0 auto;padding:7px 9px}
+#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;flex:1 1 auto;min-height:320px;padding:20px 12px 56px}
+#subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 auto}
+body.seating-fullscreen{overflow:hidden}
 body.seating-fullscreen .bottom-nav{display:none!important}
 @media(max-width:760px){
   .seating-tool{grid-template-columns:1fr}
@@ -173,8 +181,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   .seating-board-scroll{height:480px}
   #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
   #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0}
-  #subSeatingPlan.seating-fullscreen .seating-member-list{max-height:160px}
-  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:calc(100vh - 350px);min-height:360px}
+  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;min-height:320px}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -1857,7 +1864,8 @@ var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
 var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[];
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all';
-var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false;
+var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
+var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false;
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var scheduleEditId='';
 
@@ -1919,7 +1927,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v77.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v78.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5275,6 +5283,9 @@ function isSeatingEligibleMember(d){
 function seatingPartOrder(){
   return ['S1','S2','T1','T2'];
 }
+function seatingLeadWidth(){
+  return 61;
+}
 function seatingDefaultSeatCount(){
   return 38;
 }
@@ -5704,7 +5715,7 @@ function renderSeatingInlinePicker(){
   if(!seatingSelectedSeat)return '';
   var row=seatingRows[seatingSelectedSeat.row];
   if(!row||row.seats[seatingSelectedSeat.col])return '';
-  var left=97+(row.offset===0.5?28:0)+(seatingSelectedSeat.col*56);
+  var left=seatingLeadWidth()+(row.offset===0.5?28:0)+(seatingSelectedSeat.col*56);
   var top=(seatingSelectedSeat.row*50)+38;
   return '<div class="seating-inline-picker" style="left:'+left+'px;top:'+top+'px" onclick="event.stopPropagation()">'
     +'<input id="seatingInlineSearch" value="'+escHtml(seatingInlineQuery)+'" placeholder="이름 검색" oninput="seatingInlineQuery=this.value;renderSeatingInlineList()" onkeydown="event.stopPropagation()">'
@@ -5738,8 +5749,8 @@ function renderSeatingBoard(){
   if(title)title.textContent=program+' 배치도';
   seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
   var maxSeats=seatingMaxSeatCount();
-  var centerLeft=97+(maxSeats*56/2);
-  var boardWidth=97+(maxSeats*56)+40;
+  var centerLeft=seatingLeadWidth()+(maxSeats*56/2);
+  var boardWidth=seatingLeadWidth()+(maxSeats*56)+40;
   var html='<div class="seating-center-line" style="left:'+centerLeft+'px"></div><div class="seating-center-label" style="left:'+(centerLeft-18)+'px">센터</div>';
   seatingRows.forEach(function(row,r){
     html+='<div class="seating-row '+(row.offset===0.5?'offset':'')+'">'
@@ -5767,6 +5778,7 @@ function renderSeatingBoard(){
   board.style.minWidth=boardWidth+'px';
   board.innerHTML=html;
   updateSeatingZoom();
+  setupSeatingBoardGestures();
   renderSeatingSummary();
   renderSeatingInlineList();
 }
@@ -5921,13 +5933,60 @@ function removeSelectedSeatingRow(){
 function updateSeatingZoom(){
   var board=document.getElementById('seatingBoard');
   var label=document.getElementById('seatingZoomLabel');
-  seatingZoom=Math.max(0.45,Math.min(1.35,seatingZoom));
+  seatingZoom=Math.max(0.35,Math.min(1.8,seatingZoom));
   if(board)board.style.transform='scale('+seatingZoom+')';
   if(label)label.textContent=Math.round(seatingZoom*100)+'%';
 }
 function changeSeatingZoom(delta){
   seatingZoom+=delta;
   updateSeatingZoom();
+}
+function seatingTouchDistance(touches){
+  var dx=touches[0].clientX-touches[1].clientX;
+  var dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
+}
+function setupSeatingBoardGestures(){
+  if(seatingGesturesBound)return;
+  var scroller=document.querySelector('#subSeatingPlan .seating-board-scroll');
+  if(!scroller)return;
+  seatingGesturesBound=true;
+  scroller.setAttribute('tabindex','0');
+  scroller.addEventListener('touchstart',function(e){
+    if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
+    if(e.touches.length===1){
+      seatingTouchPanning=true;
+      seatingPanStartX=e.touches[0].clientX;
+      seatingPanStartY=e.touches[0].clientY;
+      seatingPanScrollLeft=scroller.scrollLeft;
+      seatingPanScrollTop=scroller.scrollTop;
+    }
+    if(e.touches.length===2){
+      seatingTouchPanning=false;
+      seatingPinchStartDist=seatingTouchDistance(e.touches);
+      seatingPinchStartZoom=seatingZoom;
+    }
+  },{passive:false});
+  scroller.addEventListener('touchmove',function(e){
+    if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
+    if(e.touches.length===2&&seatingPinchStartDist>0){
+      e.preventDefault();
+      var next=seatingPinchStartZoom*(seatingTouchDistance(e.touches)/seatingPinchStartDist);
+      seatingZoom=Math.max(0.35,Math.min(1.8,next));
+      updateSeatingZoom();
+    }else if(e.touches.length===1&&seatingTouchPanning){
+      e.preventDefault();
+      scroller.scrollLeft=seatingPanScrollLeft+(seatingPanStartX-e.touches[0].clientX);
+      scroller.scrollTop=seatingPanScrollTop+(seatingPanStartY-e.touches[0].clientY);
+    }
+  },{passive:false});
+  scroller.addEventListener('touchend',function(e){
+    if(e.touches.length<2){
+      seatingPinchStartDist=0;
+      seatingPinchStartZoom=0;
+    }
+    if(e.touches.length===0)seatingTouchPanning=false;
+  },{passive:false});
 }
 function toggleSeatingFullscreen(){
   var sub=document.getElementById('subSeatingPlan');
@@ -5937,6 +5996,10 @@ function toggleSeatingFullscreen(){
   sub.classList.toggle('seating-fullscreen',on);
   document.body.classList.toggle('seating-fullscreen',on);
   if(btn)btn.textContent=on?'전체 화면 닫기':'전체 화면';
+  setTimeout(function(){
+    var scroller=document.querySelector('#subSeatingPlan .seating-board-scroll');
+    if(scroller)scroller.focus&&scroller.focus();
+  },0);
 }
 function saveSeatingPlan(){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
