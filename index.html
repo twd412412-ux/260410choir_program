@@ -1202,7 +1202,7 @@ body{font-weight:500}
     <p>파트별 연습 사진을 모아두는 공간입니다. 평소의 사소한 사진 한 장 한 장이 쌓여 찬양의밤 등 이벤트 영상 제작에 큰 도움이 됩니다.</p>
   </div>
   <div class="archive-upload-card hidden" id="archiveUploadCard">
-    <div class="archive-upload-title">➕ 사진 · 영상 올리기</div>
+    <div class="archive-upload-title">➕ 사진 올리기</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">파트 *</label><select class="form-sel" id="archivePart"><option value="">선택</option><option>전체</option><option>특송</option><option>청년</option><option>봉사회</option><option>어머니회</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">날짜 *</label><input class="form-input" id="archiveDate" type="date" style="min-width:0"></div>
@@ -1915,7 +1915,7 @@ var PERMISSION_LABELS={};
 PERMISSION_GROUPS.forEach(function(group){group.items.forEach(function(item){PERMISSION_LABELS[item.key]=item.label;});});
 var PERMISSION_PRESETS={
   none:{label:'일반 단원',desc:'관리 메뉴 없이 곡 목록과 일정만 이용',permissions:[],scope:[]},
-  partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine'],scope:['S1','S2']},
+  partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine'],scope:[]},
   operations:{label:'운영 스태프',desc:'곡/일정 관리와 선곡 도우미',permissions:['song.manage','schedule.manage','song.recommend','archive.view','archive.upload','archive.manageMine'],scope:[]},
   chongmu:{label:'총무 스태프',desc:'곡/일정, 출결, 명부 조회, 공지 관리',permissions:['song.manage','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.view','archive.upload','archive.manageMine'],scope:['ALL']},
   handbook:{label:'명부 스태프',desc:'단원 조회와 명부 추가/수정',permissions:['member.view','member.history','member.manage'],scope:[]},
@@ -1941,7 +1941,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v79.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v80.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2157,7 +2157,9 @@ function canUploadArchive(){
 }
 function canManageArchiveItem(item){
   if(adminRole==='admin')return true;
-  return !!(hasPermission('archive.manageMine')&&currentUser&&item&&item.uploadedBy===currentUser.name);
+  if(!hasPermission('archive.manageMine')||!currentUser||!item)return false;
+  if(item.uploadedById)return item.uploadedById===currentUser.id;
+  return item.uploadedBy===currentUser.name;
 }
 function scopeFromAccountPart(part){
   part=normalizePartName(part);
@@ -2383,12 +2385,6 @@ function openUserModal(){
   }
   openModal('modalUser');
 }
-function populateUserSel(){
-  db.collection('members').orderBy('name').get().then(function(snap){
-    var sel=document.getElementById('userNameSel');if(!sel)return;
-    snap.forEach(function(doc){var d=doc.data();var o=document.createElement('option');o.value=doc.id;o.textContent=d.name+' ('+d.part+')';sel.appendChild(o)});
-  });
-}
 function loginUser(){
   var nameInput=document.getElementById('userNameInput');
   var pin=document.getElementById('userPinInput');
@@ -2583,7 +2579,7 @@ function renderHome(){
     var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
     var rows=(hymnSongs||[]).filter(function(s){return s.year===y&&s.month===m&&s.day===d});
     if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
-    return rows.map(function(s){return '<div onclick="openDetail(\''+escAttr(s.id)+'\')"><span style="font-weight:800">'+s.songName+'</span></div>'}).join('<div style="height:6px"></div>');
+    return rows.map(function(s){return '<div onclick="openDetail(\''+escAttr(s.id)+'\')"><span style="font-weight:800">'+escHtml(s.songName)+'</span></div>'}).join('<div style="height:6px"></div>');
   }
   function statusFor(data, scopeMembers){
     if(data&&data.excludeFromReport)return {state:'excluded',text:'출석률 제외 · 통계 미반영',rate:null,unchecked:0,checked:0,total:scopeMembers.length,present:0,late:0,attended:0};
@@ -2656,7 +2652,7 @@ function renderHome(){
     }else{
       scheduleHtml='<div class="home-schedule-list">'+weekSchedules.map(function(s){
         var d=new Date(s.date+'T00:00:00');
-        return '<div class="home-schedule-row" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div class="home-schedule-time">'+homeDateStr(d)+' '+homeDowName(d)+(s.time?'<br>'+s.time:'')+'</div><div class="home-schedule-title">'+s.title+(s.useBriefing?' <span class="home-ring-chip">브리핑</span>':'')+'</div><div class="home-schedule-place">'+(s.location?'📍 '+s.location:'')+'</div><div class="home-chevron">›</div></div>';
+        return '<div class="home-schedule-row" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div class="home-schedule-time">'+homeDateStr(d)+' '+homeDowName(d)+(s.time?'<br>'+escHtml(s.time):'')+'</div><div class="home-schedule-title">'+escHtml(s.title)+(s.useBriefing?' <span class="home-ring-chip">브리핑</span>':'')+'</div><div class="home-schedule-place">'+(s.location?'📍 '+escHtml(s.location):'')+'</div><div class="home-chevron">›</div></div>';
       }).join('')+'</div>';
     }
 
@@ -2928,17 +2924,19 @@ function renderSongList(){
   var show=filteredSongs.slice(0,200);
   c.innerHTML=show.map(function(s){
     var fav=favorites.indexOf(s.id)>-1;
+    var id=escAttr(s.id);
     var ytIcon=s.youtube?'<span style="color:#FF0000;font-size:14px;margin-right:4px" title="YouTube 링크 있음">▶</span>':'';
-    return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+ytIcon+s.songName+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">'+(fav?'⭐':'☆')+'</button>'+renderSongAdminActions(s)+'</span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+s.dayOfWeek+')</span>':'')+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+s.subCategory+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>';
+    return '<div class="song-card" onclick="openDetail(\''+id+'\')"><div class="song-card-title"><span>'+ytIcon+escHtml(s.songName)+'</span><span style="display:flex;align-items:center;gap:2px"><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+id+'\')">'+(fav?'⭐':'☆')+'</button>'+renderSongAdminActions(s)+'</span></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+(s.day?'.'+String(s.day).padStart(2,'0'):'')+'</span>'+(s.dayOfWeek?'<span>('+escHtml(s.dayOfWeek)+')</span>':'')+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.subCategory?'<span class="meta-tag">'+escHtml(s.subCategory)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>';
   }).join('');
   if(filteredSongs.length>200)c.innerHTML+='<div style="text-align:center;padding:16px;color:var(--ts);font-size:13px">외 '+(filteredSongs.length-200)+'곡 — 검색으로 좁혀보세요</div>';
 }
 
 function renderSongAdminActions(song){
   if(!canManageSongs())return '';
-  var name=String(song.songName||'').replace(/'/g,"\\'");
-  var edit=canEditSongItem(song)?'<button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+song.id+'\')">✏️</button>':'';
-  var del=canDeleteSongItem(song)?'<button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+song.id+'\',\''+name+'\')">🗑️</button>':'';
+  var id=escAttr(song.id);
+  var name=escAttr(song.songName);
+  var edit=canEditSongItem(song)?'<button class="admin-btn" onclick="event.stopPropagation();openEdit(\''+id+'\')">✏️</button>':'';
+  var del=canDeleteSongItem(song)?'<button class="admin-btn admin-btn-del" onclick="event.stopPropagation();delSong(\''+id+'\',\''+name+'\')">🗑️</button>':'';
   if(!edit&&!del)return '';
   return '<span style="display:flex;gap:2px">'+edit+del+'</span>';
 }
@@ -2952,7 +2950,10 @@ function renderFav(){
   var fs=allSongs.filter(function(s){return favorites.indexOf(s.id)>-1});
   document.getElementById('favCount').textContent='즐겨찾기 '+fs.length+'곡';
   if(fs.length===0){c.innerHTML='<div style="text-align:center;padding:40px;color:var(--ts)">⭐ 곡 목록에서 별을 눌러 추가하세요</div>';return}
-  c.innerHTML=fs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>'+s.songName+'</span><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+s.id+'\')">⭐</button></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+'</span>'+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+'</div></div>'}).join('');
+  c.innerHTML=fs.map(function(s){
+    var id=escAttr(s.id);
+    return '<div class="song-card" onclick="openDetail(\''+id+'\')"><div class="song-card-title"><span>'+escHtml(s.songName)+'</span><button class="bk-star" onclick="event.stopPropagation();toggleFav(\''+id+'\')">⭐</button></div><div class="song-card-meta"><span>'+s.year+'.'+String(s.month).padStart(2,'0')+'</span>'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+'</div></div>';
+  }).join('');
 }
 
 // ==================== 곡 상세 ====================
@@ -2971,13 +2972,13 @@ function openDetail(id){
   document.getElementById('detailDelBtn').style.display=canDeleteDetail ? '' : 'none';
 
   var rows=[['날짜',song.year+'년 '+song.month+'월'+(song.day?' '+song.day+'일':'')+(song.dayOfWeek?' ('+song.dayOfWeek+')':'')],['카테고리',song.category||'-'],['세부분류',song.subCategory||'-'],['장소',song.location||'-'],['참여단원',song.members||'-'],['반주자',song.pianist||'-']];
-  var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
+  var h=rows.map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
 
   // 유튜브 버튼
   if(song.youtube){
     var ytUrl=song.youtube;
-    if(ytUrl.indexOf('http')!==0)ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(ytUrl);
-    h+='<div style="margin-top:12px"><a href="'+ytUrl+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:#FF0000;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">▶ YouTube에서 듣기</a></div>';
+    if(!/^https?:\/\//i.test(ytUrl))ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(ytUrl);
+    h+='<div style="margin-top:12px"><a href="'+escHtml(ytUrl)+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:#FF0000;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">▶ YouTube에서 듣기</a></div>';
   }else{
     h+='<div style="margin-top:12px"><a href="https://www.youtube.com/results?search_query='+encodeURIComponent(song.songName+' 찬양')+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:var(--bd);color:var(--ts);padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">🔍 YouTube에서 검색</a></div>';
   }
@@ -2985,7 +2986,7 @@ function openDetail(id){
   var same=allSongs.filter(function(s){return s.songName===song.songName&&s.id!==song.id});
   if(same.length>0){
     h+='<div style="margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">🔄 같은 곡 다른 기록 ('+same.length+'건)</div>';
-    h+=same.slice(0,5).map(function(s){return '<div style="padding:6px 0;font-size:13px;color:var(--ts);border-bottom:1px solid var(--bd);cursor:pointer" onclick="openDetail(\''+s.id+'\')">'+s.year+'.'+String(s.month).padStart(2,'0')+' — '+s.category+(s.members?' · '+s.members:'')+'</div>'}).join('');
+    h+=same.slice(0,5).map(function(s){return '<div style="padding:6px 0;font-size:13px;color:var(--ts);border-bottom:1px solid var(--bd);cursor:pointer" onclick="openDetail(\''+escAttr(s.id)+'\')">'+s.year+'.'+String(s.month).padStart(2,'0')+' — '+escHtml(s.category||'-')+(s.members?' · '+escHtml(s.members):'')+'</div>'}).join('');
     h+='</div>';
   }
   document.getElementById('detailBody').innerHTML=h;
@@ -4785,9 +4786,10 @@ function loadSchAdmin(){
   var today=new Date().toISOString().split('T')[0];
   c.innerHTML=sorted.map(function(s){
     var past=s.date<today;
-    var editBtn=canEditScheduleItem(s)?'<button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+s.id+'\')">수정</button>':'';
-    var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+s.id+'\',\''+s.title.replace(/'/g,"\\'")+'\')">삭제</button>':'';
-    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+s.color+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+s.title+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+s.date+(s.time?' '+s.time:'')+(s.location?' · '+s.location:'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+s.songs+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
+    var id=escAttr(s.id);
+    var editBtn=canEditScheduleItem(s)?'<button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+id+'\')">수정</button>':'';
+    var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+id+'\',\''+escAttr(s.title)+'\')">삭제</button>':'';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(s.date)+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
   }).join('');
 }
 function editSchedule(id){
@@ -4832,6 +4834,7 @@ function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
 function setCalViewMode(v){calViewMode=v||'default';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
 function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+function safeColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||''))?String(v):COLORS[0]}
 
 function renderCal(){
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
@@ -4854,12 +4857,12 @@ function renderCal(){
     var inner='<div class="cal-date">'+d+'</div>';
     if(calViewMode==='stack'){
       var items=[];
-      evts.forEach(function(e){items.push({kind:'evt',title:(e.useBriefing?'📋 ':'📅 ')+(e.title||'일정'),color:e.color||COLORS[0]})});
+      evts.forEach(function(e){items.push({kind:'evt',title:(e.useBriefing?'📋 ':'📅 ')+(e.title||'일정'),color:safeColor(e.color)})});
       songs.forEach(function(s){items.push({kind:'song',title:'🎵 '+(s.songName||'찬양곡'),color:'#64748B'})});
       items.slice(0,3).forEach(function(item){inner+='<div class="cal-bar '+(item.kind==='song'?'song':'')+'" style="background:'+item.color+'" title="'+escHtml(item.title)+'">'+escHtml(item.title)+'</div>'});
       if(items.length>3)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(items.length-3)+'개</div>';
     }else{
-      evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+e.color+'" title="'+escHtml(e.title)+'">'+escHtml(e.title)+'</div>'});
+      evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+safeColor(e.color)+'" title="'+escHtml(e.title)+'">'+escHtml(e.title)+'</div>'});
       if(evts.length>2)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(evts.length-2)+'개</div>';
       if(songs.length>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(songs.length,4);j++)inner+='<span class="cal-dot"></span>';if(songs.length>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(songs.length-4)+'</span>';inner+='</div>'}
     }
@@ -4878,8 +4881,8 @@ function showCalDay(ds,day){
   var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
   var h='';
-  if(evts.length>0)h+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+e.color+'" onclick="openSchDetail(\''+e.id+'\')"><div class="song-card-title"><span>📅 '+e.title+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+e.time+'</span>':'')+(e.location?'<span>📍 '+e.location+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+e.songs+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+e.memo+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
-  if(songs.length>0)h+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+s.id+'\')"><div class="song-card-title"><span>🎵 '+s.songName+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+s.category+'</span>':'')+(s.members?'<span>👤 '+s.members+'</span>':'')+(s.pianist?'<span>🎹 '+s.pianist+'</span>':'')+'</div></div>'}).join('');
+  if(evts.length>0)h+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+safeColor(e.color)+'" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><div class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
+  if(songs.length>0)h+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
   if(!h)h='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
   document.getElementById('calEvtList').innerHTML=h;
 }
@@ -4887,30 +4890,23 @@ function showCalDay(ds,day){
 function openSchDetail(id){
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
-  var body=[['날짜',s.date],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+r[1]+'</span></div>'}).join('');
+  var body=[['날짜',s.date],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
   if(s.useBriefing){
     body+='<div style="margin-top:14px;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">';
     body+='<div style="font-size:15px;font-weight:700;margin-bottom:10px">📋 프로그램 브리핑</div>';
-    body+='<div class="detail-row"><span class="detail-label">프로그램</span><span class="detail-value" style="white-space:pre-line">'+(s.program||'-')+'</span></div>';
-    body+='<div class="detail-row"><span class="detail-label">당일 단복</span><span class="detail-value" style="white-space:pre-line">'+(s.dress||'-')+'</span></div>';
-    body+='<div class="detail-row"><span class="detail-label">추가 안내</span><span class="detail-value" style="white-space:pre-line">'+(s.briefingMemo||'-')+'</span></div>';
+    body+='<div class="detail-row"><span class="detail-label">프로그램</span><span class="detail-value" style="white-space:pre-line">'+escHtml(s.program||'-')+'</span></div>';
+    body+='<div class="detail-row"><span class="detail-label">당일 단복</span><span class="detail-value" style="white-space:pre-line">'+escHtml(s.dress||'-')+'</span></div>';
+    body+='<div class="detail-row"><span class="detail-label">추가 안내</span><span class="detail-value" style="white-space:pre-line">'+escHtml(s.briefingMemo||'-')+'</span></div>';
     body+='</div>';
   }
-  document.getElementById('schDetailBody').innerHTML=body+'<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:4px;background:'+s.color+';display:inline-block"></span><span style="font-size:13px;color:var(--ts)">일정 색상</span></div>';
+  document.getElementById('schDetailBody').innerHTML=body+'<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:4px;background:'+safeColor(s.color)+';display:inline-block"></span><span style="font-size:13px;color:var(--ts)">일정 색상</span></div>';
   openModal('modalSchDetail');
 }
 
 // ==================== 파트 아카이브 ====================
-function escHtml(str){
-  return String(str||'').replace(/[&<>"']/g,function(ch){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
-  });
-}
 function renderArchivePage(){
   var uploadCard=document.getElementById('archiveUploadCard');
-  var uploadHint=document.getElementById('archiveUploadHint');
   if(uploadCard)uploadCard.classList.toggle('hidden',!canUploadArchive());
-  if(uploadHint)uploadHint.classList.toggle('hidden',canUploadArchive());
   if(document.getElementById('archiveDate') && !document.getElementById('archiveDate').value){
     document.getElementById('archiveDate').value=new Date().toISOString().split('T')[0];
   }
@@ -4943,7 +4939,9 @@ function loadArchiveItems(more){
         type:d.type||'image',
         url:d.url||'',
         uploadedAt:d.uploadedAt||'',
+        uploadedById:d.uploadedById||'',
         uploadedBy:d.uploadedBy||'',
+        uploadedByPart:d.uploadedByPart||'',
         path:d.path||'',
         reactions:d.reactions||{},
         reactionUsers:d.reactionUsers||{}
@@ -4973,7 +4971,7 @@ function renderArchiveList(){
   });
   count.textContent='아카이브 '+items.length+'개 표시';
   if(items.length===0){
-    list.innerHTML='<div class="archive-empty">조건에 맞는 사진이나 영상이 없습니다.</div>';
+    list.innerHTML='<div class="archive-empty">조건에 맞는 사진이 없습니다.</div>';
     return;
   }
   var viewMode=document.getElementById('archiveViewMode')?document.getElementById('archiveViewMode').value:'grid2';
@@ -4981,10 +4979,11 @@ function renderArchiveList(){
   else if(viewMode==='list'){list.style.cssText='display:grid;grid-template-columns:1fr;gap:10px;padding:8px 16px'}
   else{list.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 16px'}
   list.innerHTML=items.map(function(item){
-    var safeUrl=String(item.url||'').replace(/'/g,'%27');
+    var safeUrl=escAttr(item.url);
+    var src=escHtml(item.url);
     var preview=item.type==='video'
-      ? '<video class="archive-thumb" src="'+item.url+'" controls preload="metadata" playsinline></video>'
-      : '<img class="archive-thumb" src="'+item.url+'" alt="'+escHtml(item.title)+'" onclick="openPhotoViewer(\''+safeUrl+'\')" style="cursor:pointer;height:'+(viewMode==='grid3'?'90px':viewMode==='list'?'200px':'120px')+'">';
+      ? '<video class="archive-thumb" src="'+src+'" controls preload="metadata" playsinline></video>'
+      : '<img class="archive-thumb" src="'+src+'" alt="'+escHtml(item.title)+'" onclick="openPhotoViewer(\''+safeUrl+'\')" style="cursor:pointer;height:'+(viewMode==='grid3'?'90px':viewMode==='list'?'200px':'120px')+'">';
     var desc='';
     if(viewMode==='grid3'){desc=''}
     else if(item.description){desc='<div class="archive-desc">'+escHtml(item.description)+'</div>'}
@@ -4992,8 +4991,8 @@ function renderArchiveList(){
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
     var canManage=canManageArchiveItem(item);
-    var safeTitle=escHtml(item.title).replace(/'/g,"\\'");
-    var safePath=(item.path||'').replace(/'/g,"\\'");
+    var safeTitle=escAttr(item.title);
+    var safePath=escAttr(item.path);
     var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
     return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
   }).join('')+renderArchiveMoreButton();
@@ -5233,6 +5232,7 @@ function uploadArchiveMedia(){
 
   var uploaded=0;
   var uploader=currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부');
+  var uploaderId=currentUser?currentUser.id:(adminRole==='admin'?'admin':(adminRole==='chongmu'?'chongmu':''));
   var uploaderPart=currentUser?currentUser.part:(adminRole==='admin'?'관리자':'총무부');
 
   function uploadOne(idx){
@@ -5267,6 +5267,7 @@ function uploadArchiveMedia(){
             path:filePath,
             fileSize:uploadBlob.size,
             uploadedAt:new Date().toISOString(),
+            uploadedById:uploaderId,
             uploadedBy:uploader,
             uploadedByPart:uploaderPart
           });
@@ -8065,7 +8066,7 @@ function populateAttMemSel(){
       var diff=parts.indexOf(a.part)-parts.indexOf(b.part);
       if(diff!==0)return diff;return a.name.localeCompare(b.name,'ko');
     });
-    sorted.forEach(function(m){sel.innerHTML+='<option value="'+m.id+'">'+m.name+' ('+m.part+')</option>'});
+    sorted.forEach(function(m){sel.innerHTML+='<option value="'+escHtml(m.id)+'">'+escHtml(m.name)+' ('+escHtml(m.part)+')</option>'});
   },'');
 }
 
@@ -8074,7 +8075,7 @@ function loadMemHistory(){
   if(!id){document.getElementById('attMemInfo').innerHTML='';document.getElementById('attMemList').innerHTML='';return}
   var mem=attMembers.find(function(m){return m.id===id});
   if(!mem)return;
-  document.getElementById('attMemInfo').innerHTML='<div style="background:var(--pl);border-radius:12px;padding:16px;margin-bottom:16px"><div style="font-size:18px;font-weight:700">'+mem.name+'</div><div style="font-size:13px;color:var(--ts);margin-top:4px">'+mem.part+(mem.group?' · '+mem.group:'')+(mem.district?' · '+mem.district:'')+'</div>'+(mem.phone?'<div style="font-size:13px;color:var(--ts);margin-top:2px">📞 '+mem.phone+'</div>':'')+'</div>';
+  document.getElementById('attMemInfo').innerHTML='<div style="background:var(--pl);border-radius:12px;padding:16px;margin-bottom:16px"><div style="font-size:18px;font-weight:700">'+escHtml(mem.name)+'</div><div style="font-size:13px;color:var(--ts);margin-top:4px">'+escHtml(mem.part)+(mem.group?' · '+escHtml(mem.group):'')+(mem.district?' · '+escHtml(mem.district):'')+'</div>'+(mem.phone?'<div style="font-size:13px;color:var(--ts);margin-top:2px">📞 '+escHtml(mem.phone)+'</div>':'')+'</div>';
   var rangeInfo=getMemHistoryRangeInfo();
   var query=db.collection('attendance');
   if(rangeInfo.from)query=query.where('date','>=',rangeInfo.from);
