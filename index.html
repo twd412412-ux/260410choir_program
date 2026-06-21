@@ -110,6 +110,58 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .dark .perm-badge{background:#302B20;color:#EAD8B9;border-color:#514733}
 .dark .perm-badge.preset{background:var(--p);color:#172016;border-color:var(--p)}
 .dark .perm-badge.scope{background:#2D3729;color:#D6E0CD;border-color:#49553F}
+.seating-tool{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px}
+.seating-panel,.seating-stage-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:var(--sh);min-width:0}
+.seating-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.seating-toolbar .btn{padding:8px 10px;font-size:12px}
+.seating-member-search{margin-bottom:8px}
+.seating-member-list{max-height:455px;overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--bg)}
+.seating-member{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
+.seating-member:last-child{border-bottom:none}
+.seating-member.on{background:var(--pl);color:var(--pd);font-weight:850}
+.seating-member.placed{opacity:.72}
+.seating-member input{width:16px;height:16px}
+.seating-member-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seating-member-meta{font-size:10px;color:var(--ts);font-weight:700}
+.seating-status{font-size:12px;color:var(--ts);line-height:1.5;margin-top:8px}
+.seating-stage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.seating-zoom{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative}
+.seating-board{position:relative;min-width:1720px;width:max-content;transform-origin:top left}
+.seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
+.seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
+.seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
+.seating-row.offset .seating-line{transform:translateX(28px)}
+.seating-row-label{width:42px;font-size:12px;font-weight:850;color:var(--ts);flex:0 0 42px}
+.seating-row-count{width:30px;height:30px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;margin-right:5px}
+.seating-line{display:flex;gap:4px}
+.seating-seat{width:52px;height:34px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 2px;color:#202018}
+.seating-seat.empty{background:#FFFDF8;color:#B7B09E}
+.seating-seat.part-S1{background:#E8B9D5}
+.seating-seat.part-S2{background:#9FD1D8}
+.seating-seat.part-T1{background:#8FC27C}
+.seating-seat.part-T2{background:#EDB34B}
+.seating-seat.part-etc{background:#D8CDB8}
+.seating-seat.selected{outline:3px solid var(--p);outline-offset:1px}
+.seating-markers{display:flex;gap:110px;align-items:center;margin-left:190px;margin-top:10px}
+.seating-mic{background:#4F7FB7;color:#fff;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:850}
+.seating-front{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
+.seating-conductor{background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
+.seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
+#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:14px;overflow:auto}
+#subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:280px minmax(0,1fr)}
+#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:calc(100vh - 245px)}
+body.seating-fullscreen .bottom-nav{display:none!important}
+@media(max-width:760px){
+  .seating-tool{grid-template-columns:1fr}
+  .seating-member-list{max-height:220px}
+  .seating-board-scroll{height:480px}
+  #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
+  #subSeatingPlan.seating-fullscreen .seating-stage-card{order:-1}
+  #subSeatingPlan.seating-fullscreen .seating-member-list{max-height:160px}
+  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:calc(100vh - 350px);min-height:360px}
+}
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .handbook-extra summary::-webkit-details-marker{display:none}
@@ -1163,6 +1215,7 @@ body{font-weight:500}
     <div class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
     <div class="admin-tab" data-at="memberLinkAudit" onclick="switchAdminTab('memberLinkAudit')">단원 연결 점검</div>
     <div class="admin-tab" data-at="songRecommend" onclick="switchAdminTab('songRecommend')">선곡 도우미</div>
+    <div class="admin-tab" data-at="seatingPlan" onclick="switchAdminTab('seatingPlan')">찬양의밤 자리배치</div>
     <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
     <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
     <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
@@ -1233,6 +1286,63 @@ body{font-weight:500}
     <button class="btn btn-p btn-bl" onclick="runSongRecommendation()">추천곡 찾기</button>
     <div id="songRecommendStatus" class="member-audit-status hidden"></div>
     <div id="songRecommendResults" style="margin-top:12px"></div>
+  </div>
+  <div class="admin-sub hidden" id="subSeatingPlan">
+    <div class="seating-stage-head">
+      <div>
+        <h3 style="font-size:16px;font-weight:850;margin-bottom:4px">🎚️ 찬양의밤 자리배치</h3>
+        <div style="font-size:12px;color:var(--ts);line-height:1.45">참석 단원만 선택해 단에 배치합니다. 한 줄씩 반 칸 밀린 형태로 실제 단 배치에 맞춰 편집할 수 있습니다.</div>
+      </div>
+      <button class="btn btn-sm" id="seatingFullscreenBtn" style="background:var(--p);color:#fff;white-space:nowrap" onclick="toggleSeatingFullscreen()">전체 화면</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">저장된 배치</label><select class="form-sel" id="seatingPlanSelect" onchange="selectSeatingPlan(this.value)"><option value="">새 배치</option></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">날짜</label><input class="form-input" id="seatingDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">행사명</label><input class="form-input" id="seatingTitle" placeholder="예: 2025 찬양의밤"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">프로그램</label><input class="form-input" id="seatingProgram" placeholder="예: 전체 합창" oninput="renderSeatingBoard()"></div>
+    </div>
+    <div class="seating-tool">
+      <aside class="seating-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div style="font-size:15px;font-weight:900">참석 단원</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="markAllSeatingAttendees(true)">전체</button>
+            <button class="btn btn-sm" style="background:var(--bg);color:var(--ts)" onclick="markAllSeatingAttendees(false)">해제</button>
+          </div>
+        </div>
+        <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
+        <div id="seatingMemberList" class="seating-member-list"><div class="loading"><div class="spinner"></div>명단 불러오는 중...</div></div>
+        <div class="seating-status" id="seatingStatus">배치를 불러오면 상태가 표시됩니다.</div>
+      </aside>
+      <section class="seating-stage-card">
+        <div class="seating-stage-head">
+          <div>
+            <div style="font-size:18px;font-weight:900" id="seatingBoardTitle">전체 합창 배치도</div>
+            <div style="font-size:12px;color:var(--ts);font-weight:700">셀 선택 후 단원을 누르거나, 단원을 먼저 누른 뒤 셀을 선택하세요.</div>
+          </div>
+          <div class="seating-zoom">
+            <button class="btn btn-sm" onclick="changeSeatingZoom(-0.1)">−</button>
+            <span id="seatingZoomLabel" style="font-size:13px;font-weight:900;color:var(--ts)">72%</span>
+            <button class="btn btn-sm" onclick="changeSeatingZoom(0.1)">+</button>
+          </div>
+        </div>
+        <div class="seating-toolbar">
+          <button class="btn btn-p" onclick="saveSeatingPlan()">저장</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="createNewSeatingPlan()">새 배치</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="autoFillSeatingPlan()">미배치 채우기</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="insertBlankSeat()">빈칸 추가</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
+          <button class="btn btn-d" onclick="clearSelectedSeat()">선택 비우기</button>
+        </div>
+        <div class="seating-board-scroll">
+          <div class="seating-board" id="seatingBoard"></div>
+        </div>
+        <div class="seating-summary" id="seatingSummary"></div>
+      </section>
+    </div>
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
     <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 (<span id="handbookCount">0</span>명)</h3>
@@ -1722,6 +1832,8 @@ var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
+var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[];
+var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.72;
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var scheduleEditId='';
 
@@ -1783,7 +1895,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v70.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v71.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -1951,6 +2063,9 @@ function canManageAccountPermissions(){
 function canUseReport(){
   return adminRole==='admin';
 }
+function canUseSeatingPlan(){
+  return adminRole==='admin';
+}
 function canUseSongRecommend(){
   return adminRole==='admin'||hasPermission('song.recommend');
 }
@@ -2074,6 +2189,10 @@ function switchAdminTab(sub){
     showToast('선곡 도우미 권한이 필요합니다.');
     return;
   }
+  if(sub==='seatingPlan'&&!canUseSeatingPlan()){
+    showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+    return;
+  }
   if(sub==='members'&&!canManageLoginAccounts()&&!canManageAccountPermissions()){
     showToast('로그인 계정 관리 권한이 필요합니다.');
     return;
@@ -2114,6 +2233,7 @@ function switchAdminTab(sub){
   if(sub === 'memberHandbook') loadHandbook();
   if(sub === 'memberLinkAudit') loadMemberLinkAudit();
   if(sub === 'songRecommend') initSongRecommendTool();
+  if(sub === 'seatingPlan') initSeatingPlanTool();
   if(sub === 'attendance'){ensureAttDate();loadAttendance()}
 }
 function updateAdminTabs(){
@@ -2126,6 +2246,7 @@ function updateAdminTabs(){
     addSong: canManageSongs(),
     memberLinkAudit: canUseMemberLinkAudit(),
     songRecommend: canUseSongRecommend(),
+    seatingPlan: canUseSeatingPlan(),
     schedule: canManageSchedules(),
     logs: adminRole==='admin',
     export: adminRole==='admin',
@@ -2138,7 +2259,7 @@ function updateAdminTabs(){
 
 function showFirstAdminTab(){
   var tabs=document.getElementById('adminTabRow');if(!tabs)return;
-  var preferredOrder = ['attendance','memberHandbook','addSong','schedule','songRecommend','notice','members','memberLinkAudit','logs','export','report'];
+  var preferredOrder = ['attendance','memberHandbook','addSong','schedule','songRecommend','seatingPlan','notice','members','memberLinkAudit','logs','export','report'];
 
   var visible = [];
   tabs.querySelectorAll('[data-at]').forEach(function(t){
@@ -5100,6 +5221,354 @@ function uploadArchiveMedia(){
   uploadOne(0);
 }
 
+// ==================== 찬양의밤 자리배치 ====================
+function isSeatingEligibleMember(d){
+  var part=normalizePartName(d&&d.part);
+  var status=(d&&d.status)||'active';
+  return status==='active'&&part!=='명단제외';
+}
+function defaultSeatingRows(){
+  var rows=[];
+  var start=38;
+  for(var r=0;r<8;r++){
+    var seats=[];
+    for(var c=0;c<28;c++)seats.push(null);
+    rows.push({label:String(start-r)+'줄',offset:r%2?0.5:0,seats:seats});
+  }
+  return rows;
+}
+function normalizeSeatingSeat(seat){
+  if(!seat||!seat.memberId)return null;
+  return {memberId:String(seat.memberId),name:String(seat.name||''),part:normalizePartName(seat.part||'')};
+}
+function normalizeSeatingRows(rows){
+  if(!Array.isArray(rows)||rows.length===0)return defaultSeatingRows();
+  return rows.map(function(row,i){
+    var seats=Array.isArray(row.seats)?row.seats.map(normalizeSeatingSeat):[];
+    while(seats.length<12)seats.push(null);
+    return {label:String(row.label||String(36-i)+'줄'),offset:row.offset===0.5?0.5:(i%2?0.5:0),seats:seats};
+  });
+}
+function loadSeatingMembers(){
+  return db.collection('members').orderBy('name').get().then(function(snap){
+    seatingMembers=[];
+    snap.forEach(function(doc){
+      var d=doc.data()||{};
+      if(isSeatingEligibleMember(d)){
+        seatingMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),group:d.group||''});
+      }
+    });
+  });
+}
+function loadSeatingPlans(){
+  return db.collection('settings').doc('seatingPlans').get().then(function(doc){
+    var data=doc.exists?(doc.data()||{}):{};
+    seatingPlans=Array.isArray(data.plans)?data.plans:[];
+    seatingPlans.sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));});
+    renderSeatingPlanSelect();
+    if(seatingPlanId){
+      var current=seatingPlans.find(function(p){return p.id===seatingPlanId;});
+      if(current)applySeatingPlan(current);
+    }else if(seatingPlans.length){
+      applySeatingPlan(seatingPlans[0]);
+    }else{
+      createNewSeatingPlan(true);
+    }
+  });
+}
+function initSeatingPlanTool(){
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+  var list=document.getElementById('seatingMemberList');
+  if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>명단 불러오는 중...</div>';
+  loadSeatingMembers().then(function(){return loadSeatingPlans();}).then(function(){
+    renderSeatingMemberList();
+    renderSeatingBoard();
+  }).catch(function(err){
+    console.error(err);
+    showToast('자리배치 데이터를 불러오지 못했습니다');
+  });
+}
+function renderSeatingPlanSelect(){
+  var sel=document.getElementById('seatingPlanSelect');if(!sel)return;
+  var html='<option value="">새 배치</option>';
+  seatingPlans.forEach(function(plan){
+    var title=(plan.title||'찬양의밤')+' · '+(plan.program||'전체 합창')+(plan.date?' · '+plan.date:'');
+    html+='<option value="'+escHtml(plan.id)+'">'+escHtml(title)+'</option>';
+  });
+  sel.innerHTML=html;
+  sel.value=seatingPlanId||'';
+}
+function selectSeatingPlan(id){
+  if(!id){createNewSeatingPlan();return;}
+  var plan=seatingPlans.find(function(p){return p.id===id;});
+  if(plan)applySeatingPlan(plan);
+}
+function createNewSeatingPlan(silent){
+  seatingPlanId='';
+  seatingRows=defaultSeatingRows();
+  seatingAttendees={};
+  seatingMembers.forEach(function(m){seatingAttendees[m.id]=true;});
+  seatingSelectedMemberId='';
+  seatingSelectedSeat=null;
+  var title=document.getElementById('seatingTitle');
+  var date=document.getElementById('seatingDate');
+  var program=document.getElementById('seatingProgram');
+  var sel=document.getElementById('seatingPlanSelect');
+  if(title)title.value='찬양의밤';
+  if(date&&!date.value)date.value=getTodayInputDate();
+  if(program)program.value='전체 합창';
+  if(sel)sel.value='';
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  if(!silent)showToast('새 배치를 시작합니다');
+}
+function applySeatingPlan(plan){
+  seatingPlanId=plan.id||'';
+  seatingRows=normalizeSeatingRows(plan.rows);
+  seatingAttendees={};
+  if(plan.attendees&&typeof plan.attendees==='object'){
+    Object.keys(plan.attendees).forEach(function(id){seatingAttendees[id]=!!plan.attendees[id];});
+  }
+  seatingRows.forEach(function(row){
+    row.seats.forEach(function(seat){
+      if(seat&&seat.memberId&&seatingAttendees[seat.memberId]===undefined)seatingAttendees[seat.memberId]=true;
+    });
+  });
+  seatingMembers.forEach(function(m){if(seatingAttendees[m.id]===undefined)seatingAttendees[m.id]=false;});
+  seatingSelectedMemberId='';
+  seatingSelectedSeat=null;
+  var title=document.getElementById('seatingTitle');
+  var date=document.getElementById('seatingDate');
+  var program=document.getElementById('seatingProgram');
+  var sel=document.getElementById('seatingPlanSelect');
+  if(title)title.value=plan.title||'찬양의밤';
+  if(date)date.value=plan.date||getTodayInputDate();
+  if(program)program.value=plan.program||'전체 합창';
+  if(sel)sel.value=seatingPlanId;
+  renderSeatingMemberList();
+  renderSeatingBoard();
+}
+function seatingAssignedMap(){
+  var map={};
+  seatingRows.forEach(function(row,r){
+    row.seats.forEach(function(seat,c){if(seat&&seat.memberId)map[seat.memberId]={row:r,col:c};});
+  });
+  return map;
+}
+function partClass(part){
+  part=normalizePartName(part);
+  if(part==='S1'||part==='S2'||part==='T1'||part==='T2')return 'part-'+part;
+  return 'part-etc';
+}
+function markAllSeatingAttendees(value){
+  seatingMembers.forEach(function(m){seatingAttendees[m.id]=!!value;});
+  if(!value)seatingRows.forEach(function(row){row.seats=row.seats.map(function(){return null;});});
+  renderSeatingMemberList();
+  renderSeatingBoard();
+}
+function toggleSeatingAttendee(id,checked){
+  seatingAttendees[id]=!!checked;
+  if(!checked){
+    seatingRows.forEach(function(row){row.seats=row.seats.map(function(seat){return seat&&seat.memberId===id?null:seat;});});
+    if(seatingSelectedMemberId===id)seatingSelectedMemberId='';
+  }
+  renderSeatingMemberList();
+  renderSeatingBoard();
+}
+function selectSeatingMember(id){
+  if(!seatingAttendees[id])return showToast('참석 체크된 단원만 배치할 수 있습니다');
+  seatingSelectedMemberId=seatingSelectedMemberId===id?'':id;
+  renderSeatingMemberList();
+}
+function renderSeatingMemberList(){
+  var list=document.getElementById('seatingMemberList');if(!list)return;
+  var q=(document.getElementById('seatingMemberSearch')||{}).value||'';
+  q=q.trim().toLowerCase();
+  var assigned=seatingAssignedMap();
+  var filtered=seatingMembers.filter(function(m){
+    var text=[m.name,m.part,m.subPart,m.group].join(' ').toLowerCase();
+    return !q||text.indexOf(q)>-1;
+  });
+  if(filtered.length===0){
+    list.innerHTML='<div style="padding:14px;font-size:12px;color:var(--ts);text-align:center">표시할 단원이 없습니다</div>';
+    return;
+  }
+  list.innerHTML=filtered.map(function(m){
+    var checked=!!seatingAttendees[m.id];
+    var on=seatingSelectedMemberId===m.id;
+    var placed=!!assigned[m.id];
+    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
+      +'<input type="checkbox" '+(checked?'checked':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
+      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+'</span></div>'
+      +'</div>';
+  }).join('');
+}
+function renderSeatingBoard(){
+  var board=document.getElementById('seatingBoard');if(!board)return;
+  var program=(document.getElementById('seatingProgram')||{}).value||'전체 합창';
+  var title=document.getElementById('seatingBoardTitle');
+  if(title)title.textContent=program+' 배치도';
+  var html='<div class="seating-center-line"></div><div class="seating-center-label">센터</div>';
+  seatingRows.forEach(function(row,r){
+    html+='<div class="seating-row '+(row.offset===0.5?'offset':'')+'">'
+      +'<div class="seating-row-label">'+escHtml(row.label)+'</div>'
+      +'<div class="seating-row-count">'+row.seats.filter(function(s){return !!s;}).length+'</div>'
+      +'<div class="seating-line">';
+    row.seats.forEach(function(seat,c){
+      var selected=seatingSelectedSeat&&seatingSelectedSeat.row===r&&seatingSelectedSeat.col===c;
+      if(seat){
+        html+='<button class="seating-seat '+partClass(seat.part)+' '+(selected?'selected':'')+'" onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name)+'">'+escHtml(seat.name)+'</button>';
+      }else{
+        html+='<button class="seating-seat empty '+(selected?'selected':'')+'" onclick="handleSeatingSeatClick('+r+','+c+')">빈칸</button>';
+      }
+    });
+    html+='</div></div>';
+  });
+  html+='<div class="seating-markers"><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div></div>'
+    +'<div class="seating-front"><span>앞쪽 / 무대 아래</span><span class="seating-conductor">지휘</span></div>';
+  board.innerHTML=html;
+  updateSeatingZoom();
+  renderSeatingSummary();
+}
+function renderSeatingSummary(){
+  var box=document.getElementById('seatingSummary');if(!box)return;
+  var attended=0, placed=0, empty=0, dup=0, seen={};
+  seatingMembers.forEach(function(m){if(seatingAttendees[m.id])attended++;});
+  seatingRows.forEach(function(row){
+    row.seats.forEach(function(seat){
+      if(seat&&seat.memberId){
+        placed++;
+        if(seen[seat.memberId])dup++;
+        seen[seat.memberId]=1;
+      }else empty++;
+    });
+  });
+  var placedUnique=Object.keys(seen).length;
+  var unplaced=Math.max(0,attended-placedUnique);
+  box.innerHTML='<span class="seating-chip">참석 '+attended+'명</span>'
+    +'<span class="seating-chip">배치 '+placedUnique+'명</span>'
+    +'<span class="seating-chip">미배치 '+unplaced+'명</span>'
+    +'<span class="seating-chip">중복 '+dup+'명</span>'
+    +'<span class="seating-chip">빈칸 '+empty+'칸</span>';
+  var status=document.getElementById('seatingStatus');
+  if(status)status.textContent='참석 '+attended+'명 · 배치 '+placedUnique+'명 · 미배치 '+unplaced+'명';
+}
+function handleSeatingSeatClick(row,col){
+  if(seatingSelectedMemberId){
+    assignMemberToSeat(seatingSelectedMemberId,row,col);
+    return;
+  }
+  if(seatingSelectedSeat&&(seatingSelectedSeat.row!==row||seatingSelectedSeat.col!==col)){
+    var a=seatingRows[seatingSelectedSeat.row].seats[seatingSelectedSeat.col];
+    var b=seatingRows[row].seats[col];
+    seatingRows[row].seats[col]=a;
+    seatingRows[seatingSelectedSeat.row].seats[seatingSelectedSeat.col]=b;
+  }
+  seatingSelectedSeat={row:row,col:col};
+  renderSeatingBoard();
+}
+function assignMemberToSeat(memberId,row,col){
+  var member=seatingMembers.find(function(m){return m.id===memberId;});
+  if(!member)return showToast('단원을 찾을 수 없습니다');
+  if(!seatingAttendees[memberId])return showToast('참석 체크된 단원만 배치할 수 있습니다');
+  seatingRows.forEach(function(r){r.seats=r.seats.map(function(seat){return seat&&seat.memberId===memberId?null:seat;});});
+  seatingRows[row].seats[col]={memberId:member.id,name:member.name,part:member.part};
+  seatingSelectedMemberId='';
+  seatingSelectedSeat={row:row,col:col};
+  renderSeatingMemberList();
+  renderSeatingBoard();
+}
+function clearSelectedSeat(){
+  if(!seatingSelectedSeat)return showToast('비울 자리를 먼저 선택해주세요');
+  seatingRows[seatingSelectedSeat.row].seats[seatingSelectedSeat.col]=null;
+  renderSeatingMemberList();
+  renderSeatingBoard();
+}
+function insertBlankSeat(){
+  var rowIndex=seatingSelectedSeat?seatingSelectedSeat.row:0;
+  var colIndex=seatingSelectedSeat?seatingSelectedSeat.col:seatingRows[rowIndex].seats.length;
+  seatingRows[rowIndex].seats.splice(colIndex,0,null);
+  seatingSelectedSeat={row:rowIndex,col:colIndex};
+  renderSeatingBoard();
+}
+function shiftSelectedSeatingRow(dir){
+  var rowIndex=seatingSelectedSeat?seatingSelectedSeat.row:null;
+  if(rowIndex===null)return showToast('이동할 줄의 자리를 먼저 선택해주세요');
+  var seats=seatingRows[rowIndex].seats;
+  if(dir>0){seats.unshift(null);seats.pop();}
+  else{seats.push(null);seats.shift();}
+  renderSeatingBoard();
+}
+function autoFillSeatingPlan(){
+  var assigned=seatingAssignedMap();
+  var queue=seatingMembers.filter(function(m){return seatingAttendees[m.id]&&!assigned[m.id];});
+  if(queue.length===0)return showToast('채울 미배치 단원이 없습니다');
+  seatingRows.forEach(function(row){
+    row.seats=row.seats.map(function(seat){
+      if(seat||queue.length===0)return seat;
+      var m=queue.shift();
+      return {memberId:m.id,name:m.name,part:m.part};
+    });
+  });
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast('빈칸에 미배치 단원을 채웠습니다');
+}
+function updateSeatingZoom(){
+  var board=document.getElementById('seatingBoard');
+  var label=document.getElementById('seatingZoomLabel');
+  seatingZoom=Math.max(0.45,Math.min(1.35,seatingZoom));
+  if(board)board.style.transform='scale('+seatingZoom+')';
+  if(label)label.textContent=Math.round(seatingZoom*100)+'%';
+}
+function changeSeatingZoom(delta){
+  seatingZoom+=delta;
+  updateSeatingZoom();
+}
+function toggleSeatingFullscreen(){
+  var sub=document.getElementById('subSeatingPlan');
+  var btn=document.getElementById('seatingFullscreenBtn');
+  if(!sub)return;
+  var on=!sub.classList.contains('seating-fullscreen');
+  sub.classList.toggle('seating-fullscreen',on);
+  document.body.classList.toggle('seating-fullscreen',on);
+  if(btn)btn.textContent=on?'전체 화면 닫기':'전체 화면';
+}
+function saveSeatingPlan(){
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+  var title=(document.getElementById('seatingTitle')||{}).value||'찬양의밤';
+  var date=(document.getElementById('seatingDate')||{}).value||getTodayInputDate();
+  var program=(document.getElementById('seatingProgram')||{}).value||'전체 합창';
+  var data={
+    title:title.trim()||'찬양의밤',
+    date:date,
+    program:program.trim()||'전체 합창',
+    attendees:seatingAttendees,
+    rows:seatingRows,
+    updatedAt:new Date().toISOString(),
+    updatedBy:currentActorName()
+  };
+  showToast('자리배치 저장 중...');
+  if(!seatingPlanId){
+    seatingPlanId='sp_'+Date.now();
+    data.createdAt=data.updatedAt;
+    data.createdBy=currentActorName();
+  }
+  data.id=seatingPlanId;
+  var existingIndex=seatingPlans.findIndex(function(p){return p.id===seatingPlanId;});
+  if(existingIndex>-1)seatingPlans[existingIndex]=data;
+  else seatingPlans.unshift(data);
+  seatingPlans.sort(function(a,b){return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));});
+  seatingPlans=seatingPlans.slice(0,30);
+  db.collection('settings').doc('seatingPlans').set({plans:seatingPlans,updatedAt:new Date().toISOString(),updatedBy:currentActorName()},{merge:true}).then(function(){
+    showToast('자리배치가 저장되었습니다');
+    writeLog('찬양의밤 자리배치 저장',data.date+' '+data.program+' 배치 저장');
+    return loadSeatingPlans();
+  }).catch(function(err){
+    console.error(err);
+    showToast('저장 중 오류가 발생했습니다');
+  });
+}
 
 // ==================== 통계 ====================
 function renderStats(){
