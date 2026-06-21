@@ -156,8 +156,9 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-mic-line{display:flex;gap:4px}
 .seating-mic-slot{width:52px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
 .seating-mic-slot.on{background:#4F7FB7;border-style:solid;border-color:#4F7FB7;color:#fff}
-.seating-front{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
-.seating-conductor{background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
+.seating-front{position:relative;height:74px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
+.seating-front-note{position:absolute;left:0;top:20px}
+.seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
 .seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
 #subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:14px;overflow:auto}
@@ -1918,7 +1919,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v74.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v75.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5761,7 +5762,7 @@ function renderSeatingBoard(){
     html+='<button class="seating-mic-slot '+(on?'on':'')+'" onclick="toggleSeatingMicSlot('+i+')" title="'+(on?'마이크 있음':'마이크 없음')+'">'+(on?'마이크':'빈칸')+'</button>';
   });
   html+='</div></div>'
-    +'<div class="seating-front"><span>앞쪽 / 무대 아래</span><span class="seating-conductor">지휘</span></div>';
+    +'<div class="seating-front" style="width:'+boardWidth+'px"><span class="seating-front-note">앞쪽 / 무대 아래</span><span class="seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
   board.style.minWidth=boardWidth+'px';
   board.innerHTML=html;
   updateSeatingZoom();
@@ -5811,15 +5812,6 @@ function handleSeatingSeatClick(row,col){
     seatingInlineQuery='';
     renderSeatingBoard();
     return;
-  }
-  if(seatingSelectedSeat&&(seatingSelectedSeat.row!==row||seatingSelectedSeat.col!==col)){
-    var a=seatingRows[seatingSelectedSeat.row].seats[seatingSelectedSeat.col];
-    var b=seatingRows[row].seats[col];
-    if(a||b){
-      beginSeatingEdit();
-      seatingRows[row].seats[col]=a;
-      seatingRows[seatingSelectedSeat.row].seats[seatingSelectedSeat.col]=b;
-    }
   }
   seatingSelectedSeat={row:row,col:col};
   if(!seatingRows[row].seats[col])seatingInlineQuery='';
@@ -5872,8 +5864,8 @@ function shiftSelectedSeatingRow(dir){
     if(seats.length<=1)return showToast('더 이상 줄일 수 없습니다');
     beginSeatingEdit();
     seats.splice(colIndex,1);
-    if(colIndex>=seats.length)colIndex=seats.length-1;
-    seatingSelectedSeat={row:rowIndex,col:Math.max(0,colIndex)};
+    seats.push(null);
+    seatingSelectedSeat={row:rowIndex,col:Math.min(colIndex,seats.length-1)};
   }
   renderSeatingBoard();
 }
