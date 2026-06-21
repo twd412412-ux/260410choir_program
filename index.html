@@ -115,6 +115,9 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
 .seating-toolbar .btn{padding:8px 10px;font-size:12px}
 .seating-member-search{margin-bottom:8px}
+.seating-part-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.seating-part-chip{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;cursor:pointer}
+.seating-part-chip.on{background:var(--p);border-color:var(--p);color:#fff}
 .seating-member-list{max-height:455px;overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--bg)}
 .seating-member{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
 .seating-member:last-child{border-bottom:none}
@@ -127,7 +130,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-stage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
 .seating-zoom{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative}
-.seating-board{position:relative;min-width:1720px;width:max-content;transform-origin:top left}
+.seating-board{position:relative;min-width:2480px;width:max-content;transform-origin:top left}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
 .seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
@@ -143,8 +146,11 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-seat.part-T2{background:#EDB34B}
 .seating-seat.part-etc{background:#D8CDB8}
 .seating-seat.selected{outline:3px solid var(--p);outline-offset:1px}
-.seating-markers{display:flex;gap:110px;align-items:center;margin-left:190px;margin-top:10px}
-.seating-mic{background:#4F7FB7;color:#fff;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:850}
+.seating-mic-row{display:flex;align-items:center;margin-top:10px;position:relative;z-index:1}
+.seating-mic-label{width:77px;font-size:12px;font-weight:850;color:var(--ts);flex:0 0 77px}
+.seating-mic-line{display:flex;gap:4px}
+.seating-mic-slot{width:52px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
+.seating-mic-slot.on{background:#4F7FB7;border-style:solid;border-color:#4F7FB7;color:#fff}
 .seating-front{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
 .seating-conductor{background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
 .seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
@@ -1313,6 +1319,7 @@ body{font-weight:500}
           </div>
         </div>
         <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
+        <div class="seating-part-filter" id="seatingPartFilter"></div>
         <div id="seatingMemberList" class="seating-member-list"><div class="loading"><div class="spinner"></div>명단 불러오는 중...</div></div>
         <div class="seating-status" id="seatingStatus">배치를 불러오면 상태가 표시됩니다.</div>
       </aside>
@@ -1320,7 +1327,7 @@ body{font-weight:500}
         <div class="seating-stage-head">
           <div>
             <div style="font-size:18px;font-weight:900" id="seatingBoardTitle">전체 합창 배치도</div>
-            <div style="font-size:12px;color:var(--ts);font-weight:700">셀 선택 후 단원을 누르거나, 단원을 먼저 누른 뒤 셀을 선택하세요.</div>
+            <div style="font-size:12px;color:var(--ts);font-weight:700">빈칸 선택 후 이름을 검색해 누르거나, 단원을 먼저 누른 뒤 셀을 선택하세요.</div>
           </div>
           <div class="seating-zoom">
             <button class="btn btn-sm" onclick="changeSeatingZoom(-0.1)">−</button>
@@ -1333,6 +1340,8 @@ body{font-weight:500}
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="createNewSeatingPlan()">새 배치</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="autoFillSeatingPlan()">미배치 채우기</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="insertBlankSeat()">빈칸 추가</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="addSeatingRow()">줄 추가</button>
+          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="removeSelectedSeatingRow()">줄 제거</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
           <button class="btn btn-d" onclick="clearSelectedSeat()">선택 비우기</button>
@@ -1832,8 +1841,8 @@ var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
-var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[];
-var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.72;
+var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[];
+var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all';
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var scheduleEditId='';
 
@@ -1895,7 +1904,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v71.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v72.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5225,14 +5234,46 @@ function uploadArchiveMedia(){
 function isSeatingEligibleMember(d){
   var part=normalizePartName(d&&d.part);
   var status=(d&&d.status)||'active';
-  return status==='active'&&part!=='명단제외';
+  return status==='active'&&['S1','S2','T1','T2'].indexOf(part)!==-1;
+}
+function seatingPartOrder(){
+  return ['S1','S2','T1','T2'];
+}
+function seatingDefaultSeatCount(){
+  return 42;
+}
+function seatingMaxSeatCount(){
+  var max=seatingDefaultSeatCount();
+  seatingRows.forEach(function(row){if(row.seats&&row.seats.length>max)max=row.seats.length;});
+  return max;
+}
+function defaultSeatingMicSlots(count){
+  count=count||seatingDefaultSeatCount();
+  var slots=[];
+  for(var i=0;i<count;i++)slots.push(false);
+  [6,14,21,28,35].forEach(function(idx){if(idx<count)slots[idx]=true;});
+  return slots;
+}
+function normalizeSeatingMicSlots(slots,count){
+  count=count||seatingMaxSeatCount();
+  var arr=Array.isArray(slots)?slots.map(function(v){return !!v;}):defaultSeatingMicSlots(count);
+  while(arr.length<count)arr.push(false);
+  return arr;
+}
+function syncSeatingRowLabels(){
+  var start=36;
+  seatingRows.forEach(function(row,i){
+    row.label=String(start-i)+'줄';
+    row.offset=i%2?0.5:0;
+  });
+  seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
 }
 function defaultSeatingRows(){
   var rows=[];
-  var start=38;
-  for(var r=0;r<8;r++){
+  var start=36;
+  for(var r=0;r<5;r++){
     var seats=[];
-    for(var c=0;c<28;c++)seats.push(null);
+    for(var c=0;c<seatingDefaultSeatCount();c++)seats.push(null);
     rows.push({label:String(start-r)+'줄',offset:r%2?0.5:0,seats:seats});
   }
   return rows;
@@ -5245,7 +5286,7 @@ function normalizeSeatingRows(rows){
   if(!Array.isArray(rows)||rows.length===0)return defaultSeatingRows();
   return rows.map(function(row,i){
     var seats=Array.isArray(row.seats)?row.seats.map(normalizeSeatingSeat):[];
-    while(seats.length<12)seats.push(null);
+    while(seats.length<seatingDefaultSeatCount())seats.push(null);
     return {label:String(row.label||String(36-i)+'줄'),offset:row.offset===0.5?0.5:(i%2?0.5:0),seats:seats};
   });
 }
@@ -5257,6 +5298,12 @@ function loadSeatingMembers(){
       if(isSeatingEligibleMember(d)){
         seatingMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),group:d.group||''});
       }
+    });
+    var order=seatingPartOrder();
+    seatingMembers.sort(function(a,b){
+      var pa=order.indexOf(a.part), pb=order.indexOf(b.part);
+      if(pa!==pb)return pa-pb;
+      return String(a.name||'').localeCompare(String(b.name||''),'ko');
     });
   });
 }
@@ -5306,10 +5353,12 @@ function selectSeatingPlan(id){
 function createNewSeatingPlan(silent){
   seatingPlanId='';
   seatingRows=defaultSeatingRows();
+  seatingMicSlots=defaultSeatingMicSlots(seatingDefaultSeatCount());
   seatingAttendees={};
   seatingMembers.forEach(function(m){seatingAttendees[m.id]=true;});
   seatingSelectedMemberId='';
   seatingSelectedSeat=null;
+  seatingPartFilter='all';
   var title=document.getElementById('seatingTitle');
   var date=document.getElementById('seatingDate');
   var program=document.getElementById('seatingProgram');
@@ -5325,6 +5374,7 @@ function createNewSeatingPlan(silent){
 function applySeatingPlan(plan){
   seatingPlanId=plan.id||'';
   seatingRows=normalizeSeatingRows(plan.rows);
+  seatingMicSlots=normalizeSeatingMicSlots(plan.micSlots,seatingMaxSeatCount());
   seatingAttendees={};
   if(plan.attendees&&typeof plan.attendees==='object'){
     Object.keys(plan.attendees).forEach(function(id){seatingAttendees[id]=!!plan.attendees[id];});
@@ -5345,6 +5395,7 @@ function applySeatingPlan(plan){
   if(date)date.value=plan.date||getTodayInputDate();
   if(program)program.value=plan.program||'전체 합창';
   if(sel)sel.value=seatingPlanId;
+  seatingPartFilter='all';
   renderSeatingMemberList();
   renderSeatingBoard();
 }
@@ -5375,19 +5426,43 @@ function toggleSeatingAttendee(id,checked){
   renderSeatingMemberList();
   renderSeatingBoard();
 }
+function setSeatingPartFilter(part){
+  seatingPartFilter=part||'all';
+  renderSeatingMemberList();
+}
+function renderSeatingPartFilter(){
+  var box=document.getElementById('seatingPartFilter');if(!box)return;
+  var parts=['all'].concat(seatingPartOrder());
+  var labels={all:'전체',S1:'S1',S2:'S2',T1:'T1',T2:'T2'};
+  box.innerHTML=parts.map(function(p){
+    var count=p==='all'?seatingMembers.length:seatingMembers.filter(function(m){return m.part===p;}).length;
+    return '<button class="seating-part-chip '+(seatingPartFilter===p?'on':'')+'" onclick="setSeatingPartFilter(\''+p+'\')">'+labels[p]+' '+count+'</button>';
+  }).join('');
+}
 function selectSeatingMember(id){
   if(!seatingAttendees[id])return showToast('참석 체크된 단원만 배치할 수 있습니다');
-  seatingSelectedMemberId=seatingSelectedMemberId===id?'':id;
+  if(seatingSelectedMemberId===id){
+    seatingSelectedMemberId='';
+    renderSeatingMemberList();
+    return;
+  }
+  if(seatingSelectedSeat){
+    assignMemberToSeat(id,seatingSelectedSeat.row,seatingSelectedSeat.col);
+    return;
+  }
+  seatingSelectedMemberId=id;
   renderSeatingMemberList();
 }
 function renderSeatingMemberList(){
   var list=document.getElementById('seatingMemberList');if(!list)return;
+  renderSeatingPartFilter();
   var q=(document.getElementById('seatingMemberSearch')||{}).value||'';
   q=q.trim().toLowerCase();
   var assigned=seatingAssignedMap();
   var filtered=seatingMembers.filter(function(m){
     var text=[m.name,m.part,m.subPart,m.group].join(' ').toLowerCase();
-    return !q||text.indexOf(q)>-1;
+    var partOk=seatingPartFilter==='all'||m.part===seatingPartFilter;
+    return partOk&&(!q||text.indexOf(q)>-1);
   });
   if(filtered.length===0){
     list.innerHTML='<div style="padding:14px;font-size:12px;color:var(--ts);text-align:center">표시할 단원이 없습니다</div>';
@@ -5408,6 +5483,7 @@ function renderSeatingBoard(){
   var program=(document.getElementById('seatingProgram')||{}).value||'전체 합창';
   var title=document.getElementById('seatingBoardTitle');
   if(title)title.textContent=program+' 배치도';
+  seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
   var html='<div class="seating-center-line"></div><div class="seating-center-label">센터</div>';
   seatingRows.forEach(function(row,r){
     html+='<div class="seating-row '+(row.offset===0.5?'offset':'')+'">'
@@ -5424,11 +5500,20 @@ function renderSeatingBoard(){
     });
     html+='</div></div>';
   });
-  html+='<div class="seating-markers"><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div><div class="seating-mic">마이크</div></div>'
+  html+='<div class="seating-mic-row"><div class="seating-mic-label">마이크</div><div class="seating-mic-line">';
+  seatingMicSlots.forEach(function(on,i){
+    html+='<button class="seating-mic-slot '+(on?'on':'')+'" onclick="toggleSeatingMicSlot('+i+')" title="'+(on?'마이크 있음':'마이크 없음')+'">'+(on?'마이크':'빈칸')+'</button>';
+  });
+  html+='</div></div>'
     +'<div class="seating-front"><span>앞쪽 / 무대 아래</span><span class="seating-conductor">지휘</span></div>';
   board.innerHTML=html;
   updateSeatingZoom();
   renderSeatingSummary();
+}
+function toggleSeatingMicSlot(index){
+  seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
+  seatingMicSlots[index]=!seatingMicSlots[index];
+  renderSeatingBoard();
 }
 function renderSeatingSummary(){
   var box=document.getElementById('seatingSummary');if(!box)return;
@@ -5449,13 +5534,28 @@ function renderSeatingSummary(){
     +'<span class="seating-chip">배치 '+placedUnique+'명</span>'
     +'<span class="seating-chip">미배치 '+unplaced+'명</span>'
     +'<span class="seating-chip">중복 '+dup+'명</span>'
+    +'<span class="seating-chip">마이크 '+seatingMicSlots.filter(function(v){return !!v;}).length+'개</span>'
     +'<span class="seating-chip">빈칸 '+empty+'칸</span>';
   var status=document.getElementById('seatingStatus');
   if(status)status.textContent='참석 '+attended+'명 · 배치 '+placedUnique+'명 · 미배치 '+unplaced+'명';
 }
+function focusSeatingMemberSearchForSeat(){
+  var input=document.getElementById('seatingMemberSearch');
+  if(!input)return;
+  input.placeholder='이 자리에 넣을 이름 검색';
+  setTimeout(function(){
+    input.focus();
+    input.select();
+  },0);
+}
 function handleSeatingSeatClick(row,col){
   if(seatingSelectedMemberId){
     assignMemberToSeat(seatingSelectedMemberId,row,col);
+    return;
+  }
+  if(seatingSelectedSeat&&seatingSelectedSeat.row===row&&seatingSelectedSeat.col===col){
+    seatingSelectedSeat=null;
+    renderSeatingBoard();
     return;
   }
   if(seatingSelectedSeat&&(seatingSelectedSeat.row!==row||seatingSelectedSeat.col!==col)){
@@ -5466,6 +5566,7 @@ function handleSeatingSeatClick(row,col){
   }
   seatingSelectedSeat={row:row,col:col};
   renderSeatingBoard();
+  if(!seatingRows[row].seats[col])focusSeatingMemberSearchForSeat();
 }
 function assignMemberToSeat(memberId,row,col){
   var member=seatingMembers.find(function(m){return m.id===memberId;});
@@ -5475,6 +5576,8 @@ function assignMemberToSeat(memberId,row,col){
   seatingRows[row].seats[col]={memberId:member.id,name:member.name,part:member.part};
   seatingSelectedMemberId='';
   seatingSelectedSeat={row:row,col:col};
+  var input=document.getElementById('seatingMemberSearch');
+  if(input){input.value='';input.placeholder='이름/파트 검색';}
   renderSeatingMemberList();
   renderSeatingBoard();
 }
@@ -5488,15 +5591,48 @@ function insertBlankSeat(){
   var rowIndex=seatingSelectedSeat?seatingSelectedSeat.row:0;
   var colIndex=seatingSelectedSeat?seatingSelectedSeat.col:seatingRows[rowIndex].seats.length;
   seatingRows[rowIndex].seats.splice(colIndex,0,null);
+  seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
   seatingSelectedSeat={row:rowIndex,col:colIndex};
   renderSeatingBoard();
 }
 function shiftSelectedSeatingRow(dir){
-  var rowIndex=seatingSelectedSeat?seatingSelectedSeat.row:null;
-  if(rowIndex===null)return showToast('이동할 줄의 자리를 먼저 선택해주세요');
+  if(!seatingSelectedSeat)return showToast('기준이 될 빈칸을 먼저 선택해주세요');
+  var rowIndex=seatingSelectedSeat.row;
+  var colIndex=seatingSelectedSeat.col;
   var seats=seatingRows[rowIndex].seats;
-  if(dir>0){seats.unshift(null);seats.pop();}
-  else{seats.push(null);seats.shift();}
+  if(dir>0){
+    seats.splice(colIndex,0,null);
+    seatingSelectedSeat={row:rowIndex,col:colIndex};
+    seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
+  }else{
+    if(seats[colIndex])return showToast('좌로 밀기는 비어 있는 기준칸을 선택해주세요');
+    if(seats.length<=1)return showToast('더 이상 줄일 수 없습니다');
+    seats.splice(colIndex,1);
+    if(colIndex>=seats.length)colIndex=seats.length-1;
+    seatingSelectedSeat={row:rowIndex,col:Math.max(0,colIndex)};
+  }
+  renderSeatingBoard();
+}
+function addSeatingRow(){
+  var insertAt=seatingSelectedSeat?seatingSelectedSeat.row+1:seatingRows.length;
+  var count=seatingMaxSeatCount();
+  var seats=[];
+  for(var i=0;i<count;i++)seats.push(null);
+  seatingRows.splice(insertAt,0,{label:'',offset:0,seats:seats});
+  syncSeatingRowLabels();
+  seatingSelectedSeat={row:insertAt,col:0};
+  renderSeatingBoard();
+}
+function removeSelectedSeatingRow(){
+  if(!seatingSelectedSeat)return showToast('제거할 줄의 자리를 먼저 선택해주세요');
+  if(seatingRows.length<=1)return showToast('마지막 줄은 제거할 수 없습니다');
+  var rowIndex=seatingSelectedSeat.row;
+  var occupied=seatingRows[rowIndex].seats.filter(function(seat){return !!seat;}).length;
+  if(occupied>0&&!confirm(seatingRows[rowIndex].label+'에 배치된 '+occupied+'명이 있습니다. 이 줄을 제거할까요?'))return;
+  seatingRows.splice(rowIndex,1);
+  syncSeatingRowLabels();
+  seatingSelectedSeat=null;
+  renderSeatingMemberList();
   renderSeatingBoard();
 }
 function autoFillSeatingPlan(){
@@ -5545,6 +5681,7 @@ function saveSeatingPlan(){
     program:program.trim()||'전체 합창',
     attendees:seatingAttendees,
     rows:seatingRows,
+    micSlots:seatingMicSlots,
     updatedAt:new Date().toISOString(),
     updatedBy:currentActorName()
   };
