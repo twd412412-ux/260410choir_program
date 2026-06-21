@@ -164,11 +164,21 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
 #subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow:hidden;height:100dvh;display:flex;flex-direction:column}
 #subSeatingPlan.seating-fullscreen>.seating-stage-head{flex:0 0 auto;margin-bottom:8px}
-#subSeatingPlan.seating-fullscreen>div[style*="grid-template-columns"]{display:none!important}
+#subSeatingPlan.seating-fullscreen>.seating-stage-head>div>div{display:none}
+#subSeatingPlan.seating-fullscreen>.seating-plan-row,#subSeatingPlan.seating-fullscreen>.seating-program-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;margin:0 0 6px!important;flex:0 0 auto}
+#subSeatingPlan.seating-fullscreen>.seating-name-row{display:none!important}
+#subSeatingPlan.seating-fullscreen .form-label{font-size:10px;margin-bottom:3px}
+#subSeatingPlan.seating-fullscreen .form-input,#subSeatingPlan.seating-fullscreen .form-sel{font-size:12px;padding:8px 10px;min-height:38px}
 #subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;gap:8px}
-#subSeatingPlan.seating-fullscreen .seating-panel{display:none}
+#subSeatingPlan.seating-fullscreen .seating-panel{display:block;flex:0 0 auto;padding:8px}
+#subSeatingPlan.seating-fullscreen .seating-panel>div:first-child,#subSeatingPlan.seating-fullscreen .seating-status{display:none!important}
+#subSeatingPlan.seating-fullscreen .seating-member-search{margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-part-filter{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
+#subSeatingPlan.seating-fullscreen .seating-part-chip{flex:0 0 auto;padding:5px 9px}
+#subSeatingPlan.seating-fullscreen .seating-member-list{max-height:52px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:10px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
 #subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
 #subSeatingPlan.seating-fullscreen .seating-toolbar .btn{flex:0 0 auto;padding:7px 9px}
 #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;flex:1 1 auto;min-height:320px;padding:20px 12px 56px}
@@ -182,6 +192,10 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
   #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0}
   #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;min-height:320px}
+}
+@media(min-width:761px) and (max-width:1080px){
+  .seating-tool{grid-template-columns:1fr}
+  .seating-member-list{max-height:260px}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -1316,15 +1330,15 @@ body{font-weight:500}
       </div>
       <button class="btn btn-sm" id="seatingFullscreenBtn" style="background:var(--p);color:#fff;white-space:nowrap" onclick="toggleSeatingFullscreen()">전체 화면</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+    <div class="seating-plan-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">저장된 배치</label><select class="form-sel" id="seatingPlanSelect" onchange="selectSeatingPlan(this.value)"><option value="">새 배치 만들기</option></select></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label">날짜</label><input class="form-input" id="seatingDate" type="date" onchange="markSeatingDirty()" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="seating-name-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">배치 이름 *</label><input class="form-input" id="seatingPlanName" placeholder="예: 2026 찬양의밤 전체합창" oninput="markSeatingDirty()"></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label">행사명</label><input class="form-input" id="seatingTitle" placeholder="예: 2025 찬양의밤" oninput="markSeatingDirty()"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="seating-program-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">프로그램</label><input class="form-input" id="seatingProgram" placeholder="예: 전체 합창" oninput="markSeatingDirty();renderSeatingBoard()"></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label">템플릿</label><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="applySeatingTemplate('full')">전체 38칸</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="applySeatingTemplate('male')">남성 20칸</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="applySeatingTemplate('female')">여성 28칸</button></div></div>
     </div>
@@ -1927,7 +1941,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v78.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v79.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5718,7 +5732,7 @@ function renderSeatingInlinePicker(){
   var left=seatingLeadWidth()+(row.offset===0.5?28:0)+(seatingSelectedSeat.col*56);
   var top=(seatingSelectedSeat.row*50)+38;
   return '<div class="seating-inline-picker" style="left:'+left+'px;top:'+top+'px" onclick="event.stopPropagation()">'
-    +'<input id="seatingInlineSearch" value="'+escHtml(seatingInlineQuery)+'" placeholder="이름 검색" oninput="seatingInlineQuery=this.value;renderSeatingInlineList()" onkeydown="event.stopPropagation()">'
+    +'<input id="seatingInlineSearch" value="'+escHtml(seatingInlineQuery)+'" placeholder="이름 검색" oninput="seatingInlineQuery=this.value;renderSeatingInlineList()" onkeydown="handleSeatingInlineKey(event)">'
     +'<div class="seating-inline-list" id="seatingInlineList"></div>'
     +'</div>';
 }
@@ -5735,6 +5749,18 @@ function renderSeatingInlineList(){
 function pickInlineSeatingMember(id){
   if(!seatingSelectedSeat)return;
   assignMemberToSeat(id,seatingSelectedSeat.row,seatingSelectedSeat.col,true);
+}
+function handleSeatingInlineKey(event){
+  event.stopPropagation();
+  if(event.isComposing||event.key!=='Enter')return;
+  event.preventDefault();
+  var query=String(seatingInlineQuery||'').trim();
+  if(!query)return;
+  var rows=seatingInlineCandidates();
+  if(rows.length===0)return showToast('검색된 단원이 없습니다');
+  var normalized=query.replace(/\s+/g,'');
+  var exact=rows.find(function(m){return String(m.name||'').replace(/\s+/g,'')===normalized;});
+  pickInlineSeatingMember((exact||rows[0]).id);
 }
 function focusSeatingInlineSearch(){
   setTimeout(function(){
@@ -5897,11 +5923,23 @@ function shiftSelectedSeatingRow(dir){
     seats[colIndex]=null;
     seatingSelectedSeat={row:rowIndex,col:colIndex};
   }else{
-    if(colIndex>=seats.length-1)return showToast('왼쪽으로 당길 오른쪽 자리가 없습니다');
-    beginSeatingEdit();
-    for(var l=colIndex;l<seats.length-1;l++)seats[l]=seats[l+1];
-    seats[seats.length-1]=null;
-    seatingSelectedSeat={row:rowIndex,col:colIndex};
+    if(seats[colIndex]){
+      var blankIndex=-1;
+      for(var b=colIndex-1;b>=0;b--){
+        if(!seats[b]){blankIndex=b;break;}
+      }
+      if(blankIndex<0)return showToast('선택 자리 왼쪽에 빈칸이 없습니다');
+      beginSeatingEdit();
+      for(var p=blankIndex;p<colIndex;p++)seats[p]=seats[p+1];
+      seats[colIndex]=null;
+      seatingSelectedSeat={row:rowIndex,col:Math.max(blankIndex,colIndex-1)};
+    }else{
+      if(colIndex>=seats.length-1)return showToast('왼쪽으로 당길 오른쪽 자리가 없습니다');
+      beginSeatingEdit();
+      for(var l=colIndex;l<seats.length-1;l++)seats[l]=seats[l+1];
+      seats[seats.length-1]=null;
+      seatingSelectedSeat={row:rowIndex,col:colIndex};
+    }
   }
   renderSeatingMemberList();
   renderSeatingBoard();
