@@ -1097,6 +1097,33 @@ body{font-weight:500}
 .home-part-session.none{color:#8D4B45}
 .home-part-session.done .pct{color:#4E5A35}
 .home-part-session.none .pct{color:#B9655F}
+.home-seating-card{cursor:pointer}
+.home-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.home-seating-pill{font-size:11px;font-weight:750;background:#EAEFDF;color:#4E5A35;border:1px solid #C8D0B9;border-radius:999px;padding:4px 8px}
+.public-seating-modal .modal-content{max-width:960px;max-height:88vh}
+.public-seating-search{width:100%;border:1.5px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;font-weight:760;padding:11px 12px;outline:none;margin-bottom:10px}
+.public-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.public-seating-pill{font-size:11px;font-weight:850;background:var(--bg);border:1px solid var(--bd);border-radius:999px;color:var(--ts);padding:5px 8px}
+.public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
+.public-seating-board-scroll{max-height:52vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain}
+.public-seating-board{position:relative;width:max-content;min-width:100%}
+.public-seating-row{display:flex;align-items:center;height:42px;margin-bottom:8px}
+.public-seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
+.public-seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px;color:#596354}
+.public-seating-line{display:flex;gap:4px}
+.public-seating-row.offset .public-seating-line{transform:translateX(28px)}
+.public-seating-seat{width:52px;height:34px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;overflow:hidden;white-space:nowrap;padding:0 2px;color:#202018}
+.public-seating-seat.empty{background:#FFFDF8;color:#B7B09E}
+.public-seating-seat.part-S1{background:#E8B9D5}
+.public-seating-seat.part-S2{background:#9FD1D8}
+.public-seating-seat.part-T1{background:#8FC27C}
+.public-seating-seat.part-T2{background:#EDB34B}
+.public-seating-seat.part-etc{background:#D8CDB8}
+.public-seating-seat.dim{opacity:.26}
+.public-seating-seat.match{outline:3px solid #7C571E;outline-offset:1px}
+.public-seating-seat.mine{outline:3px solid #2563EB;outline-offset:1px;box-shadow:0 0 0 5px rgba(37,99,235,.14)}
+.public-seating-front{position:relative;height:62px;margin-top:12px;font-size:12px;font-weight:850;color:var(--ts)}
+.public-seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:13px 20px;font-size:14px;font-weight:900}
 @media(max-width:390px){
   .home-dashboard{padding:14px 14px 13px}
   .home-dashboard-top{grid-template-columns:minmax(0,1fr) 84px;min-height:92px;gap:8px}
@@ -1395,6 +1422,7 @@ body{font-weight:500}
         </div>
         <div class="seating-toolbar">
           <button class="btn btn-p" onclick="saveSeatingPlan()">저장</button>
+          <button class="btn" style="background:var(--p);color:#fff" onclick="publishSeatingPlan()">단원에게 공개</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="downloadSeatingImage()">이미지 저장</button>
           <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="createNewSeatingPlan()">새 배치</button>
@@ -1663,6 +1691,15 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 공개 자리배치 -->
+<div class="modal-overlay modal-center public-seating-modal" id="modalPublicSeating">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">🎚️ 찬양의밤 자리배치</span><button class="modal-close" onclick="closeModal('modalPublicSeating')">✕</button></div>
+    <input class="public-seating-search" id="publicSeatingSearch" placeholder="이름/파트 검색" oninput="publicSeatingSearch=this.value;renderPublicSeatingModalBody()">
+    <div id="publicSeatingBody"></div>
+  </div>
+</div>
+
 <!-- MODAL: 단원 활동 이력 -->
 <div class="modal-overlay modal-center" id="modalMemberSongHistory">
   <div class="modal-content">
@@ -1898,6 +1935,7 @@ var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='';
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
@@ -1969,7 +2007,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v85.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v86.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2535,6 +2573,144 @@ function refreshHomeAccessState(){
   invalidateHomeAttendanceCache();
   requestHomeRender();
 }
+function invalidatePublishedSeatingCache(){
+  publishedSeatingPlan=null;
+  publishedSeatingLoaded=false;
+  publishedSeatingPromise=null;
+}
+function getPublishedSeatingPlan(force){
+  if(!force&&publishedSeatingLoaded)return Promise.resolve(publishedSeatingPlan);
+  if(!force&&publishedSeatingPromise)return publishedSeatingPromise;
+  publishedSeatingPromise=db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){
+    var data=doc.exists?(doc.data()||{}):null;
+    if(data&&data.rows){
+      data.rows=normalizeSeatingRows(data.rows);
+      data.micSlots=normalizeSeatingMicSlots(data.micSlots||[],publicSeatingMaxSeatCount(data.rows));
+      publishedSeatingPlan=data;
+    }else{
+      publishedSeatingPlan=null;
+    }
+    publishedSeatingLoaded=true;
+    publishedSeatingPromise=null;
+    return publishedSeatingPlan;
+  }).catch(function(err){
+    publishedSeatingPromise=null;
+    throw err;
+  });
+  return publishedSeatingPromise;
+}
+function publicSeatingMaxSeatCount(rows){
+  var max=0;
+  (rows||[]).forEach(function(row){if(row.seats&&row.seats.length>max)max=row.seats.length;});
+  return max||seatingDefaultSeatCount();
+}
+function publicSeatingStats(plan){
+  var rows=plan&&Array.isArray(plan.rows)?plan.rows:[];
+  var count=0, partCounts={};
+  rows.forEach(function(row){
+    (row.seats||[]).forEach(function(seat){
+      if(seat&&seat.memberId){
+        count++;
+        var part=normalizePartName(seat.part)||'기타';
+        partCounts[part]=(partCounts[part]||0)+1;
+      }
+    });
+  });
+  return {placed:count,partCounts:partCounts};
+}
+function publicSeatingSeatLabel(rowIndex,colIndex){
+  var row=publishedSeatingPlan&&publishedSeatingPlan.rows?publishedSeatingPlan.rows[rowIndex]:null;
+  return (row&&row.label?row.label:'줄')+' '+(colIndex+1)+'번';
+}
+function publicSeatingNormalizeText(v){
+  return String(v||'').replace(/\s+/g,'').toLowerCase();
+}
+function publicSeatingIsMine(seat){
+  if(!seat||!currentUser)return false;
+  if(seat.memberId&&currentUser.id&&seat.memberId===currentUser.id)return true;
+  return publicSeatingNormalizeText(seat.name)===publicSeatingNormalizeText(currentUser.name);
+}
+function publicSeatingMatches(seat,query){
+  if(!seat||!query)return false;
+  query=publicSeatingNormalizeText(query);
+  return publicSeatingNormalizeText([seat.name,seat.part].join(' ')).indexOf(query)>-1;
+}
+function findPublicSeatingMine(plan){
+  var found=[];
+  if(!plan||!currentUser)return found;
+  (plan.rows||[]).forEach(function(row,r){
+    (row.seats||[]).forEach(function(seat,c){
+      if(publicSeatingIsMine(seat))found.push({row:r,col:c,seat:seat,label:(row.label||'줄')+' '+(c+1)+'번'});
+    });
+  });
+  return found;
+}
+function renderPublicSeatingHomeCard(plan,pending){
+  if(pending||!plan)return '';
+  var stats=publicSeatingStats(plan);
+  var mine=findPublicSeatingMine(plan);
+  var mineText=mine.length?'내 자리 '+mine.map(function(x){return x.label;}).join(', '):'이름 검색 가능';
+  return '<div class="home-card home-seating-card" onclick="openPublicSeatingModal()">'
+    +'<div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🎚️</span><span>찬양의밤 자리배치</span></div><button class="home-view-link" onclick="event.stopPropagation();openPublicSeatingModal()">보기 ›</button></div>'
+    +'<div class="home-row-main">'+escHtml(plan.title||'찬양의밤')+'</div>'
+    +'<div class="home-main-sub" style="margin-top:5px">'+escHtml([plan.date||'',plan.program||'',plan.publishedAt?('공개 '+seatingFormatHistoryTime(plan.publishedAt)):''].filter(Boolean).join(' · '))+'</div>'
+    +'<div class="home-seating-meta"><span class="home-seating-pill">배치 '+stats.placed+'명</span><span class="home-seating-pill">'+escHtml(mineText)+'</span></div>'
+    +'</div>';
+}
+function openPublicSeatingModal(){
+  getPublishedSeatingPlan(false).then(function(plan){
+    if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
+    var input=document.getElementById('publicSeatingSearch');
+    if(input)input.value=publicSeatingSearch||'';
+    renderPublicSeatingModalBody();
+    openModal('modalPublicSeating');
+  }).catch(function(err){
+    console.error(err);
+    showToast('자리배치를 불러오지 못했습니다');
+  });
+}
+function renderPublicSeatingModalBody(){
+  var box=document.getElementById('publicSeatingBody');if(!box)return;
+  var plan=publishedSeatingPlan;
+  if(!plan){box.innerHTML='<div class="home-empty-row">아직 공개된 자리배치가 없습니다</div>';return;}
+  var q=String(publicSeatingSearch||'').trim();
+  var rows=Array.isArray(plan.rows)?plan.rows:[];
+  var stats=publicSeatingStats(plan);
+  var mine=findPublicSeatingMine(plan);
+  var maxSeats=publicSeatingMaxSeatCount(rows);
+  var centerLeft=seatingLeadWidth()+(maxSeats*56/2);
+  var boardWidth=seatingLeadWidth()+(maxSeats*56)+40;
+  var mineNote=currentUser
+    ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
+    : '로그인하면 내 자리가 자동으로 강조됩니다. 지금은 이름 검색으로 확인해 주세요.';
+  var html='<div class="public-seating-meta">'
+    +'<span class="public-seating-pill">'+escHtml(plan.title||'찬양의밤')+'</span>'
+    +(plan.date?'<span class="public-seating-pill">'+escHtml(plan.date)+'</span>':'')
+    +(plan.program?'<span class="public-seating-pill">'+escHtml(plan.program)+'</span>':'')
+    +'<span class="public-seating-pill">배치 '+stats.placed+'명</span>'
+    +'</div><div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
+  html+='<div class="public-seating-board-scroll"><div class="public-seating-board" style="min-width:'+boardWidth+'px">';
+  rows.forEach(function(row,r){
+    html+='<div class="public-seating-row '+(row.offset===0.5?'offset':'')+'">'
+      +'<div class="public-seating-row-label">'+escHtml(row.label||'')+'</div>'
+      +'<div class="public-seating-row-count">'+(row.seats||[]).filter(function(s){return !!s;}).length+'</div>'
+      +'<div class="public-seating-line">';
+    (row.seats||[]).forEach(function(seat,c){
+      var mineClass=publicSeatingIsMine(seat)?' mine':'';
+      var matchClass=publicSeatingMatches(seat,q)?' match':'';
+      var dimClass=q&&seat&&!publicSeatingMatches(seat,q)&&!publicSeatingIsMine(seat)?' dim':'';
+      if(seat){
+        html+='<div class="public-seating-seat '+partClass(seat.part)+mineClass+matchClass+dimClass+'" title="'+escHtml(publicSeatingSeatLabel(r,c)+' · '+(seat.part||'')+' '+(seat.name||''))+'">'+escHtml(seat.name||'')+'</div>';
+      }else{
+        html+='<div class="public-seating-seat empty">빈칸</div>';
+      }
+    });
+    html+='</div></div>';
+  });
+  html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  html+='</div></div>';
+  box.innerHTML=html;
+}
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
   if(homeAttendanceCache.key===dateKey&&homeAttendanceCache.data&&(now-homeAttendanceCache.ts)<30000){
@@ -2707,6 +2883,7 @@ function renderHome(){
     var attendanceSection=showHomeAttendance
       ? '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>'
       : '';
+    var publicSeatingSection=renderPublicSeatingHomeCard(state.publicSeating||publishedSeatingPlan,state.publicSeatingPending);
     var adminToolsSection=homeAdminTools(hymnSongs,state);
 
     c.innerHTML=''
@@ -2720,6 +2897,7 @@ function renderHome(){
           +'<div class="home-dashboard-chip"><div class="home-row-label">그 다음 주일 '+homeDateStr(nextSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(nextSun),state.songsPending)+'</div></div>'
         +'</div>'
       +'</div>'
+      +publicSeatingSection
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
       +adminToolsSection
       +attendanceSection;
@@ -2729,7 +2907,7 @@ function renderHome(){
   var scheduleCache=allSchedules.length>0?allSchedules:loadCache('choir_schedules',600000);
   var cachedSongs=Array.isArray(songCache)?songCache:[];
   var cachedSchedules=Array.isArray(scheduleCache)?scheduleCache:[];
-  var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache};
+  var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache,publicSeatingPending:!publishedSeatingLoaded};
   var currentHomeAttendance=null;
   function latestHomeSongs(){
     return allSongs.length>0?allSongs:cachedSongs;
@@ -2737,6 +2915,9 @@ function renderHome(){
   function latestHomeSchedules(){
     var rows=allSchedules.length>0?allSchedules:cachedSchedules;
     return rows.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr});
+  }
+  function latestPublicSeating(){
+    return publishedSeatingLoaded?publishedSeatingPlan:null;
   }
   renderHomeShell(cachedSongs,latestHomeSchedules(),null,shellState);
 
@@ -2761,18 +2942,22 @@ function renderHome(){
         rows.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch)});
         return rows;
       });
+  var publicSeatingPromise=getPublishedSeatingPlan(false).catch(function(e){
+    console.error(e);
+    return null;
+  });
 
-  Promise.all([songPromise,schedulePromise]).then(function(res){
-    renderHomeShell(res[0],res[1],currentHomeAttendance);
+  Promise.all([songPromise,schedulePromise,publicSeatingPromise]).then(function(res){
+    renderHomeShell(res[0],res[1],currentHomeAttendance,{publicSeating:res[2]});
   }).catch(function(e){console.error(e)});
 
   if(showHomeAttendance){
     getHomeAttendanceData(currentSunStr).then(function(attendance){
       currentHomeAttendance=attendance;
-      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),attendance);
+      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),attendance,{publicSeating:latestPublicSeating(),publicSeatingPending:!publishedSeatingLoaded});
     }).catch(function(e){
       console.error(e);
-      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),null,shellState);
+      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),null,Object.assign({},shellState,{publicSeating:latestPublicSeating(),publicSeatingPending:!publishedSeatingLoaded}));
     });
   }
 }
@@ -2847,6 +3032,7 @@ function initSongs(){
 function refreshData(){
   showToast('새로고침 중...');
   invalidateHomeAttendanceCache();
+  invalidatePublishedSeatingCache();
   Promise.all([
     db.collection('songs').get().then(function(snap){
       allSongs=[];
@@ -2870,7 +3056,8 @@ function refreshData(){
       var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
       if(doc.exists&&doc.data().text){b.classList.remove('hidden');t.textContent=doc.data().text;saveCache('choir_notice',doc.data().text)}
       else{b.classList.add('hidden');t.textContent='';localStorage.removeItem('choir_notice')}
-    })
+    }),
+    getPublishedSeatingPlan(true)
   ]).then(function(){
     requestHomeRender();
     showToast('최신 데이터로 업데이트 완료!');
@@ -6402,6 +6589,51 @@ function toggleSeatingFullscreen(){
   setTimeout(function(){
     if(on)sub.scrollTop=0;
   },0);
+}
+function buildPublishedSeatingPlanData(){
+  var title=(document.getElementById('seatingTitle')||{}).value||'찬양의밤';
+  var date=(document.getElementById('seatingDate')||{}).value||getTodayInputDate();
+  var program=(document.getElementById('seatingProgram')||{}).value||'전체 합창';
+  var name=((document.getElementById('seatingPlanName')||{}).value||'').trim()||seatingDefaultPlanName(seatingProgramTemplateName(program));
+  var now=new Date().toISOString();
+  var stats=seatingPlacementStats();
+  return {
+    sourcePlanId:seatingPlanId||'',
+    name:name,
+    title:title.trim()||'찬양의밤',
+    date:date,
+    program:program.trim()||'전체 합창',
+    rows:cloneSeatingValue(seatingRows),
+    micSlots:cloneSeatingValue(normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount())),
+    stats:{attended:stats.attended,placed:stats.placedUnique,unplaced:stats.unplaced,duplicate:stats.dup,empty:stats.empty},
+    publishedAt:now,
+    publishedBy:currentActorName(),
+    publishedById:currentActorId(),
+    version:1
+  };
+}
+function publishSeatingPlan(){
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
+  if(!seatingRows.length)return showToast('공개할 배치가 없습니다');
+  var stats=seatingPlacementStats();
+  var msg='현재 자리배치를 일반 단원에게 공개할까요?';
+  if(seatingDirty)msg+='\n저장하지 않은 수정 내용도 그대로 공개됩니다.';
+  if(stats.unplaced>0)msg+='\n미배치 '+stats.unplaced+'명이 있습니다.';
+  if(!confirm(msg))return;
+  var data=buildPublishedSeatingPlanData();
+  showToast('자리배치를 공개하는 중...');
+  db.collection('settings').doc('publishedSeatingPlan').set(data).then(function(){
+    publishedSeatingPlan=cloneSeatingValue(data);
+    publishedSeatingLoaded=true;
+    publishedSeatingPromise=null;
+    publicSeatingSearch='';
+    writeLog('찬양의밤 자리배치 공개',data.date+' '+data.program+' 배치 공개');
+    requestHomeRender();
+    showToast('단원에게 자리배치를 공개했습니다');
+  }).catch(function(err){
+    console.error(err);
+    showToast('공개 중 오류가 발생했습니다');
+  });
 }
 function saveSeatingPlan(){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
