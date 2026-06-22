@@ -1935,7 +1935,8 @@ var PERMISSION_GROUPS=[
   ]},
   {title:'관리 도구',items:[
     {key:'notice.manage',label:'공지 관리',desc:'상단 공지 저장/삭제'},
-    {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'}
+    {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'},
+    {key:'seating.manage',label:'찬양의밤 자리배치',desc:'찬양의밤 자리배치 보기, 편집, 저장'}
   ]}
 ];
 var PERMISSION_LABELS={};
@@ -1968,7 +1969,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v84.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v85.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -2156,7 +2157,7 @@ function canUseReport(){
   return adminRole==='admin';
 }
 function canUseSeatingPlan(){
-  return adminRole==='admin';
+  return adminRole==='admin'||hasPermission('seating.manage');
 }
 function canUseSongRecommend(){
   return adminRole==='admin'||hasPermission('song.recommend');
@@ -2286,7 +2287,7 @@ function switchAdminTab(sub){
     return;
   }
   if(sub==='seatingPlan'&&!canUseSeatingPlan()){
-    showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+    showToast('찬양의밤 자리배치 권한이 필요합니다.');
     return;
   }
   if(sub==='members'&&!canManageLoginAccounts()&&!canManageAccountPermissions()){
@@ -5603,7 +5604,7 @@ function loadSeatingPlans(){
   });
 }
 function initSeatingPlanTool(){
-  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
   var list=document.getElementById('seatingMemberList');
   if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>명단 불러오는 중...</div>';
   loadSeatingMembers().then(function(){return loadSeatingPlans();}).then(function(){
@@ -6403,7 +6404,7 @@ function toggleSeatingFullscreen(){
   },0);
 }
 function saveSeatingPlan(){
-  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
   var name=((document.getElementById('seatingPlanName')||{}).value||'').trim();
   if(!name){
     var nameInput=document.getElementById('seatingPlanName');
@@ -6469,7 +6470,7 @@ function saveSeatingPlan(){
   });
 }
 function deleteSeatingPlan(){
-  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치는 관리자만 이용할 수 있습니다.');
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
   if(!seatingPlanId)return showToast('삭제할 저장 배치를 먼저 선택해주세요');
   var plan=seatingPlans.find(function(p){return p.id===seatingPlanId;});
   var label=plan?(plan.name||plan.planName||plan.title||'선택한 배치'):'선택한 배치';
