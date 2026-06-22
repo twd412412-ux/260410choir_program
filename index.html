@@ -1951,7 +1951,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v82.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v83.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5802,7 +5802,7 @@ function selectSeatingMember(id){
     return;
   }
   if(seatingSelectedSeat){
-    assignMemberToSeat(id,seatingSelectedSeat.row,seatingSelectedSeat.col);
+    assignMemberToSeat(id,seatingSelectedSeat.row,seatingSelectedSeat.col,true);
     return;
   }
   seatingSelectedMemberId=id;
@@ -5969,7 +5969,7 @@ function focusSeatingMemberSearchForSeat(){
 }
 function handleSeatingSeatClick(row,col){
   if(seatingSelectedMemberId){
-    assignMemberToSeat(seatingSelectedMemberId,row,col);
+    assignMemberToSeat(seatingSelectedMemberId,row,col,true);
     return;
   }
   if(seatingSelectedSeat&&seatingSelectedSeat.row===row&&seatingSelectedSeat.col===col){
