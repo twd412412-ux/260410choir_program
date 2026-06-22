@@ -118,11 +118,16 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-part-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .seating-part-chip{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;cursor:pointer}
 .seating-part-chip.on{background:var(--p);border-color:var(--p);color:#fff}
+.seating-submission-bar{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px}
+.seating-submit-chip{border:1px solid var(--bd);background:var(--bg);color:var(--ts);border-radius:999px;padding:5px 8px;font-size:10px;font-weight:850;cursor:pointer}
+.seating-submit-chip.done{background:var(--p);border-color:var(--p);color:#fff}
+.seating-lock-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);font-size:11px;font-weight:800;color:var(--ts)}
 .seating-member-list{max-height:455px;overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--bg)}
 .seating-member{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
 .seating-member:last-child{border-bottom:none}
 .seating-member.on{background:var(--pl);color:var(--pd);font-weight:850}
 .seating-member.placed{opacity:.72}
+.seating-member.locked{background:#F1ECE2}
 .seating-member input{width:16px;height:16px}
 .seating-member-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seating-member-meta{font-size:10px;color:var(--ts);font-weight:700}
@@ -162,17 +167,20 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
 .seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
-#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow:hidden;height:100dvh;display:flex;flex-direction:column}
+#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow-x:hidden;overflow-y:auto;height:100dvh;display:flex;flex-direction:column;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #subSeatingPlan.seating-fullscreen>.seating-stage-head{flex:0 0 auto;margin-bottom:8px}
 #subSeatingPlan.seating-fullscreen>.seating-stage-head>div>div{display:none}
 #subSeatingPlan.seating-fullscreen>.seating-plan-row,#subSeatingPlan.seating-fullscreen>.seating-program-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;margin:0 0 6px!important;flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen>.seating-name-row{display:none!important}
+#subSeatingPlan.seating-fullscreen>.seating-name-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;margin:0 0 6px!important;flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .form-label{font-size:10px;margin-bottom:3px}
 #subSeatingPlan.seating-fullscreen .form-input,#subSeatingPlan.seating-fullscreen .form-sel{font-size:12px;padding:8px 10px;min-height:38px}
 #subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;gap:8px}
 #subSeatingPlan.seating-fullscreen .seating-panel{display:block;flex:0 0 auto;padding:8px}
 #subSeatingPlan.seating-fullscreen .seating-panel>div:first-child,#subSeatingPlan.seating-fullscreen .seating-status{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-member-search{margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-submission-bar{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
+#subSeatingPlan.seating-fullscreen .seating-submit-chip{flex:0 0 auto}
+#subSeatingPlan.seating-fullscreen .seating-lock-row{margin-bottom:6px;padding:6px}
 #subSeatingPlan.seating-fullscreen .seating-part-filter{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
 #subSeatingPlan.seating-fullscreen .seating-part-chip{flex:0 0 auto;padding:5px 9px}
 #subSeatingPlan.seating-fullscreen .seating-member-list{max-height:52px}
@@ -1347,10 +1355,12 @@ body{font-weight:500}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
           <div style="font-size:15px;font-weight:900">참석 단원</div>
           <div style="display:flex;gap:4px">
-            <button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="markAllSeatingAttendees(true)">전체</button>
-            <button class="btn btn-sm" style="background:var(--bg);color:var(--ts)" onclick="markAllSeatingAttendees(false)">해제</button>
+            <button class="btn btn-sm" id="seatingMarkAllBtn" style="background:var(--pl);color:var(--pd)" onclick="markAllSeatingAttendees(true)">전체</button>
+            <button class="btn btn-sm" id="seatingClearAllBtn" style="background:var(--bg);color:var(--ts)" onclick="markAllSeatingAttendees(false)">해제</button>
           </div>
         </div>
+        <div class="seating-submission-bar" id="seatingSubmissionBar"></div>
+        <div class="seating-lock-row" id="seatingLockRow"></div>
         <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
         <div class="seating-part-filter" id="seatingPartFilter"></div>
         <div id="seatingMemberList" class="seating-member-list"><div class="loading"><div class="spinner"></div>명단 불러오는 중...</div></div>
@@ -1876,9 +1886,9 @@ var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
-var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[];
+var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[], seatingPartSubmissions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all';
-var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
+var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingAttendeesLocked=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
 var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false;
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var scheduleEditId='';
@@ -1941,7 +1951,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v80.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v81.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5298,6 +5308,47 @@ function isSeatingEligibleMember(d){
 function seatingPartOrder(){
   return ['S1','S2','T1','T2'];
 }
+function defaultSeatingPartSubmissions(){
+  var out={};
+  seatingPartOrder().forEach(function(part){out[part]={submitted:false};});
+  return out;
+}
+function normalizeSeatingPartSubmissions(value){
+  var out=defaultSeatingPartSubmissions();
+  if(value&&typeof value==='object'){
+    seatingPartOrder().forEach(function(part){
+      var raw=value[part];
+      if(raw===true)out[part]={submitted:true};
+      else if(raw&&typeof raw==='object'){
+        out[part]={
+          submitted:!!raw.submitted,
+          submittedAt:raw.submittedAt||'',
+          submittedBy:raw.submittedBy||'',
+          submittedCount:raw.submittedCount||0
+        };
+      }
+    });
+  }
+  return out;
+}
+function isSeatingPartSubmitted(part){
+  part=normalizePartName(part);
+  var info=seatingPartSubmissions&&seatingPartSubmissions[part];
+  return !!(info&&info.submitted);
+}
+function seatingPartAttendeeCount(part){
+  return seatingMembers.filter(function(m){return m.part===part&&seatingAttendees[m.id];}).length;
+}
+function seatingPartMemberCount(part){
+  return seatingMembers.filter(function(m){return m.part===part;}).length;
+}
+function isSeatingMemberAttendanceLocked(member){
+  if(seatingAttendeesLocked)return true;
+  return !!(member&&isSeatingPartSubmitted(member.part));
+}
+function seatingSubmissionCompleteCount(){
+  return seatingPartOrder().filter(function(part){return isSeatingPartSubmitted(part);}).length;
+}
 function seatingLeadWidth(){
   return 61;
 }
@@ -5428,6 +5479,8 @@ function seatingSnapshot(){
     date:seatingInputValue('seatingDate'),
     program:seatingInputValue('seatingProgram'),
     attendees:cloneSeatingValue(seatingAttendees),
+    attendeesLocked:seatingAttendeesLocked,
+    partSubmissions:cloneSeatingValue(seatingPartSubmissions),
     rows:cloneSeatingValue(seatingRows),
     micSlots:cloneSeatingValue(seatingMicSlots),
     selectedSeat:seatingSelectedSeat?cloneSeatingValue(seatingSelectedSeat):null,
@@ -5440,6 +5493,8 @@ function seatingSnapshot(){
 function applySeatingSnapshot(snap,keepDirty){
   seatingPlanId=snap.planId||'';
   seatingAttendees=cloneSeatingValue(snap.attendees||{});
+  seatingAttendeesLocked=!!snap.attendeesLocked;
+  seatingPartSubmissions=normalizeSeatingPartSubmissions(cloneSeatingValue(snap.partSubmissions||{}));
   seatingRows=normalizeSeatingRows(cloneSeatingValue(snap.rows||[]));
   seatingMicSlots=normalizeSeatingMicSlots(cloneSeatingValue(snap.micSlots||[]),seatingMaxSeatCount());
   seatingSelectedSeat=snap.selectedSeat||null;
@@ -5551,6 +5606,8 @@ function createNewSeatingPlan(silent,skipConfirm){
   seatingMicSlots=defaultSeatingMicSlots(seatingDefaultSeatCount());
   seatingAttendees={};
   seatingMembers.forEach(function(m){seatingAttendees[m.id]=true;});
+  seatingAttendeesLocked=false;
+  seatingPartSubmissions=defaultSeatingPartSubmissions();
   seatingSelectedMemberId='';
   seatingSelectedSeat=null;
   seatingPartFilter='all';
@@ -5576,6 +5633,8 @@ function applySeatingPlan(plan){
   seatingRows=normalizeSeatingRows(plan.rows);
   seatingMicSlots=normalizeSeatingMicSlots(plan.micSlots,seatingMaxSeatCount());
   seatingAttendees={};
+  seatingAttendeesLocked=!!(plan.attendeesLocked||plan.attendanceLocked);
+  seatingPartSubmissions=normalizeSeatingPartSubmissions(plan.partSubmissions||plan.submissions||{});
   if(plan.attendees&&typeof plan.attendees==='object'){
     Object.keys(plan.attendees).forEach(function(id){seatingAttendees[id]=!!plan.attendees[id];});
   }
@@ -5636,13 +5695,20 @@ function partClass(part){
   return 'part-etc';
 }
 function markAllSeatingAttendees(value){
+  if(seatingAttendeesLocked)return showToast('참석명단이 고정되어 있습니다. 고정 해제 후 수정하세요');
   beginSeatingEdit();
-  seatingMembers.forEach(function(m){seatingAttendees[m.id]=!!value;});
-  if(!value)seatingRows.forEach(function(row){row.seats=row.seats.map(function(){return null;});});
+  var lockedMap={};
+  seatingMembers.forEach(function(m){
+    if(isSeatingMemberAttendanceLocked(m)){lockedMap[m.id]=true;return;}
+    seatingAttendees[m.id]=!!value;
+  });
+  if(!value)seatingRows.forEach(function(row){row.seats=row.seats.map(function(seat){return seat&&lockedMap[seat.memberId]?seat:null;});});
   renderSeatingMemberList();
   renderSeatingBoard();
 }
 function toggleSeatingAttendee(id,checked){
+  var member=seatingMembers.find(function(m){return m.id===id;});
+  if(isSeatingMemberAttendanceLocked(member))return showToast((member&&member.part?member.part+' ':'')+'참석명단이 제출완료/고정 상태입니다');
   beginSeatingEdit();
   seatingAttendees[id]=!!checked;
   if(!checked){
@@ -5673,6 +5739,46 @@ function renderSeatingPartFilter(){
   html+='<button class="seating-part-chip '+(seatingUnplacedOnly?'on':'')+'" onclick="toggleSeatingUnplacedFilter()">미배치 '+unplaced+'</button>';
   box.innerHTML=html;
 }
+function renderSeatingSubmissionState(){
+  seatingPartSubmissions=normalizeSeatingPartSubmissions(seatingPartSubmissions);
+  var bar=document.getElementById('seatingSubmissionBar');
+  if(bar){
+    bar.innerHTML=seatingPartOrder().map(function(part){
+      var info=seatingPartSubmissions[part]||{};
+      var count=seatingPartAttendeeCount(part);
+      var total=seatingPartMemberCount(part);
+      return '<button class="seating-submit-chip '+(info.submitted?'done':'')+'" onclick="toggleSeatingPartSubmission(\''+part+'\')" title="'+(info.submitted?'제출완료 해제':'이 파트 참석명단 제출완료')+'">'+part+' '+(info.submitted?'제출완료':'미제출')+' '+count+'/'+total+'</button>';
+    }).join('');
+  }
+  var row=document.getElementById('seatingLockRow');
+  if(row){
+    row.innerHTML='<span>파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+' · '+(seatingAttendeesLocked?'전체 명단 고정 중':'전체 명단 수정 가능')+'</span>'
+      +'<button class="btn btn-sm" style="background:'+(seatingAttendeesLocked?'var(--bg)':'var(--p)')+';color:'+(seatingAttendeesLocked?'var(--ts)':'#fff')+'" onclick="toggleSeatingAttendeesLocked()">'+(seatingAttendeesLocked?'고정 해제':'명단 고정')+'</button>';
+  }
+  var allBtn=document.getElementById('seatingMarkAllBtn');
+  var clearBtn=document.getElementById('seatingClearAllBtn');
+  if(allBtn)allBtn.disabled=!!seatingAttendeesLocked;
+  if(clearBtn)clearBtn.disabled=!!seatingAttendeesLocked;
+}
+function toggleSeatingPartSubmission(part){
+  part=normalizePartName(part);
+  if(seatingPartOrder().indexOf(part)===-1)return;
+  beginSeatingEdit();
+  var current=seatingPartSubmissions[part]||{};
+  seatingPartSubmissions[part]=current.submitted
+    ? {submitted:false}
+    : {submitted:true,submittedAt:new Date().toISOString(),submittedBy:currentActorName(),submittedCount:seatingPartAttendeeCount(part)};
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast(part+(seatingPartSubmissions[part].submitted?' 참석명단 제출완료':' 제출완료 해제'));
+}
+function toggleSeatingAttendeesLocked(){
+  beginSeatingEdit();
+  seatingAttendeesLocked=!seatingAttendeesLocked;
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast(seatingAttendeesLocked?'참석명단을 고정했습니다':'참석명단 고정을 해제했습니다');
+}
 function selectSeatingMember(id){
   if(!seatingAttendees[id])return showToast('참석 체크된 단원만 배치할 수 있습니다');
   if(seatingSelectedMemberId===id){
@@ -5690,6 +5796,7 @@ function selectSeatingMember(id){
 function renderSeatingMemberList(){
   var list=document.getElementById('seatingMemberList');if(!list)return;
   renderSeatingPartFilter();
+  renderSeatingSubmissionState();
   var q=(document.getElementById('seatingMemberSearch')||{}).value||'';
   q=q.trim().toLowerCase();
   var assigned=seatingAssignedMap();
@@ -5707,9 +5814,10 @@ function renderSeatingMemberList(){
     var checked=!!seatingAttendees[m.id];
     var on=seatingSelectedMemberId===m.id;
     var placed=!!assigned[m.id];
-    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
-      +'<input type="checkbox" '+(checked?'checked':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
-      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+'</span></div>'
+    var locked=isSeatingMemberAttendanceLocked(m);
+    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(locked?'locked':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
+      +'<input type="checkbox" '+(checked?'checked':'')+(locked?' disabled':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
+      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(locked?' · 고정':'')+'</span></div>'
       +'</div>';
   }).join('');
 }
@@ -5834,6 +5942,8 @@ function renderSeatingSummary(){
     +'<span class="seating-chip">배치 '+placedUnique+'명</span>'
     +'<span class="seating-chip">미배치 '+unplaced+'명</span>'
     +'<span class="seating-chip">중복 '+dup+'명</span>'
+    +'<span class="seating-chip">파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+'</span>'
+    +(seatingAttendeesLocked?'<span class="seating-chip">명단 고정</span>':'')
     +'<span class="seating-chip">마이크 '+seatingMicSlots.filter(function(v){return !!v;}).length+'개</span>'
     +'<span class="seating-chip">빈칸 '+empty+'칸</span>';
   var status=document.getElementById('seatingStatus');
@@ -6036,8 +6146,7 @@ function toggleSeatingFullscreen(){
   document.body.classList.toggle('seating-fullscreen',on);
   if(btn)btn.textContent=on?'전체 화면 닫기':'전체 화면';
   setTimeout(function(){
-    var scroller=document.querySelector('#subSeatingPlan .seating-board-scroll');
-    if(scroller)scroller.focus&&scroller.focus();
+    if(on)sub.scrollTop=0;
   },0);
 }
 function saveSeatingPlan(){
@@ -6057,6 +6166,8 @@ function saveSeatingPlan(){
     date:date,
     program:program.trim()||'전체 합창',
     attendees:seatingAttendees,
+    attendeesLocked:seatingAttendeesLocked,
+    partSubmissions:normalizeSeatingPartSubmissions(seatingPartSubmissions),
     rows:seatingRows,
     micSlots:seatingMicSlots,
     updatedAt:new Date().toISOString(),
