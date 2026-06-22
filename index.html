@@ -183,7 +183,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 #subSeatingPlan.seating-fullscreen .seating-lock-row{margin-bottom:6px;padding:6px}
 #subSeatingPlan.seating-fullscreen .seating-part-filter{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
 #subSeatingPlan.seating-fullscreen .seating-part-chip{flex:0 0 auto;padding:5px 9px}
-#subSeatingPlan.seating-fullscreen .seating-member-list{max-height:52px}
+#subSeatingPlan.seating-fullscreen .seating-member-list{height:clamp(96px,18dvh,160px);max-height:none}
 #subSeatingPlan.seating-fullscreen .seating-stage-card{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:10px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
@@ -1951,7 +1951,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v81.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v82.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
@@ -5363,6 +5363,21 @@ function seatingTemplateInfo(type){
   };
   return map[type]||map.full;
 }
+function seatingProgramTemplateName(program){
+  program=String(program||'');
+  if(program.indexOf('남성')>-1)return '남성합창';
+  if(program.indexOf('여성')>-1)return '여성합창';
+  return '전체합창';
+}
+function seatingDefaultPlanName(templateName){
+  var title=String(seatingInputValue('seatingTitle')||'찬양의밤').trim()||'찬양의밤';
+  return title+' '+(templateName||'전체합창');
+}
+function shouldReplaceSeatingPlanName(name){
+  name=String(name||'').trim();
+  if(!name)return true;
+  return /(전체합창|남성합창|여성합창)$/.test(name);
+}
 function seatingBaseRowLabel(i){
   var base=['3단','2단','1단','0단'];
   return base[i]||('0단앞'+(i>4?String(i-3):''));
@@ -5583,7 +5598,7 @@ function renderSeatingPlanSelect(){
   var sel=document.getElementById('seatingPlanSelect');if(!sel)return;
   var html='<option value="">새 배치 만들기</option>';
   seatingPlans.forEach(function(plan){
-    var title=(plan.name||plan.planName||plan.title||'이름 없는 배치')+(plan.program?' · '+plan.program:'')+(plan.date?' · '+plan.date:'');
+    var title=(plan.name||plan.planName||plan.title||plan.program||'이름 없는 배치')+(plan.date?' · '+plan.date:'');
     html+='<option value="'+escHtml(plan.id)+'">'+escHtml(title)+'</option>';
   });
   sel.innerHTML=html;
@@ -5677,7 +5692,7 @@ function applySeatingTemplate(type){
   var program=document.getElementById('seatingProgram');
   var name=document.getElementById('seatingPlanName');
   if(program)program.value=t.program;
-  if(name&&!name.value.trim())name.value=(seatingInputValue('seatingTitle')||'찬양의밤')+' '+t.name;
+  if(name&&shouldReplaceSeatingPlanName(name.value))name.value=seatingDefaultPlanName(t.name);
   renderSeatingMemberList();
   renderSeatingBoard();
   showToast(t.name+' 템플릿을 적용했습니다');
@@ -6154,8 +6169,10 @@ function saveSeatingPlan(){
   var name=((document.getElementById('seatingPlanName')||{}).value||'').trim();
   if(!name){
     var nameInput=document.getElementById('seatingPlanName');
-    if(nameInput)nameInput.focus();
-    return showToast('배치 이름을 입력해주세요');
+    var programName=seatingProgramTemplateName((document.getElementById('seatingProgram')||{}).value||'');
+    name=seatingDefaultPlanName(programName);
+    if(nameInput)nameInput.value=name;
+    showToast('배치 이름을 자동 입력했습니다');
   }
   var title=(document.getElementById('seatingTitle')||{}).value||'찬양의밤';
   var date=(document.getElementById('seatingDate')||{}).value||getTodayInputDate();
@@ -6200,7 +6217,7 @@ function deleteSeatingPlan(){
   if(!seatingPlanId)return showToast('삭제할 저장 배치를 먼저 선택해주세요');
   var plan=seatingPlans.find(function(p){return p.id===seatingPlanId;});
   var label=plan?(plan.name||plan.planName||plan.title||'선택한 배치'):'선택한 배치';
-  if(!confirm(label+'을 삭제할까요?\\n삭제 후에는 저장된 배치를 되돌릴 수 없습니다.'))return;
+  if(!confirm(label+'을 삭제할까요?\n삭제 후에는 저장된 배치를 되돌릴 수 없습니다.'))return;
   var deletedId=seatingPlanId;
   seatingPlans=seatingPlans.filter(function(p){return p.id!==deletedId;});
   showToast('저장 배치 삭제 중...');
