@@ -112,8 +112,22 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .dark .perm-badge.scope{background:#2D3729;color:#D6E0CD;border-color:#49553F}
 .seating-tool{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px}
 .seating-panel,.seating-stage-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:var(--sh);min-width:0}
-.seating-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
-.seating-toolbar .btn{padding:8px 10px;font-size:12px}
+.seating-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.seating-toolbar-main{display:flex;gap:8px;flex-wrap:wrap;min-width:0;flex:1 1 520px}
+.seating-toolbar-publish{display:flex;align-items:flex-start;justify-content:flex-end;flex:0 0 auto}
+.seating-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:6px;border:1px solid var(--line);border-radius:10px;background:rgba(255,253,248,.64)}
+.dark .seating-toolbar-group{background:rgba(29,33,27,.58)}
+.seating-toolbar-group.danger{border-color:#E7C5C1;background:#FFF7F5}
+.dark .seating-toolbar-group.danger{border-color:#653C37;background:#33211F}
+.seating-toolbar-group.publish{border-color:#CAD8BD;background:#F4F8EE}
+.dark .seating-toolbar-group.publish{border-color:#4E6040;background:#253021}
+.seating-toolbar-label{font-size:10px;font-weight:900;color:var(--ts);padding:0 4px;white-space:nowrap}
+.seating-toolbar .btn{padding:7px 10px;font-size:12px;white-space:nowrap}
+.seating-btn-soft{background:var(--pl);color:var(--pd)}
+.seating-btn-publish{background:#6F7D4E;color:#fff;box-shadow:0 0 0 2px rgba(111,125,78,.12)}
+.seating-btn-publish:hover{background:#59663D}
+.seating-btn-danger-soft{background:#F3E2DE;color:#9A4C45}
+.dark .seating-btn-danger-soft{background:#4A2A27;color:#F2C7C1}
 .seating-member-search{margin-bottom:8px}
 .seating-part-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .seating-part-chip{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;cursor:pointer}
@@ -203,6 +217,9 @@ body.admin-tab-active .att-save-float{bottom:84px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
 #subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
+#subSeatingPlan.seating-fullscreen .seating-toolbar-main{flex:0 0 auto;flex-wrap:nowrap}
+#subSeatingPlan.seating-fullscreen .seating-toolbar-group{flex:0 0 auto;flex-wrap:nowrap}
+#subSeatingPlan.seating-fullscreen .seating-toolbar-publish{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-toolbar .btn{flex:0 0 auto;padding:7px 9px}
 #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;flex:1 1 auto;min-height:320px;padding:20px 12px 56px}
 #subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 auto}
@@ -210,6 +227,10 @@ body.seating-fullscreen{overflow:hidden}
 body.seating-fullscreen .bottom-nav{display:none!important}
 @media(max-width:760px){
   .seating-tool{grid-template-columns:1fr}
+  .seating-toolbar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+  .seating-toolbar-main{flex:0 0 auto;flex-wrap:nowrap}
+  .seating-toolbar-group{flex:0 0 auto;flex-wrap:nowrap}
+  .seating-toolbar-publish{flex:0 0 auto}
   .seating-member-list{max-height:220px}
   .seating-board-scroll{height:480px}
   #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
@@ -1420,20 +1441,36 @@ body{font-weight:500}
             <button class="btn btn-sm" onclick="changeSeatingZoom(0.1)">+</button>
           </div>
         </div>
-        <div class="seating-toolbar">
-          <button class="btn btn-p" onclick="saveSeatingPlan()">저장</button>
-          <button class="btn" style="background:var(--p);color:#fff" onclick="publishSeatingPlan()">단원에게 공개</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="downloadSeatingImage()">이미지 저장</button>
-          <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="createNewSeatingPlan()">새 배치</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="undoSeatingChange()">되돌리기</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="redoSeatingChange()">앞돌리기</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="insertBlankSeat()">빈칸 추가</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="addSeatingRow()">줄 추가</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="removeSelectedSeatingRow()">줄 제거</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
-          <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
-          <button class="btn btn-d" onclick="clearSelectedSeat()">선택 비우기</button>
+        <div class="seating-toolbar" aria-label="자리배치 작업">
+          <div class="seating-toolbar-main">
+            <div class="seating-toolbar-group">
+              <span class="seating-toolbar-label">배치</span>
+              <button class="btn btn-p" onclick="saveSeatingPlan()">저장</button>
+              <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
+              <button class="btn seating-btn-soft" onclick="downloadSeatingImage()">이미지 저장</button>
+            </div>
+            <div class="seating-toolbar-group">
+              <span class="seating-toolbar-label">편집</span>
+              <button class="btn seating-btn-soft" onclick="undoSeatingChange()">되돌리기</button>
+              <button class="btn seating-btn-soft" onclick="redoSeatingChange()">앞돌리기</button>
+              <button class="btn seating-btn-soft" onclick="insertBlankSeat()">빈칸 추가</button>
+              <button class="btn seating-btn-soft" onclick="addSeatingRow()">줄 추가</button>
+              <button class="btn seating-btn-soft" onclick="removeSelectedSeatingRow()">줄 제거</button>
+              <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
+              <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
+            </div>
+            <div class="seating-toolbar-group danger">
+              <span class="seating-toolbar-label">정리</span>
+              <button class="btn seating-btn-danger-soft" onclick="clearSelectedSeat()">선택 비우기</button>
+              <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
+            </div>
+          </div>
+          <div class="seating-toolbar-publish">
+            <div class="seating-toolbar-group publish">
+              <span class="seating-toolbar-label">공개</span>
+              <button class="btn seating-btn-publish" onclick="publishSeatingPlan()">단원에게 공개</button>
+            </div>
+          </div>
         </div>
         <div class="seating-board-scroll">
           <div class="seating-board" id="seatingBoard"></div>
@@ -2007,7 +2044,7 @@ function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.doc
 function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v86.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw-v87.js',{scope:'./',updateViaCache:'none'}).catch(function(){})}
 
 // ==================== 모달 ====================
 function isMemberAddOpen(){
