@@ -2,7 +2,9 @@
 
 일반 단원이 스마트폰으로 찬양곡과 일정을 확인할 때 쓰는 기본 안내서입니다.
 
-확인 기준: `main` 커밋 `7700d46912731412befb021ea726bf0ffbdd76df`, 배포 링크 https://twd412412-ux.github.io/260410choir_program/
+기능 확인 기준: `main` 커밋 `7700d46912731412befb021ea726bf0ffbdd76df`, 배포 링크 https://twd412412-ux.github.io/260410choir_program/
+
+설명서 작성 기준: `main` 커밋 `367bec48a20656738f486bcdb2782080acf65949`
 
 ## 1. 앱 접속하기
 
