@@ -4,7 +4,7 @@
 
 기능 확인 기준: `main` 커밋 `7700d46912731412befb021ea726bf0ffbdd76df`, 배포 링크 https://twd412412-ux.github.io/260410choir_program/
 
-설명서 작성 기준: `main` 커밋 `367bec48a20656738f486bcdb2782080acf65949`
+설명서 작성 기준: 2026년 6월 22일, `USER_GUIDE.md`
 
 ## 1. 앱 접속하기
 
