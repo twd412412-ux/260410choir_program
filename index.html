@@ -169,7 +169,9 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-submission-bar{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px}
 .seating-submit-chip{border:1px solid var(--bd);background:var(--bg);color:var(--ts);border-radius:999px;padding:5px 8px;font-size:10px;font-weight:850;cursor:pointer}
 .seating-submit-chip.done{background:var(--p);border-color:var(--p);color:#fff}
+.seating-submit-chip:disabled{opacity:.48;cursor:not-allowed}
 .seating-lock-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);font-size:11px;font-weight:800;color:var(--ts)}
+.seating-lock-note{font-size:11px;font-weight:850;color:var(--ts);white-space:nowrap}
 .seating-member-list{max-height:455px;overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--bg)}
 .seating-member{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
 .seating-member:last-child{border-bottom:none}
@@ -2068,7 +2070,7 @@ var PERMISSION_GROUPS=[
   {title:'관리 도구',items:[
     {key:'notice.manage',label:'공지 관리',desc:'상단 공지 저장/삭제'},
     {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'},
-    {key:'seating.manage',label:'찬양의밤 자리배치',desc:'찬양의밤 자리배치 보기, 편집, 저장'}
+    {key:'seating.manage',label:'찬양의밤 자리배치',desc:'배치도 보기/편집/저장. 파트 제출과 명단 고정은 담당 범위/관리자 권한을 따름'}
   ]}
 ];
 var PERMISSION_LABELS={};
@@ -3541,7 +3543,7 @@ function accountFeatureLabels(perms){
   if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
   if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1||perms.indexOf('account.manage')>-1)labels.push('명부');
   if(perms.indexOf('archive.view')>-1||perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1)labels.push('아카이브');
-  if(perms.indexOf('notice.manage')>-1||perms.indexOf('song.recommend')>-1)labels.push('도구');
+  if(perms.indexOf('notice.manage')>-1||perms.indexOf('song.recommend')>-1||perms.indexOf('seating.manage')>-1)labels.push('도구');
   return labels;
 }
 
@@ -3612,7 +3614,7 @@ function renderPermissionEditor(preset, permissions, scope){
     html+='</div>';
   });
   html+='</div>';
-  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">출결 담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">권한을 받은 사람이 직접 범위를 바꾸는 것이 아니라, 관리자가 여기서 지정한 범위만 열립니다.</div><div class="perm-scope-grid">';
+  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">출결 체크와 찬양의밤 파트 제출에서 여기서 지정한 범위만 열립니다. 비워두면 계정의 파트를 기본 범위로 사용합니다.</div><div class="perm-scope-grid">';
   ATTENDANCE_SCOPE_OPTIONS.forEach(function(opt){
     html+='<label class="perm-scope-item"><input type="checkbox" class="perm-scope-input" value="'+escHtml(opt.key)+'" '+(scope.indexOf(opt.key)>-1?'checked':'')+'><span>'+escHtml(opt.label)+'</span></label>';
   });
@@ -3661,7 +3663,7 @@ function syncAttendanceScopeVisibility(){
   var box=document.getElementById('attendanceScopeBox');
   if(!box)return;
   var perms=readPermissionEditorChecks();
-  var needs=perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1;
+  var needs=perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1||perms.indexOf('seating.manage')>-1;
   box.style.display=needs?'block':'none';
 }
 
@@ -5673,6 +5675,37 @@ function isSeatingPartSubmitted(part){
   var info=seatingPartSubmissions&&seatingPartSubmissions[part];
   return !!(info&&info.submitted);
 }
+function seatingSubmissionScopeParts(){
+  if(adminRole==='admin')return seatingPartOrder();
+  if(!currentUser)return [];
+  var scope=Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length
+    ? normalizeAttendanceScopeArray(currentUser.attendanceScope)
+    : scopeFromAccountPart(currentUser.part);
+  var expanded=expandAttendanceScope(scope);
+  if(expanded.indexOf('ALL')>-1||expanded.indexOf('all')>-1)return seatingPartOrder();
+  return uniqueArray(expanded.map(normalizePartName)).filter(function(part){
+    return seatingPartOrder().indexOf(part)>-1;
+  });
+}
+function canSubmitSeatingPart(part){
+  part=normalizePartName(part);
+  if(adminRole==='admin')return true;
+  return seatingSubmissionScopeParts().indexOf(part)>-1;
+}
+function canToggleSeatingPartSubmission(part){
+  part=normalizePartName(part);
+  if(seatingPartOrder().indexOf(part)===-1)return false;
+  if(adminRole==='admin')return true;
+  if(isSeatingPartSubmitted(part))return false;
+  return canSubmitSeatingPart(part);
+}
+function seatingPartSubmissionTitle(part){
+  part=normalizePartName(part);
+  if(adminRole==='admin')return isSeatingPartSubmitted(part)?part+' 제출완료 해제':'관리자 권한으로 '+part+' 제출완료';
+  if(!canSubmitSeatingPart(part))return part+' 제출 권한이 없습니다';
+  if(isSeatingPartSubmitted(part))return '제출완료 해제는 관리자만 가능합니다';
+  return part+' 참석명단을 제출완료로 확정합니다';
+}
 function seatingPartAttendeeCount(part){
   return seatingMembers.filter(function(m){return m.part===part&&seatingAttendees[m.id];}).length;
 }
@@ -5682,6 +5715,17 @@ function seatingPartMemberCount(part){
 function isSeatingMemberAttendanceLocked(member){
   if(seatingAttendeesLocked)return true;
   return !!(member&&isSeatingPartSubmitted(member.part));
+}
+function canEditSeatingMemberAttendance(member){
+  if(!member)return false;
+  if(isSeatingMemberAttendanceLocked(member))return false;
+  if(adminRole==='admin')return true;
+  return canSubmitSeatingPart(member.part);
+}
+function canEditAnySeatingAttendance(){
+  if(seatingAttendeesLocked)return false;
+  if(adminRole==='admin')return true;
+  return seatingMembers.some(function(m){return canEditSeatingMemberAttendance(m);});
 }
 function seatingSubmissionCompleteCount(){
   return seatingPartOrder().filter(function(part){return isSeatingPartSubmitted(part);}).length;
@@ -6226,7 +6270,7 @@ function renderSeatingHistory(){
     }).join('')+'</div>';
 }
 function showSeatingSubmissionInfo(){
-  alert('미제출: 해당 파트 참석명단을 아직 수정할 수 있는 상태입니다.\n제출완료: 해당 파트 참석명단을 확정해서 참석 체크를 잠급니다.\n명단 고정: 모든 파트 참석명단을 한 번에 잠그거나 해제합니다.');
+  alert('찬양의밤 참석명단 운영 방식\n\n1. 파트장은 본인 담당 범위의 참석 체크만 수정할 수 있습니다.\n2. 제출완료를 누르면 그 파트 참석명단이 잠깁니다.\n3. 제출완료 후 해제는 관리자만 할 수 있습니다.\n4. 명단 고정/해제는 관리자만 가능합니다. 모든 파트 제출을 확인한 뒤 최종 잠금할 때 사용합니다.\n5. 자리배치 권한은 배치도 편집/저장 권한입니다. S1/S2/T1/T2 전체 제출 권한을 뜻하지 않습니다.\n6. 변경 내용은 저장 버튼을 눌러야 저장된 배치에 반영됩니다.');
 }
 function seatingPartFillColor(part){
   part=normalizePartName(part);
@@ -6380,10 +6424,11 @@ function downloadSeatingImage(){
 }
 function markAllSeatingAttendees(value){
   if(seatingAttendeesLocked)return showToast('참석명단이 고정되어 있습니다. 고정 해제 후 수정하세요');
+  if(!canEditAnySeatingAttendance())return showToast('수정 가능한 담당 파트가 없습니다');
   beginSeatingEdit();
   var lockedMap={};
   seatingMembers.forEach(function(m){
-    if(isSeatingMemberAttendanceLocked(m)){lockedMap[m.id]=true;return;}
+    if(!canEditSeatingMemberAttendance(m)){lockedMap[m.id]=true;return;}
     seatingAttendees[m.id]=!!value;
   });
   if(!value)seatingRows.forEach(function(row){row.seats=row.seats.map(function(seat){return seat&&lockedMap[seat.memberId]?seat:null;});});
@@ -6393,6 +6438,7 @@ function markAllSeatingAttendees(value){
 function toggleSeatingAttendee(id,checked){
   var member=seatingMembers.find(function(m){return m.id===id;});
   if(isSeatingMemberAttendanceLocked(member))return showToast((member&&member.part?member.part+' ':'')+'참석명단이 제출완료/고정 상태입니다');
+  if(!canEditSeatingMemberAttendance(member))return showToast((member&&member.part?member.part+' ':'')+'참석명단 수정 권한이 없습니다');
   beginSeatingEdit();
   seatingAttendees[id]=!!checked;
   if(!checked){
@@ -6431,23 +6477,38 @@ function renderSeatingSubmissionState(){
       var info=seatingPartSubmissions[part]||{};
       var count=seatingPartAttendeeCount(part);
       var total=seatingPartMemberCount(part);
-      return '<button class="seating-submit-chip '+(info.submitted?'done':'')+'" onclick="toggleSeatingPartSubmission(\''+part+'\')" title="'+(info.submitted?'제출완료 해제':'이 파트 참석명단 제출완료')+'">'+part+' '+(info.submitted?'제출완료':'미제출')+' '+count+'/'+total+'</button>';
+      var allowed=canToggleSeatingPartSubmission(part);
+      return '<button class="seating-submit-chip '+(info.submitted?'done':'')+'" '+(allowed?'onclick="toggleSeatingPartSubmission(\''+part+'\')"':'disabled')+' title="'+escHtml(seatingPartSubmissionTitle(part))+'">'+part+' '+(info.submitted?'제출완료':'미제출')+' '+count+'/'+total+'</button>';
     }).join('');
   }
   var row=document.getElementById('seatingLockRow');
   if(row){
+    var editable=canEditAnySeatingAttendance();
+    var adminLockButton=adminRole==='admin'
+      ? '<button class="btn btn-sm" style="background:'+(seatingAttendeesLocked?'var(--bg)':'var(--p)')+';color:'+(seatingAttendeesLocked?'var(--ts)':'#fff')+'" onclick="toggleSeatingAttendeesLocked()">'+(seatingAttendeesLocked?'고정 해제':'명단 고정')+'</button>'
+      : '<span class="seating-lock-note">명단 고정은 관리자 전용</span>';
     row.innerHTML='<span>파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+' · '+(seatingAttendeesLocked?'전체 명단 고정 중':'전체 명단 수정 가능')+'</span>'
       +'<div class="seating-lock-actions"><button class="seating-info-btn" onclick="showSeatingSubmissionInfo()" title="제출/미제출/명단 고정 설명">i</button>'
-      +'<button class="btn btn-sm" style="background:'+(seatingAttendeesLocked?'var(--bg)':'var(--p)')+';color:'+(seatingAttendeesLocked?'var(--ts)':'#fff')+'" onclick="toggleSeatingAttendeesLocked()">'+(seatingAttendeesLocked?'고정 해제':'명단 고정')+'</button></div>';
+      +adminLockButton+'</div>';
+    var scopedLabel=adminRole==='admin'||seatingSubmissionScopeParts().length===seatingPartOrder().length;
+    var allBtn=document.getElementById('seatingMarkAllBtn');
+    var clearBtn=document.getElementById('seatingClearAllBtn');
+    if(allBtn){allBtn.textContent=scopedLabel?'전체':'담당 전체';allBtn.disabled=!editable;}
+    if(clearBtn){clearBtn.textContent=scopedLabel?'해제':'담당 해제';clearBtn.disabled=!editable;}
+    return;
   }
   var allBtn=document.getElementById('seatingMarkAllBtn');
   var clearBtn=document.getElementById('seatingClearAllBtn');
-  if(allBtn)allBtn.disabled=!!seatingAttendeesLocked;
-  if(clearBtn)clearBtn.disabled=!!seatingAttendeesLocked;
+  if(allBtn)allBtn.disabled=!canEditAnySeatingAttendance();
+  if(clearBtn)clearBtn.disabled=!canEditAnySeatingAttendance();
 }
 function toggleSeatingPartSubmission(part){
   part=normalizePartName(part);
   if(seatingPartOrder().indexOf(part)===-1)return;
+  if(!canToggleSeatingPartSubmission(part)){
+    if(isSeatingPartSubmitted(part))return showToast('제출완료 해제는 관리자만 가능합니다');
+    return showToast(part+' 제출 권한이 없습니다');
+  }
   beginSeatingEdit();
   var current=seatingPartSubmissions[part]||{};
   seatingPartSubmissions[part]=current.submitted
@@ -6458,6 +6519,7 @@ function toggleSeatingPartSubmission(part){
   showToast(part+(seatingPartSubmissions[part].submitted?' 참석명단 제출완료':' 제출완료 해제'));
 }
 function toggleSeatingAttendeesLocked(){
+  if(adminRole!=='admin')return showToast('명단 고정/해제는 관리자만 가능합니다');
   beginSeatingEdit();
   seatingAttendeesLocked=!seatingAttendeesLocked;
   renderSeatingMemberList();
@@ -6503,9 +6565,10 @@ function renderSeatingMemberList(){
     var placed=!!assigned[m.id];
     var unplaced=checked&&!placed;
     var locked=isSeatingMemberAttendanceLocked(m);
-    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+(locked?'locked':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
-      +'<input type="checkbox" '+(checked?'checked':'')+(locked?' disabled':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
-      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(locked?' · 고정':'')+'</span></div>'
+    var canEdit=canEditSeatingMemberAttendance(m);
+    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
+      +'<input type="checkbox" '+(checked?'checked':'')+((locked||!canEdit)?' disabled':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
+      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(locked?' · 고정':(!canEdit?' · 읽기':'') )+'</span></div>'
       +'</div>';
   }).join('');
 }
