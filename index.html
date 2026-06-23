@@ -119,9 +119,11 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .dark .perm-badge{background:#302B20;color:#EAD8B9;border-color:#514733}
 .dark .perm-badge.preset{background:var(--p);color:#172016;border-color:var(--p)}
 .dark .perm-badge.scope{background:#2D3729;color:#D6E0CD;border-color:#49553F}
-.seating-tool{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px}
+#subSeatingPlan>.seating-plan-row{margin:8px 0 6px!important}
+#subSeatingPlan>.seating-name-row,#subSeatingPlan>.seating-program-row{margin-bottom:6px!important}
+.seating-tool{display:grid;grid-template-columns:260px minmax(0,1fr);gap:10px;margin-top:2px}
 .seating-panel,.seating-stage-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px;box-shadow:var(--sh);min-width:0}
-.seating-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.seating-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
 .seating-toolbar-main{display:flex;gap:8px;flex-wrap:wrap;min-width:0;flex:1 1 520px}
 .seating-toolbar-publish{display:flex;align-items:flex-start;justify-content:flex-end;flex:0 0 auto}
 .seating-toolbar-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:6px;border:1px solid var(--line);border-radius:10px;background:rgba(255,253,248,.64)}
@@ -130,6 +132,13 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .dark .seating-toolbar-group.danger{border-color:#653C37;background:#33211F}
 .seating-toolbar-group.publish{border-color:#CAD8BD;background:#F4F8EE}
 .dark .seating-toolbar-group.publish{border-color:#4E6040;background:#253021}
+.seating-toolbar-group.collapsible{display:block;padding:0;overflow:hidden}
+.seating-toolbar-group.collapsible>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;min-width:86px}
+.seating-toolbar-group.collapsible>summary::-webkit-details-marker{display:none}
+.seating-toolbar-toggle{font-size:10px;font-weight:850;color:var(--ts)}
+.seating-toolbar-group.collapsible[open] .toggle-closed,.seating-toolbar-group.collapsible:not([open]) .toggle-open{display:none}
+.seating-toolbar-actions{display:flex;gap:5px;flex-wrap:wrap;padding:6px;border-top:1px solid var(--line)}
+.seating-toolbar-group.collapsible:not([open]) .seating-toolbar-actions{display:none}
 .seating-toolbar-label{font-size:10px;font-weight:900;color:var(--ts);padding:0 4px;white-space:nowrap}
 .seating-toolbar .btn{padding:7px 10px;font-size:12px;white-space:nowrap}
 .seating-btn-soft{background:var(--pl);color:var(--pd)}
@@ -192,6 +201,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-seat[draggable=true]{cursor:grab}
 .seating-seat.dragging{opacity:.55;outline:3px solid var(--accent);outline-offset:1px}
 .seating-seat.empty{background:#FFFDF8;color:#B7B09E}
+.seating-seat.empty.ready{background:var(--pl);color:var(--pd);border-color:var(--p);outline:2px dashed rgba(111,125,78,.7);outline-offset:1px}
 .seating-seat.part-S1{background:#E8B9D5}
 .seating-seat.part-S2{background:#9FD1D8}
 .seating-seat.part-T1{background:#8FC27C}
@@ -1475,27 +1485,33 @@ body{font-weight:500}
               <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
               <button class="btn seating-btn-soft" onclick="downloadSeatingImage()">이미지 저장</button>
             </div>
-            <div class="seating-toolbar-group">
-              <span class="seating-toolbar-label">편집</span>
-              <button class="btn seating-btn-soft" onclick="undoSeatingChange()">되돌리기</button>
-              <button class="btn seating-btn-soft" onclick="redoSeatingChange()">앞돌리기</button>
-              <button class="btn seating-btn-soft" onclick="insertBlankSeat()">빈칸 추가</button>
-              <button class="btn seating-btn-soft" onclick="addSeatingRow()">줄 추가</button>
-              <button class="btn seating-btn-soft" onclick="removeSelectedSeatingRow()">줄 제거</button>
-              <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
-              <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
-            </div>
-            <div class="seating-toolbar-group danger">
-              <span class="seating-toolbar-label">정리</span>
-              <button class="btn seating-btn-danger-soft" onclick="clearSelectedSeat()">선택 비우기</button>
-              <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
-            </div>
+            <details class="seating-toolbar-group collapsible">
+              <summary><span class="seating-toolbar-label">편집</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
+              <div class="seating-toolbar-actions">
+                <button class="btn seating-btn-soft" onclick="undoSeatingChange()">되돌리기</button>
+                <button class="btn seating-btn-soft" onclick="redoSeatingChange()">앞돌리기</button>
+                <button class="btn seating-btn-soft" onclick="insertBlankSeat()">빈칸 추가</button>
+                <button class="btn seating-btn-soft" onclick="addSeatingRow()">줄 추가</button>
+                <button class="btn seating-btn-soft" onclick="removeSelectedSeatingRow()">줄 제거</button>
+                <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
+                <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(1)">우로 밀기</button>
+              </div>
+            </details>
+            <details class="seating-toolbar-group collapsible danger">
+              <summary><span class="seating-toolbar-label">정리</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
+              <div class="seating-toolbar-actions">
+                <button class="btn seating-btn-danger-soft" onclick="clearSelectedSeat()">선택 비우기</button>
+                <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
+              </div>
+            </details>
           </div>
           <div class="seating-toolbar-publish">
-            <div class="seating-toolbar-group publish">
-              <span class="seating-toolbar-label">공개</span>
-              <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
-            </div>
+            <details class="seating-toolbar-group collapsible publish">
+              <summary><span class="seating-toolbar-label">공개</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
+              <div class="seating-toolbar-actions">
+                <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
+              </div>
+            </details>
           </div>
         </div>
         <div class="seating-draft-bar hidden" id="seatingDraftBar"></div>
@@ -6453,6 +6469,7 @@ function selectSeatingMember(id){
   if(seatingSelectedMemberId===id){
     seatingSelectedMemberId='';
     renderSeatingMemberList();
+    renderSeatingBoard();
     return;
   }
   if(seatingSelectedSeat){
@@ -6461,6 +6478,7 @@ function selectSeatingMember(id){
   }
   seatingSelectedMemberId=id;
   renderSeatingMemberList();
+  renderSeatingBoard();
 }
 function renderSeatingMemberList(){
   var list=document.getElementById('seatingMemberList');if(!list)return;
@@ -6565,7 +6583,8 @@ function renderSeatingBoard(){
     row.seats.forEach(function(seat,c){
       var selected=seatingSelectedSeat&&seatingSelectedSeat.row===r&&seatingSelectedSeat.col===c;
       var dragging=seatingDragSeat&&seatingDragSeat.row===r&&seatingDragSeat.col===c;
-      var stateClass=(selected?'selected ':'')+(dragging?'dragging':'');
+      var ready=!seat&&seatingSelectedMemberId?'ready ':'';
+      var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+ready;
       var dropAttrs=' ondragover="handleSeatingDragOver(event)" ondrop="handleSeatingDrop(event,'+r+','+c+')"';
       if(seat){
         html+='<button class="seating-seat '+partClass(seat.part)+' '+stateClass+'" draggable="true" ondragstart="handleSeatingDragStart(event,'+r+','+c+')" ondragend="handleSeatingDragEnd(event)"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name)+'">'+escHtml(seat.name)+'</button>';
