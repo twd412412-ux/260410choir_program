@@ -5310,14 +5310,6 @@ function renderCal(){
   else{document.getElementById('calEvtTitle').textContent='일정';document.getElementById('calEvtList').innerHTML='<div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div>'}
 }
 
-function renderCalQuickDayActions(ds){
-  if(!canManageSchedules()&&!canManageSongs())return '';
-  var actions=[];
-  if(canManageSchedules())actions.push('<button type="button" class="quick-manage-btn primary" onclick="event.stopPropagation();openQuickAddSchedule(\''+escAttr(ds)+'\')">+ 이 날짜 일정</button>');
-  if(canManageSongs())actions.push('<button type="button" class="quick-manage-btn" onclick="event.stopPropagation();openQuickAddSong(\''+escAttr(ds)+'\')">+ 이 날짜 곡</button>');
-  return '<div class="quick-manage-row" style="justify-content:flex-start;margin:0 0 10px">'+actions.join('')+'</div>';
-}
-
 function showCalDay(ds,day){
   selectedCalDate=ds;
   var evts=allSchedules.filter(function(s){return s.date===ds});
@@ -5327,7 +5319,7 @@ function showCalDay(ds,day){
   if(evts.length>0)body+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+safeColor(e.color)+'" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><div class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
   if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
   if(!body)body='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
-  document.getElementById('calEvtList').innerHTML=renderCalQuickDayActions(ds)+body;
+  document.getElementById('calEvtList').innerHTML=body;
 }
 
 function openSchDetail(id){
