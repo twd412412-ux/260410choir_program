@@ -38,6 +38,10 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .day-row{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .day-chip{padding:5px 10px;border-radius:16px;font-size:12px;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer;user-select:none;transition:all .2s}
 .day-chip.on{background:var(--p);color:#fff;border-color:var(--p)}
+.quick-manage-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+.quick-manage-btn{border:1px solid rgba(111,125,78,.24);background:var(--pl);color:var(--pd);padding:7px 11px;border-radius:10px;font-size:12px;font-weight:850;cursor:pointer}
+.quick-manage-btn.primary{background:var(--p);border-color:var(--p);color:#fff}
+.quick-manage-btn:active{transform:scale(.98)}
 .result-count{padding:8px 16px;font-size:13px;color:var(--ts);font-weight:600}
 .result-count.has-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .result-reset-btn{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
@@ -1282,6 +1286,7 @@ body{font-weight:500}
     <div class="filter-row"><span class="filter-label">연도</span><select class="filter-select" id="yearSel" onchange="doFilter()"><option value="all">전체</option></select></div>
     <div class="filter-row"><span class="filter-label">분류</span><select class="filter-select" id="catSel" onchange="doFilter()"><option value="all">전체</option></select></div>
     <div class="day-row"><span class="filter-label">요일</span><div class="day-chip on" data-d="all" onclick="toggleDay('all')">전체</div><div class="day-chip" data-d="일" onclick="toggleDay('일')">일</div><div class="day-chip" data-d="월" onclick="toggleDay('월')">월</div><div class="day-chip" data-d="화" onclick="toggleDay('화')">화</div><div class="day-chip" data-d="수" onclick="toggleDay('수')">수</div><div class="day-chip" data-d="목" onclick="toggleDay('목')">목</div><div class="day-chip" data-d="금" onclick="toggleDay('금')">금</div><div class="day-chip" data-d="토" onclick="toggleDay('토')">토</div></div>
+    <div class="quick-manage-row hidden" id="songQuickActions"><button type="button" class="quick-manage-btn primary" onclick="openQuickAddSong()">+ 곡 추가</button></div>
     <div style="text-align:right;font-size:9px;color:var(--bd);margin-top:6px">Engineered by JY</div>
   </div>
   <div class="result-count" id="resultCount"></div>
@@ -1299,6 +1304,7 @@ body{font-weight:500}
 <div id="pageCalendar" class="hidden">
   <div class="cal-nav"><button onclick="calPrev()">◀</button><span class="cal-nav-title" id="calTitle"></span><button onclick="calNext()">▶</button></div>
   <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="default">기본 · 점+밴드</option><option value="stack">스택형</option></select></div>
+  <div class="quick-manage-row hidden" id="calendarQuickActions" style="padding:0 16px 10px;margin-top:0"><button type="button" class="quick-manage-btn primary" id="calendarQuickScheduleBtn" onclick="openQuickAddSchedule()">+ 일정 추가</button><button type="button" class="quick-manage-btn" id="calendarQuickSongBtn" onclick="openQuickAddSong(getQuickCreateDate())">+ 곡 추가</button></div>
   <div class="cal-grid" id="calGrid"></div>
   <div style="padding:12px 16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:8px" id="calEvtTitle">일정</h3><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
 </div>
@@ -2008,7 +2014,7 @@ var songRecommendCache=[];
 var adminRole=null;
 var chongmuPassword='0412';
 var currentUser=null, currentDetailSong=null;
-var calYear, calMonth, allSchedules=[], allMembers=[];
+var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
@@ -2372,6 +2378,18 @@ function syncAccessShell(){
   if(navStats)navStats.classList.toggle('hidden',!canUseStats());
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
+  syncQuickCreateActions();
+}
+
+function syncQuickCreateActions(){
+  var songActions=document.getElementById('songQuickActions');
+  var calActions=document.getElementById('calendarQuickActions');
+  var calScheduleBtn=document.getElementById('calendarQuickScheduleBtn');
+  var calSongBtn=document.getElementById('calendarQuickSongBtn');
+  if(songActions)songActions.classList.toggle('hidden',!canManageSongs());
+  if(calActions)calActions.classList.toggle('hidden',!(canManageSchedules()||canManageSongs()));
+  if(calScheduleBtn)calScheduleBtn.classList.toggle('hidden',!canManageSchedules());
+  if(calSongBtn)calSongBtn.classList.toggle('hidden',!canManageSongs());
 }
 
 // ==================== 탭 전환 ====================
@@ -2395,6 +2413,7 @@ function switchTab(tab){
   if(tab==='calendar')renderCal();
   if(tab==='archive')renderArchivePage();
   if(tab==='stats')renderStats();
+  syncQuickCreateActions();
   if(tab==='admin'){
     if(canManageLoginAccounts()||canManageAccountPermissions())loadMembers();
     if(adminRole==='admin')loadLogs();
@@ -2503,6 +2522,70 @@ function showFirstAdminTab(){
 
   var target = preferredOrder.find(function(key){ return visible.indexOf(key)!==-1; }) || visible[0];
   if(target) switchAdminTab(target);
+}
+
+function getQuickCreateDate(){
+  if(selectedCalDate)return selectedCalDate;
+  if(typeof calYear==='number'&&typeof calMonth==='number')return calYear+'-'+String(calMonth+1).padStart(2,'0')+'-01';
+  return new Date().toISOString().split('T')[0];
+}
+
+function resetAddSongForm(defaultDate){
+  buildCatOptions();
+  ['addSongName','addSub','addLoc','addMem','addPia','addYoutube'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var dateEl=document.getElementById('addDate');
+  if(dateEl)dateEl.value=defaultDate||'';
+  var dowEl=document.getElementById('addDow');
+  if(dowEl)dowEl.value='';
+  if(defaultDate)calcDow('add');
+  var catSel=document.getElementById('addCatSel');
+  if(catSel)catSel.selectedIndex=0;
+  var catInput=document.getElementById('addCatInput');
+  if(catInput){catInput.classList.add('hidden');catInput.value='';}
+  songMemberSelections.add={};
+  renderSongMemberLinkPanel('add');
+}
+
+function resetScheduleForm(defaultDate){
+  scheduleEditId='';
+  ['schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var dateEl=document.getElementById('schDate');
+  if(dateEl)dateEl.value=defaultDate||'';
+  var briefing=document.getElementById('schUseBriefing');
+  if(briefing)briefing.checked=false;
+  toggleScheduleBriefing();
+  selColor=COLORS[0];
+  document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
+  var btn=document.getElementById('schSaveBtn');
+  if(btn)btn.textContent='일정 추가';
+}
+
+function openQuickAddSong(defaultDate){
+  if(!canManageSongs())return showToast('곡 관리 권한이 필요합니다');
+  switchTab('admin');
+  switchAdminTab('addSong');
+  resetAddSongForm(defaultDate||'');
+  setTimeout(function(){
+    var target=document.getElementById(defaultDate?'addSongName':'addDate')||document.getElementById('addSongName');
+    if(target)target.focus();
+  },0);
+}
+
+function openQuickAddSchedule(defaultDate){
+  if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
+  var date=defaultDate||getQuickCreateDate();
+  switchTab('admin');
+  switchAdminTab('schedule');
+  resetScheduleForm(date);
+  loadSchAdmin();
+  setTimeout(function(){
+    var target=document.getElementById('schTitle')||document.getElementById('schDate');
+    if(target)target.focus();
+  },0);
 }
 
 
@@ -5186,8 +5269,10 @@ function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return 
 function safeColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||''))?String(v):COLORS[0]}
 
 function renderCal(){
+  selectedCalDate='';
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
   var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
+  syncQuickCreateActions();
   var g=document.getElementById('calGrid');
   var hds=['일','월','화','수','목','금','토'];
   var h=hds.map(function(x){return '<div class="cal-hdr">'+x+'</div>'}).join('');
@@ -5225,15 +5310,24 @@ function renderCal(){
   else{document.getElementById('calEvtTitle').textContent='일정';document.getElementById('calEvtList').innerHTML='<div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div>'}
 }
 
+function renderCalQuickDayActions(ds){
+  if(!canManageSchedules()&&!canManageSongs())return '';
+  var actions=[];
+  if(canManageSchedules())actions.push('<button type="button" class="quick-manage-btn primary" onclick="event.stopPropagation();openQuickAddSchedule(\''+escAttr(ds)+'\')">+ 이 날짜 일정</button>');
+  if(canManageSongs())actions.push('<button type="button" class="quick-manage-btn" onclick="event.stopPropagation();openQuickAddSong(\''+escAttr(ds)+'\')">+ 이 날짜 곡</button>');
+  return '<div class="quick-manage-row" style="justify-content:flex-start;margin:0 0 10px">'+actions.join('')+'</div>';
+}
+
 function showCalDay(ds,day){
+  selectedCalDate=ds;
   var evts=allSchedules.filter(function(s){return s.date===ds});
   var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
-  var h='';
-  if(evts.length>0)h+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+safeColor(e.color)+'" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><div class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
-  if(songs.length>0)h+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
-  if(!h)h='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
-  document.getElementById('calEvtList').innerHTML=h;
+  var body='';
+  if(evts.length>0)body+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+safeColor(e.color)+'" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><div class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
+  if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
+  if(!body)body='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
+  document.getElementById('calEvtList').innerHTML=renderCalQuickDayActions(ds)+body;
 }
 
 function openSchDetail(id){
