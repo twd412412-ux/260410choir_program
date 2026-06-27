@@ -2043,6 +2043,7 @@ var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
 var SEATING_PLAN_COLLECTION='seatingPlans', SEATING_PLAN_LEGACY_DOC='seatingPlans', SEATING_DRAFT_KEY='choir_seating_draft_v1';
 var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[], seatingPartSubmissions={}, seatingPlanHistory=[];
+var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all';
 var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingAttendeesLocked=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
 var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
@@ -5975,6 +5976,15 @@ function normalizeStoredSeatingPlan(plan,id){
   plan.history=Array.isArray(plan.history)?plan.history:[];
   return plan;
 }
+function seatingPlanVersion(plan){
+  return String((plan&&(plan.updatedAt||plan.createdAt))||'');
+}
+function rememberSeatingPlanVersions(list){
+  seatingPlanLoadedVersions={};
+  (Array.isArray(list)?list:[]).forEach(function(plan){
+    if(plan&&plan.id)seatingPlanLoadedVersions[plan.id]=seatingPlanVersion(plan);
+  });
+}
 function mergeSeatingPlanLists(primary,legacy){
   var byId={};
   (Array.isArray(legacy)?legacy:[]).forEach(function(plan){
@@ -6159,6 +6169,7 @@ function loadLegacySeatingPlans(){
 }
 function applyLoadedSeatingPlans(list){
   seatingPlans=seatingSortPlans(list);
+  rememberSeatingPlanVersions(seatingPlans);
   renderSeatingPlanSelect();
   if(seatingPlanId){
     var current=seatingPlans.find(function(p){return p.id===seatingPlanId;});
@@ -7103,18 +7114,51 @@ function upsertLocalSeatingPlan(data){
   if(existingIndex>-1)seatingPlans[existingIndex]=copy;
   else seatingPlans.unshift(copy);
   seatingPlans=seatingSortPlans(seatingPlans);
+  if(copy.id)seatingPlanLoadedVersions[copy.id]=seatingPlanVersion(copy);
   return copy;
 }
-function syncLegacySeatingPlans(){
-  var legacyPlans=cloneSeatingValue(seatingPlans.slice(0,30));
+function seatingPlansWithRecord(data){
+  var list=seatingPlans.map(function(plan){return normalizeStoredSeatingPlan(plan,plan&&plan.id);});
+  var copy=normalizeStoredSeatingPlan(data,data&&data.id);
+  var existingIndex=list.findIndex(function(p){return p.id===copy.id;});
+  if(existingIndex>-1)list[existingIndex]=copy;
+  else list.unshift(copy);
+  return seatingSortPlans(list);
+}
+function syncLegacySeatingPlans(listOverride){
+  var source=Array.isArray(listOverride)?listOverride:seatingPlans;
+  var legacyPlans=cloneSeatingValue(seatingSortPlans(source.slice()).slice(0,30));
   return db.collection('settings').doc(SEATING_PLAN_LEGACY_DOC).set({plans:legacyPlans,updatedAt:new Date().toISOString(),updatedBy:currentActorName()},{merge:true});
 }
-function saveSeatingPlanRecord(data){
-  return db.collection(SEATING_PLAN_COLLECTION).doc(data.id).set(data).then(function(){
-    return syncLegacySeatingPlans().catch(function(err){console.error(err);}).then(function(){return 'doc';});
+function seatingConflictError(latestPlan){
+  var err=new Error('seating_plan_conflict');
+  err.code='seating_plan_conflict';
+  err.latestPlan=latestPlan;
+  return err;
+}
+function saveSeatingPlanDoc(data,expectedVersion,overwrite){
+  var ref=db.collection(SEATING_PLAN_COLLECTION).doc(data.id);
+  if(!expectedVersion||overwrite)return ref.set(data).then(function(){return 'doc';});
+  return db.runTransaction(function(tx){
+    return tx.get(ref).then(function(doc){
+      if(doc.exists){
+        var latest=normalizeStoredSeatingPlan(doc.data()||{},doc.id);
+        var latestVersion=seatingPlanVersion(latest);
+        if(latestVersion&&latestVersion!==expectedVersion)throw seatingConflictError(latest);
+      }
+      tx.set(ref,data);
+      return 'doc';
+    });
+  });
+}
+function saveSeatingPlanRecord(data,expectedVersion,overwrite){
+  var legacyList=seatingPlansWithRecord(data);
+  return saveSeatingPlanDoc(data,expectedVersion,overwrite).then(function(){
+    return syncLegacySeatingPlans(legacyList).catch(function(err){console.error(err);}).then(function(){return 'doc';});
   }).catch(function(err){
+    if(err&&err.code==='seating_plan_conflict')throw err;
     console.error(err);
-    return syncLegacySeatingPlans().then(function(){return 'legacy';});
+    return syncLegacySeatingPlans(legacyList).then(function(){return 'legacy';});
   });
 }
 function deleteSeatingPlanRecord(id){
@@ -7142,6 +7186,7 @@ function saveSeatingPlan(options){
   var actor=currentActorName();
   var stats=seatingPlacementStats();
   var existingPlan=seatingPlanId?seatingPlans.find(function(p){return p.id===seatingPlanId;}):null;
+  var expectedVersion=(!forceNew&&existingPlan)?(seatingPlanLoadedVersions[existingPlan.id]||seatingPlanVersion(existingPlan)):'';
   var previousHistory=forceNew?[]:(Array.isArray(existingPlan&&existingPlan.history)?existingPlan.history:seatingPlanHistory);
   var historyEntry={
     at:now,
@@ -7171,22 +7216,41 @@ function saveSeatingPlan(options){
     updatedAt:now,
     updatedBy:actor
   };
-  showToast('자리배치 저장 중...');
-  seatingPlanId=data.id;
-  seatingPlanHistory=data.history;
-  upsertLocalSeatingPlan(data);
-  renderSeatingPlanSelect();
-  saveSeatingPlanRecord(data).then(function(mode){
+  function finishSave(mode){
+    seatingPlanId=data.id;
+    seatingPlanHistory=data.history;
+    upsertLocalSeatingPlan(data);
+    renderSeatingPlanSelect();
     showToast(forceNew?'새 이름으로 저장되었습니다':'자리배치가 저장되었습니다');
     writeLog(forceNew?'찬양의밤 자리배치 다른 이름 저장':'찬양의밤 자리배치 저장',data.date+' '+data.program+' 배치 저장'+(mode==='legacy'?'(호환 저장)':''));
     clearSeatingDirty();
     clearSeatingDraft();
     renderSeatingHistory();
     return loadSeatingPlans();
-  }).catch(function(err){
+  }
+  function handleSaveError(err){
+    if(err&&err.code==='seating_plan_conflict'){
+      var latest=err.latestPlan||{};
+      var latestBy=latest.updatedBy||latest.createdBy||'다른 사용자';
+      var latestAt=seatingFormatHistoryTime(latest.updatedAt||latest.createdAt)||'최근';
+      var latestName=latest.name||latest.planName||latest.program||'현재 배치';
+      var overwrite=confirm('다른 사용자가 이 배치를 먼저 저장했습니다.\n\n배치: '+latestName+'\n저장자: '+latestBy+'\n저장시각: '+latestAt+'\n\n확인: 현재 화면 내용으로 덮어쓰기\n취소: 저장하지 않고 현재 화면 유지');
+      if(overwrite){
+        showToast('자리배치 덮어쓰기 저장 중...');
+        return saveSeatingPlanRecord(data,expectedVersion,true).then(finishSave).catch(handleSaveError);
+      }
+      if(confirm('최신 배치를 불러오면 현재 미저장 변경은 사라집니다.\n최신 배치를 불러올까요?')){
+        showToast('최신 배치를 불러오는 중...');
+        return loadSeatingPlans().then(function(){showToast('최신 배치를 불러왔습니다')});
+      }
+      showToast('저장을 중단했습니다. 현재 화면은 유지됩니다');
+      return;
+    }
     console.error(err);
     showToast('저장 중 오류가 발생했습니다');
-  });
+  }
+  showToast('자리배치 저장 중...');
+  saveSeatingPlanRecord(data,expectedVersion,false).then(finishSave).catch(handleSaveError);
 }
 function saveSeatingPlanAs(){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
