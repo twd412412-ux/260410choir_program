@@ -3315,8 +3315,22 @@ function renderHome(){
     if(attendanceReady){
       var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
       ringsHtml=homeRing('오전',amSt)+homeRing('오후',pmSt);
-      var partOrder=['S1','S2','T1','T2','관현악'];
-      var parts=partOrder.filter(function(p){return members.some(function(m){return m.part===p||m.subPart===p})});
+      function homeAttendancePartRows(members){
+        var primaryOrder=['S1','S2','T1','T2','관현악'];
+        var scopedOrder=['S1','S2','T1','T2','관현악','지휘','반주','임원'];
+        var allowed=getAttendanceAllowedParts();
+        var source=allowed.indexOf('all')>-1?primaryOrder:allowed.filter(function(p){return p&&p!=='all'});
+        source=uniqueArray(source.map(normalizePartName));
+        source.sort(function(a,b){
+          var ai=scopedOrder.indexOf(a), bi=scopedOrder.indexOf(b);
+          ai=ai===-1?999:ai; bi=bi===-1?999:bi;
+          return ai-bi||a.localeCompare(b,'ko');
+        });
+        return source.filter(function(p){
+          return members.some(function(m){return m.part===p||m.subPart===p});
+        });
+      }
+      var parts=homeAttendancePartRows(members);
       function partSession(label,st,icon){
         var text=st.state==='done'?'완료':(st.state==='progress'?st.rate+'%':(st.state==='excluded'?'제외':'체크 전'));
         var detail=canSeeHomeAttendanceDetail()&&st.total&&typeof st.rate==='number'?' <span style="font-weight:650;color:#606554">('+st.attended+'/'+st.total+')</span>':'';
