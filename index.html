@@ -1209,13 +1209,16 @@ body{font-weight:500}
 .att-ring-num{font-size:22px;font-weight:800;color:#191A15}
 .att-ring-label{font-size:10px;font-weight:650;color:#606554;margin-top:4px}
 .att-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.att-mini-stat{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:10px;padding:9px 10px}
+.att-mini-stat{background:#F8F2E8;border:1px solid #E1D7C5;border-radius:10px;padding:9px 10px;font:inherit;text-align:left;color:inherit;appearance:none;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+.att-mini-stat:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(49,54,35,.08)}
 .att-mini-label{font-size:11px;font-weight:650;color:#606554;margin-bottom:3px}
 .att-mini-value{font-size:16px;font-weight:780;color:#191A15}
 .att-mini-stat.present{background:#EAEFDF;border-color:#C8D0B9}
 .att-mini-stat.late{background:#F5EBD8;border-color:#E5D2AF}
 .att-mini-stat.excused{background:#EFEBF1;border-color:#D8D0DF}
+.att-mini-stat.absent{background:#F7E6E0;border-color:#E5C3BA}
 .att-mini-stat.unchecked{background:#F0E7D7;border-color:#DED2BE}
+.att-mini-stat.active{border-color:var(--p);box-shadow:0 0 0 2px rgba(111,125,78,.18)}
 .date-display-wrap{position:relative}
 .date-display{width:100%;min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FFFDF8;border:1px solid #D5C8B6;border-radius:10px;color:#191A15;padding:10px 12px;font-family:inherit;font-size:15px;font-weight:680;text-align:left;cursor:pointer}
 .date-display-icon{color:#6F7D4E;font-size:13px}
@@ -1709,7 +1712,7 @@ body{font-weight:500}
         <input class="form-input" id="attExcludeReason" placeholder="예: 운동회/체육활동으로 정규 주일 출석률에서 제외" oninput="renderAttGuideCard()">
       </div>
       <div id="attPartFilter" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
-      <div class="form-group" style="margin-bottom:12px"><label class="form-label">상태 필터</label><select class="form-sel" id="attStatusFilter" onchange="setAttStatusFilter(this.value)"><option value="all">전체</option><option value="출석">출석</option><option value="지각">지각</option><option value="사유결석">사유</option><option value="무단결석">무단</option></select></div>
+      <div class="form-group" style="margin-bottom:12px"><label class="form-label">상태 필터</label><select class="form-sel" id="attStatusFilter" onchange="setAttStatusFilter(this.value)"><option value="all">전체</option><option value="출석">출석</option><option value="지각">지각</option><option value="사유결석">사유</option><option value="무단결석">무단</option><option value="unchecked">미체크</option></select></div>
       <div id="attGuideCard" style="display:none;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <span id="attCount" style="font-size:13px;color:var(--ts);flex:1;min-width:220px"></span>
@@ -8213,6 +8216,7 @@ var attAmData=null;
 var attPmData=null;
 var attSession='오전';
 var attStatusFilter='all';
+var ATT_STATUS_FILTER_LABELS={all:'전체','출석':'출석','지각':'지각','사유결석':'사유','무단결석':'무단',unchecked:'미체크'};
 var attUnsubs=[];
 var attMembersLoaded=false;
 var attMembersSourceLoaded=false;
@@ -8421,7 +8425,21 @@ function setAttPartFilter(p){
 
 function setAttStatusFilter(status){
   attStatusFilter=status||'all';
+  if(!ATT_STATUS_FILTER_LABELS[attStatusFilter])attStatusFilter='all';
+  var sel=document.getElementById('attStatusFilter');
+  if(sel&&sel.value!==attStatusFilter)sel.value=attStatusFilter;
   renderAttList();
+}
+
+function getAttStatusFilterLabel(status){
+  return ATT_STATUS_FILTER_LABELS[status]||ATT_STATUS_FILTER_LABELS.all;
+}
+
+function isAttMemberMatchingStatus(member,status){
+  if(status==='all')return true;
+  var st=attData[member.id]||'';
+  if(status==='unchecked')return !st;
+  return st===status;
 }
 
 function renderAttSummaryCard(stats){
@@ -8435,15 +8453,20 @@ function renderAttSummaryCard(stats){
   var rate=stats.total?Math.round(attended/stats.total*100):0;
   var scope=attPartFilter==='all'?'전체':attPartFilter;
   var unchecked=stats.unchecked;
+  function statChip(cls,label,value,status){
+    var active=attStatusFilter===status?' active':'';
+    return '<button type="button" class="att-mini-stat '+cls+active+'" onclick="setAttStatusFilter(\''+escAttr(status)+'\')" title="'+escAttr(label)+'만 보기"><div class="att-mini-label">'+label+'</div><div class="att-mini-value">'+value+'</div></button>';
+  }
   el.innerHTML='<div class="att-summary-card">'
     +'<div class="att-summary-head"><div class="att-summary-title">'+attSession+' 출결 요약</div><div class="att-summary-scope">'+scope+' · '+stats.total+'명</div></div>'
     +'<div class="att-ring-wrap">'
       +'<div class="att-ring" style="--pct:'+rate+'"><div class="att-ring-text"><div class="att-ring-num">'+rate+'%</div><div class="att-ring-label">출석률</div></div></div>'
       +'<div class="att-mini-grid">'
-        +'<div class="att-mini-stat present"><div class="att-mini-label">출석</div><div class="att-mini-value">'+stats.present+'</div></div>'
-        +'<div class="att-mini-stat late"><div class="att-mini-label">지각</div><div class="att-mini-value">'+stats.late+'</div></div>'
-        +'<div class="att-mini-stat excused"><div class="att-mini-label">사유</div><div class="att-mini-value">'+stats.excused+'</div></div>'
-        +'<div class="att-mini-stat unchecked"><div class="att-mini-label">미체크</div><div class="att-mini-value">'+unchecked+'</div></div>'
+        +statChip('present','출석',stats.present,'출석')
+        +statChip('late','지각',stats.late,'지각')
+        +statChip('excused','사유',stats.excused,'사유결석')
+        +statChip('absent','무단',stats.absent,'무단결석')
+        +statChip('unchecked','미체크',unchecked,'unchecked')
       +'</div>'
     +'</div>'
   +'</div>';
@@ -8543,8 +8566,8 @@ function renderAttList(){
   var countHtml='출석 '+present+' / 지각 '+late+' / 사유 '+excused+' / 무단 '+absent+' / 미체크 '+unchecked+' (총 '+members.length+'명)';
   var displayMembers=members;
   if(attStatusFilter!=='all'){
-    displayMembers=members.filter(function(m){return (attData[m.id]||'')===attStatusFilter});
-    countHtml+='<div style="font-size:11px;color:var(--p);margin-top:4px;line-height:1.6">🔎 '+document.getElementById('attStatusFilter').selectedOptions[0].text+' '+displayMembers.length+'명 표시 중</div>';
+    displayMembers=members.filter(function(m){return isAttMemberMatchingStatus(m,attStatusFilter)});
+    countHtml+='<div style="font-size:11px;color:var(--p);margin-top:4px;line-height:1.6">🔎 '+getAttStatusFilterLabel(attStatusFilter)+' '+displayMembers.length+'명 표시 중</div>';
   }
   if(uncheckedNames.length>0&&uncheckedNames.length<=30){countHtml+='<div style="font-size:11px;color:#DC2626;margin-top:4px;line-height:1.6">🔔 미체크 '+uncheckedNames.length+'명: '+uncheckedNames.join(', ')+'</div>'}
   document.getElementById('attCount').innerHTML=countHtml;
