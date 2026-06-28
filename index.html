@@ -92,6 +92,10 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-create-panel{background:rgba(255,253,248,.76);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:16px;box-shadow:0 8px 18px rgba(47,41,31,.05)}
 .dark .account-create-panel{background:rgba(29,33,27,.76)}
 .account-list-title{font-size:14px;font-weight:850;margin:2px 0 10px;color:var(--tx)}
+.account-list-tools{margin:0 0 10px}
+.account-part-heading{display:flex;align-items:center;gap:7px;margin:12px 0 6px;font-size:12px;font-weight:950;color:#4F623A}
+.account-part-heading::before{content:'';width:7px;height:7px;border-radius:50%;background:#6F7D4E}
+.account-part-heading span{font-size:11px;color:var(--ts);font-weight:800}
 .account-row{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--sf);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 18px;margin-bottom:8px;box-shadow:0 8px 20px rgba(47,41,31,.055)}
 .account-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:#D8D0BE}
 .account-row.part-s1::before{background:#D58BB5}
@@ -1687,6 +1691,7 @@ body{font-weight:500}
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
+    <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="계정 이름/파트/연결 검색" oninput="renderAccountList()"></div>
     <div id="memberList"></div>
   </div>
 
@@ -3930,6 +3935,89 @@ function renderAccountLinkStatus(m){
   return '<div class="account-link-line '+cls+'"><span class="account-link-dot"></span><span class="account-link-status">'+escHtml(status)+'</span>'+(detail?'<span class="account-link-detail">'+escHtml(detail)+'</span>':'')+'</div>';
 }
 
+function accountPartSortValue(part){
+  part=normalizePartName(part);
+  var order=['S1','S2','T1','T2','관현악'];
+  var idx=order.indexOf(part);
+  return idx>-1?idx:order.length;
+}
+
+function accountPartGroupLabel(part){
+  part=normalizePartName(part);
+  return ['S1','S2','T1','T2','관현악'].indexOf(part)>-1?part:'기타';
+}
+
+function accountSearchText(m){
+  var linked=m.memberId?accountLinkMemberMap[m.memberId]:null;
+  return [
+    m.name||'',
+    normalizePartName(m.part)||'',
+    linked&&linked.name||'',
+    linked&&normalizePartName(linked.part)||'',
+    getUserPermissions(m).map(function(p){return PERMISSION_LABELS[p]||p}).join(' ')
+  ].join(' ').toLowerCase();
+}
+
+function filteredSortedAccounts(){
+  var q=(document.getElementById('accountListSearch')||{}).value||'';
+  q=q.trim().toLowerCase();
+  return allMembers.filter(function(m){
+    return !q||accountSearchText(m).indexOf(q)>-1;
+  }).sort(function(a,b){
+    return accountPartSortValue(a.part)-accountPartSortValue(b.part)
+      || String(normalizePartName(a.part)||'').localeCompare(String(normalizePartName(b.part)||''),'ko')
+      || String(a.name||'').localeCompare(String(b.name||''),'ko');
+  });
+}
+
+function renderAccountList(){
+  var c=document.getElementById('memberList');
+  if(!c)return;
+  if(allMembers.length===0){
+    c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';
+    return;
+  }
+  var list=filteredSortedAccounts();
+  if(list.length===0){
+    c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">검색 결과가 없습니다.</div>';
+    return;
+  }
+  var groupCounts={};
+  list.forEach(function(m){
+    var label=accountPartGroupLabel(m.part);
+    groupCounts[label]=(groupCounts[label]||0)+1;
+  });
+  var lastGroup='';
+  c.innerHTML=list.map(function(m){
+    var group=accountPartGroupLabel(m.part);
+    var groupHtml='';
+    if(group!==lastGroup){
+      lastGroup=group;
+      groupHtml='<div class="account-part-heading">'+escHtml(group)+' <span>'+groupCounts[group]+'명</span></div>';
+    }
+    var roleBadge=renderAccountPermissionBadges(m);
+    var pinMeta=canManageAccountPins()?('PIN '+m.pin):'PIN 권한 필요';
+    var linkHtml='';
+    if(canManageLoginAccounts()||canManageAccountPermissions()){
+      linkHtml=renderAccountLinkStatus(m);
+    }
+    return groupHtml+`<div class="account-row ${accountPartClass(m.part)}">
+      <div class="account-main">
+        <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span></div>
+        <div class="account-meta-line">${escHtml(m.part)} · ${escHtml(pinMeta)}</div>
+        ${roleBadge}
+        ${linkHtml}
+      </div>
+      <div class="account-actions">
+        ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
+        ${canManageAccountPermissions()?`<button type="button" class="account-action-btn primary" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>`:''}
+        ${canManageAccountPins()?`<button type="button" class="account-action-btn" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>`:''}
+        ${canDeleteLoginAccount()?`<button type="button" class="account-action-btn danger" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function addMember(){
   if(!canManageLoginAccounts()) return showToast('계정 등록 및 수정 권한이 없습니다');
   var name=document.getElementById('memName').value.trim();
@@ -3975,29 +4063,7 @@ function loadMembers(){
       var m = doc.data();
       if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[])}); }
     });
-    if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
-    c.innerHTML=allMembers.map(function(m){
-      var roleBadge=renderAccountPermissionBadges(m);
-      var pinMeta=canManageAccountPins()?('PIN '+m.pin):'PIN 권한 필요';
-      var linkHtml='';
-      if(canManageLoginAccounts()||canManageAccountPermissions()){
-        linkHtml=renderAccountLinkStatus(m);
-      }
-      return `<div class="account-row ${accountPartClass(m.part)}">
-        <div class="account-main">
-          <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span></div>
-          <div class="account-meta-line">${escHtml(m.part)} · ${escHtml(pinMeta)}</div>
-          ${roleBadge}
-          ${linkHtml}
-        </div>
-        <div class="account-actions">
-          ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
-          ${canManageAccountPermissions()?`<button type="button" class="account-action-btn primary" onclick="openAccountRole('${escAttr(m.id)}')">권한</button>`:''}
-          ${canManageAccountPins()?`<button type="button" class="account-action-btn" onclick="openAccountPin('${escAttr(m.id)}')">PIN</button>`:''}
-          ${canDeleteLoginAccount()?`<button type="button" class="account-action-btn danger" onclick="openAccountDelete('${escAttr(m.id)}')">삭제</button>`:''}
-        </div>
-      </div>`;
-    }).join('');
+    renderAccountList();
   });
 }
 var accountActionId='';
