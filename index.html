@@ -390,8 +390,12 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .color-opts{display:flex;gap:6px;flex-wrap:wrap}
 .color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent}
 .color-dot.sel{border-color:var(--tx)}
-.admin-tab{padding:5px 12px;border-radius:20px;font-size:12px;border:1.5px solid var(--bd);background:var(--sf);color:var(--ts);cursor:pointer}
-.admin-tab.on{background:var(--p);color:#fff;border-color:var(--p)}
+.admin-tab-panel{display:grid;gap:8px;margin-bottom:16px;padding:10px;background:rgba(244,238,226,.78);border:1px solid #D8CAB7;border-radius:16px}
+.admin-tab-group{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;align-items:start}
+.admin-tab-group-label{padding-top:8px;color:#7A7060;font-size:11px;font-weight:900;letter-spacing:0;text-align:center}
+.admin-tab-list{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.admin-tab{padding:7px 11px;border-radius:999px;font-size:12px;border:1px solid #D8CAB7;background:rgba(255,253,248,.82);color:#5D554B;cursor:pointer;font-family:inherit;font-weight:780;line-height:1.1;box-shadow:0 1px 0 rgba(56,49,38,.03)}
+.admin-tab.on{background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 7px 16px rgba(82,101,82,.14)}
 @media(min-width:500px){body{max-width:500px;margin:0 auto}}
 .suggest-box{background:var(--sf);border:1.5px solid var(--bd);border-radius:8px;max-height:150px;overflow-y:auto;margin-top:4px;box-shadow:var(--sh)}
 .suggest-item{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bd)}
@@ -1081,6 +1085,12 @@ body{font-weight:500}
 .filter-label{font-weight:700;color:#655E52}
 .day-chip,.admin-tab{background:#FFFDF8;border-color:#D8CAB7;color:#5D554B;border-radius:10px;font-weight:650}
 .day-chip.on,.admin-tab.on{background:#6F7D4E;border-color:#6F7D4E;color:#fff;box-shadow:none}
+#adminTabRow.admin-tab-panel{display:grid;gap:8px;margin-bottom:16px;padding:10px;background:rgba(244,238,226,.78);border:1px solid #D8CAB7;border-radius:16px}
+#adminTabRow .admin-tab-group{display:grid;grid-template-columns:54px minmax(0,1fr);gap:8px;align-items:start}
+#adminTabRow .admin-tab-group-label{padding-top:8px;color:#7A7060;font-size:11px;font-weight:900;letter-spacing:0;text-align:center}
+#adminTabRow .admin-tab-list{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+#adminTabRow .admin-tab{padding:7px 11px;border-radius:999px;border:1px solid #D8CAB7;background:rgba(255,253,248,.84);color:#5D554B;font-size:12px;font-weight:780;line-height:1.1;box-shadow:0 1px 0 rgba(56,49,38,.03)}
+#adminTabRow .admin-tab.on{background:#6F7D4E;border-color:#6F7D4E;color:#fff;box-shadow:0 7px 16px rgba(82,101,82,.14)}
 .result-count{background:#F4EEE2;color:#655E52;font-weight:700}
 .song-card{border-left-color:#6F7D4E;border-left-width:4px}
 .song-card-title{font-size:16px;font-weight:760;color:#191A15}
@@ -1378,19 +1388,45 @@ body{font-weight:500}
 </div>
 <!-- PAGE: 관리자 -->
 <div class="tab-page hidden" id="pageAdmin"><div style="padding:16px">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="adminTabRow">
-    <div class="admin-tab on" data-at="members" onclick="switchAdminTab('members')">단원 관리</div>
-    <div class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">단원 전자출결부</div>
-    <div class="admin-tab" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</div>
-    <div class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지/설정</div>
-    <div class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</div>
-    <div class="admin-tab" data-at="memberLinkAudit" onclick="switchAdminTab('memberLinkAudit')">단원 연결 점검</div>
-    <div class="admin-tab" data-at="songRecommend" onclick="switchAdminTab('songRecommend')">선곡 도우미</div>
-    <div class="admin-tab" data-at="seatingPlan" onclick="switchAdminTab('seatingPlan')">찬양의밤 자리배치</div>
-    <div class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</div>
-    <div class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</div>
-    <div class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</div>
-    <div class="admin-tab" data-at="report" onclick="switchAdminTab('report')">결산 보고서</div> </div>
+  <div class="admin-tab-panel" id="adminTabRow">
+    <div class="admin-tab-group">
+      <div class="admin-tab-group-label">단원</div>
+      <div class="admin-tab-list">
+        <button type="button" class="admin-tab on" data-at="memberHandbook" onclick="switchAdminTab('memberHandbook')">단원 명부</button>
+        <button type="button" class="admin-tab" data-at="members" onclick="switchAdminTab('members')">계정 관리</button>
+        <button type="button" class="admin-tab" data-at="memberLinkAudit" onclick="switchAdminTab('memberLinkAudit')">연결 점검</button>
+      </div>
+    </div>
+    <div class="admin-tab-group">
+      <div class="admin-tab-group-label">출결</div>
+      <div class="admin-tab-list">
+        <button type="button" class="admin-tab" data-at="attendance" onclick="switchAdminTab('attendance')">전자출결부</button>
+        <button type="button" class="admin-tab" data-at="report" onclick="switchAdminTab('report')">결산 보고서</button>
+      </div>
+    </div>
+    <div class="admin-tab-group">
+      <div class="admin-tab-group-label">콘텐츠</div>
+      <div class="admin-tab-list">
+        <button type="button" class="admin-tab" data-at="addSong" onclick="switchAdminTab('addSong')">곡 추가</button>
+        <button type="button" class="admin-tab" data-at="schedule" onclick="switchAdminTab('schedule')">일정 관리</button>
+        <button type="button" class="admin-tab" data-at="songRecommend" onclick="switchAdminTab('songRecommend')">선곡 도우미</button>
+      </div>
+    </div>
+    <div class="admin-tab-group">
+      <div class="admin-tab-group-label">운영</div>
+      <div class="admin-tab-list">
+        <button type="button" class="admin-tab" data-at="seatingPlan" onclick="switchAdminTab('seatingPlan')">찬양의밤 자리배치</button>
+        <button type="button" class="admin-tab" data-at="notice" onclick="switchAdminTab('notice')">공지/설정</button>
+      </div>
+    </div>
+    <div class="admin-tab-group">
+      <div class="admin-tab-group-label">시스템</div>
+      <div class="admin-tab-list">
+        <button type="button" class="admin-tab" data-at="logs" onclick="switchAdminTab('logs')">활동 로그</button>
+        <button type="button" class="admin-tab" data-at="export" onclick="switchAdminTab('export')">백업</button>
+      </div>
+    </div>
+  </div>
 
 
   </div>
@@ -2543,6 +2579,13 @@ function updateAdminTabs(){
   };
   tabs.querySelectorAll('[data-at]').forEach(function(t){
     t.style.display=visibleMap[t.dataset.at] ? '' : 'none';
+  });
+  tabs.querySelectorAll('.admin-tab-group').forEach(function(group){
+    var hasVisible=false;
+    group.querySelectorAll('[data-at]').forEach(function(t){
+      if(t.style.display!=='none')hasVisible=true;
+    });
+    group.style.display=hasVisible?'grid':'none';
   });
 }
 
