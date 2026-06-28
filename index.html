@@ -5242,7 +5242,10 @@ function addHandbookMember(){
 function deleteHandbookMember(id, name){
   if(!canDeleteHandbookMembers())return showToast('단원 삭제 권한이 없습니다');
   if(!confirm(name + ' 단원을 명부에서 완전히 삭제할까요?')) return;
+  var member = directoryData.find(function(x){return x.id===id}) || null;
+  var photoUrl = member&&member.photo ? member.photo : '';
   db.collection('members').doc(id).delete().then(function(){ 
+    if(photoUrl)deleteStoragePhotoByUrl(photoUrl);
     showToast('삭제되었습니다'); 
     invalidateAttendanceMemberCache();
     invalidateAccountLinkMemberCache();
