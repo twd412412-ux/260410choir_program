@@ -290,6 +290,21 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .handbook-extra-body{padding:0 12px 12px}
 .handbook-extra-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .handbook-extra-grid .span-2{grid-column:1/-1}
+.handbook-title-count{display:inline-flex;align-items:center;margin-left:6px;padding:3px 8px;border-radius:999px;background:var(--pl);color:var(--pd);font-size:11px;font-weight:800;vertical-align:middle}
+.handbook-summary-card{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:14px;padding:12px;margin-bottom:14px}
+.handbook-summary-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.handbook-summary-stat{border:1px solid #E1D7C5;background:#F8F2E8;border-radius:12px;padding:10px;text-align:left;font-family:inherit;color:var(--tx);cursor:pointer}
+.handbook-summary-stat.on{background:var(--p);border-color:var(--p);color:#fff}
+.handbook-summary-num{font-size:21px;font-weight:900;line-height:1}
+.handbook-summary-label{font-size:11px;font-weight:750;margin-top:4px;opacity:.82}
+.handbook-chip-section{margin-top:10px}
+.handbook-chip-title{font-size:11px;font-weight:850;color:var(--ts);margin-bottom:6px}
+.handbook-chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.handbook-filter-chip{border:1px solid #D8CAB7;background:#FFFDF8;color:#5F6658;border-radius:999px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.handbook-filter-chip.on{background:var(--p);border-color:var(--p);color:#fff}
+.handbook-filter-chip.muted{background:#F3EDE1;color:#7A7060}
+.handbook-filter-chip .num{margin-left:3px;font-weight:900}
+.handbook-summary-note{margin-top:10px;color:var(--ts);font-size:11px;font-weight:700;line-height:1.45}
 .handbook-add-panel{background:var(--pl);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .handbook-add-panel summary{cursor:pointer;list-style:none;padding:14px;font-size:14px;font-weight:850;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .handbook-add-panel summary::-webkit-details-marker{display:none}
@@ -1539,7 +1554,7 @@ body{font-weight:500}
     </div>
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
-    <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 (<span id="handbookCount">0</span>명)</h3>
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 <span id="handbookCount" class="handbook-title-count">표시 0명</span></h3>
     <div id="handbookPartSummary"></div>
     
     <details class="handbook-add-panel" id="hbAddPanel" ontoggle="syncMemberAddOpen()">
@@ -2731,6 +2746,9 @@ function escAttr(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'
 function normalizePartName(part){
   var v=String(part||'').trim();
   var up=v.toUpperCase();
+  if(/^명.*외$/.test(v))return '명단제외';
+  if(/^준.*단원$/.test(v))return '준단원';
+  if(/^신.*단원$/.test(v))return '신입단원';
   var map={S1:'S1',S2:'S2',T1:'T1',T2:'T2'};
   return map[up]||v;
 }
@@ -3923,17 +3941,21 @@ function loadHandbook() {
     directoryData = [];
     snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
     setSongMemberDirectory(directoryData);
-    renderHandbook(directoryData);
-    updatePartSummary(); // 👈 데이터를 다 불러온 후 파트 요약 업데이트!
+    updatePartSummary();
+    filterHandbook();
   });
 }
 
 function renderHandbook(list) {
   var countEl = document.getElementById('handbookCount');
-  if(countEl) countEl.textContent = list.length; 
+  if(countEl) countEl.textContent = '표시 '+list.length+'명';
   var c = document.getElementById('handbookList'); if(!c) return;
   var addPanel=document.getElementById('hbAddPanel');
   if(addPanel)addPanel.style.display=canManageHandbookMembers()?'block':'none';
+  if(!list.length){
+    c.innerHTML='<div class="member-history-empty">조건에 맞는 단원이 없습니다.</div>';
+    return;
+  }
 
   c.innerHTML = list.map(function(m) {
     // 👇 사진 HTML 동적 생성 (여기 추가됨)
@@ -3946,14 +3968,19 @@ function renderHandbook(list) {
     var activityBtn=canViewMemberHistory()?`<button class="btn btn-sm hb-activity-btn" style="padding:4px 8px; font-size:10px" onclick="openMemberSongHistory('${escAttr(m.id)}')">활동</button>`:'';
     var editBtn=canManageHandbookMembers()?`<button class="btn btn-sm" style="padding:4px 8px; font-size:10px" onclick="editHandbookMember('${escAttr(m.id)}')">✏️</button>`:'';
     var delBtn=canDeleteHandbookMembers()?`<button class="btn btn-sm btn-d" style="padding:4px 8px; font-size:10px" onclick="deleteHandbookMember('${escAttr(m.id)}', '${escAttr(m.name)}')">🗑️</button>`:'';
+    var mainPart=normalizePartName(m.part)||'-';
+    var subPart=normalizePartName(m.subPart);
+    var stateBadge=isHandbookExcludedMember(m)
+      ? ' <span style="font-size:10px;background:#ECE7DA;color:#655E52;padding:1px 6px;border-radius:8px">명단제외</span>'
+      : (!isAttendanceTargetMember(m)?' <span style="font-size:10px;background:#F4E7CC;color:#7C571E;padding:1px 6px;border-radius:8px">출결제외</span>':'');
 
     return `
       <div class="song-card" style="border-left-color: ${(m.status||'active') === 'active' ? 'var(--p)' : 'var(--ts)'}">
         <div class="hb-card-head">
           <div class="hb-card-main">
             ${photoHtml} <div class="hb-card-text">
-              <div class="hb-card-title">${m.name} <span class="hb-card-meta">${m.part}${m.subPart?' · '+m.subPart:''}</span>
-${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}</div>
+              <div class="hb-card-title">${m.name} <span class="hb-card-meta">${mainPart}${subPart?' · '+subPart:''}</span>
+${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#fff;padding:1px 6px;border-radius:8px">출결</span>':m.role==='chongmu'?' <span style="font-size:10px;background:var(--p);color:#fff;padding:1px 6px;border-radius:8px">총무부</span>':''}${stateBadge}</div>
               ${m.phone ? `<a href="tel:${m.phone.replace(/[^0-9+]/g,'')}" style="font-size:13px; color:var(--p); font-weight:700; margin:4px 0; display:inline-block; text-decoration:none">📞 ${m.phone}</a>` : `<div style="font-size:13px; color:var(--ts); font-weight:700; margin:4px 0">전화번호 미등록</div>`}
             </div>
           </div>
@@ -4806,31 +4833,60 @@ function openMemberSongHistory(id){
 
 // 현재 선택된 파트 필터를 기억하는 변수
 var selectedHbPart = 'all';
+var HANDBOOK_MAIN_PARTS=['S1','S2','T1','T2','관현악','지휘','반주','임원'];
+var HANDBOOK_ROLE_TAGS=['임원','지휘','반주','준단원','신입단원'];
+
+function isHandbookExcludedMember(member){
+  var part=normalizePartName(member&&member.part);
+  return !member||part==='명단제외'||(member.status||'active')!=='active';
+}
+
+function isHandbookRosterMember(member){
+  return !isHandbookExcludedMember(member);
+}
+
+function getHandbookMainPart(member){
+  var part=normalizePartName(member&&member.part);
+  return HANDBOOK_MAIN_PARTS.indexOf(part)>-1?part:'';
+}
+
+function hasHandbookRoleTag(member,tag){
+  var part=normalizePartName(member&&member.part);
+  var subPart=normalizePartName(member&&member.subPart);
+  return part===tag||subPart===tag;
+}
+
+function matchesHandbookFilter(member,filterKey){
+  filterKey=filterKey||'all';
+  if(filterKey==='all')return isHandbookRosterMember(member);
+  if(filterKey==='attendance')return isAttendanceTargetMember(member);
+  if(filterKey==='noAtt')return isHandbookRosterMember(member)&&!isAttendanceTargetMember(member);
+  if(filterKey==='excluded')return isHandbookExcludedMember(member);
+  if(filterKey==='otherMain')return isHandbookRosterMember(member)&&!getHandbookMainPart(member);
+  if(filterKey.indexOf('main:')===0){
+    return isHandbookRosterMember(member)&&getHandbookMainPart(member)===filterKey.slice(5);
+  }
+  if(filterKey.indexOf('role:')===0){
+    return isHandbookRosterMember(member)&&hasHandbookRoleTag(member,filterKey.slice(5));
+  }
+  return isHandbookRosterMember(member);
+}
 
 // [수정] 텍스트 검색과 파트 클릭 필터를 동시에 적용 (새 파트 추가)
 function filterHandbook() {
-  var q = document.getElementById('handbookSearch').value.toLowerCase();
+  var searchEl=document.getElementById('handbookSearch');
+  var q = (searchEl?searchEl.value:'').toLowerCase();
   
   var filtered = directoryData.filter(function(m) {
-    var name = m.name || ""; var dist = m.district || ""; var job = m.job || "";
-    var textMatch = name.toLowerCase().includes(q) || dist.toLowerCase().includes(q) || job.toLowerCase().includes(q);
-
-    var partMatch = true;
-    if (selectedHbPart !== 'all') {
-      if (selectedHbPart === '기타') {
-        // 👇 여기에 신입단원, 준단원, 명단제외를 추가했습니다!
-        var standardParts = ['S1', 'S2', 'T1', 'T2', '지휘', '반주', '관현악', '임원', '준단원', '신입단원', '명단제외'];
-        partMatch = !standardParts.includes(m.part || '');
-      } else {
-        partMatch = m.part === selectedHbPart || m.subPart === selectedHbPart;
-      }
-
-    }
-    return textMatch && partMatch;
+    var haystack=[
+      m.name||'',m.district||'',m.area||'',m.job||'',m.group||'',
+      normalizePartName(m.part),normalizePartName(m.subPart)
+    ].join(' ').toLowerCase();
+    return (!q||haystack.indexOf(q)>-1)&&matchesHandbookFilter(m,selectedHbPart);
   });
 
-  renderHandbook(filtered); // 👈 1. 이거 추가!
-}                           // 👈 2. 닫는 중괄호 추가!
+  renderHandbook(filtered);
+}
 
 
 
@@ -5032,53 +5088,53 @@ function updateHandbookMember(){
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
-// [수정] 클릭 가능한 파트 요약 칩 (새 파트 카운터 추가)
 function updatePartSummary() {
   var container = document.getElementById('handbookPartSummary');
   if(!container) return;
 
-  // 👇 여기에 새 파트들의 카운터를 위한 자리를 마련했습니다!
-  var counts = { 'S1': 0, 'S2': 0, 'T1': 0, 'T2': 0, '관현악': 0, '지휘': 0, '반주': 0, '임원': 0, '준단원': 0, '신입단원': 0, '명단제외': 0 };
-  var others = 0;
-
-  directoryData.forEach(function(m) {
-    var mainPart=normalizePartName(m.part);
-    var subPart=normalizePartName(m.subPart);
-    if(counts[mainPart] !== undefined) counts[mainPart]++;
-    else others++;
-    if(subPart && counts[subPart] !== undefined && subPart !== mainPart) counts[subPart]++;
-
+  var roster=directoryData.filter(isHandbookRosterMember);
+  var attendance=roster.filter(isAttendanceTargetMember);
+  var noAtt=roster.length-attendance.length;
+  var excluded=directoryData.filter(isHandbookExcludedMember);
+  var mainCounts={}, roleCounts={}, otherMain=0;
+  HANDBOOK_MAIN_PARTS.forEach(function(part){mainCounts[part]=0;});
+  HANDBOOK_ROLE_TAGS.forEach(function(tag){roleCounts[tag]=0;});
+  roster.forEach(function(m){
+    var main=getHandbookMainPart(m);
+    if(main)mainCounts[main]++;
+    else otherMain++;
+    HANDBOOK_ROLE_TAGS.forEach(function(tag){
+      if(hasHandbookRoleTag(m,tag))roleCounts[tag]++;
+    });
   });
 
-
-  var html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">';
-  
-  var allBg = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bg)';
-  var allCol = selectedHbPart === 'all' ? '#fff' : 'var(--ts)';
-  var allBd = selectedHbPart === 'all' ? 'var(--p)' : 'var(--bd)';
-  html += `<span style="background:${allBg}; color:${allCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${allBd}; cursor:pointer;" onclick="toggleHbPart('all')">전체 ${directoryData.length}</span>`;
-
-  Object.keys(counts).forEach(function(k) {
-    var isZero = counts[k] === 0;
-    var isSelected = selectedHbPart === k;
-
-    var bg = isSelected ? 'var(--p)' : (isZero ? 'var(--bg)' : 'var(--pl)');
-    var border = isSelected ? 'var(--p)' : (isZero ? 'var(--bd)' : 'var(--p)');
-    var textCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--pd)');
-    var numCol = isSelected ? '#fff' : (isZero ? 'var(--ts)' : 'var(--p)');
-
-    // 명단제외는 약간 눈에 덜 띄게 회색 톤으로 처리하려면 아래 로직 추가 가능 (현재는 기본 통일)
-    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:700; border:1px solid ${border}; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('${k}')">${k} <span style="color:${numCol}; margin-left:2px">${counts[k]}</span></span>`;
-  });
-  
-  if(others > 0) {
-    var isSelected = selectedHbPart === '기타';
-    var bg = isSelected ? 'var(--p)' : 'var(--bd)';
-    var textCol = isSelected ? '#fff' : 'var(--ts)';
-    html += `<span style="background:${bg}; color:${textCol}; padding:5px 10px; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;" onclick="toggleHbPart('기타')">기타 ${others}</span>`;
+  function stat(key,label,count){
+    var on=selectedHbPart===key?' on':'';
+    return '<button type="button" class="handbook-summary-stat'+on+'" onclick="toggleHbPart(\''+escAttr(key)+'\')"><div class="handbook-summary-num">'+count+'</div><div class="handbook-summary-label">'+label+'</div></button>';
   }
-  
-  html += '</div>';
+  function chip(key,label,count,muted){
+    var on=selectedHbPart===key?' on':'';
+    return '<button type="button" class="handbook-filter-chip'+on+(muted?' muted':'')+'" onclick="toggleHbPart(\''+escAttr(key)+'\')">'+label+' <span class="num">'+count+'</span></button>';
+  }
+
+  var html='<div class="handbook-summary-card">';
+  html+='<div class="handbook-summary-stats">'
+    +stat('all','실단원',roster.length)
+    +stat('attendance','출결대상',attendance.length)
+    +stat('noAtt','출결제외',noAtt)
+    +stat('excluded','명단제외',excluded.length)
+    +'</div>';
+  html+='<div class="handbook-chip-section"><div class="handbook-chip-title">주 파트</div><div class="handbook-chip-row">';
+  HANDBOOK_MAIN_PARTS.forEach(function(part){
+    html+=chip('main:'+part,part,mainCounts[part]);
+  });
+  if(otherMain>0)html+=chip('otherMain','주파트 미지정',otherMain,true);
+  html+='</div></div>';
+  html+='<div class="handbook-chip-section"><div class="handbook-chip-title">겸직/상태 필터</div><div class="handbook-chip-row">';
+  HANDBOOK_ROLE_TAGS.forEach(function(tag){
+    html+=chip('role:'+tag,tag,roleCounts[tag],false);
+  });
+  html+='</div></div><div class="handbook-summary-note">주 파트는 단원 1명당 1번만 집계합니다. 겸직/상태는 필터용이라 주 파트 인원과 별도로 표시됩니다.</div></div>';
   container.innerHTML = html;
 }
 
