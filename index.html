@@ -357,6 +357,14 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .late-chip.present{background:var(--pl);border-color:var(--p);color:var(--pd)}
 .late-chip.cancel{color:var(--ts)}
 .reason-help{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
+.photo-crop-stage{display:flex;justify-content:center;margin:8px 0 14px}
+.photo-crop-frame{width:240px;height:240px;border-radius:50%;overflow:hidden;background:#ECE4D6;border:3px solid var(--pl);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.photo-crop-frame canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.photo-crop-controls{display:grid;gap:10px;margin-top:8px}
+.photo-crop-control{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:center}
+.photo-crop-control span{font-size:12px;font-weight:850;color:var(--ts)}
+.photo-crop-control input{width:100%}
+.photo-crop-note{font-size:11px;color:var(--ts);line-height:1.45;text-align:center;margin-top:8px}
 .detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
 .detail-label{width:80px;font-weight:700;color:var(--ts);flex-shrink:0}
 .detail-value{flex:1;color:var(--tx)}
@@ -1675,8 +1683,8 @@ body{font-weight:500}
         <label class="form-label" style="font-size:12px; color:var(--p)">📷 프로필 사진 등록</label>
         <div style="text-align:center; margin-bottom:10px;"><img id="hbPhotoPreview" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--bd); margin:0 auto;"></div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <input type="file" id="hbPhotoFile" accept="image/*" style="font-size:12px; flex:1">
-          <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="uploadPhotoAndResize('hbPhotoFile', 'hbPhotoUrl')">업로드</button>
+          <input type="file" id="hbPhotoFile" accept="image/*" style="display:none">
+          <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="selectPhotoForUpload('hbPhotoFile', 'hbPhotoUrl')">사진첩에서 선택</button>
           <button class="btn btn-sm btn-d" style="white-space:nowrap" onclick="removeAddPreviewPhoto()">삭제</button>
         </div>
         <input class="form-input hidden" id="hbPhotoUrl" readonly data-saved-url="" placeholder="업로드 성공 시 주소가 자동 입력됩니다">
@@ -1960,6 +1968,27 @@ body{font-weight:500}
     <button style="position:absolute; top:-12px; right:-12px; background:var(--sf); color:var(--tx); border:none; width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3)" onclick="closeModal('modalPhotoViewer')">✕</button>
   </div>
 </div>
+<div class="modal-overlay modal-center" id="modalPhotoCrop">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">프로필 사진 위치 맞추기</span>
+      <button class="modal-close" onclick="cancelPhotoCrop()">✕</button>
+    </div>
+    <div class="photo-crop-stage">
+      <div class="photo-crop-frame"><canvas id="photoCropCanvas" width="240" height="240"></canvas></div>
+    </div>
+    <div class="photo-crop-controls">
+      <label class="photo-crop-control"><span>확대</span><input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1" oninput="updatePhotoCropFromControls()"></label>
+      <label class="photo-crop-control"><span>좌우</span><input id="photoCropX" type="range" min="-120" max="120" step="1" value="0" oninput="updatePhotoCropFromControls()"></label>
+      <label class="photo-crop-control"><span>상하</span><input id="photoCropY" type="range" min="-120" max="120" step="1" value="0" oninput="updatePhotoCropFromControls()"></label>
+    </div>
+    <div class="photo-crop-note">얼굴이 원 안에 오도록 위치를 맞춘 뒤 업로드하세요.</div>
+    <div class="account-action-actions">
+      <button type="button" class="btn" onclick="cancelPhotoCrop()">취소</button>
+      <button type="button" class="btn btn-p" onclick="confirmPhotoCropUpload()">업로드</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay modal-center" id="modalMemberEdit">
   <div class="modal-content">
     <div class="modal-header">
@@ -2026,8 +2055,8 @@ body{font-weight:500}
       <label class="form-label" style="font-size:12px; color:var(--p)">📷 프로필 사진 수정</label>
       <div style="text-align:center; margin-bottom:10px;"><img id="editHbPhotoPreview" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--bd); margin:0 auto;"></div>
       <div style="display:flex; gap:8px; align-items:center;">
-        <input type="file" id="editHbPhotoFile" accept="image/*" style="font-size:12px; flex:1">
-        <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="uploadPhotoAndResize('editHbPhotoFile', 'editHbPhotoUrl')">업로드</button>
+        <input type="file" id="editHbPhotoFile" accept="image/*" style="display:none">
+        <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="selectPhotoForUpload('editHbPhotoFile', 'editHbPhotoUrl')">사진첩에서 선택</button>
         <button class="btn btn-sm btn-d" style="white-space:nowrap" onclick="removePreviewPhoto()">삭제</button>
       </div>
       <input class="form-input" id="editHbPhotoUrl" data-saved-url="" placeholder="사진 URL (업로드 시 자동 입력, 직접 입력도 가능)" style="margin-top:4px; font-size:12px">
@@ -2271,6 +2300,12 @@ function closeModal(id){
   if(!modal)return;
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
+  if(id==='modalPhotoCrop'&&photoCropState){
+    if(photoCropState.uploading)return showToast('사진 업로드 중입니다');
+    var fileInput=document.getElementById(photoCropState.fileInputId);
+    if(fileInput)fileInput.value='';
+    photoCropState=null;
+  }
   modal.classList.remove('active');
   syncLayoutState();
 }
@@ -2796,7 +2831,7 @@ function renderCurrentUserProfile(member,state){
       +preview
       +'<div style="font-size:13px;font-weight:850;margin-bottom:2px">'+escHtml(member.name||currentUser.name)+'</div>'
       +'<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+escHtml(accountLinkMemberLabel(member))+'</div>'
-      +'<div style="display:flex;gap:8px;align-items:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="font-size:12px;flex:1;min-width:0"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="uploadPhotoAndResize(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">업로드</button></div>'
+      +'<div style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="display:none"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="selectPhotoForUpload(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">사진첩에서 선택</button></div>'
       +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly data-saved-url="'+escHtml(photo)+'" value="'+escHtml(photo)+'">'
       +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
@@ -10160,75 +10195,153 @@ function cleanupUnsavedPhotoUpload(inputOrId){
   if(currentUrl&&currentUrl!==savedUrl)deleteStoragePhotoByUrl(currentUrl);
 }
 
-// [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
-function uploadPhotoAndResize(fileInputId, urlInputId) {
-  var fileInput = document.getElementById(fileInputId);
-  if (!fileInput.files || fileInput.files.length === 0) {
-    return showToast('먼저 앨범에서 사진을 선택해주세요!');
-  }
+var photoCropState=null;
 
-  var file = fileInput.files[0];
-  showToast('🚀 사진을 압축하며 업로드 중입니다... (최대 5초 대기)');
-
-  var reader = new FileReader();
-  reader.readAsDataURL(file);
-  reader.onload = function(event) {
-    var img = new Image();
-    img.src = event.target.result;
-    
-    img.onload = function() {
-      // 가로 300px 크기로 압축
-      var canvas = document.createElement('canvas');
-      var MAX_WIDTH = 300; 
-      var scaleSize = MAX_WIDTH / img.width;
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scaleSize;
-
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      // 압축된 이미지 뽑아내기
-      canvas.toBlob(function(blob) {
-        // Firebase Storage에 업로드
-        var fileName = 'profiles/' + Date.now() + '_' + file.name;
-        var uploadTask = storage.ref().child(fileName).put(blob);
-
-        uploadTask.then(function(snapshot) {
-          // 💡 여기서 주소를 받아옵니다!
-          snapshot.ref.getDownloadURL().then(function(downloadURL) {
-            
-            var urlInput = document.getElementById(urlInputId);
-            if (urlInput) {
-              var previousUrl = urlInput.value.trim();
-              var savedUrl = getPhotoSavedUrl(urlInput);
-              if(previousUrl&&previousUrl!==savedUrl&&previousUrl!==downloadURL)deleteStoragePhotoByUrl(previousUrl);
-              urlInput.value = downloadURL; // 빈칸에 주소 강제 주입!
-              urlInput.classList.remove('hidden'); 
-              
-              var previewId = urlInputId === 'hbPhotoUrl' ? 'hbPhotoPreview' : (urlInputId === 'myProfilePhotoUrl' ? 'myProfilePhotoPreview' : 'editHbPhotoPreview');
-              var previewImg = document.getElementById(previewId);
-              if(previewImg) {
-                previewImg.src = downloadURL;
-                previewImg.style.display = 'block';
-              }
-            }
-            showToast('✅ 사진 업로드 완료! (저장하기를 눌러주세요)');
-            
-          }).catch(function(err) {
-            // 주소를 받아오지 못했을 때 뜨는 에러
-            console.error(err);
-            showToast('❌ 주소 가져오기 실패: ' + err.message);
-          });
-          
-        }).catch(function(error) {
-          // 업로드 자체가 실패했을 때 뜨는 에러
-          console.error(error);
-          showToast('❌ 업로드 실패: ' + error.message);
-        });
-      }, 'image/jpeg', 0.8);
-    }
-  };
+function selectPhotoForUpload(fileInputId,urlInputId){
+  var input=document.getElementById(fileInputId);
+  if(!input)return showToast('사진 입력칸을 찾을 수 없습니다');
+  input.onchange=function(){uploadPhotoAndResize(fileInputId,urlInputId);};
+  input.click();
 }
+
+function uploadPhotoAndResize(fileInputId, urlInputId) {
+  var fileInput=document.getElementById(fileInputId);
+  if(!fileInput||!fileInput.files||fileInput.files.length===0)return showToast('먼저 사진을 선택해주세요');
+  var file=fileInput.files[0];
+  var reader=new FileReader();
+  reader.onload=function(event){
+    var img=new Image();
+    img.onload=function(){
+      photoCropState={file:file,fileInputId:fileInputId,urlInputId:urlInputId,img:img,zoom:1,x:0,y:0,dragging:false,lastX:0,lastY:0};
+      ['photoCropZoom','photoCropX','photoCropY'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el)el.value=id==='photoCropZoom'?'1':'0';
+      });
+      openModal('modalPhotoCrop');
+      initPhotoCropCanvasEvents();
+      drawPhotoCropPreview();
+    };
+    img.onerror=function(){showToast('사진을 읽을 수 없습니다. 다른 사진을 선택해주세요');};
+    img.src=event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function updatePhotoCropFromControls(){
+  if(!photoCropState)return;
+  photoCropState.zoom=parseFloat((document.getElementById('photoCropZoom')||{}).value||'1');
+  photoCropState.x=parseFloat((document.getElementById('photoCropX')||{}).value||'0');
+  photoCropState.y=parseFloat((document.getElementById('photoCropY')||{}).value||'0');
+  drawPhotoCropPreview();
+}
+
+function drawPhotoCropToCanvas(canvas,size,clipCircle){
+  if(!photoCropState||!canvas)return;
+  var img=photoCropState.img;
+  var ctx=canvas.getContext('2d');
+  canvas.width=size;canvas.height=size;
+  ctx.clearRect(0,0,size,size);
+  ctx.fillStyle='#F8F2E8';
+  ctx.fillRect(0,0,size,size);
+  if(clipCircle){
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size/2,size/2,size/2,0,Math.PI*2);
+    ctx.clip();
+  }
+  var baseScale=Math.max(size/img.width,size/img.height);
+  var scale=baseScale*(photoCropState.zoom||1);
+  var dw=img.width*scale;
+  var dh=img.height*scale;
+  var factor=size/240;
+  var dx=(size-dw)/2+(photoCropState.x||0)*factor;
+  var dy=(size-dh)/2+(photoCropState.y||0)*factor;
+  ctx.drawImage(img,dx,dy,dw,dh);
+  if(clipCircle)ctx.restore();
+}
+
+function drawPhotoCropPreview(){
+  drawPhotoCropToCanvas(document.getElementById('photoCropCanvas'),240,true);
+}
+
+function initPhotoCropCanvasEvents(){
+  var canvas=document.getElementById('photoCropCanvas');
+  if(!canvas||canvas.dataset.bound==='true')return;
+  canvas.dataset.bound='true';
+  canvas.addEventListener('pointerdown',function(e){
+    if(!photoCropState)return;
+    photoCropState.dragging=true;
+    photoCropState.lastX=e.clientX;
+    photoCropState.lastY=e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove',function(e){
+    if(!photoCropState||!photoCropState.dragging)return;
+    photoCropState.x=Math.max(-120,Math.min(120,photoCropState.x+(e.clientX-photoCropState.lastX)));
+    photoCropState.y=Math.max(-120,Math.min(120,photoCropState.y+(e.clientY-photoCropState.lastY)));
+    photoCropState.lastX=e.clientX;
+    photoCropState.lastY=e.clientY;
+    var x=document.getElementById('photoCropX'), y=document.getElementById('photoCropY');
+    if(x)x.value=photoCropState.x;
+    if(y)y.value=photoCropState.y;
+    drawPhotoCropPreview();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(type){
+    canvas.addEventListener(type,function(){if(photoCropState)photoCropState.dragging=false;});
+  });
+}
+
+function cancelPhotoCrop(){
+  if(photoCropState){
+    if(photoCropState.uploading)return showToast('사진 업로드 중입니다');
+    var fileInput=document.getElementById(photoCropState.fileInputId);
+    if(fileInput)fileInput.value='';
+  }
+  photoCropState=null;
+  closeModal('modalPhotoCrop');
+}
+
+function confirmPhotoCropUpload(){
+  if(!photoCropState)return showToast('선택된 사진이 없습니다');
+  if(photoCropState.uploading)return;
+  photoCropState.uploading=true;
+  var state=photoCropState;
+  showToast('사진 업로드 중...');
+  var out=document.createElement('canvas');
+  drawPhotoCropToCanvas(out,300,false);
+  out.toBlob(function(blob){
+    if(!blob){state.uploading=false;return showToast('사진 변환에 실패했습니다');}
+    var safeName=String(state.file.name||'profile.jpg').replace(/[^\w.\-가-힣]/g,'_').replace(/\.[^.]+$/,'')+'.jpg';
+    var fileName='profiles/'+Date.now()+'_'+safeName;
+    var targetUrlInputId=state.urlInputId;
+    var sourceInputId=state.fileInputId;
+    storage.ref().child(fileName).put(blob,{contentType:'image/jpeg'}).then(function(snapshot){
+      return snapshot.ref.getDownloadURL();
+    }).then(function(downloadURL){
+      var urlInput=document.getElementById(targetUrlInputId);
+      if(urlInput){
+        var previousUrl=urlInput.value.trim();
+        var savedUrl=getPhotoSavedUrl(urlInput);
+        if(previousUrl&&previousUrl!==savedUrl&&previousUrl!==downloadURL)deleteStoragePhotoByUrl(previousUrl);
+        urlInput.value=downloadURL;
+        urlInput.classList.remove('hidden');
+        var previewId=targetUrlInputId==='hbPhotoUrl'?'hbPhotoPreview':(targetUrlInputId==='myProfilePhotoUrl'?'myProfilePhotoPreview':'editHbPhotoPreview');
+        var previewImg=document.getElementById(previewId);
+        if(previewImg){previewImg.src=downloadURL;previewImg.style.display='block';}
+      }
+      var fileInput=document.getElementById(sourceInputId);
+      if(fileInput)fileInput.value='';
+      photoCropState=null;
+      closeModal('modalPhotoCrop');
+      showToast('사진 업로드 완료. 저장을 눌러 반영하세요');
+    }).catch(function(error){
+      console.error(error);
+      if(photoCropState)photoCropState.uploading=false;
+      showToast('사진 업로드 실패: '+error.message);
+    });
+  },'image/jpeg',0.85);
+}
+
 function viewLargePhoto(url) {
   document.getElementById('viewerImage').src = url;
   openModal('modalPhotoViewer');
