@@ -2504,6 +2504,7 @@ function canManageArchiveItem(item){
 }
 function scopeFromAccountPart(part){
   part=normalizePartName(part);
+  if(part==='지휘')return ['ALL'];
   return part?[part]:[];
 }
 function expandAttendanceScope(scope){
@@ -4197,6 +4198,7 @@ function renderAccountPermissionBadges(m){
     badges.push('<span class="perm-badge">'+escHtml(label)+'</span>');
   });
   var scopeText=accountScopeLabel(m.attendanceScope);
+  if(!scopeText&&featureLabels.indexOf('출결')>-1)scopeText=accountScopeLabel(scopeFromAccountPart(m.part));
   if(scopeText&&featureLabels.indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
   return '<div class="account-perm-line"><span class="account-line-label">권한</span><div class="perm-badges">'+badges.join('')+'</div></div>';
 }
@@ -4254,7 +4256,7 @@ function renderPermissionEditor(preset, permissions, scope){
     html+='</div>';
   });
   html+='</div>';
-  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">출결 체크와 찬양의밤 파트 제출에서 여기서 지정한 범위만 열립니다. 비워두면 계정의 파트를 기본 범위로 사용합니다.</div><div class="perm-scope-grid">';
+  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">출결 체크와 찬양의밤 파트 제출에서 여기서 지정한 범위만 열립니다. 비워두면 계정의 파트를 기본 범위로 사용하고, 지휘 계정은 전체 범위로 사용합니다.</div><div class="perm-scope-grid">';
   ATTENDANCE_SCOPE_OPTIONS.forEach(function(opt){
     html+='<label class="perm-scope-item"><input type="checkbox" class="perm-scope-input" value="'+escHtml(opt.key)+'" '+(scope.indexOf(opt.key)>-1?'checked':'')+'><span>'+escHtml(opt.label)+'</span></label>';
   });
