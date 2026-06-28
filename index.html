@@ -1664,6 +1664,7 @@ body{font-weight:500}
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
+      <div class="form-group"><label class="form-label">명부 연결</label><select class="form-sel" id="memMemberId"><option value="">명부 연결 안 함</option></select><div style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:4px">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
@@ -2073,6 +2074,7 @@ var adminRole=null;
 var chongmuPassword='0412';
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
+var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
@@ -2712,11 +2714,78 @@ function checkAdminPw(){
 function openUserModal(){
   var b=document.getElementById('userModalBody');
   if(currentUser){
-    b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+currentUser.name+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+currentUser.part+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div><button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+    renderCurrentUserProfile(null,'loading');
+    loadCurrentUserLinkedMember();
   }else{
     b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">로그인하면 즐겨찾기가 다른 기기에서도 동기화됩니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 로그인 없이도 모든 곡 열람 가능</p>';
   }
   openModal('modalUser');
+}
+
+function renderCurrentUserProfile(member,state){
+  var b=document.getElementById('userModalBody');
+  if(!b||!currentUser)return;
+  var memberBox='';
+  if(!currentUser.memberId){
+    memberBox='<div style="padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;font-size:12px;color:var(--ts);line-height:1.5;margin-top:14px">명부 연결 전입니다. 계정은 정상 사용 가능하며, 명부 사진 업로드는 관리자 연결 후 사용할 수 있습니다.</div>';
+  }else if(state==='loading'){
+    memberBox='<div style="padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;font-size:12px;color:var(--ts);line-height:1.5;margin-top:14px">명부 연결 상태를 확인하는 중입니다...</div>';
+  }else if(state==='missing'){
+    memberBox='<div style="padding:12px;background:#F4E7CC;border:1px solid #E5C88F;border-radius:12px;font-size:12px;color:#7C571E;line-height:1.5;margin-top:14px">연결된 명부를 찾을 수 없습니다. 계정은 유지되며, 관리자에게 명부 재연결을 요청해주세요.</div>';
+  }else if(state==='inactive'){
+    memberBox='<div style="padding:12px;background:#F4E7CC;border:1px solid #E5C88F;border-radius:12px;font-size:12px;color:#7C571E;line-height:1.5;margin-top:14px">연결된 명부가 현재 비활성 상태입니다. 사진 업로드는 사용할 수 없습니다.</div>';
+  }else if(member){
+    var photo=member.photo||'';
+    var preview='<img id="myProfilePhotoPreview" src="'+escHtml(photo)+'" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--pl);margin:0 auto 10px;display:'+(photo?'block':'none')+'">';
+    memberBox='<div style="margin-top:14px;padding:12px;background:var(--sf);border:1px solid var(--bd);border-radius:12px">'
+      +preview
+      +'<div style="font-size:13px;font-weight:850;margin-bottom:2px">'+escHtml(member.name||currentUser.name)+'</div>'
+      +'<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+escHtml(accountLinkMemberLabel(member))+'</div>'
+      +'<div style="display:flex;gap:8px;align-items:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="font-size:12px;flex:1;min-width:0"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="uploadPhotoAndResize(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">업로드</button></div>'
+      +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly value="'+escHtml(photo)+'">'
+      +'<button class="btn btn-p btn-bl" style="margin-top:10px" onclick="saveMyProfilePhoto()">사진 저장</button>'
+      +'</div>';
+  }
+  b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(currentUser.part||'')+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+}
+
+function loadCurrentUserLinkedMember(){
+  if(!currentUser||!currentUser.memberId)return;
+  db.collection('members').doc(currentUser.memberId).get().then(function(doc){
+    if(!currentUser||currentUser.memberId!==doc.id)return;
+    if(!doc.exists)return renderCurrentUserProfile(null,'missing');
+    var member=Object.assign({id:doc.id},doc.data());
+    if(isHandbookExcludedMember(member))return renderCurrentUserProfile(member,'inactive');
+    renderCurrentUserProfile(member,'ready');
+  }).catch(function(){
+    renderCurrentUserProfile(null,'missing');
+  });
+}
+
+function saveMyProfilePhoto(){
+  if(!currentUser||!currentUser.memberId)return showToast('명부 연결 후 사용할 수 있습니다');
+  var input=document.getElementById('myProfilePhotoUrl');
+  var url=input?input.value.trim():'';
+  if(!url)return showToast('먼저 사진을 업로드해주세요');
+  db.collection('members').doc(currentUser.memberId).get().then(function(doc){
+    if(!doc.exists)throw new Error('missing');
+    var member=Object.assign({id:doc.id},doc.data());
+    if(isHandbookExcludedMember(member))throw new Error('inactive');
+    return db.collection('members').doc(currentUser.memberId).update({
+      photo:url,
+      photoUpdatedAt:new Date().toISOString(),
+      photoUpdatedByAccountId:currentUser.id,
+      photoUpdatedBy:currentUser.name
+    });
+  }).then(function(){
+    showToast('프로필 사진이 저장되었습니다');
+    loadCurrentUserLinkedMember();
+  }).catch(function(e){
+    if(e&&e.message==='inactive')return showToast('비활성 명부는 사진을 저장할 수 없습니다');
+    if(e&&e.message==='missing')return showToast('연결된 명부를 찾을 수 없습니다');
+    console.error(e);
+    showToast('사진 저장 중 오류가 발생했습니다');
+  });
 }
 function loginUser(){
   var nameInput=document.getElementById('userNameInput');
@@ -2729,7 +2798,7 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part,role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[])};
+    currentUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[])};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
@@ -2770,6 +2839,7 @@ function restoreUser() {
   if (s) {
     try {
       currentUser = JSON.parse(s);
+      currentUser.memberId=currentUser.memberId||'';
       currentUser.permissions=normalizePermissionArray(currentUser.permissions);
       currentUser.attendanceScope=normalizeAttendanceScopeArray(currentUser.attendanceScope||[]);
       updateUserBar();
@@ -3648,22 +3718,90 @@ function delSong(id,name){
 function delFromDetail(){if(currentDetailSong){if(!canDeleteSongItem(currentDetailSong))return showToast('삭제 권한이 없습니다');delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
 
 // ==================== 1. 단원 관리 (로그인 계정용 - 'accounts' 방 사용) ====================
+function accountLinkMemberLabel(member){
+  if(!member)return '연결 끊김';
+  var part=normalizePartName(member.part)||'-';
+  var sub=normalizePartName(member.subPart);
+  var state=isHandbookExcludedMember(member)?' · 명단제외':'';
+  return (member.name||'이름 없음')+' ('+part+(sub?' · '+sub:'')+state+')';
+}
+
+function buildAccountMemberOptions(selectedId){
+  selectedId=String(selectedId||'');
+  var html='<option value="">명부 연결 안 함</option>';
+  var activeMembers=accountLinkMembers.filter(isHandbookRosterMember).sort(function(a,b){
+    return String(a.name||'').localeCompare(String(b.name||''),'ko')||String(a.part||'').localeCompare(String(b.part||''),'ko');
+  });
+  activeMembers.forEach(function(m){
+    html+='<option value="'+escHtml(m.id)+'"'+(selectedId===m.id?' selected':'')+'>'+escHtml(accountLinkMemberLabel(m))+'</option>';
+  });
+  if(selectedId&&(!accountLinkMemberMap[selectedId]||!isHandbookRosterMember(accountLinkMemberMap[selectedId]))){
+    html+='<option value="'+escHtml(selectedId)+'" selected>'+escHtml(accountLinkMemberLabel(accountLinkMemberMap[selectedId]))+'</option>';
+  }
+  return html;
+}
+
+function populateAccountMemberSelect(selectId,selectedId){
+  var sel=document.getElementById(selectId);
+  if(sel)sel.innerHTML=buildAccountMemberOptions(selectedId);
+}
+
+function loadAccountLinkMembers(){
+  if(accountLinkMembersLoaded)return Promise.resolve(accountLinkMembers);
+  if(accountLinkMembersPromise)return accountLinkMembersPromise;
+  accountLinkMembersPromise=db.collection('members').orderBy('name').get().then(function(snap){
+    accountLinkMembers=[];
+    accountLinkMemberMap={};
+    snap.forEach(function(doc){
+      var data=doc.data();
+      var row={id:doc.id,name:data.name||'',part:normalizePartName(data.part),subPart:normalizePartName(data.subPart),status:data.status||'active',noAtt:!!data.noAtt,photo:data.photo||''};
+      accountLinkMembers.push(row);
+      accountLinkMemberMap[row.id]=row;
+    });
+    accountLinkMembersLoaded=true;
+    accountLinkMembersPromise=null;
+    return accountLinkMembers;
+  }).catch(function(e){
+    accountLinkMembersPromise=null;
+    console.error(e);
+    return [];
+  });
+  return accountLinkMembersPromise;
+}
+
+function invalidateAccountLinkMemberCache(){
+  accountLinkMembers=[];
+  accountLinkMemberMap={};
+  accountLinkMembersLoaded=false;
+  accountLinkMembersPromise=null;
+}
+
+function accountMemberLinkConflict(memberId,excludeAccountId){
+  memberId=String(memberId||'');
+  if(!memberId)return null;
+  return allMembers.find(function(m){return m.id!==excludeAccountId&&m.memberId===memberId;})||null;
+}
+
 function addMember(){
   if(!canManageLoginAccounts()) return showToast('계정 등록 및 수정 권한이 없습니다');
   var name=document.getElementById('memName').value.trim();
   var part=document.getElementById('memPart').value;
   var pin=document.getElementById('memPin').value.trim();
+  var memberId=(document.getElementById('memMemberId')||{}).value||'';
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
+  var linkedAccount=accountMemberLinkConflict(memberId,'');
+  if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
 
   // 👇 'accounts' 방에 저장!
   db.collection('accounts').add({ 
-    name:name, part:part, pin:pin, 
+    name:name, part:part, pin:pin, memberId:memberId,
     favorites:[], createdAt:new Date().toISOString()
   }).then(function(){
     showToast(name+'님 로그인 계정 생성 완료');
     document.getElementById('memName').value='';
     document.getElementById('memPin').value='';
+    if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
     
     setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
     writeLog('계정 발급', name + '님 로그인 계정 생성');
@@ -3674,21 +3812,32 @@ function loadMembers(){
   if(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions())return;
   var createPanel=document.getElementById('accountCreatePanel');
   if(createPanel)createPanel.style.display=canManageLoginAccounts()?'block':'none';
-  db.collection('accounts').orderBy('name').get().then(function(snap){
+  var linkPromise=(canManageLoginAccounts()||canManageAccountPermissions())?loadAccountLinkMembers():Promise.resolve([]);
+  linkPromise.then(function(){
+    if(canManageLoginAccounts())populateAccountMemberSelect('memMemberId','');
+    return db.collection('accounts').orderBy('name').get();
+  }).then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[])}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[])}); }
     });
     if(allMembers.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';return}
     c.innerHTML=allMembers.map(function(m){
       var roleBadge=renderAccountPermissionBadges(m);
       var pinHtml=canManageAccountPins()?'<div class="account-pin">PIN: <b>'+escHtml(m.pin)+'</b></div>':'<div class="account-pin">PIN: 권한 필요</div>';
+      var linkHtml='';
+      if(canManageLoginAccounts()||canManageAccountPermissions()){
+        var linked=m.memberId?accountLinkMemberMap[m.memberId]:null;
+        var linkText=m.memberId?(linked?('명부 연결: '+accountLinkMemberLabel(linked)):'명부 연결 끊김'):'명부 미연결';
+        linkHtml='<div style="font-size:11px;color:var(--ts);margin-top:4px">'+escHtml(linkText)+'</div>';
+      }
       return `<div class="account-row">
         <div class="account-main">
           <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span><span class="meta-tag">${escHtml(m.part)}</span></div>
           ${roleBadge}
           ${pinHtml}
+          ${linkHtml}
         </div>
         <div class="account-actions">
           ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
@@ -3872,6 +4021,7 @@ function openAccountEdit(id){
   openAccountAction('로그인 계정 수정',
     '<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="accountEditName" value="'+escHtml(m.name)+'"></div>'
     +'<div class="form-group"><label class="form-label">파트</label><select class="form-sel" id="accountEditPart">'+partOptions+'</select></div>'
+    +'<div class="form-group"><label class="form-label">명부 연결</label><select class="form-sel" id="accountEditMemberId">'+buildAccountMemberOptions(m.memberId||'')+'</select><div style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:4px">연결하지 않아도 계정은 정상 사용됩니다.</div></div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountEdit()">저장</button></div>'
   );
 }
@@ -3882,9 +4032,12 @@ function saveAccountEdit(){
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   var newName=document.getElementById('accountEditName').value.trim();
   var newPart=document.getElementById('accountEditPart').value.trim();
+  var memberId=(document.getElementById('accountEditMemberId')||{}).value||'';
   if(!newName||!newPart)return showToast('이름과 파트는 필수입니다');
+  var linkedAccount=accountMemberLinkConflict(memberId,accountActionId);
+  if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({name:newName,part:newPart}).then(function(){
+  db.collection('accounts').doc(accountActionId).update({name:newName,part:newPart,memberId:memberId}).then(function(){
     showToast(newName+'님의 정보가 수정되었습니다');
     closeModal('modalAccountAction');
     loadMembers();
@@ -5044,6 +5197,7 @@ function addHandbookMember(){
     if(addPanel)addPanel.open=false;
     syncMemberAddOpen();
     invalidateAttendanceMemberCache();
+    invalidateAccountLinkMemberCache();
     loadHandbook();
     writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 🏠 ${distInfo}`);
   });
@@ -5055,6 +5209,7 @@ function deleteHandbookMember(id, name){
   db.collection('members').doc(id).delete().then(function(){ 
     showToast('삭제되었습니다'); 
     invalidateAttendanceMemberCache();
+    invalidateAccountLinkMemberCache();
     loadHandbook(); 
     // 👇 활동 로그 추가
     writeLog('명부 삭제', name + ' 단원 삭제됨');
@@ -5138,6 +5293,7 @@ function updateHandbookMember(){
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit');
     invalidateAttendanceMemberCache();
+    invalidateAccountLinkMemberCache();
     loadHandbook();
     writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}${reactivatedForAttendance?' | 출결 시작일 '+data.attendanceStartDate:''}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
@@ -9669,7 +9825,8 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
               urlInput.value = downloadURL; // 빈칸에 주소 강제 주입!
               urlInput.classList.remove('hidden'); 
               
-              var previewImg = document.getElementById(urlInputId === 'hbPhotoUrl' ? 'hbPhotoPreview' : 'editHbPhotoPreview');
+              var previewId = urlInputId === 'hbPhotoUrl' ? 'hbPhotoPreview' : (urlInputId === 'myProfilePhotoUrl' ? 'myProfilePhotoPreview' : 'editHbPhotoPreview');
+              var previewImg = document.getElementById(previewId);
               if(previewImg) {
                 previewImg.src = downloadURL;
                 previewImg.style.display = 'block';
