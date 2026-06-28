@@ -1647,8 +1647,9 @@ body{font-weight:500}
         <div style="display:flex; gap:8px; align-items:center;">
           <input type="file" id="hbPhotoFile" accept="image/*" style="font-size:12px; flex:1">
           <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="uploadPhotoAndResize('hbPhotoFile', 'hbPhotoUrl')">업로드</button>
+          <button class="btn btn-sm btn-d" style="white-space:nowrap" onclick="removeAddPreviewPhoto()">삭제</button>
         </div>
-        <input class="form-input hidden" id="hbPhotoUrl" readonly placeholder="업로드 성공 시 주소가 자동 입력됩니다">
+        <input class="form-input hidden" id="hbPhotoUrl" readonly data-saved-url="" placeholder="업로드 성공 시 주소가 자동 입력됩니다">
       </div>
       <button class="btn btn-p btn-bl" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
       </div>
@@ -1983,7 +1984,7 @@ body{font-weight:500}
         <button class="btn btn-sm" style="background:var(--pl); color:var(--pd); white-space:nowrap" onclick="uploadPhotoAndResize('editHbPhotoFile', 'editHbPhotoUrl')">업로드</button>
         <button class="btn btn-sm btn-d" style="white-space:nowrap" onclick="removePreviewPhoto()">삭제</button>
       </div>
-      <input class="form-input" id="editHbPhotoUrl" placeholder="사진 URL (업로드 시 자동 입력, 직접 입력도 가능)" style="margin-top:4px; font-size:12px">
+      <input class="form-input" id="editHbPhotoUrl" data-saved-url="" placeholder="사진 URL (업로드 시 자동 입력, 직접 입력도 가능)" style="margin-top:4px; font-size:12px">
     </div>
     <button class="btn btn-p btn-bl" onclick="updateHandbookMember()">저장하기</button>
   </div>
@@ -2197,6 +2198,8 @@ function isMemberAddOpen(){
   return !!(panel&&panel.open&&currentTab==='admin');
 }
 function syncMemberAddOpen(){
+  var panel=document.getElementById('hbAddPanel');
+  if(panel&&!panel.open)cleanupUnsavedPhotoUpload('hbPhotoUrl');
   syncLayoutState();
 }
 function syncLayoutState(){
@@ -2219,13 +2222,18 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
+  if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   modal.classList.remove('active');
   syncLayoutState();
 }
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')&&e.target.classList.contains('active')){
-    e.target.classList.remove('active');
-    syncLayoutState();
+    if(e.target.id)closeModal(e.target.id);
+    else{
+      e.target.classList.remove('active');
+      syncLayoutState();
+    }
   }
 });
 window.addEventListener('beforeunload',function(e){
@@ -2742,8 +2750,8 @@ function renderCurrentUserProfile(member,state){
       +'<div style="font-size:13px;font-weight:850;margin-bottom:2px">'+escHtml(member.name||currentUser.name)+'</div>'
       +'<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+escHtml(accountLinkMemberLabel(member))+'</div>'
       +'<div style="display:flex;gap:8px;align-items:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="font-size:12px;flex:1;min-width:0"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="uploadPhotoAndResize(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">업로드</button></div>'
-      +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly value="'+escHtml(photo)+'">'
-      +'<button class="btn btn-p btn-bl" style="margin-top:10px" onclick="saveMyProfilePhoto()">사진 저장</button>'
+      +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly data-saved-url="'+escHtml(photo)+'" value="'+escHtml(photo)+'">'
+      +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
   }
   b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(currentUser.part||'')+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
@@ -2766,11 +2774,15 @@ function saveMyProfilePhoto(){
   if(!currentUser||!currentUser.memberId)return showToast('명부 연결 후 사용할 수 있습니다');
   var input=document.getElementById('myProfilePhotoUrl');
   var url=input?input.value.trim():'';
-  if(!url)return showToast('먼저 사진을 업로드해주세요');
+  var savedUrl=getPhotoSavedUrl(input);
+  if(!url&&!savedUrl)return showToast('저장할 사진 변경이 없습니다');
+  if(url===savedUrl)return showToast('이미 저장된 사진입니다');
+  var previousPhoto='';
   db.collection('members').doc(currentUser.memberId).get().then(function(doc){
     if(!doc.exists)throw new Error('missing');
     var member=Object.assign({id:doc.id},doc.data());
     if(isHandbookExcludedMember(member))throw new Error('inactive');
+    previousPhoto=member.photo||'';
     return db.collection('members').doc(currentUser.memberId).update({
       photo:url,
       photoUpdatedAt:new Date().toISOString(),
@@ -2778,6 +2790,8 @@ function saveMyProfilePhoto(){
       photoUpdatedBy:currentUser.name
     });
   }).then(function(){
+    if(input)setPhotoSavedUrl(input,url);
+    if(previousPhoto&&previousPhoto!==url)deleteStoragePhotoByUrl(previousPhoto);
     showToast('프로필 사진이 저장되었습니다');
     loadCurrentUserLinkedMember();
   }).catch(function(e){
@@ -2786,6 +2800,20 @@ function saveMyProfilePhoto(){
     console.error(e);
     showToast('사진 저장 중 오류가 발생했습니다');
   });
+}
+
+function removeMyProfilePhoto(){
+  var input=document.getElementById('myProfilePhotoUrl');
+  if(!input)return;
+  var current=input.value.trim();
+  var savedUrl=getPhotoSavedUrl(input);
+  if(current&&current!==savedUrl)deleteStoragePhotoByUrl(current);
+  input.value='';
+  var file=document.getElementById('myProfilePhotoFile');
+  if(file)file.value='';
+  var preview=document.getElementById('myProfilePhotoPreview');
+  if(preview){preview.src='';preview.style.display='none';}
+  showToast('사진을 비웠습니다. 저장을 누르면 명부에서도 제거됩니다');
 }
 function loginUser(){
   var nameInput=document.getElementById('userNameInput');
@@ -5192,7 +5220,15 @@ function addHandbookMember(){
     document.getElementById('hbSub').selectedIndex = 0;
     document.getElementById('hbNoAtt').checked = false;
     clearHandbookProfileFields('add');
-    if(document.getElementById('hbPhotoUrl')) document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
+    if(document.getElementById('hbPhotoUrl')) {
+      document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
+      setPhotoSavedUrl('hbPhotoUrl','');
+    }
+    if(document.getElementById('hbPhotoFile'))document.getElementById('hbPhotoFile').value='';
+    if(document.getElementById('hbPhotoPreview')){
+      document.getElementById('hbPhotoPreview').src='';
+      document.getElementById('hbPhotoPreview').style.display='none';
+    }
     var addPanel=document.getElementById('hbAddPanel');
     if(addPanel)addPanel.open=false;
     syncMemberAddOpen();
@@ -5244,6 +5280,7 @@ function editHandbookMember(id){
   // 👇 수정 창을 열 때 기존 사진 URL을 칸에 채워줍니다!
   if(document.getElementById('editHbPhotoUrl')) {
     document.getElementById('editHbPhotoUrl').value = m.photo || '';
+    setPhotoSavedUrl('editHbPhotoUrl',m.photo||'');
     
     // 👇 창 열 때 기존 사진이 있으면 띄워주기
     var previewImg = document.getElementById('editHbPhotoPreview');
@@ -5262,6 +5299,7 @@ function updateHandbookMember(){
   if(!canManageHandbookMembers())return showToast('단원 추가/수정 권한이 필요합니다');
   var id = document.getElementById('editHbId').value;
   var previousMember = directoryData.find(function(x){return x.id===id}) || null;
+  var previousPhoto = previousMember&&previousMember.photo ? previousMember.photo : '';
   var name = document.getElementById('editHbName').value.trim();
   var part = normalizePartName(document.getElementById('editHbPart').value);
   var subPart = cleanMemberSubPart(part, document.getElementById('editHbSub').value);
@@ -5290,6 +5328,8 @@ function updateHandbookMember(){
   
   showToast('저장 중...');
   db.collection('members').doc(id).update(data).then(function(){
+    setPhotoSavedUrl('editHbPhotoUrl',data.photo);
+    if(previousPhoto&&previousPhoto!==data.photo)deleteStoragePhotoByUrl(previousPhoto);
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit');
     invalidateAttendanceMemberCache();
@@ -9783,6 +9823,46 @@ function deleteAttendance(){
   },date);
 }
 
+function isFirebaseStoragePhotoUrl(url){
+  url=String(url||'').trim();
+  return /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/profiles(?:%2F|\/)/.test(url)||/^gs:\/\/[^/]+\/profiles\//.test(url);
+}
+
+function deleteStoragePhotoByUrl(url){
+  url=String(url||'').trim();
+  if(!url||!isFirebaseStoragePhotoUrl(url))return Promise.resolve(false);
+  try{
+    return storage.refFromURL(url).delete().then(function(){
+      return true;
+    }).catch(function(e){
+      if(e&&e.code==='storage/object-not-found')return false;
+      console.warn('Storage photo delete skipped:',e);
+      return false;
+    });
+  }catch(e){
+    console.warn('Storage photo delete skipped:',e);
+    return Promise.resolve(false);
+  }
+}
+
+function getPhotoSavedUrl(inputOrId){
+  var input=typeof inputOrId==='string'?document.getElementById(inputOrId):inputOrId;
+  return input&&input.dataset?String(input.dataset.savedUrl||'').trim():'';
+}
+
+function setPhotoSavedUrl(inputOrId,url){
+  var input=typeof inputOrId==='string'?document.getElementById(inputOrId):inputOrId;
+  if(input&&input.dataset)input.dataset.savedUrl=String(url||'').trim();
+}
+
+function cleanupUnsavedPhotoUpload(inputOrId){
+  var input=typeof inputOrId==='string'?document.getElementById(inputOrId):inputOrId;
+  if(!input)return;
+  var currentUrl=String(input.value||'').trim();
+  var savedUrl=getPhotoSavedUrl(input);
+  if(currentUrl&&currentUrl!==savedUrl)deleteStoragePhotoByUrl(currentUrl);
+}
+
 // [강화버전] 브라우저에서 사진을 압축하고 Firebase Storage에 올리는 함수
 function uploadPhotoAndResize(fileInputId, urlInputId) {
   var fileInput = document.getElementById(fileInputId);
@@ -9822,6 +9902,9 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
             
             var urlInput = document.getElementById(urlInputId);
             if (urlInput) {
+              var previousUrl = urlInput.value.trim();
+              var savedUrl = getPhotoSavedUrl(urlInput);
+              if(previousUrl&&previousUrl!==savedUrl&&previousUrl!==downloadURL)deleteStoragePhotoByUrl(previousUrl);
               urlInput.value = downloadURL; // 빈칸에 주소 강제 주입!
               urlInput.classList.remove('hidden'); 
               
@@ -9854,9 +9937,30 @@ function viewLargePhoto(url) {
   openModal('modalPhotoViewer');
 }
   
+function removeAddPreviewPhoto() {
+  var urlInput=document.getElementById('hbPhotoUrl');
+  if(urlInput){
+    var currentUrl=urlInput.value.trim();
+    var savedUrl=getPhotoSavedUrl(urlInput);
+    if(currentUrl&&currentUrl!==savedUrl)deleteStoragePhotoByUrl(currentUrl);
+    urlInput.value='';
+  }
+  var fileInput=document.getElementById('hbPhotoFile');
+  if(fileInput)fileInput.value='';
+  var preview=document.getElementById('hbPhotoPreview');
+  if(preview){preview.src='';preview.style.display='none';}
+  showToast('사진을 비웠습니다');
+}
+
   // [신규] 사진 지우기 함수
 function removePreviewPhoto() {
-  document.getElementById('editHbPhotoUrl').value = ''; // 주소 빈칸으로 만들기
+  var urlInput=document.getElementById('editHbPhotoUrl');
+  if(urlInput){
+    var currentUrl=urlInput.value.trim();
+    var savedUrl=getPhotoSavedUrl(urlInput);
+    if(currentUrl&&currentUrl!==savedUrl)deleteStoragePhotoByUrl(currentUrl);
+    urlInput.value = ''; // 주소 빈칸으로 만들기
+  }
   document.getElementById('editHbPhotoFile').value = ''; // 파일 선택 초기화
   
   var preview = document.getElementById('editHbPhotoPreview');
