@@ -98,6 +98,12 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-name{font-size:15px;font-weight:850;color:var(--tx)}
 .account-pin{font-size:12px;color:var(--ts);margin-top:5px}
 .account-pin b{color:var(--pd);letter-spacing:1px}
+.account-link-line{font-size:11px;color:var(--ts);margin-top:4px;display:flex;align-items:center;gap:5px;min-width:0}
+.account-link-pill{display:inline-flex;align-items:center;max-width:100%;background:#F1E8D9;border:1px solid #DED0B8;border-radius:999px;padding:3px 8px;color:#5F512D;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-link-pill.missing{background:#F4E7CC;border-color:#E8D2A7;color:#7C571E}
+.account-link-pill.none{background:#F8F2E8;border-color:#E1D7C5;color:#706B5D}
+.account-member-search{margin-bottom:6px}
+.account-member-count{font-size:11px;color:var(--ts);line-height:1.35;margin-top:4px}
 .account-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .account-action-btn{min-width:46px;padding:7px 10px;border:1px solid #CFC4AE;border-radius:10px;background:#F9F5EC;color:#465034;font-size:12px;font-weight:850;line-height:1;cursor:pointer}
 .account-action-btn.primary{background:var(--p);border-color:var(--p);color:#fff}
@@ -1665,7 +1671,7 @@ body{font-weight:500}
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
-      <div class="form-group"><label class="form-label">명부 연결</label><select class="form-sel" id="memMemberId"><option value="">명부 연결 안 함</option></select><div style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:4px">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
+      <div class="form-group"><label class="form-label">명부 연결</label><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId')"><select class="form-sel" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-count" id="memMemberIdCount" data-default-note="선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
@@ -3754,14 +3760,41 @@ function accountLinkMemberLabel(member){
   return (member.name||'이름 없음')+' ('+part+(sub?' · '+sub:'')+state+')';
 }
 
-function buildAccountMemberOptions(selectedId){
+function accountLinkMemberShortLabel(member){
+  if(!member)return '연결 끊김';
+  var part=normalizePartName(member.part)||'-';
+  return (member.name||'이름 없음')+' / '+part;
+}
+
+function accountMemberSearchText(member){
+  if(!member)return '';
+  return [
+    member.name||'',
+    normalizePartName(member.part)||'',
+    normalizePartName(member.subPart)||''
+  ].join(' ').toLowerCase();
+}
+
+function getFilteredAccountLinkMembers(query,selectedId){
+  query=String(query||'').trim().toLowerCase();
   selectedId=String(selectedId||'');
-  var html='<option value="">명부 연결 안 함</option>';
-  var activeMembers=accountLinkMembers.filter(isHandbookRosterMember).sort(function(a,b){
+  var activeMembers=accountLinkMembers.filter(isHandbookRosterMember);
+  if(query)activeMembers=activeMembers.filter(function(m){return accountMemberSearchText(m).indexOf(query)>-1;});
+  activeMembers=activeMembers.sort(function(a,b){
     return String(a.name||'').localeCompare(String(b.name||''),'ko')||String(a.part||'').localeCompare(String(b.part||''),'ko');
   });
+  if(selectedId&&activeMembers.every(function(m){return m.id!==selectedId;})&&accountLinkMemberMap[selectedId]){
+    activeMembers.unshift(accountLinkMemberMap[selectedId]);
+  }
+  return activeMembers;
+}
+
+function buildAccountMemberOptions(selectedId,query){
+  selectedId=String(selectedId||'');
+  var html='<option value="">명부 연결 안 함</option>';
+  var activeMembers=getFilteredAccountLinkMembers(query,selectedId);
   activeMembers.forEach(function(m){
-    html+='<option value="'+escHtml(m.id)+'"'+(selectedId===m.id?' selected':'')+'>'+escHtml(accountLinkMemberLabel(m))+'</option>';
+    html+='<option value="'+escHtml(m.id)+'"'+(selectedId===m.id?' selected':'')+'>'+escHtml(accountLinkMemberShortLabel(m))+'</option>';
   });
   if(selectedId&&(!accountLinkMemberMap[selectedId]||!isHandbookRosterMember(accountLinkMemberMap[selectedId]))){
     html+='<option value="'+escHtml(selectedId)+'" selected>'+escHtml(accountLinkMemberLabel(accountLinkMemberMap[selectedId]))+'</option>';
@@ -3769,9 +3802,29 @@ function buildAccountMemberOptions(selectedId){
   return html;
 }
 
-function populateAccountMemberSelect(selectId,selectedId){
+function populateAccountMemberSelect(selectId,selectedId,query){
   var sel=document.getElementById(selectId);
-  if(sel)sel.innerHTML=buildAccountMemberOptions(selectedId);
+  if(!sel)return;
+  var currentId=String(selectedId==null?sel.value:selectedId||'');
+  sel.innerHTML=buildAccountMemberOptions(currentId,query);
+  sel.value=currentId;
+  var countEl=document.getElementById(selectId+'Count');
+  if(countEl){
+    var count=getFilteredAccountLinkMembers(query,currentId).length;
+    countEl.textContent=query?('검색 결과 '+count+'명'):(countEl.dataset.defaultNote||'이름, 파트, 겸직으로 검색할 수 있습니다');
+  }
+}
+
+function filterAccountMemberSelect(inputId,selectId){
+  var input=document.getElementById(inputId);
+  var sel=document.getElementById(selectId);
+  populateAccountMemberSelect(selectId,sel?sel.value:'',input?input.value:'');
+}
+
+function accountMemberLinkField(searchId,selectId,selectedId,note){
+  return '<input class="form-input account-member-search" id="'+searchId+'" placeholder="명부 이름 검색" oninput="filterAccountMemberSelect(\''+searchId+'\',\''+selectId+'\')">'
+    +'<select class="form-sel" id="'+selectId+'">'+buildAccountMemberOptions(selectedId||'')+'</select>'
+    +'<div class="account-member-count" id="'+selectId+'Count" data-default-note="'+escAttr(note||'이름, 파트, 겸직으로 검색할 수 있습니다')+'">'+escHtml(note||'이름, 파트, 겸직으로 검색할 수 있습니다')+'</div>';
 }
 
 function loadAccountLinkMembers(){
@@ -3830,6 +3883,7 @@ function addMember(){
     document.getElementById('memName').value='';
     document.getElementById('memPin').value='';
     if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
+    if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
     
     setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
     writeLog('계정 발급', name + '님 로그인 계정 생성');
@@ -3842,7 +3896,10 @@ function loadMembers(){
   if(createPanel)createPanel.style.display=canManageLoginAccounts()?'block':'none';
   var linkPromise=(canManageLoginAccounts()||canManageAccountPermissions())?loadAccountLinkMembers():Promise.resolve([]);
   linkPromise.then(function(){
-    if(canManageLoginAccounts())populateAccountMemberSelect('memMemberId','');
+    if(canManageLoginAccounts()){
+      var search=document.getElementById('memMemberSearch');
+      populateAccountMemberSelect('memMemberId','',search?search.value:'');
+    }
     return db.collection('accounts').orderBy('name').get();
   }).then(function(snap){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
@@ -3857,8 +3914,9 @@ function loadMembers(){
       var linkHtml='';
       if(canManageLoginAccounts()||canManageAccountPermissions()){
         var linked=m.memberId?accountLinkMemberMap[m.memberId]:null;
-        var linkText=m.memberId?(linked?('명부 연결: '+accountLinkMemberLabel(linked)):'명부 연결 끊김'):'명부 미연결';
-        linkHtml='<div style="font-size:11px;color:var(--ts);margin-top:4px">'+escHtml(linkText)+'</div>';
+        var linkText=m.memberId?(linked?accountLinkMemberShortLabel(linked):'연결 끊김'):'미연결';
+        var linkClass=m.memberId?(linked?'':' missing'):' none';
+        linkHtml='<div class="account-link-line"><span>명부</span><span class="account-link-pill'+linkClass+'">'+escHtml(linkText)+'</span></div>';
       }
       return `<div class="account-row">
         <div class="account-main">
@@ -4049,7 +4107,7 @@ function openAccountEdit(id){
   openAccountAction('로그인 계정 수정',
     '<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="accountEditName" value="'+escHtml(m.name)+'"></div>'
     +'<div class="form-group"><label class="form-label">파트</label><select class="form-sel" id="accountEditPart">'+partOptions+'</select></div>'
-    +'<div class="form-group"><label class="form-label">명부 연결</label><select class="form-sel" id="accountEditMemberId">'+buildAccountMemberOptions(m.memberId||'')+'</select><div style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:4px">연결하지 않아도 계정은 정상 사용됩니다.</div></div>'
+    +'<div class="form-group"><label class="form-label">명부 연결</label>'+accountMemberLinkField('accountEditMemberSearch','accountEditMemberId',m.memberId||'','연결하지 않아도 계정은 정상 사용됩니다')+'</div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountEdit()">저장</button></div>'
   );
 }
