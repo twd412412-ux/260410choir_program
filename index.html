@@ -93,6 +93,11 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .dark .account-create-panel{background:rgba(29,33,27,.76)}
 .account-list-title{font-size:14px;font-weight:850;margin:2px 0 10px;color:var(--tx)}
 .account-list-tools{margin:0 0 10px}
+.account-link-summary{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px}
+.account-summary-item{font-size:11px;font-weight:900;border:1px solid #DED0B8;background:#F8F2E8;color:#5F512D;border-radius:999px;padding:5px 8px}
+.account-summary-item.ok{background:#EAEFDF;border-color:#CBD7BE;color:#4E5A35}
+.account-summary-item.warn{background:#F4E7CC;border-color:#E8D2A7;color:#7C571E}
+.account-summary-item.bad{background:#F7E6E0;border-color:#E5C3BA;color:#9D3E36}
 .account-part-heading{display:flex;align-items:center;gap:7px;margin:12px 0 6px;font-size:12px;font-weight:950;color:#4F623A}
 .account-part-heading::before{content:'';width:7px;height:7px;border-radius:50%;background:#6F7D4E}
 .account-part-heading span{font-size:11px;color:var(--ts);font-weight:800}
@@ -1695,6 +1700,7 @@ body{font-weight:500}
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
     <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="계정 이름/파트/연결 검색" oninput="renderAccountList()"></div>
+    <div class="account-link-summary" id="accountLinkSummary"></div>
     <div id="memberList"></div>
   </div>
 
@@ -1744,6 +1750,20 @@ body{font-weight:500}
         관리자 로그 숨김
       </label>
       <button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" onclick="loadLogs()">새로고침</button>
+    </div>
+    <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px;margin-bottom:8px">
+      <select class="form-sel" id="logTypeFilter" onchange="renderLogCards(cachedLogRows,cachedLogRows.length)">
+        <option value="all">전체 유형</option>
+        <option value="attendance">출결</option>
+        <option value="schedule">일정</option>
+        <option value="song">곡</option>
+        <option value="member">명부</option>
+        <option value="account">계정/권한</option>
+        <option value="seating">자리배치</option>
+        <option value="archive">아카이브</option>
+        <option value="system">시스템/기타</option>
+      </select>
+      <input class="form-input" id="logSearch" placeholder="내용/작성자 검색" oninput="renderLogCards(cachedLogRows,cachedLogRows.length)">
     </div>
     <div id="logSummary" style="font-size:12px;color:var(--ts);margin-bottom:8px"></div>
     <div id="logList"></div>
@@ -2132,10 +2152,11 @@ var SEATING_PLAN_COLLECTION='seatingPlans', SEATING_PLAN_LEGACY_DOC='seatingPlan
 var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingMicSlots=[], seatingPartSubmissions={}, seatingPlanHistory=[];
 var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all';
-var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingAttendeesLocked=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
+var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingAbsentOnly=false, seatingAttendeesLocked=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
 var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
 var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt='', seatingPublishPreviewData=null;
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
+var cachedLogRows=[];
 var scheduleEditId='';
 
 // ==================== 권한 정의 ====================
@@ -3973,14 +3994,41 @@ function filteredSortedAccounts(){
   });
 }
 
+function accountLinkState(m){
+  var linked=m.memberId?accountLinkMemberMap[m.memberId]:null;
+  if(!m.memberId)return 'none';
+  if(!linked)return 'missing';
+  if(!accountMemberNameMatches(m.name,linked))return 'mismatch';
+  return 'linked';
+}
+
+function renderAccountLinkSummary(list){
+  var box=document.getElementById('accountLinkSummary');
+  if(!box)return;
+  var total=allMembers.length;
+  var counts={linked:0,none:0,missing:0,mismatch:0};
+  allMembers.forEach(function(m){counts[accountLinkState(m)]++;});
+  var q=(document.getElementById('accountListSearch')||{}).value||'';
+  var searchNote=q.trim()?'<span class="account-summary-item">검색 '+list.length+'/'+total+'명</span>':'';
+  box.innerHTML=''
+    +'<span class="account-summary-item ok">연결됨 '+counts.linked+'</span>'
+    +'<span class="account-summary-item">미연결 '+counts.none+'</span>'
+    +'<span class="account-summary-item warn">이름 불일치 '+counts.mismatch+'</span>'
+    +'<span class="account-summary-item bad">연결 끊김 '+counts.missing+'</span>'
+    +searchNote;
+}
+
 function renderAccountList(){
   var c=document.getElementById('memberList');
   if(!c)return;
+  var summaryBox=document.getElementById('accountLinkSummary');
   if(allMembers.length===0){
+    if(summaryBox)summaryBox.innerHTML='';
     c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">등록된 로그인 계정이 없습니다.</div>';
     return;
   }
   var list=filteredSortedAccounts();
+  renderAccountLinkSummary(list);
   if(list.length===0){
     c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">검색 결과가 없습니다.</div>';
     return;
@@ -5285,12 +5333,17 @@ function hasHandbookRoleTag(member,tag){
   return part===tag||subPart===tag;
 }
 
+function hasHandbookPhoto(member){
+  return !!(member&&String(member.photo||'').trim());
+}
+
 function matchesHandbookFilter(member,filterKey){
   filterKey=filterKey||'all';
   if(filterKey==='all')return isHandbookRosterMember(member);
   if(filterKey==='attendance')return isAttendanceTargetMember(member);
   if(filterKey==='noAtt')return isHandbookRosterMember(member)&&!isAttendanceTargetMember(member);
   if(filterKey==='excluded')return isHandbookExcludedMember(member);
+  if(filterKey==='photoMissing')return isHandbookRosterMember(member)&&!hasHandbookPhoto(member);
   if(filterKey==='otherMain')return isHandbookRosterMember(member)&&!getHandbookMainPart(member);
   if(filterKey.indexOf('main:')===0){
     return isHandbookRosterMember(member)&&getHandbookMainPart(member)===filterKey.slice(5);
@@ -5543,6 +5596,7 @@ function updatePartSummary() {
   var attendance=roster.filter(isAttendanceTargetMember);
   var noAtt=roster.length-attendance.length;
   var excluded=directoryData.filter(isHandbookExcludedMember);
+  var photoMissing=roster.filter(function(m){return !hasHandbookPhoto(m);}).length;
   var mainCounts={}, roleCounts={}, otherMain=0;
   HANDBOOK_MAIN_PARTS.forEach(function(part){mainCounts[part]=0;});
   HANDBOOK_ROLE_TAGS.forEach(function(tag){roleCounts[tag]=0;});
@@ -5578,6 +5632,7 @@ function updatePartSummary() {
   if(otherMain>0)html+=chip('otherMain','주파트 미지정',otherMain,true);
   html+='</div></div>';
   html+='<div class="handbook-chip-section"><div class="handbook-chip-title">겸직/상태 필터</div><div class="handbook-chip-row">';
+  html+=chip('photoMissing','사진 없음',photoMissing,true);
   HANDBOOK_ROLE_TAGS.forEach(function(tag){
     html+=chip('role:'+tag,tag,roleCounts[tag],false);
   });
@@ -6608,6 +6663,7 @@ function seatingSnapshot(){
     selectedMemberId:seatingSelectedMemberId,
     partFilter:seatingPartFilter,
     unplacedOnly:seatingUnplacedOnly,
+    absentOnly:seatingAbsentOnly,
     zoom:seatingZoom
   };
 }
@@ -6623,6 +6679,7 @@ function applySeatingSnapshot(snap,keepDirty){
   seatingSelectedMemberId=snap.selectedMemberId||'';
   seatingPartFilter=snap.partFilter||'all';
   seatingUnplacedOnly=!!snap.unplacedOnly;
+  seatingAbsentOnly=!!snap.absentOnly;
   seatingZoom=snap.zoom||seatingZoom;
   setSeatingInputValue('seatingPlanName',snap.planName||'');
   setSeatingInputValue('seatingTitle',snap.title||'');
@@ -6758,6 +6815,7 @@ function createNewSeatingPlan(silent,skipConfirm){
   seatingSelectedSeat=null;
   seatingPartFilter='all';
   seatingUnplacedOnly=false;
+  seatingAbsentOnly=false;
   seatingZoom=seatingTemplateInfo('full').zoom;
   var title=document.getElementById('seatingTitle');
   var date=document.getElementById('seatingDate');
@@ -6807,6 +6865,7 @@ function applySeatingPlan(plan){
   if(sel)sel.value=seatingPlanId;
   seatingPartFilter='all';
   seatingUnplacedOnly=false;
+  seatingAbsentOnly=false;
   renderSeatingMemberList();
   renderSeatingBoard();
   renderSeatingHistory();
@@ -6889,7 +6948,7 @@ function renderSeatingHistory(){
     }).join('')+'</div>';
 }
 function showSeatingSubmissionInfo(){
-  alert('찬양의밤 참석명단 운영 방식\n\n1. 각 파트 담당자는 본인 파트 참석 여부를 확인합니다.\n2. 제출완료를 누르면 해당 파트 참석명단이 잠겨 이후 실수 변경을 줄일 수 있습니다.\n3. 제출완료를 잘못 눌렀다면 전체 운영 담당자에게 해제를 요청하면 됩니다.\n4. 명단 고정은 모든 파트 확인이 끝난 뒤 전체 운영 담당자가 최종 잠금할 때 사용합니다.\n5. 자리배치 편집/저장은 참석명단 확인과 별개입니다.\n6. 변경 내용은 저장 버튼을 눌러야 저장된 배치에 반영됩니다.');
+  alert('찬양의밤 참석명단 운영 방식\n\n1. 각 파트 담당자는 본인 파트 참석 여부를 확인합니다.\n2. 제출완료를 누르면 해당 파트 참석명단이 잠겨 이후 실수 변경을 줄일 수 있습니다.\n3. 제출완료를 잘못 눌렀다면 전체 운영 담당자에게 해제를 요청하면 됩니다.\n4. 명단 고정은 모든 파트 확인이 끝난 뒤 전체 운영 담당자가 최종 잠금할 때 사용합니다.\n5. 잠금 상태는 현재 배치에 저장됩니다. 새 배치를 만들면 미제출/고정 해제 상태로 다시 시작합니다.\n6. 자리배치 편집/저장은 참석명단 확인과 별개입니다.\n7. 변경 내용은 저장 버튼을 눌러야 저장된 배치에 반영됩니다.');
 }
 function seatingPartFillColor(part){
   part=normalizePartName(part);
@@ -7073,6 +7132,12 @@ function setSeatingPartFilter(part){
 }
 function toggleSeatingUnplacedFilter(){
   seatingUnplacedOnly=!seatingUnplacedOnly;
+  if(seatingUnplacedOnly)seatingAbsentOnly=false;
+  renderSeatingMemberList();
+}
+function toggleSeatingAbsentFilter(){
+  seatingAbsentOnly=!seatingAbsentOnly;
+  if(seatingAbsentOnly)seatingUnplacedOnly=false;
   renderSeatingMemberList();
 }
 function renderSeatingPartFilter(){
@@ -7085,7 +7150,9 @@ function renderSeatingPartFilter(){
     return '<button class="seating-part-chip '+(seatingPartFilter===p?'on':'')+'" onclick="setSeatingPartFilter(\''+p+'\')">'+labels[p]+' '+count+'</button>';
   }).join('');
   var unplaced=seatingMembers.filter(function(m){return seatingAttendees[m.id]&&!assigned[m.id];}).length;
+  var absent=seatingMembers.filter(function(m){return !seatingAttendees[m.id];}).length;
   html+='<button class="seating-part-chip '+(seatingUnplacedOnly?'on ':'')+(unplaced>0?'warn':'')+'" onclick="toggleSeatingUnplacedFilter()">미배치 '+unplaced+'</button>';
+  html+='<button class="seating-part-chip '+(seatingAbsentOnly?'on ':'')+(absent>0?'warn':'')+'" onclick="toggleSeatingAbsentFilter()">미참석 '+absent+'</button>';
   box.innerHTML=html;
 }
 function renderSeatingSubmissionState(){
@@ -7177,7 +7244,8 @@ function renderSeatingMemberList(){
     var text=[m.name,m.part,m.subPart,m.group].join(' ').toLowerCase();
     var partOk=seatingPartFilter==='all'||m.part===seatingPartFilter;
     var unplacedOk=!seatingUnplacedOnly||(seatingAttendees[m.id]&&!assigned[m.id]);
-    return partOk&&unplacedOk&&(!q||text.indexOf(q)>-1);
+    var absentOk=!seatingAbsentOnly||!seatingAttendees[m.id];
+    return partOk&&unplacedOk&&absentOk&&(!q||text.indexOf(q)>-1);
   });
   if(filtered.length===0){
     list.innerHTML='<div style="padding:14px;font-size:12px;color:var(--ts);text-align:center">표시할 단원이 없습니다</div>';
@@ -7188,11 +7256,12 @@ function renderSeatingMemberList(){
     var on=seatingSelectedMemberId===m.id;
     var placed=!!assigned[m.id];
     var unplaced=checked&&!placed;
+    var absent=!checked;
     var locked=isSeatingMemberAttendanceLocked(m);
     var canEdit=canEditSeatingMemberAttendance(m);
     return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
       +'<input type="checkbox" '+(checked?'checked':'')+((locked||!canEdit)?' disabled':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
-      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(locked?' · 고정':(!canEdit?' · 읽기':'') )+'</span></div>'
+      +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(absent?' · 미참석':'')+(locked?' · 고정':(!canEdit?' · 읽기':'') )+'</span></div>'
       +'</div>';
   }).join('');
 }
@@ -7909,7 +7978,7 @@ function writeLog(action,detail){
 function toggleLogHideAdmin(checked){
   logHideAdmin=!!checked;
   localStorage.setItem('choir_log_hide_admin',logHideAdmin?'true':'false');
-  loadLogs();
+  renderLogCards(cachedLogRows,cachedLogRows.length);
 }
 function isAdminLogEntry(d){
   if(d.isAdminAction===true)return true;
@@ -7935,12 +8004,34 @@ function logTimestampLabel(value){
   if(isNaN(t.getTime()))t=new Date();
   return t.getFullYear()+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+String(t.getDate()).padStart(2,'0')+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
 }
+function logEntryType(action){
+  action=String(action||'');
+  if(action.indexOf('출석')>-1||action.indexOf('출결')>-1)return 'attendance';
+  if(action.indexOf('일정')>-1)return 'schedule';
+  if(action.indexOf('곡')>-1||action.indexOf('선곡')>-1)return 'song';
+  if(action.indexOf('명부')>-1||action.indexOf('단원 연결')>-1)return 'member';
+  if(action.indexOf('계정')>-1||action.indexOf('권한')>-1||action.indexOf('PIN')>-1)return 'account';
+  if(action.indexOf('자리배치')>-1)return 'seating';
+  if(action.indexOf('아카이브')>-1)return 'archive';
+  return 'system';
+}
+function logMatchesFilters(d){
+  if(logHideAdmin&&isAdminLogEntry(d))return false;
+  var type=(document.getElementById('logTypeFilter')||{}).value||'all';
+  if(type!=='all'&&logEntryType(d.action)!==type)return false;
+  var q=((document.getElementById('logSearch')||{}).value||'').trim().toLowerCase();
+  if(!q)return true;
+  var text=[d.action||'',d.detail||'',d.actorName||'',d.user||'',d.actorRoleLabel||'',d.actorPart||''].join(' ').toLowerCase();
+  return text.indexOf(q)>-1;
+}
 function renderLogCards(rows,totalCount){
   var c=document.getElementById('logList');if(!c)return;
   var summary=document.getElementById('logSummary');
-  var visible=rows.filter(function(d){return !logHideAdmin||!isAdminLogEntry(d);}).slice(0,50);
+  rows=Array.isArray(rows)?rows:[];
+  var filtered=rows.filter(logMatchesFilters);
+  var visible=filtered.slice(0,50);
   if(summary){
-    summary.textContent=(logHideAdmin?'관리자 로그를 제외하고 ':'전체 로그 중 ')+visible.length+'건 표시 · 최근 조회 '+totalCount+'건 기준';
+    summary.textContent=visible.length+'건 표시 · 조건 일치 '+filtered.length+'건 · 최근 조회 '+totalCount+'건 기준';
   }
   if(visible.length===0){
     c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">표시할 활동 로그가 없습니다</div>';
@@ -7969,10 +8060,15 @@ function loadLogs(){
   if(chk)chk.checked=logHideAdmin;
   db.collection('activityLogs').orderBy('timestamp','desc').limit(150).get().then(function(snap){
     var c=document.getElementById('logList');if(!c)return;
-    if(snap.empty){c.innerHTML='<div style="font-size:13px;color:var(--ts)">활동 로그가 없습니다</div>';return}
+    if(snap.empty){
+      cachedLogRows=[];
+      renderLogCards(cachedLogRows,0);
+      return;
+    }
     var rows=[];
     snap.forEach(function(doc){rows.push(doc.data()||{});});
-    renderLogCards(rows,rows.length);
+    cachedLogRows=rows;
+    renderLogCards(cachedLogRows,cachedLogRows.length);
   }).catch(function(){
     var c=document.getElementById('logList');if(c)c.innerHTML='<div style="font-size:13px;color:var(--ts);padding:12px;text-align:center">활동 로그를 불러오지 못했습니다</div>';
   });
