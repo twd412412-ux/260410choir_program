@@ -1613,12 +1613,9 @@ body{font-weight:500}
             </details>
           </div>
           <div class="seating-toolbar-publish">
-            <details class="seating-toolbar-group collapsible publish">
-              <summary><span class="seating-toolbar-label">공개</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
-              <div class="seating-toolbar-actions">
-                <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
-              </div>
-            </details>
+            <div class="seating-toolbar-group publish">
+              <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
+            </div>
           </div>
         </div>
         <div class="seating-draft-bar hidden" id="seatingDraftBar"></div>
@@ -2195,7 +2192,9 @@ var scheduleEditId='';
 var PERMISSION_GROUPS=[
   {title:'곡 / 일정',items:[
     {key:'song.manage',label:'곡 관리',desc:'곡 추가, 본인 등록곡 수정/삭제'},
-    {key:'schedule.manage',label:'일정 관리',desc:'일정 추가, 본인 등록 일정 수정/삭제'}
+    {key:'song.editAny',label:'타인 곡 수정',desc:'곡 관리 권한으로 타인 등록곡 수정'},
+    {key:'schedule.manage',label:'일정 관리',desc:'일정 추가, 본인 등록 일정 수정/삭제'},
+    {key:'schedule.editAny',label:'타인 일정 수정',desc:'일정 관리 권한으로 타인 등록 일정 수정'}
   ]},
   {title:'출결',items:[
     {key:'attendance.view',label:'출결 조회',desc:'담당 범위 출결과 통계 조회'},
@@ -2425,7 +2424,9 @@ function isOwnCreatedItem(item){
 }
 function canEditSongItem(song){
   if(adminRole==='admin')return true;
-  return !!(canManageSongs()&&isOwnCreatedItem(song));
+  if(!canManageSongs())return false;
+  if(hasPermission('song.editAny'))return true;
+  return !!isOwnCreatedItem(song);
 }
 function canDeleteSongItem(song){
   if(adminRole==='admin')return true;
@@ -2436,7 +2437,9 @@ function canManageSchedules(){
 }
 function canEditScheduleItem(schedule){
   if(adminRole==='admin')return true;
-  return !!(canManageSchedules()&&isOwnCreatedItem(schedule));
+  if(!canManageSchedules())return false;
+  if(hasPermission('schedule.editAny'))return true;
+  return !!isOwnCreatedItem(schedule);
 }
 function canDeleteScheduleItem(schedule){
   if(adminRole==='admin')return true;
@@ -3777,7 +3780,7 @@ function addNewSong(skipMemberLoad){
 function openEdit(id){
   if(!canManageSongs())return showToast('곡 관리 권한이 필요합니다');
   var song=allSongs.find(function(s){return s.id===id});if(!song)return;
-  if(!canEditSongItem(song))return showToast('본인이 등록한 곡만 수정할 수 있습니다');
+  if(!canEditSongItem(song))return showToast('곡 수정 권한이 없습니다');
   currentDetailSong=song;
   document.getElementById('editName').value=song.songName;
   buildYearOptions();
@@ -3804,7 +3807,7 @@ function editFromDetail(){if(currentDetailSong)openEdit(currentDetailSong.id)}
 function saveEdit(skipMemberLoad){
   if(!currentDetailSong)return;
   
-  if(!canEditSongItem(currentDetailSong)) return showToast('본인이 등록한 곡만 수정할 수 있습니다');
+  if(!canEditSongItem(currentDetailSong)) return showToast('곡 수정 권한이 없습니다');
   
   var cat=getCatValue('edit');
   
@@ -4182,7 +4185,7 @@ function accountScopeLabel(scope){
 function accountFeatureLabels(perms){
   perms=normalizePermissionArray(perms);
   var labels=[];
-  if(perms.indexOf('song.manage')>-1||perms.indexOf('schedule.manage')>-1)labels.push('곡/일정');
+  if(perms.indexOf('song.manage')>-1||perms.indexOf('song.editAny')>-1||perms.indexOf('schedule.manage')>-1||perms.indexOf('schedule.editAny')>-1)labels.push('곡/일정');
   if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
   if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1)labels.push('명부');
   if(perms.indexOf('account.manage')>-1||perms.indexOf('account.pin')>-1)labels.push('계정');
@@ -5810,7 +5813,7 @@ function addSchedule(){
   if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   if(scheduleEditId){
     var editingSchedule=allSchedules.find(function(s){return s.id===scheduleEditId});
-    if(!canEditScheduleItem(editingSchedule))return showToast('본인이 등록한 일정만 수정할 수 있습니다');
+    if(!canEditScheduleItem(editingSchedule))return showToast('일정 수정 권한이 없습니다');
   }
   var date=document.getElementById('schDate').value;
   var title=document.getElementById('schTitle').value.trim();
@@ -5859,7 +5862,7 @@ function loadSchAdmin(){
 function editSchedule(id){
   if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
-  if(!canEditScheduleItem(s))return showToast('본인이 등록한 일정만 수정할 수 있습니다');
+  if(!canEditScheduleItem(s))return showToast('일정 수정 권한이 없습니다');
   scheduleEditId=id;
   document.getElementById('schDate').value=s.date;
   document.getElementById('schTitle').value=s.title;
