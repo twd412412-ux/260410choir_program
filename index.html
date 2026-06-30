@@ -1169,8 +1169,9 @@ body{font-weight:500}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
 .home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
-.home-update-wrap{display:flex;justify-content:center;margin:14px 0 6px}
+.home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
+.home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
 .home-ring-stack{display:grid;gap:8px}
@@ -1345,7 +1346,10 @@ body{font-weight:500}
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
-    <div class="home-update-wrap"><button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button></div>
+    <div class="home-update-wrap">
+      <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
+      <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
+    </div>
     <div class="home-credit">Engineered by JY</div>
   </div>
 </div>
@@ -8866,29 +8870,41 @@ function dismissInstall(){
 }
 
 // ==================== 가이드 슬라이드 ====================
-function showGuide(){
-  if(localStorage.getItem('choir_guide_seen'))return;
+function openHomeGuide(){
+  showGuide(true);
+}
+function showGuide(force){
+  force=!!force;
+  if(!force&&localStorage.getItem('choir_guide_seen'))return;
+  var old=document.getElementById('guideOverlay');
+  if(old)old.remove();
   var slides=[
-    {icon:'🎵',title:'곡 목록',desc:'찬양대의 모든 곡을 검색하고\n연도, 분류, 요일로 필터링하세요'},
-    {icon:'⭐',title:'즐겨찾기',desc:'자주 부르는 곡에 별표를 눌러\n즐겨찾기에 저장하세요'},
-    {icon:'📅',title:'일정 캘린더',desc:'연습 일정과 공연 일정을\n한눈에 확인하세요'},
-    {icon:'▶',title:'YouTube 연결',desc:'곡 상세에서 바로\nYouTube로 들을 수 있어요'},
-    {icon:'👤',title:'로그인',desc:'이름과 PIN으로 로그인하면\n즐겨찾기가 동기화됩니다'}
+    {icon:'🎵',title:'곡 검색',desc:'곡명, 단원, 반주자로 검색하고\n연도/분류/요일로 좁혀볼 수 있습니다.'},
+    {icon:'⭐',title:'즐겨찾기',desc:'자주 보는 곡은 별표를 눌러\n즐겨찾기 탭에서 바로 확인하세요.'},
+    {icon:'📅',title:'일정 확인',desc:'일정 탭에서 월별 일정을 보고\n날짜별 곡과 장소를 확인할 수 있습니다.'},
+    {icon:'🎚️',title:'자리배치 확인',desc:'공개된 찬양의밤 배치가 있으면\n홈에서 바로 열고 이름으로 찾을 수 있습니다.'},
+    {icon:'👤',title:'로그인과 프로필',desc:'이름과 PIN으로 로그인하면\n즐겨찾기 동기화와 프로필 사진 등록을 사용할 수 있습니다.'},
+    {icon:'↻',title:'앱 업데이트',desc:'기능이 바뀌었는데 화면이 그대로면\n홈 하단 앱 업데이트를 눌러 최신 화면을 불러오세요.'}
   ];
   var idx=0;
   var ov=document.createElement('div');
   ov.id='guideOverlay';
   ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center';
+  function closeGuide(markSeen){
+    if(markSeen&&!force)localStorage.setItem('choir_guide_seen','true');
+    if(ov.parentNode)ov.remove();
+  }
 
   function renderSlide(){
     var s=slides[idx];
     var isLast=idx===slides.length-1;
-    ov.innerHTML='<div style="background:var(--sf);width:90%;max-width:340px;border-radius:20px;padding:32px 24px;text-align:center"><div style="font-size:56px;margin-bottom:16px">'+s.icon+'</div><div style="font-size:20px;font-weight:800;color:var(--tx);margin-bottom:8px">'+s.title+'</div><div style="font-size:14px;color:var(--ts);line-height:1.6;white-space:pre-line;margin-bottom:24px">'+s.desc+'</div><div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px">'+slides.map(function(_,i){return '<div style="width:8px;height:8px;border-radius:50%;background:'+(i===idx?'var(--p)':'var(--bd)')+'"></div>'}).join('')+'</div><div style="display:flex;gap:8px">'+(idx>0?'<button onclick="guideNav(-1)" style="flex:1;padding:10px;border:2px solid var(--bd);border-radius:10px;background:none;color:var(--ts);font-weight:700;font-size:14px;cursor:pointer">이전</button>':'')+'<button onclick="guideNav(1)" style="flex:1;padding:10px;border:none;border-radius:10px;background:var(--p);color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(isLast?'시작하기':'다음')+'</button></div></div>';
+    ov.innerHTML='<div style="position:relative;background:var(--sf);width:90%;max-width:340px;border-radius:20px;padding:30px 24px 24px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.22)"><button onclick="closeGuide()" style="position:absolute;top:10px;right:10px;width:30px;height:30px;border:1px solid var(--bd);border-radius:50%;background:var(--bg);color:var(--ts);font-weight:900;cursor:pointer">×</button><div style="font-size:52px;margin-bottom:14px">'+s.icon+'</div><div style="font-size:20px;font-weight:850;color:var(--tx);margin-bottom:8px">'+s.title+'</div><div style="font-size:14px;color:var(--ts);line-height:1.6;white-space:pre-line;margin-bottom:22px">'+s.desc+'</div><div style="display:flex;justify-content:center;gap:6px;margin-bottom:18px">'+slides.map(function(_,i){return '<div style="width:8px;height:8px;border-radius:50%;background:'+(i===idx?'var(--p)':'var(--bd)')+'"></div>'}).join('')+'</div><div style="display:flex;gap:8px">'+(idx>0?'<button onclick="guideNav(-1)" style="flex:1;padding:10px;border:2px solid var(--bd);border-radius:10px;background:none;color:var(--ts);font-weight:700;font-size:14px;cursor:pointer">이전</button>':'')+'<button onclick="guideNav(1)" style="flex:1;padding:10px;border:none;border-radius:10px;background:var(--p);color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(isLast?(force?'닫기':'시작하기'):'다음')+'</button></div></div>';
   }
 
+  window.closeGuide=function(){closeGuide(!force);};
   window.guideNav=function(dir){
     idx+=dir;
-    if(idx>=slides.length){localStorage.setItem('choir_guide_seen','true');ov.remove();return}
+    if(idx>=slides.length){closeGuide(true);return}
     if(idx<0)idx=0;
     renderSlide();
   };
