@@ -10951,10 +10951,19 @@ function printReport() {
   var monthVal=document.getElementById('reportMonthSel')?document.getElementById('reportMonthSel').value:'';
   writeLog('결산 보고서 인쇄',monthVal?monthVal+' 보고서 인쇄/PDF 저장 실행':'보고서 인쇄/PDF 저장 실행');
   window.addEventListener('afterprint',cleanup);
-  setTimeout(function(){
+  try{
+    if(typeof window.print!=='function'){
+      cleanup();
+      return showToast('이 브라우저에서는 인쇄 기능을 열 수 없습니다');
+    }
+    void document.body.offsetHeight;
     window.print();
     setTimeout(cleanup,1500);
-  },50);
+  }catch(e){
+    cleanup();
+    console.error(e);
+    showToast('인쇄 창을 여는 중 오류가 발생했습니다');
+  }
 }
 </script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
