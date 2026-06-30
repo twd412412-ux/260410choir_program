@@ -228,11 +228,14 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
 .seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
-.seating-row.offset .seating-line{transform:translateX(28px)}
+.seating-row.offset .seating-line{transform:translateX(26px)}
 .seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px}
 .seating-line{display:flex;gap:4px}
-.seating-seat{width:52px;height:34px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 2px;color:#202018}
+.seating-seat{width:48px;height:36px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
+.seating-seat-name{display:block;max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap;line-height:1}
+.seating-seat-name.medium{font-size:11.7px}
+.seating-seat-name.long{font-size:10.5px}
 .seating-seat[draggable=true]{cursor:grab}
 .seating-seat.dragging{opacity:.55;outline:3px solid var(--accent);outline-offset:1px}
 .seating-seat.empty{background:#FFFDF8;color:#B7B09E}
@@ -251,7 +254,7 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .seating-mic-row{display:flex;align-items:center;margin-top:10px;position:relative;z-index:1}
 .seating-mic-label{width:61px;font-size:12px;font-weight:850;color:var(--ts);flex:0 0 61px}
 .seating-mic-line{display:flex;gap:4px}
-.seating-mic-slot{width:52px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
+.seating-mic-slot{width:48px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
 .seating-mic-slot.on{background:#4F7FB7;border-style:solid;border-color:#4F7FB7;color:#fff}
 .seating-front{position:relative;height:74px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
 .seating-front-note{position:absolute;left:0;top:20px}
@@ -1239,8 +1242,8 @@ body{font-weight:500}
 .public-seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .public-seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px;color:#596354}
 .public-seating-line{display:flex;gap:4px}
-.public-seating-row.offset .public-seating-line{transform:translateX(28px)}
-.public-seating-seat{width:52px;height:34px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;overflow:hidden;white-space:nowrap;padding:0 2px;color:#202018}
+.public-seating-row.offset .public-seating-line{transform:translateX(26px)}
+.public-seating-seat{width:48px;height:36px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
 .public-seating-seat.empty{background:#FFFDF8;color:#B7B09E}
 .public-seating-seat.part-S1{background:#E8B9D5}
 .public-seating-seat.part-S2{background:#9FD1D8}
@@ -3129,8 +3132,8 @@ function renderPublicSeatingModalBody(){
   var stats=publicSeatingStats(plan);
   var mine=findPublicSeatingMine(plan);
   var maxSeats=publicSeatingMaxSeatCount(rows);
-  var centerLeft=seatingLeadWidth()+(maxSeats*56/2);
-  var boardWidth=seatingLeadWidth()+(maxSeats*56)+40;
+  var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
+  var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '로그인하면 내 자리가 자동으로 강조됩니다. 지금은 이름 검색으로 확인해 주세요.';
@@ -3151,7 +3154,7 @@ function renderPublicSeatingModalBody(){
       var matchClass=publicSeatingMatches(seat,q)?' match':'';
       var dimClass=q&&seat&&!publicSeatingMatches(seat,q)&&!publicSeatingIsMine(seat)?' dim':'';
       if(seat){
-        html+='<div class="public-seating-seat '+partClass(seat.part)+mineClass+matchClass+dimClass+'" title="'+escHtml(publicSeatingSeatLabel(r,c)+' · '+(seat.part||'')+' '+(seat.name||''))+'">'+escHtml(seat.name||'')+'</div>';
+        html+='<div class="public-seating-seat '+partClass(seat.part)+mineClass+matchClass+dimClass+'" title="'+escHtml(publicSeatingSeatLabel(r,c)+' · '+(seat.part||'')+' '+(seat.name||''))+'">'+seatingSeatNameHtml(seat.name||'')+'</div>';
       }else{
         html+='<div class="public-seating-seat empty">빈칸</div>';
       }
@@ -6448,6 +6451,19 @@ function seatingSubmissionCompleteCount(){
 function seatingLeadWidth(){
   return 61;
 }
+function seatingSeatPitch(){
+  return 52;
+}
+function seatingSeatOffset(){
+  return seatingSeatPitch()/2;
+}
+function seatingSeatNameClass(name){
+  var len=String(name||'').replace(/\s+/g,'').length;
+  return len>=5?' long':(len>=4?' medium':'');
+}
+function seatingSeatNameHtml(name){
+  return '<span class="seating-seat-name'+seatingSeatNameClass(name)+'">'+escHtml(name||'')+'</span>';
+}
 function seatingDefaultSeatCount(){
   return 38;
 }
@@ -7034,7 +7050,7 @@ function downloadSeatingImage(){
   if(!seatingRows.length)return showToast('저장할 배치가 없습니다');
   var stats=seatingPlacementStats();
   var maxSeats=seatingMaxSeatCount();
-  var seatW=92,seatH=46,gap=8,labelW=70,countW=42,leftPad=28,rightPad=28,topPad=92,rowGap=14;
+  var seatW=84,seatH=50,gap=8,labelW=70,countW=42,leftPad=28,rightPad=28,topPad=92,rowGap=14;
   var rowBlockW=labelW+countW+(maxSeats*seatW)+((maxSeats-1)*gap);
   var width=Math.max(980,leftPad+rowBlockW+rightPad);
   var rowsH=seatingRows.length*(seatH+rowGap);
@@ -7094,9 +7110,9 @@ function downloadSeatingImage(){
       ctx.lineWidth=1;
       ctx.stroke();
       ctx.fillStyle=seat?'#202018':'#B7B09E';
-      ctx.font='900 14px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
+      ctx.font='900 16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign='center';
-      seatingCanvasText(ctx,seat?seat.name:'빈칸',x+seatW/2,y+seatH/2,seatW-10);
+      seatingCanvasText(ctx,seat?seat.name:'빈칸',x+seatW/2,y+seatH/2,seatW-8);
     });
   });
   var micY=topPad+rowsH+18;
@@ -7333,7 +7349,7 @@ function renderSeatingInlinePicker(){
   if(!seatingSelectedSeat)return '';
   var row=seatingRows[seatingSelectedSeat.row];
   if(!row||row.seats[seatingSelectedSeat.col])return '';
-  var left=seatingLeadWidth()+(row.offset===0.5?28:0)+(seatingSelectedSeat.col*56);
+  var left=seatingLeadWidth()+(row.offset===0.5?seatingSeatOffset():0)+(seatingSelectedSeat.col*seatingSeatPitch());
   var top=(seatingSelectedSeat.row*50)+38;
   return '<div class="seating-inline-picker" style="left:'+left+'px;top:'+top+'px" onclick="event.stopPropagation()">'
     +'<input id="seatingInlineSearch" value="'+escHtml(seatingInlineQuery)+'" placeholder="이름 검색" oninput="seatingInlineQuery=this.value;renderSeatingInlineList()" onkeydown="handleSeatingInlineKey(event)">'
@@ -7379,8 +7395,8 @@ function renderSeatingBoard(){
   if(title)title.textContent=program+' 배치도';
   seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
   var maxSeats=seatingMaxSeatCount();
-  var centerLeft=seatingLeadWidth()+(maxSeats*56/2);
-  var boardWidth=seatingLeadWidth()+(maxSeats*56)+40;
+  var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
+  var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var html='<div class="seating-center-line" style="left:'+centerLeft+'px"></div><div class="seating-center-label" style="left:'+(centerLeft-18)+'px">센터</div>';
   seatingRows.forEach(function(row,r){
     html+='<div class="seating-row '+(row.offset===0.5?'offset':'')+'">'
@@ -7394,7 +7410,7 @@ function renderSeatingBoard(){
       var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+ready;
       var dropAttrs=' ondragover="handleSeatingDragOver(event)" ondrop="handleSeatingDrop(event,'+r+','+c+')"';
       if(seat){
-        html+='<button class="seating-seat '+partClass(seat.part)+' '+stateClass+'" draggable="true" ondragstart="handleSeatingDragStart(event,'+r+','+c+')" ondragend="handleSeatingDragEnd(event)"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name)+'">'+escHtml(seat.name)+'</button>';
+        html+='<button class="seating-seat '+partClass(seat.part)+' '+stateClass+'" draggable="true" ondragstart="handleSeatingDragStart(event,'+r+','+c+')" ondragend="handleSeatingDragEnd(event)"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name)+'">'+seatingSeatNameHtml(seat.name)+'</button>';
       }else{
         html+='<button class="seating-seat empty '+stateClass+'"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')">빈칸</button>';
       }
@@ -7670,8 +7686,8 @@ function toggleSeatingFullscreen(){
 function renderSeatingPublishBoardPreview(plan){
   var rows=normalizeSeatingRows(plan&&plan.rows);
   var maxSeats=publicSeatingMaxSeatCount(rows);
-  var centerLeft=seatingLeadWidth()+(maxSeats*56/2);
-  var boardWidth=seatingLeadWidth()+(maxSeats*56)+40;
+  var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
+  var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var html='<div class="public-seating-board-scroll" style="max-height:34vh"><div class="public-seating-board" style="min-width:'+boardWidth+'px">';
   rows.forEach(function(row,r){
     html+='<div class="public-seating-row '+(row.offset===0.5?'offset':'')+'">'
@@ -7679,7 +7695,7 @@ function renderSeatingPublishBoardPreview(plan){
       +'<div class="public-seating-row-count">'+(row.seats||[]).filter(function(s){return !!s;}).length+'</div>'
       +'<div class="public-seating-line">';
     (row.seats||[]).forEach(function(seat,c){
-      if(seat)html+='<div class="public-seating-seat '+partClass(seat.part)+'" title="'+escHtml((row.label||'줄')+' '+(c+1)+'번 · '+(seat.part||'')+' '+(seat.name||''))+'">'+escHtml(seat.name||'')+'</div>';
+      if(seat)html+='<div class="public-seating-seat '+partClass(seat.part)+'" title="'+escHtml((row.label||'줄')+' '+(c+1)+'번 · '+(seat.part||'')+' '+(seat.name||''))+'">'+seatingSeatNameHtml(seat.name||'')+'</div>';
       else html+='<div class="public-seating-seat empty">빈칸</div>';
     });
     html+='</div></div>';
