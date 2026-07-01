@@ -1893,6 +1893,19 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">권한 선택</label><select class="form-sel" id="roleSelect"><option value="admin">관리자</option><option value="chongmu">총무부</option></select></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="adminPw" type="password" placeholder="비밀번호 입력" onkeypress="if(event.key==='Enter')checkAdminPw()"></div>
     <button class="btn btn-p btn-bl" onclick="checkAdminPw()">로그인</button>
+    <button class="btn btn-bl" style="margin-top:8px;background:var(--sf);color:var(--pd);border:1px solid var(--bd)" onclick="startAdminPasswordReset()">Google 인증으로 관리자 비밀번호 초기화</button>
+    <p style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:8px">등록된 소유자 Google 계정으로만 초기화할 수 있습니다.</p>
+  </div>
+</div>
+
+<!-- MODAL: 관리자 비밀번호 초기화 -->
+<div class="modal-overlay modal-center" id="modalAdminReset">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">🔐 관리자 비밀번호 초기화</span><button class="modal-close" onclick="closeModal('modalAdminReset')">✕</button></div>
+    <div id="adminResetAccount" style="font-size:13px;color:var(--ts);line-height:1.5;margin-bottom:12px">Google 인증 확인 중입니다.</div>
+    <div class="form-group"><label class="form-label">새 관리자 비밀번호 *</label><input class="form-input" id="adminResetPwNew" type="password" placeholder="6자리 이상" autocomplete="new-password"></div>
+    <div class="form-group"><label class="form-label">새 비밀번호 확인 *</label><input class="form-input" id="adminResetPwConfirm" type="password" placeholder="한 번 더 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter')saveAdminPasswordFromRecovery()"></div>
+    <button class="btn btn-p btn-bl" onclick="saveAdminPasswordFromRecovery()">새 비밀번호 저장</button>
   </div>
 </div>
 
@@ -2162,6 +2175,10 @@ var chongmuPassword='';
 var adminPasswordHash='';
 var adminPasswordSalt='';
 var ADMIN_PASSWORD_MIN_LENGTH=6;
+var ADMIN_RECOVERY_EMAIL='twd412412@gmail.com';
+var firebaseAuthLoadPromise=null;
+var adminResetVerified=false;
+var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
@@ -2316,6 +2333,7 @@ function closeModal(id){
   if(!modal)return;
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
+  if(id==='modalAdminReset')clearAdminPasswordResetState();
   if(id==='modalPhotoCrop'&&photoCropState){
     if(photoCropState.uploading)return showToast('사진 업로드 중입니다');
     var fileInput=document.getElementById(photoCropState.fileInputId);
@@ -2811,6 +2829,105 @@ function hashAdminPassword(pw,salt){
 function verifyAdminPassword(pw){
   if(!adminPasswordHash||!adminPasswordSalt)return Promise.resolve(false);
   return hashAdminPassword(pw,adminPasswordSalt).then(function(hash){return hash===adminPasswordHash});
+}
+function loadScriptOnce(id,src){
+  var existing=document.getElementById(id);
+  if(existing)return Promise.resolve();
+  return new Promise(function(resolve,reject){
+    var script=document.createElement('script');
+    script.id=id;
+    script.src=src;
+    script.onload=function(){resolve()};
+    script.onerror=function(){reject(new Error('script_load_failed'))};
+    document.head.appendChild(script);
+  });
+}
+function ensureFirebaseAuth(){
+  if(firebase.auth)return Promise.resolve(firebase.auth());
+  if(firebaseAuthLoadPromise)return firebaseAuthLoadPromise;
+  firebaseAuthLoadPromise=loadScriptOnce('firebaseAuthCompatSdk','https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js').then(function(){
+    return firebase.auth();
+  });
+  return firebaseAuthLoadPromise;
+}
+function clearAdminPasswordResetState(){
+  adminResetVerified=false;
+  var newEl=document.getElementById('adminResetPwNew');
+  var confirmEl=document.getElementById('adminResetPwConfirm');
+  var accountEl=document.getElementById('adminResetAccount');
+  if(newEl)newEl.value='';
+  if(confirmEl)confirmEl.value='';
+  if(accountEl)accountEl.textContent='Google 인증 확인 중입니다.';
+  if(adminResetAuth){
+    adminResetAuth.signOut().catch(function(){});
+    adminResetAuth=null;
+  }
+}
+function adminAuthErrorMessage(error){
+  var code=error&&error.code?String(error.code):'';
+  if(code==='auth/unauthorized-domain')return 'Firebase Auth 승인 도메인에 현재 주소를 추가해야 합니다';
+  if(code==='auth/operation-not-allowed')return 'Firebase Auth에서 Google 로그인 제공자를 먼저 활성화해야 합니다';
+  if(code==='auth/popup-closed-by-user')return 'Google 인증 창이 닫혔습니다';
+  if(code==='auth/popup-blocked')return '브라우저가 Google 인증 팝업을 차단했습니다';
+  return 'Google 인증 중 오류가 발생했습니다';
+}
+function startAdminPasswordReset(){
+  showToast('Google 인증 창을 여는 중...');
+  ensureFirebaseAuth().then(function(auth){
+    adminResetAuth=auth;
+    var provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    return auth.signInWithPopup(provider);
+  }).then(function(result){
+    var user=result&&result.user?result.user:null;
+    var email=String(user&&user.email||'').toLowerCase();
+    if(email!==ADMIN_RECOVERY_EMAIL){
+      if(adminResetAuth)adminResetAuth.signOut().catch(function(){});
+      adminResetAuth=null;
+      adminResetVerified=false;
+      return showToast('허용된 Google 계정만 초기화할 수 있습니다');
+    }
+    adminResetVerified=true;
+    closeModal('modalAdmin');
+    openModal('modalAdminReset');
+    var accountEl=document.getElementById('adminResetAccount');
+    if(accountEl)accountEl.textContent=email+' 인증 완료. 새 관리자 비밀번호를 입력하세요.';
+    setTimeout(function(){
+      var el=document.getElementById('adminResetPwNew');
+      if(el)el.focus();
+    },100);
+  }).catch(function(error){
+    console.error(error);
+    showToast(adminAuthErrorMessage(error));
+  });
+}
+function saveAdminPasswordFromRecovery(){
+  if(!adminResetVerified)return showToast('먼저 Google 인증을 완료해주세요');
+  var pw=document.getElementById('adminResetPwNew').value.trim();
+  var confirmPw=document.getElementById('adminResetPwConfirm').value.trim();
+  if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
+  if(pw.length<ADMIN_PASSWORD_MIN_LENGTH)return showToast('관리자 비밀번호는 '+ADMIN_PASSWORD_MIN_LENGTH+'자리 이상으로 입력해주세요');
+  if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
+  if(!hasPasswordHashSupport())return showToast('현재 브라우저에서는 보안 해시 기능을 사용할 수 없습니다');
+  var salt=randomPasswordSalt();
+  hashAdminPassword(pw,salt).then(function(hash){
+    return db.collection('settings').doc('admin').set({
+      adminPasswordHash:hash,
+      adminPasswordSalt:salt,
+      adminPasswordUpdatedAt:new Date().toISOString(),
+      adminPasswordUpdatedBy:ADMIN_RECOVERY_EMAIL,
+      updatedAt:new Date().toISOString()
+    },{merge:true}).then(function(){
+      adminPasswordHash=hash;
+      adminPasswordSalt=salt;
+      writeLog('관리자 비밀번호 초기화','Google 인증으로 관리자 비밀번호를 초기화함');
+      closeModal('modalAdminReset');
+      showToast('관리자 비밀번호가 초기화되었습니다');
+    });
+  }).catch(function(e){
+    console.error(e);
+    showToast('비밀번호 저장 중 오류 발생');
+  });
 }
 function openAdminLogin(){
   var userSessionRole=getSessionRoleForUser(currentUser);
