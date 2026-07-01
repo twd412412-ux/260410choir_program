@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>광주교회 찬양대</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
@@ -2145,6 +2146,15 @@ firebase.initializeApp({
   messagingSenderId:"493401753336",
   appId:"1:493401753336:web:5c69b98f1b5445e3099d0d"
 });
+var APP_CHECK_SITE_KEY="6Lf8OD8tAAAAALeCV6emBZm-YeyHdTAjQWk7RUmo";
+try{
+  firebase.appCheck().activate(
+    new firebase.appCheck.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+    true
+  );
+}catch(error){
+  console.warn("App Check initialization failed",error);
+}
 var db = firebase.firestore();
 var storage = firebase.storage();
 // ==================== 전역 변수 ====================
