@@ -11,7 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>광주교회 찬양대</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
@@ -2146,15 +2145,6 @@ firebase.initializeApp({
   messagingSenderId:"493401753336",
   appId:"1:493401753336:web:5c69b98f1b5445e3099d0d"
 });
-var APP_CHECK_SITE_KEY="6Lf8OD8tAAAAALeCV6emBZm-YeyHdTAjQWk7RUmo";
-try{
-  firebase.appCheck().activate(
-    new firebase.appCheck.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
-    true
-  );
-}catch(error){
-  console.warn("App Check initialization failed",error);
-}
 var db = firebase.firestore();
 var storage = firebase.storage();
 // ==================== 전역 변수 ====================
@@ -3191,11 +3181,15 @@ function getHomeAttendanceData(dateKey){
     return homeAttendanceCache.promise;
   }
   var promise=Promise.all([
-    getAttendanceMemberSource(),
+    db.collection('members').get(),
     db.collection('attendance').doc(dateKey+'_오전').get(),
     db.collection('attendance').doc(dateKey+'_오후').get()
   ]).then(function(res){
-    var members=filterAttendanceMembersForDate(res[0]||[],dateKey).slice();
+    var members=[];
+    res[0].forEach(function(doc){
+      var d=doc.data();
+      if(isMemberActiveOnAttendanceDate(d,dateKey))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),attendanceStartDate:memberAttendanceStartDate(d)});
+    });
     if(getAttendanceAllowedParts().indexOf('all')===-1){
       members=members.filter(function(m){return isMemberInAttendanceScope(m);});
     }
@@ -8932,7 +8926,6 @@ var ATT_STATUS_FILTER_LABELS={all:'전체','출석':'출석','지각':'지각','
 var attUnsubs=[];
 var attMembersLoaded=false;
 var attMembersSourceLoaded=false;
-var attMembersSourcePromise=null;
 var attMembersLoadedFor='';
 var attLoadSeq=0;
 var attRenderSeq=0;
@@ -9033,24 +9026,6 @@ function switchAttTab(tab){
   if(tab==='history'){document.getElementById('attHistory').classList.remove('hidden');populateAttMemSel()}
 }
 
-function getAttendanceMemberSource(){
-  if(attMembersSourceLoaded)return Promise.resolve(attAllMembers);
-  if(attMembersSourcePromise)return attMembersSourcePromise;
-  attMembersSourcePromise=db.collection('members').orderBy('name').get().then(function(snap){
-    attAllMembers=[];
-    snap.forEach(function(doc){
-      var d=doc.data();
-      if(isAttendanceTargetMember(d))attAllMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
-    });
-    attMembersSourceLoaded=true;
-    return attAllMembers;
-  }).catch(function(e){
-    attMembersSourcePromise=null;
-    throw e;
-  });
-  return attMembersSourcePromise;
-}
-
 function loadAttMembers(callback,dateKey){
   var targetDate=(dateKey===undefined)?((document.getElementById('attDate')||{}).value||''):dateKey;
   function applyLoadedMembers(){
@@ -9067,13 +9042,14 @@ function loadAttMembers(callback,dateKey){
     applyLoadedMembers();
     return;
   }
-  getAttendanceMemberSource().then(function(){
+  db.collection('members').orderBy('name').get().then(function(snap){
+    attAllMembers=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(isAttendanceTargetMember(d))attAllMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
+    });
+    attMembersSourceLoaded=true;
     applyLoadedMembers();
-  }).catch(function(e){
-    console.error(e);
-    attMembers=[];
-    attMembersLoaded=false;
-    if(callback)callback();
   });
 }
 
@@ -9141,10 +9117,8 @@ function clearAttRealtimeListeners(){
 function invalidateAttendanceMemberCache(){
   attMembersLoaded=false;
   attMembersSourceLoaded=false;
-  attMembersSourcePromise=null;
   attMembersLoadedFor='';
   attAllMembers=[];
-  invalidateHomeAttendanceCache();
 }
 
 
