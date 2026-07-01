@@ -10939,17 +10939,54 @@ function generateReport() {
   });
 }
 
+function buildReportPrintDocument(reportHtml,title){
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escHtml(title||'결산 보고서')+'</title><style>'
+    +':root{--p:#6F7D4E;--pd:#526552}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#222;font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif}.report-print-sheet{background:#fff;color:#222;padding:0}table{page-break-inside:auto}tr{page-break-inside:avoid;page-break-after:auto}h2,h3{page-break-after:avoid}'
+    +'@page{margin:12mm}@media print{html,body{background:#fff!important}.report-print-sheet{width:100%;margin:0;padding:0;border:0;box-shadow:none}}'
+    +'</style></head><body><main class="report-print-sheet">'+reportHtml+'</main></body></html>';
+}
+function printReportDocument(reportHtml,title){
+  var old=document.getElementById('reportPrintFrame');
+  if(old&&old.parentNode)old.parentNode.removeChild(old);
+  var frame=document.createElement('iframe');
+  frame.id='reportPrintFrame';
+  frame.setAttribute('title','결산 보고서 인쇄');
+  frame.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none;';
+  document.body.appendChild(frame);
+  try{
+    var win=frame.contentWindow;
+    var doc=win&&win.document;
+    if(!win||!doc)throw new Error('print_frame_unavailable');
+    doc.open();
+    doc.write(buildReportPrintDocument(reportHtml,title));
+    doc.close();
+    void doc.body.offsetHeight;
+    win.focus();
+    win.print();
+    showToast('보고서 인쇄 창을 요청했습니다');
+    setTimeout(function(){
+      if(frame&&frame.parentNode)frame.parentNode.removeChild(frame);
+    },2500);
+    return true;
+  }catch(e){
+    console.error(e);
+    if(frame&&frame.parentNode)frame.parentNode.removeChild(frame);
+    return false;
+  }
+}
 function printReport() {
   if(!canUseReport())return showToast('결산 보고서는 관리자만 출력할 수 있습니다.');
   var canvas = document.getElementById('reportCanvas');
   if(!canvas||!canvas.innerHTML.trim())return showToast('먼저 보고서를 생성해주세요');
+  var monthVal=document.getElementById('reportMonthSel')?document.getElementById('reportMonthSel').value:'';
+  writeLog('결산 보고서 인쇄',monthVal?monthVal+' 보고서 인쇄/PDF 저장 실행':'보고서 인쇄/PDF 저장 실행');
+  if(printReportDocument(canvas.innerHTML,monthVal?monthVal+' 광주교회 찬양대 결산 보고서':'광주교회 찬양대 결산 보고서'))return;
+
   document.body.classList.add('print-report-mode');
   function cleanup(){
     document.body.classList.remove('print-report-mode');
     window.removeEventListener('afterprint',cleanup);
   }
-  var monthVal=document.getElementById('reportMonthSel')?document.getElementById('reportMonthSel').value:'';
-  writeLog('결산 보고서 인쇄',monthVal?monthVal+' 보고서 인쇄/PDF 저장 실행':'보고서 인쇄/PDF 저장 실행');
   window.addEventListener('afterprint',cleanup);
   try{
     if(typeof window.print!=='function'){
