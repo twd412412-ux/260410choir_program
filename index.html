@@ -1721,6 +1721,13 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">공지 내용</label><input class="form-input" id="noticeInput" placeholder="상단에 표시할 공지사항"></div>
     <div style="display:flex;gap:8px"><button class="btn btn-p" onclick="saveNotice()">저장</button><button class="btn btn-d" onclick="delNotice()">삭제</button></div>
     <div style="margin-top:16px"><h4 style="font-size:14px;font-weight:700;margin-bottom:4px">현재 공지</h4><div id="curNotice" style="font-size:14px;color:var(--ts)">없음</div></div>
+    <div id="adminPasswordSection" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🔐 관리자 비밀번호 변경</h3>
+      <div class="form-group"><label class="form-label">새 관리자 비밀번호 *</label><input class="form-input" id="adminPwNew" type="password" placeholder="6자리 이상 권장" autocomplete="new-password"></div>
+      <div class="form-group"><label class="form-label">새 비밀번호 확인 *</label><input class="form-input" id="adminPwConfirm" type="password" placeholder="한 번 더 입력" autocomplete="new-password" onkeypress="if(event.key==='Enter')saveAdminPassword()"></div>
+      <button class="btn btn-p btn-bl" onclick="saveAdminPassword()">관리자 비밀번호 저장</button>
+      <p style="font-size:12px;color:var(--ts);margin-top:8px">코드에는 저장하지 않고 Firestore에 해시로 저장합니다.</p>
+    </div>
     <div id="chongmuPasswordSection" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)">
       <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🔐 총무부 비밀번호 변경</h3>
       <div class="form-group"><label class="form-label">새 총무부 비밀번호 *</label><input class="form-input" id="chongmuPwNew" type="password" placeholder="새 비밀번호 입력" autocomplete="new-password"></div>
@@ -2151,7 +2158,10 @@ var storage = firebase.storage();
 var allSongs=[], filteredSongs=[], currentTab='home';
 var songRecommendCache=[];
 var adminRole=null;
-var chongmuPassword='0412';
+var chongmuPassword='';
+var adminPasswordHash='';
+var adminPasswordSalt='';
+var ADMIN_PASSWORD_MIN_LENGTH=6;
 var currentUser=null, currentDetailSong=null;
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
@@ -2657,6 +2667,8 @@ function switchAdminTab(sub){
   var elId = 'sub' + sub.charAt(0).toUpperCase() + sub.slice(1);
   var el = document.getElementById(elId);
   if(el) el.classList.remove('hidden');
+  var adminPwSection=document.getElementById('adminPasswordSection');
+  if(adminPwSection)adminPwSection.style.display=adminRole==='admin'?'block':'none';
   var pwSection=document.getElementById('chongmuPasswordSection');
   if(pwSection)pwSection.style.display=adminRole==='admin'?'block':'none';
 
@@ -2778,6 +2790,28 @@ function openQuickAddSchedule(defaultDate){
 
 
 // ==================== 관리자 로그인 ====================
+function hasPasswordHashSupport(){
+  return !!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
+}
+function bytesToHex(buffer){
+  return Array.prototype.map.call(new Uint8Array(buffer),function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+function randomPasswordSalt(){
+  var bytes=new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.prototype.map.call(bytes,function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+function sha256Hex(text){
+  if(!hasPasswordHashSupport())return Promise.reject(new Error('crypto_unavailable'));
+  return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)).then(bytesToHex);
+}
+function hashAdminPassword(pw,salt){
+  return sha256Hex(String(salt||'')+':'+String(pw||''));
+}
+function verifyAdminPassword(pw){
+  if(!adminPasswordHash||!adminPasswordSalt)return Promise.resolve(false);
+  return hashAdminPassword(pw,adminPasswordSalt).then(function(hash){return hash===adminPasswordHash});
+}
 function openAdminLogin(){
   var userSessionRole=getSessionRoleForUser(currentUser);
   if(adminRole&&(!currentUser||adminRole==='admin'||(adminRole==='chongmu'&&userSessionRole!=='chongmu'))){
@@ -2795,13 +2829,24 @@ function openAdminLogin(){
 function checkAdminPw(){
   var role=document.getElementById('roleSelect').value;
   var pw=document.getElementById('adminPw').value;
-  if(role==='admin'&&pw==='9917'){
-    adminRole='admin';
-    syncAccessShell();
-    document.getElementById('adminPw').value='';
-    closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();refreshHomeAccessState();
+  if(role==='admin'){
+    if(!pw)return showToast('비밀번호를 입력해주세요');
+    loadAdminSettings().then(function(){
+      if(!adminPasswordHash||!adminPasswordSalt)return showToast('관리자 비밀번호가 아직 설정되지 않았습니다');
+      return verifyAdminPassword(pw).then(function(ok){
+        if(!ok)return showToast('비밀번호가 틀렸습니다');
+        adminRole='admin';
+        syncAccessShell();
+        document.getElementById('adminPw').value='';
+        closeModal('modalAdmin');showToast('관리자 모드 활성화');renderSongList();refreshHomeAccessState();
+      });
+    }).catch(function(e){
+      console.error(e);
+      showToast('비밀번호 확인 중 오류 발생');
+    });
   }else if(role==='chongmu'){
     loadAdminSettings().then(function(){
+      if(!chongmuPassword)return showToast('총무부 비밀번호가 아직 설정되지 않았습니다');
       if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
       adminRole='chongmu';
       syncAccessShell();
@@ -5707,9 +5752,14 @@ function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 // ==================== 관리자 설정 ====================
 function loadAdminSettings(){
   return db.collection('settings').doc('admin').get().then(function(doc){
-    if(doc.exists&&doc.data().chongmuPassword){
-      chongmuPassword=String(doc.data().chongmuPassword);
-      saveCache('choir_admin_settings',{chongmuPassword:chongmuPassword});
+    if(doc.exists){
+      var data=doc.data();
+      if(data.chongmuPassword){
+        chongmuPassword=String(data.chongmuPassword);
+        saveCache('choir_admin_settings',{chongmuPassword:chongmuPassword});
+      }
+      adminPasswordHash=String(data.adminPasswordHash||'');
+      adminPasswordSalt=String(data.adminPasswordSalt||'');
     }
   }).catch(function(){
     var cached=loadCache('choir_admin_settings',600000);
@@ -5717,6 +5767,34 @@ function loadAdminSettings(){
   });
 }
 function initAdminSettings(){loadAdminSettings()}
+function saveAdminPassword(){
+  if(adminRole!=='admin')return showToast('관리자만 변경할 수 있습니다');
+  var pw=document.getElementById('adminPwNew').value.trim();
+  var confirmPw=document.getElementById('adminPwConfirm').value.trim();
+  if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
+  if(pw.length<ADMIN_PASSWORD_MIN_LENGTH)return showToast('관리자 비밀번호는 '+ADMIN_PASSWORD_MIN_LENGTH+'자리 이상으로 입력해주세요');
+  if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
+  if(!hasPasswordHashSupport())return showToast('현재 브라우저에서는 보안 해시 기능을 사용할 수 없습니다');
+  var salt=randomPasswordSalt();
+  hashAdminPassword(pw,salt).then(function(hash){
+    return db.collection('settings').doc('admin').set({
+      adminPasswordHash:hash,
+      adminPasswordSalt:salt,
+      adminPasswordUpdatedAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    },{merge:true}).then(function(){
+      adminPasswordHash=hash;
+      adminPasswordSalt=salt;
+      document.getElementById('adminPwNew').value='';
+      document.getElementById('adminPwConfirm').value='';
+      writeLog('관리자 비밀번호 변경','관리자가 관리자 로그인 비밀번호를 변경함');
+      showToast('관리자 비밀번호 변경 완료');
+    });
+  }).catch(function(e){
+    console.error(e);
+    showToast('비밀번호 저장 중 오류 발생');
+  });
+}
 function saveChongmuPassword(){
   if(adminRole!=='admin')return showToast('관리자만 변경할 수 있습니다');
   var pw=document.getElementById('chongmuPwNew').value.trim();
