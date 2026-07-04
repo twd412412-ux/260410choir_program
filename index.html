@@ -1730,7 +1730,7 @@ body{font-weight:500}
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
-      <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
+      <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.">비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
@@ -4255,6 +4255,20 @@ function validateAccountMemberLinkName(accountName,memberId){
   return true;
 }
 
+function findAutoAccountMemberLink(accountName,excludeAccountId){
+  var matches=accountLinkMembers.filter(isHandbookRosterMember).filter(function(m){
+    return accountMemberNameMatches(accountName,m);
+  });
+  if(matches.length!==1){
+    return {memberId:'',status:matches.length>1?'duplicate':'none',count:matches.length};
+  }
+  var member=matches[0];
+  if(accountMemberLinkConflict(member.id,excludeAccountId)){
+    return {memberId:'',status:'used',count:1,member:member};
+  }
+  return {memberId:member.id,status:'matched',count:1,member:member};
+}
+
 function accountPartClass(part){
   part=normalizePartName(part);
   if(part==='S1')return 'part-s1';
@@ -4404,25 +4418,39 @@ function addMember(){
   var memberId=(document.getElementById('memMemberId')||{}).value||'';
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
-  if(!validateAccountMemberLinkName(name,memberId))return;
-  var linkedAccount=accountMemberLinkConflict(memberId,'');
-  if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
+  loadAccountLinkMembers().then(function(){
+    var autoLink={status:'manual',memberId:memberId};
+    if(!memberId){
+      autoLink=findAutoAccountMemberLink(name,'');
+      memberId=autoLink.memberId||'';
+    }
+    if(!validateAccountMemberLinkName(name,memberId))return;
+    var linkedAccount=accountMemberLinkConflict(memberId,'');
+    if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
 
-  // 👇 'accounts' 방에 저장!
-  db.collection('accounts').add({ 
-    name:name, part:part, pin:pin, memberId:memberId,
-    favorites:[], createdAt:new Date().toISOString()
-  }).then(function(){
-    showToast(name+'님 로그인 계정 생성 완료');
-    document.getElementById('memName').value='';
-    document.getElementById('memPin').value='';
-    if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
-    if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
-    populateAccountMemberSelect('memMemberId','','');
-    
-    setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
-    writeLog('계정 발급', name + '님 로그인 계정 생성');
-  }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
+    // 👇 'accounts' 방에 저장!
+    db.collection('accounts').add({ 
+      name:name, part:part, pin:pin, memberId:memberId,
+      favorites:[], createdAt:new Date().toISOString()
+    }).then(function(){
+      var msg=name+'님 로그인 계정 생성 완료';
+      if(autoLink.status==='matched')msg+=' · 명부 자동 연결';
+      else if(autoLink.status==='duplicate')msg+=' · 동명이인으로 명부 연결 보류';
+      else if(autoLink.status==='used')msg+=' · 이미 연결된 명부라 연결 보류';
+      showToast(msg);
+      document.getElementById('memName').value='';
+      document.getElementById('memPin').value='';
+      if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
+      if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
+      populateAccountMemberSelect('memMemberId','','');
+      
+      setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
+      writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
+    }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
+  }).catch(function(e){
+    console.error(e);
+    showToast('명부 확인 중 오류 발생');
+  });
 }
 
 function loadMembers(){
