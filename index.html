@@ -2250,7 +2250,7 @@ body{font-weight:500}
 <div class="bottom-nav">
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
-    <div class="nav-item" data-t="scores" onclick="switchTab('scores')"><span class="nav-icon">📄</span>악보</div>
+    <div class="nav-item hidden" data-t="scores" id="navScores" onclick="switchTab('scores')"><span class="nav-icon">📄</span>악보</div>
     <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐찾</div>
     <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
   </div>
@@ -2566,6 +2566,12 @@ function canManageSongs(){
 function canManageScores(){
   return adminRole==='admin'||hasPermission('score.manage');
 }
+function canViewScores(){
+  return !!currentUser||adminRole==='admin'||hasPermission('score.manage');
+}
+function canDeleteScores(){
+  return adminRole==='admin';
+}
 function isOwnCreatedItem(item){
   return !!(currentUser&&item&&(item.createdById===currentUser.id||(!item.createdById&&item.createdByName===currentUser.name)));
 }
@@ -2696,11 +2702,15 @@ function syncAccessShell(){
   var navAdmin=document.getElementById('navAdmin');
   var navStats=document.getElementById('navStats');
   var navArchive=document.getElementById('navArchive');
+  var navScores=document.getElementById('navScores');
   var btnLock=document.getElementById('btnLock');
   if(navAdmin)navAdmin.classList.toggle('hidden',!canOpenAdminArea());
   if(navStats)navStats.classList.toggle('hidden',!canUseStats());
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
+  if(navScores)navScores.classList.toggle('hidden',!canViewScores());
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
+  if(canViewScores()&&!scoresLoaded&&!scoresLoadPromise)initScores();
+  if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
 }
 
@@ -2724,6 +2734,11 @@ function switchTab(tab){
   if(tab==='stats'&&!canUseStats())return;
   if(tab==='archive'&&!hasArchiveView()){
     showToast('로그인 후 이용 가능합니다');
+    openUserModal();
+    return;
+  }
+  if(tab==='scores'&&!canViewScores()){
+    showToast('로그인한 단원만 악보를 볼 수 있습니다');
     openUserModal();
     return;
   }
@@ -3295,10 +3310,11 @@ function logoutUser(){
   }
   currentUser=null;
   localStorage.removeItem('choir_user');
+  if(!canViewScores())clearScoreAccessCache();
   syncAccessShell();
   updateUserBar();
   closeModal('modalUser');
-  if(currentTab==='archive')switchTab('songs');
+  if(currentTab==='archive'||currentTab==='scores')switchTab('songs');
   renderSongList();
   refreshHomeAccessState();
   showToast('로그아웃 되었습니다');
@@ -3865,6 +3881,13 @@ function initSongs(){
 function scoreSearchKey(value){
   return normalizeSearchText(value||'');
 }
+function clearScoreAccessCache(){
+  allScores=[];
+  scoresLoaded=false;
+  scoresLoadedPrivate=false;
+  scoresLoadPromise=null;
+  try{localStorage.removeItem(SCORE_CACHE_KEY)}catch(e){}
+}
 function scoreRowFromDoc(doc){
   var d=doc.data()||{};
   var title=d.title||d.songName||'';
@@ -3940,9 +3963,17 @@ function isPublicScore(score){
   return !!(score&&score.public!==false&&score.currentFileUrl);
 }
 function savePublicScoreCache(){
+  if(!canViewScores()){
+    try{localStorage.removeItem(SCORE_CACHE_KEY)}catch(e){}
+    return;
+  }
   saveCache(SCORE_CACHE_KEY,sortScores(allScores.filter(function(s){return isPublicScore(s)})));
 }
 function loadScores(force, includePrivate){
+  if(!canViewScores()){
+    clearScoreAccessCache();
+    return Promise.resolve([]);
+  }
   includePrivate=!!includePrivate&&canManageScores();
   if(!force&&scoresLoaded&&(!includePrivate||scoresLoadedPrivate))return Promise.resolve(allScores);
   var cached=!includePrivate?loadCache(SCORE_CACHE_KEY,600000):null;
@@ -3975,7 +4006,8 @@ function loadScores(force, includePrivate){
   return scoresLoadPromise;
 }
 function initScores(){
-  loadScores(false,false).then(function(){
+  if(!canViewScores())return Promise.resolve([]);
+  return loadScores(false,false).then(function(){
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
   });
@@ -4014,10 +4046,16 @@ function findScoresForSong(song, includePrivate){
   });
 }
 function getPublicScoreForSong(song){
+  if(!canViewScores())return null;
   var rows=findScoresForSong(song,false);
   return rows.length?rows[0]:null;
 }
 function openScoreFileById(id){
+  if(!canViewScores()){
+    showToast('로그인한 단원만 악보를 열 수 있습니다');
+    openUserModal();
+    return;
+  }
   var score=allScores.find(function(s){return s.id===id});
   if(!score||!score.currentFileUrl)return showToast('열 수 있는 악보가 없습니다');
   var details=[score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
@@ -4041,7 +4079,7 @@ function renderScoreCard(score, adminMode){
       +'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">교체</button>'
       +'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>'
       +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 PDF 열기</button>'
-      +'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>'
+      +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
       +'</div>'
     : '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 PDF 열기</button>';
   return '<div class="score-card">'
@@ -4090,6 +4128,11 @@ function renderScoresPage(){
   var list=document.getElementById('scoreList');
   var count=document.getElementById('scoreCount');
   if(!list)return;
+  if(!canViewScores()){
+    if(count)count.textContent='악보 로그인 필요';
+    list.innerHTML='<div class="score-empty">로그인한 단원만 악보를 볼 수 있습니다.<br><button class="btn btn-p" style="margin-top:12px" onclick="openUserModal()">로그인</button></div>';
+    return;
+  }
   syncQuickCreateActions();
   if(!scoresLoaded){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
@@ -4299,7 +4342,7 @@ function toggleScorePublic(id){
   }).catch(function(e){console.error(e);showToast('공개 설정 변경 실패')});
 }
 function deleteScore(id){
-  if(!canManageScores())return;
+  if(!canDeleteScores())return showToast('악보 삭제는 관리자만 가능합니다');
   var score=allScores.find(function(s){return s.id===id});
   if(!score)return;
   if(!confirm('이 악보를 삭제할까요? 단원 화면에서도 사라지고 Storage 파일도 삭제됩니다.'))return;
