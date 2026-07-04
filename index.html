@@ -1016,7 +1016,8 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .home-soft-row.primary .home-row-label{font-size:13px;color:var(--pd);font-weight:900}
 .home-soft-row.primary .home-row-main{font-size:18px}
 .home-row-label{font-size:12px;color:var(--ts);margin-bottom:4px}
-.home-row-main{font-size:15px;font-weight:850;line-height:1.45}
+.home-row-main{font-size:15px;font-weight:850;line-height:1.45;text-align:center}
+.home-row-main>div{justify-content:center;text-align:center}
 .home-timeline-item{padding:11px 12px;border-radius:17px;background:var(--bg);margin-top:8px;cursor:pointer}
 .home-part-item{padding:12px;border-radius:18px;background:var(--bg);margin-top:8px}
 .home-part-name{text-align:center;font-size:15px;font-weight:950;margin-bottom:7px}
@@ -3596,7 +3597,7 @@ function renderHome(){
     return rows.map(function(s){
       var score=getPublicScoreForSong(s);
       var scoreBtn=score?' <button class="score-light-btn" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">악보</button>':'';
-      return '<div onclick="openDetail(\''+escAttr(s.id)+'\')" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-weight:800">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
+      return '<div onclick="openDetail(\''+escAttr(s.id)+'\')" style="display:flex;align-items:center;justify-content:center;text-align:center;gap:6px;flex-wrap:wrap"><span style="font-weight:800">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
     }).join('<div style="height:6px"></div>');
   }
   function statusFor(data, scopeMembers){
@@ -4014,6 +4015,9 @@ function getPublicScoreForSong(song){
 function openScoreFileById(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score||!score.currentFileUrl)return showToast('열 수 있는 악보가 없습니다');
+  var details=[score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
+  var message='악보 PDF를 열까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 PDF 파일을 불러옵니다.';
+  if(!confirm(message))return;
   var win=window.open(score.currentFileUrl,'_blank','noopener');
   if(!win)location.href=score.currentFileUrl;
 }
