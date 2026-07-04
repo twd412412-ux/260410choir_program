@@ -538,6 +538,8 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--ts);margin-top:6px}
 .score-badge{display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:3px 8px;font-size:11px;font-weight:800;background:var(--pl);color:var(--pd)}
 .score-badge.private{background:#FEE2E2;color:#B91C1C}
+.score-status-stack{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.score-version-badge{display:inline-flex;align-items:center;border-radius:9px;padding:2px 7px;font-size:10px;font-weight:800;background:#F7F1E4;color:#7A5A24;white-space:nowrap}
 .score-open-btn{border:0;border-radius:9px;background:var(--p);color:#fff;font-size:12px;font-weight:850;padding:8px 10px;white-space:nowrap;cursor:pointer}
 .score-light-btn{border:1px solid var(--bd);border-radius:9px;background:var(--pl);color:var(--pd);font-size:12px;font-weight:800;padding:8px 10px;cursor:pointer}
 .score-danger-btn{border:1px solid #FECACA;border-radius:9px;background:#FEE2E2;color:#B91C1C;font-size:12px;font-weight:800;padding:8px 10px;cursor:pointer}
@@ -3874,6 +3876,7 @@ function scoreRowFromSettingsItem(id,d){
     currentFilePath:d.currentFilePath||d.filePath||'',
     currentFileName:d.currentFileName||d.fileName||'',
     currentFileSize:Number(d.currentFileSize||d.fileSize||0),
+    currentUploadedAt:d.currentUploadedAt||d.fileUploadedAt||'',
     currentLabel:d.currentLabel||d.versionLabel||'',
     linkedSongId:d.linkedSongId||'',
     linkedSongName:d.linkedSongName||'',
@@ -3898,6 +3901,7 @@ function scoreStorageItem(score){
     currentFilePath:score.currentFilePath||'',
     currentFileName:score.currentFileName||'',
     currentFileSize:Number(score.currentFileSize||0),
+    currentUploadedAt:score.currentUploadedAt||'',
     currentLabel:score.currentLabel||'',
     linkedSongId:score.linkedSongId||'',
     linkedSongName:score.linkedSongName||'',
@@ -3977,9 +3981,13 @@ function scoreFileSizeText(bytes){
   return (bytes/1024/1024).toFixed(bytes<10*1024*1024?1:0)+'MB';
 }
 function scoreUpdatedText(score){
-  var raw=score&&score.updatedAt?score.updatedAt:(score&&score.createdAt?score.createdAt:'');
+  var raw=score&&score.currentUploadedAt?score.currentUploadedAt:(score&&score.updatedAt?score.updatedAt:(score&&score.createdAt?score.createdAt:''));
   if(!raw)return '';
-  return raw.slice(0,10);
+  return raw.slice(0,10).replace(/-/g,'.');
+}
+function renderScoreVersionBadge(score){
+  var date=scoreUpdatedText(score);
+  return date?'<span class="score-version-badge">업데이트 '+date+'</span>':'';
 }
 function findScoresForSong(song, includePrivate){
   if(!song)return [];
@@ -4012,12 +4020,12 @@ function openScoreFileById(id){
 function renderScoreMeta(score){
   var parts=[];
   if(score.currentLabel)parts.push(score.currentLabel);
-  if(scoreUpdatedText(score))parts.push('수정 '+scoreUpdatedText(score));
+  if(score.currentFileName)parts.push(score.currentFileName);
   if(scoreFileSizeText(score.currentFileSize))parts.push(scoreFileSizeText(score.currentFileSize));
   return parts.map(function(p){return '<span>'+escHtml(p)+'</span>';}).join('<span>·</span>');
 }
 function renderScoreCard(score, adminMode){
-  var status='<span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>';
+  var status='<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>';
   var meta=renderScoreMeta(score);
   var actions=adminMode
     ? '<div class="score-admin-actions">'
@@ -4100,7 +4108,7 @@ function renderSongScoreDetail(song){
   var score=getPublicScoreForSong(song);
   if(score){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div>'
-      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(score.title)+'</div><div class="score-meta">'+(renderScoreMeta(score)||'<span>최신 악보</span>')+'</div></div><button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">열기</button></div></div></div>';
+      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(score.title)+'</div><div class="score-meta">'+(renderScoreMeta(score)||'<span>최신 악보</span>')+'</div></div><div class="score-status-stack"><button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">열기</button>'+renderScoreVersionBadge(score)+'</div></div></div></div>';
   }
   if(canManageScores()){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div><button class="score-light-btn" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">이 곡 악보 등록</button></div>';
@@ -4196,6 +4204,7 @@ function saveScoreUpload(){
       currentFilePath:fileInfo.path||'',
       currentFileName:fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:''),
       currentFileSize:fileInfo.size||0,
+      currentUploadedAt:now,
       currentLabel:label,
       linkedSongId:linkedSongId,
       linkedSongName:linkedSongName,
