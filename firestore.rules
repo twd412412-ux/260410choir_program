@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /songs/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /scores/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /schedules/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /members/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /activityLogs/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /accounts/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /attendance/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 미디어 아카이브: 사진 업로드/불러오기용
+    match /mediaArchive/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
