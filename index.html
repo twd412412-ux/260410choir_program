@@ -532,10 +532,12 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-card,.score-week-card,.score-admin-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh)}
 .score-week-card,.score-admin-card{margin:12px 16px 0;padding:14px}
 .score-list{padding:0 16px 180px}
-.score-card{padding:14px;margin-bottom:10px}
-.score-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
-.score-title{font-size:15px;font-weight:850;line-height:1.35;word-break:keep-all}
-.score-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--ts);margin-top:6px}
+.score-card{padding:10px 11px;margin-bottom:8px;border-radius:10px;box-shadow:none}
+.score-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0}
+.score-title-row>div:first-child{min-width:0}
+.score-title{font-size:14px;font-weight:850;line-height:1.25;word-break:keep-all}
+.score-meta{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden;min-width:0;font-size:10.5px;color:var(--ts);margin-top:4px}
+.score-meta span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .score-badge{display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:3px 8px;font-size:11px;font-weight:800;background:var(--pl);color:var(--pd)}
 .score-badge.private{background:#FEE2E2;color:#B91C1C}
 .score-status-stack{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
@@ -548,6 +550,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-action-btn.add{background:#FFF4D8;color:#7A4A00;border-color:#E4B950}
 .score-action-btn.empty{background:#F3F0E8;color:#8A8170;border-color:#D7CEBC;cursor:not-allowed}
 .score-action-btn.compact{font-size:11px;padding:5px 8px;border-radius:9px}
+.score-card .score-action-btn.open{font-size:11px;padding:7px 9px;border-radius:9px}
 .score-week-title{font-size:14px;font-weight:850;margin-bottom:8px}
 .score-week-grid{display:grid;gap:8px}
 .score-week-row{display:grid;grid-template-columns:68px 1fr auto;gap:8px;align-items:center;border-top:1px solid var(--bd);padding-top:8px;font-size:12px}
@@ -1027,10 +1030,12 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .home-song-line+.home-song-line{margin-top:6px}
 .home-row-main>.home-song-line{text-align:center}
 .home-song-title{min-width:0;font-weight:850;word-break:keep-all;overflow-wrap:anywhere;text-align:center}
-.home-score-chip{justify-self:end;border:1px solid #CAD5B5;background:#EEF4E4;color:#4E5A35;border-radius:999px;padding:5px 8px;font-family:inherit;font-size:11px;font-weight:850;line-height:1;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;box-shadow:0 1px 0 rgba(49,54,35,.04);cursor:pointer}
+.home-score-chip{justify-self:end;border:1px solid #CAD5B5;background:#EEF4E4;color:#4E5A35;border-radius:999px;padding:5px 8px;font-family:inherit;font-size:11px;font-weight:850;line-height:1;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 1px 0 rgba(49,54,35,.04);cursor:pointer}
+.home-score-chip.icon-only{width:30px;height:28px;padding:0;border-radius:10px}
+.home-score-chip svg{width:15px;height:15px;display:block;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .home-score-chip:hover{background:#E2ECD5;color:#2F3B24}
 .home-score-chip:active{transform:scale(.98)}
-.home-main-title .home-score-chip{padding:6px 9px;font-size:12px}
+.home-main-title .home-score-chip.icon-only{width:32px;height:30px;padding:0}
 .home-timeline-item{padding:11px 12px;border-radius:17px;background:var(--bg);margin-top:8px;cursor:pointer}
 .home-part-item{padding:12px;border-radius:18px;background:var(--bg);margin-top:8px}
 .home-part-name{text-align:center;font-size:15px;font-weight:950;margin-bottom:7px}
@@ -3307,7 +3312,7 @@ function loginUser(){
     syncAccessShell();
     updateAdminTabs();
     refreshHomeAccessState();
-    scheduleScoresLoad(800);
+    scheduleScoresLoad(500);
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
@@ -3626,7 +3631,8 @@ function renderHome(){
     if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
     return rows.map(function(s){
       var score=getPublicScoreForSong(s);
-      var scoreBtn=score?'<button class="home-score-chip" aria-label="'+escAttr(s.songName)+' 악보 보기" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">악보 보기</button>':'';
+      var scoreIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h5"></path><path d="M10 17h4"></path></svg>';
+      var scoreBtn=score?'<button class="home-score-chip icon-only" aria-label="'+escAttr(s.songName)+' 악보 보기" title="악보 보기" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">'+scoreIcon+'</button>':'';
       return '<div class="home-song-line" onclick="openDetail(\''+escAttr(s.id)+'\')"><span class="home-song-title">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
     }).join('<div style="height:6px"></div>');
   }
@@ -4099,8 +4105,11 @@ function renderScoreMeta(score){
   return parts.map(function(p){return '<span>'+escHtml(p)+'</span>';}).join('<span>·</span>');
 }
 function renderScoreCard(score, adminMode){
-  var status='<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>';
+  var status=adminMode
+    ? '<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>'
+    : '<div class="score-status-stack"><button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'+renderScoreVersionBadge(score)+'</div>';
   var meta=renderScoreMeta(score);
+  var showLinked=score.linkedSongName&&scoreSearchKey(score.linkedSongName)!==scoreSearchKey(score.title);
   var actions=adminMode
     ? '<div class="score-admin-actions">'
       +'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">교체</button>'
@@ -4108,10 +4117,10 @@ function renderScoreCard(score, adminMode){
       +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
       +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
       +'</div>'
-    : '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>';
+    : '';
   return '<div class="score-card">'
     +'<div class="score-title-row"><div><div class="score-title">'+escHtml(score.title||'곡명 없음')+'</div><div class="score-meta">'+(meta||'<span>최신 악보</span>')+'</div></div>'+status+'</div>'
-    +(score.linkedSongName?'<div class="score-meta"><span>연결 곡: '+escHtml(score.linkedSongName)+'</span></div>':'')
+    +(showLinked?'<div class="score-meta"><span>연결 곡: '+escHtml(score.linkedSongName)+'</span></div>':'')
     +actions
     +'</div>';
 }
@@ -9928,7 +9937,7 @@ function init(){
   initNotice();
   initSchedules();
   if(currentTab==='home')renderHome();
-  scheduleScoresLoad(1000);
+  scheduleScoresLoad(600);
   handleAdminResetRedirectResult();
   initColorPicker();
   buildCatOptions();
