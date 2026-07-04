@@ -2294,6 +2294,7 @@ var storage = firebase.storage();
 var allSongs=[], filteredSongs=[], currentTab='home';
 var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false;
 var scoreLoadTimer=null;
+var scoreWeekVisibleIds={};
 var SCORE_CACHE_KEY='choir_scores_public';
 var songRecommendCache=[];
 var adminRole=null;
@@ -4129,6 +4130,7 @@ function renderScoreCard(score, adminMode){
 }
 function renderScoreWeekPanel(){
   var panel=document.getElementById('scoreWeekPanel');
+  scoreWeekVisibleIds={};
   if(!panel)return;
   if(!songsLoaded&&allSongs.length===0){
     panel.innerHTML='<div class="score-week-card"><div class="score-week-title">주일찬송곡 악보</div><div class="score-empty">곡 정보를 불러오는 중입니다.</div></div>';
@@ -4153,6 +4155,7 @@ function renderScoreWeekPanel(){
     }
     return rows.map(function(song){
       var score=getPublicScoreForSong(song);
+      if(score&&score.id)scoreWeekVisibleIds[score.id]=true;
       var action=score
         ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
         : canManageScores()
@@ -4184,13 +4187,14 @@ function renderScoresPage(){
   var qKey=scoreSearchKey(q);
   var rows=sortScores(allScores.filter(function(score){
     if(!isPublicScore(score))return false;
+    if(!q&&scoreWeekVisibleIds[score.id])return false;
     if(!q)return true;
     var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName].join(' ').toLowerCase();
     return text.indexOf(q)>-1||(qKey&&scoreSearchKey(text).indexOf(qKey)>-1);
   }));
-  if(count)count.textContent='악보 '+rows.length+'개';
+  if(count)count.textContent=q?'검색 결과 '+rows.length+'개':'추가 악보 '+rows.length+'개';
   if(rows.length===0){
-    list.innerHTML='<div class="score-empty">조건에 맞는 공개 악보가 없습니다.</div>';
+    list.innerHTML='<div class="score-empty">'+(q?'조건에 맞는 공개 악보가 없습니다.':'주일찬송곡 악보는 위에서 바로 볼 수 있습니다.<br>추가 악보가 없습니다.')+'</div>';
     return;
   }
   list.innerHTML=rows.map(function(score){return renderScoreCard(score,false);}).join('');
