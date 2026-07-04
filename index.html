@@ -1568,9 +1568,10 @@ body{font-weight:500}
       <div class="score-admin-form">
         <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일 *</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" style="padding:8px"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" style="padding:8px"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="Storage가 막혀 있으면 Google Drive 등 PDF 링크를 입력"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
-        <div class="score-form-note">곡명은 기존 곡목록과 같은 이름이면 곡 상세와 주일찬송곡 영역에 자동 연결됩니다. PDF는 자동 다운로드되지 않고, 단원이 열 때만 불러옵니다.</div>
+        <div class="score-form-note">곡명은 기존 곡목록과 같은 이름이면 곡 상세와 주일찬송곡 영역에 자동 연결됩니다. PDF는 파일 또는 URL 중 하나로 등록할 수 있고, 단원이 열 때만 불러옵니다.</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-p" id="scoreSaveBtn" style="flex:1" onclick="saveScoreUpload()">악보 등록</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="resetScoreForm()">초기화</button>
@@ -3824,8 +3825,13 @@ function scoreSearchKey(value){
 function scoreRowFromDoc(doc){
   var d=doc.data()||{};
   var title=d.title||d.songName||'';
+  return scoreRowFromSettingsItem(doc.id,d);
+}
+function scoreRowFromSettingsItem(id,d){
+  d=d||{};
+  var title=d.title||d.songName||'';
   return {
-    id:doc.id,
+    id:id||d.id||'',
     title:title,
     searchKey:d.searchKey||scoreSearchKey(title),
     public:d.public!==false,
@@ -3843,6 +3849,40 @@ function scoreRowFromDoc(doc){
     updatedById:d.updatedById||'',
     updatedByName:d.updatedByName||''
   };
+}
+function scoreSettingsRef(){
+  return db.collection('settings').doc('scores');
+}
+function scoreStorageItem(score){
+  return {
+    id:score.id,
+    title:score.title||'',
+    searchKey:score.searchKey||scoreSearchKey(score.title),
+    public:score.public!==false,
+    currentFileUrl:score.currentFileUrl||'',
+    currentFilePath:score.currentFilePath||'',
+    currentFileName:score.currentFileName||'',
+    currentFileSize:Number(score.currentFileSize||0),
+    currentLabel:score.currentLabel||'',
+    linkedSongId:score.linkedSongId||'',
+    linkedSongName:score.linkedSongName||'',
+    createdAt:score.createdAt||'',
+    createdById:score.createdById||'',
+    createdByName:score.createdByName||'',
+    updatedAt:score.updatedAt||'',
+    updatedById:score.updatedById||'',
+    updatedByName:score.updatedByName||''
+  };
+}
+function scoreItemsFromRows(rows){
+  var items={};
+  (rows||[]).forEach(function(score){
+    if(score&&score.id)items[score.id]=scoreStorageItem(score);
+  });
+  return items;
+}
+function createScoreId(){
+  return 'score_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
 }
 function sortScores(rows){
   return (rows||[]).slice().sort(function(a,b){
@@ -3866,16 +3906,19 @@ function loadScores(force, includePrivate){
     scoresLoaded=true;
   }
   if(!force&&scoresLoadPromise&&(!includePrivate||scoresLoadedPrivate))return scoresLoadPromise;
-  var query=db.collection('scores');
-  if(!includePrivate)query=query.where('public','==',true);
-  scoresLoadPromise=query.get().then(function(snap){
+  scoresLoadPromise=scoreSettingsRef().get().then(function(doc){
     var rows=[];
-    snap.forEach(function(doc){rows.push(scoreRowFromDoc(doc));});
+    var data=doc.exists?(doc.data()||{}):{};
+    var items=data.items||{};
+    if(Array.isArray(items)){
+      items.forEach(function(item){if(item&&item.id)rows.push(scoreRowFromSettingsItem(item.id,item));});
+    }else{
+      Object.keys(items).forEach(function(id){rows.push(scoreRowFromSettingsItem(id,items[id]));});
+    }
     allScores=sortScores(rows);
     scoresLoaded=true;
-    scoresLoadedPrivate=includePrivate;
-    if(!includePrivate)saveCache(SCORE_CACHE_KEY,allScores);
-    else savePublicScoreCache();
+    scoresLoadedPrivate=true;
+    savePublicScoreCache();
     if(currentTab==='scores')renderScoresPage();
     return allScores;
   }).catch(function(e){
@@ -4050,7 +4093,7 @@ function renderScoreManage(){
   list.innerHTML=rows.map(function(score){return renderScoreCard(score,true);}).join('');
 }
 function resetScoreForm(){
-  ['scoreEditId','scoreTitle','scoreLabel'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['scoreEditId','scoreTitle','scoreLabel','scoreUrl'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var pub=document.getElementById('scorePublic');if(pub)pub.checked=true;
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 등록';
@@ -4083,34 +4126,36 @@ function saveScoreUpload(){
   var editId=(document.getElementById('scoreEditId').value||'').trim();
   var fileEl=document.getElementById('scoreFile');
   var file=fileEl&&fileEl.files?fileEl.files[0]:null;
+  var urlInput=(document.getElementById('scoreUrl').value||'').trim();
   var isPublic=!!document.getElementById('scorePublic').checked;
   if(!title)return showToast('곡명을 입력해주세요');
-  if(!file)return showToast('업로드할 PDF 파일을 선택해주세요');
-  if(file.size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
-  if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name))return showToast('PDF 파일만 업로드할 수 있습니다');
+  if(!file&&!urlInput)return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
+  if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
+  if(file&&file.size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
+  if(file&&file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name))return showToast('PDF 파일만 업로드할 수 있습니다');
   var previous=editId?allScores.find(function(s){return s.id===editId}):null;
-  var docRef=editId?db.collection('scores').doc(editId):db.collection('scores').doc();
-  var scoreId=docRef.id;
+  var scoreId=editId||createScoreId();
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
-  var safeName=scoreSafeFileName(file.name);
-  var filePath='scores/'+scoreId+'/'+Date.now()+'_'+safeName;
   var btn=document.getElementById('scoreSaveBtn');
   if(btn){btn.disabled=true;btn.textContent=editId?'교체 중...':'등록 중...';}
-  showToast(editId?'악보 교체 중...':'악보 업로드 중...');
-  storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
-    return snapshot.ref.getDownloadURL();
-  }).then(function(url){
+  showToast(file?(editId?'악보 교체 중...':'악보 업로드 중...'):'악보 링크 저장 중...');
+
+  function buildScoreData(fileInfo){
+    fileInfo=fileInfo||{};
     var data={
+      id:scoreId,
       title:title,
       searchKey:scoreSearchKey(title),
       public:isPublic,
-      currentFileUrl:url,
-      currentFilePath:filePath,
-      currentFileName:file.name,
-      currentFileSize:file.size,
+      currentFileUrl:fileInfo.url||urlInput,
+      currentFilePath:fileInfo.path||'',
+      currentFileName:fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:''),
+      currentFileSize:fileInfo.size||0,
       currentLabel:label,
+      linkedSongId:previous&&previous.linkedSongId?previous.linkedSongId:'',
+      linkedSongName:previous&&previous.linkedSongName?previous.linkedSongName:'',
       updatedAt:now,
       updatedById:actorId,
       updatedByName:actorName
@@ -4120,10 +4165,29 @@ function saveScoreUpload(){
       data.createdById=actorId;
       data.createdByName=actorName;
     }
-    return docRef.set(data,{merge:true}).then(function(){return docRef.get();});
-  }).then(function(doc){
-    var score=scoreRowFromDoc(doc);
+    return data;
+  }
+  function uploadFileIfNeeded(){
+    if(!file)return Promise.resolve(buildScoreData());
+    var safeName=scoreSafeFileName(file.name);
+    var filePath='scores/'+scoreId+'/'+Date.now()+'_'+safeName;
+    return storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
+      return snapshot.ref.getDownloadURL().then(function(url){
+        return buildScoreData({url:url,path:filePath,name:file.name,size:file.size});
+      });
+    });
+  }
+
+  uploadFileIfNeeded().then(function(data){
+    var score=scoreRowFromSettingsItem(scoreId,data);
     upsertScoreLocal(score);
+    return scoreSettingsRef().set({
+      items:scoreItemsFromRows(allScores),
+      updatedAt:now,
+      updatedById:actorId,
+      updatedByName:actorName
+    },{merge:true}).then(function(){return score;});
+  }).then(function(score){
     var oldPath=previous&&previous.currentFilePath&&previous.currentFilePath!==score.currentFilePath?previous.currentFilePath:'';
     writeLog(previous?'악보 교체':'악보 등록','📄 ['+score.title+'] '+(score.public?'공개':'비공개')+' 저장');
     resetScoreForm();
@@ -4134,7 +4198,8 @@ function saveScoreUpload(){
     return deleteScoreStoragePath(oldPath);
   }).catch(function(e){
     console.error(e);
-    showToast('악보 저장 중 오류가 발생했습니다');
+    if(e&&e.code==='storage/unauthorized')showToast('Storage 업로드 권한이 없습니다. PDF URL로 등록해주세요.');
+    else showToast('악보 저장 중 오류가 발생했습니다');
   }).finally(function(){
     if(btn){btn.disabled=false;btn.textContent=document.getElementById('scoreEditId').value?'악보 교체':'악보 등록';}
   });
@@ -4145,6 +4210,7 @@ function editScoreUpload(id){
   document.getElementById('scoreEditId').value=score.id;
   document.getElementById('scoreTitle').value=score.title||'';
   document.getElementById('scoreLabel').value=score.currentLabel||'';
+  document.getElementById('scoreUrl').value=score.currentFilePath?'':(score.currentFileUrl||'');
   document.getElementById('scorePublic').checked=score.public!==false;
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 교체';
@@ -4157,9 +4223,11 @@ function toggleScorePublic(id){
   if(!score)return;
   var next=!score.public;
   var now=new Date().toISOString();
-  db.collection('scores').doc(id).update({public:next,updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()}).then(function(){
-    score.public=next;
-    score.updatedAt=now;
+  score.public=next;
+  score.updatedAt=now;
+  score.updatedById=currentActorId();
+  score.updatedByName=currentActorName();
+  scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()},{merge:true}).then(function(){
     savePublicScoreCache();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
@@ -4175,9 +4243,9 @@ function deleteScore(id){
   if(!confirm('이 악보를 삭제할까요? 단원 화면에서도 사라지고 Storage 파일도 삭제됩니다.'))return;
   showToast('악보 삭제 중...');
   deleteScoreStoragePath(score.currentFilePath).then(function(){
-    return db.collection('scores').doc(id).delete();
-  }).then(function(){
     allScores=allScores.filter(function(s){return s.id!==id});
+    return scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:new Date().toISOString(),updatedById:currentActorId(),updatedByName:currentActorName()},{merge:true});
+  }).then(function(){
     savePublicScoreCache();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
