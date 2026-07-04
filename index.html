@@ -4139,7 +4139,8 @@ function resetScoreForm(){
   renderScoreLinkedSongNote();
 }
 function scoreSafeFileName(name){
-  var base=String(name||'score.pdf').replace(/[^\w.\-가-힣]/g,'_');
+  var base=String(name||'score.pdf').trim().replace(/[\\\/\u0000-\u001F]/g,'_');
+  if(!base)base='score.pdf';
   if(!/\.pdf$/i.test(base))base+='.pdf';
   return base;
 }
@@ -4212,7 +4213,7 @@ function saveScoreUpload(){
   function uploadFileIfNeeded(){
     if(!file)return Promise.resolve(buildScoreData());
     var safeName=scoreSafeFileName(file.name);
-    var filePath='scores/'+scoreId+'/'+Date.now()+'_'+safeName;
+    var filePath='scores/'+scoreId+'/'+safeName;
     return storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
       return snapshot.ref.getDownloadURL().then(function(url){
         return buildScoreData({url:url,path:filePath,name:file.name,size:file.size});
