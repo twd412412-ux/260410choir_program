@@ -324,18 +324,30 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .handbook-extra-grid .span-2{grid-column:1/-1}
 .handbook-title-count{display:inline-flex;align-items:center;margin-left:6px;padding:3px 8px;border-radius:999px;background:var(--pl);color:var(--pd);font-size:11px;font-weight:800;vertical-align:middle}
 .handbook-summary-card{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:14px;padding:12px;margin-bottom:14px}
+.handbook-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.handbook-summary-title{font-size:13px;font-weight:900;color:var(--tx)}
+.handbook-summary-active{font-size:11px;font-weight:800;color:var(--pd);background:var(--pl);border:1px solid #D8CAB7;border-radius:999px;padding:4px 8px;white-space:nowrap}
 .handbook-summary-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .handbook-summary-stat{border:1px solid #E1D7C5;background:#F8F2E8;border-radius:12px;padding:10px;text-align:left;font-family:inherit;color:var(--tx);cursor:pointer}
 .handbook-summary-stat.on{background:var(--p);border-color:var(--p);color:#fff}
 .handbook-summary-num{font-size:21px;font-weight:900;line-height:1}
 .handbook-summary-label{font-size:11px;font-weight:750;margin-top:4px;opacity:.82}
 .handbook-chip-section{margin-top:10px}
-.handbook-chip-title{font-size:11px;font-weight:850;color:var(--ts);margin-bottom:6px}
+.handbook-filter-block{border:1px solid #E1D7C5;background:#FCF8EF;border-radius:12px;padding:10px;margin-top:10px}
+.handbook-filter-block.primary{background:#FFFDF8}
+.handbook-chip-title{font-size:12px;font-weight:900;color:var(--tx);margin-bottom:3px}
+.handbook-filter-caption{font-size:10.5px;font-weight:750;color:var(--ts);line-height:1.4;margin-bottom:7px}
 .handbook-chip-row{display:flex;flex-wrap:wrap;gap:6px}
 .handbook-filter-chip{border:1px solid #D8CAB7;background:#FFFDF8;color:#5F6658;border-radius:999px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .handbook-filter-chip.on{background:var(--p);border-color:var(--p);color:#fff}
 .handbook-filter-chip.muted{background:#F3EDE1;color:#7A7060}
 .handbook-filter-chip .num{margin-left:3px;font-weight:900}
+.handbook-filter-more{border:1px solid #E1D7C5;background:#F8F2E8;border-radius:12px;margin-top:10px;overflow:hidden}
+.handbook-filter-more summary{list-style:none;cursor:pointer;padding:10px 11px;font-size:12px;font-weight:900;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.handbook-filter-more summary::-webkit-details-marker{display:none}
+.handbook-filter-more summary::after{content:'열기';font-size:10px;font-weight:850;color:var(--ts);background:#FFFDF8;border:1px solid #D8CAB7;border-radius:999px;padding:3px 8px}
+.handbook-filter-more[open] summary::after{content:'닫기'}
+.handbook-filter-more-body{padding:0 10px 10px}
 .handbook-summary-note{margin-top:10px;color:var(--ts);font-size:11px;font-weight:700;line-height:1.45}
 .handbook-add-panel{background:var(--pl);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .handbook-add-panel summary{cursor:pointer;list-style:none;padding:14px;font-size:14px;font-weight:850;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -5865,26 +5877,39 @@ function updatePartSummary() {
     var on=selectedHbPart===key?' on':'';
     return '<button type="button" class="handbook-filter-chip'+on+(muted?' muted':'')+'" onclick="toggleHbPart(\''+escAttr(key)+'\')">'+label+' <span class="num">'+count+'</span></button>';
   }
+  function activeFilterLabel(){
+    if(selectedHbPart==='all')return '실단원 전체';
+    if(selectedHbPart==='attendance')return '출결대상';
+    if(selectedHbPart==='noAtt')return '출결제외';
+    if(selectedHbPart==='excluded')return '명단제외';
+    if(selectedHbPart==='photoMissing')return '사진 없음';
+    if(selectedHbPart==='otherMain')return '주파트 미지정';
+    if(selectedHbPart.indexOf('main:')===0)return selectedHbPart.slice(5)+' 파트';
+    if(selectedHbPart.indexOf('role:')===0)return selectedHbPart.slice(5)+' 겸직';
+    return '실단원 전체';
+  }
+  var showMoreOpen=(selectedHbPart==='photoMissing'||selectedHbPart==='excluded'||selectedHbPart.indexOf('role:')===0);
 
   var html='<div class="handbook-summary-card">';
+  html+='<div class="handbook-summary-head"><div><div class="handbook-summary-title">명부 보기</div><div class="handbook-filter-caption" style="margin:2px 0 0">먼저 전체/출결 기준을 고르고, 필요할 때 파트나 추가 조건으로 좁혀봅니다.</div></div><div class="handbook-summary-active">'+escHtml(activeFilterLabel())+'</div></div>';
   html+='<div class="handbook-summary-stats">'
     +stat('all','실단원',roster.length)
     +stat('attendance','출결대상',attendance.length)
     +stat('noAtt','출결제외',noAtt)
     +stat('excluded','명단제외',excluded.length)
     +'</div>';
-  html+='<div class="handbook-chip-section"><div class="handbook-chip-title">주 파트</div><div class="handbook-chip-row">';
+  html+='<div class="handbook-filter-block primary"><div class="handbook-chip-title">파트별 보기</div><div class="handbook-filter-caption">단원의 실제 소속 파트 기준입니다. 한 사람은 한 파트에만 집계됩니다.</div><div class="handbook-chip-row">';
   HANDBOOK_MAIN_PARTS.forEach(function(part){
     html+=chip('main:'+part,part,mainCounts[part]);
   });
   if(otherMain>0)html+=chip('otherMain','주파트 미지정',otherMain,true);
   html+='</div></div>';
-  html+='<div class="handbook-chip-section"><div class="handbook-chip-title">겸직/상태 필터</div><div class="handbook-chip-row">';
+  html+='<details class="handbook-filter-more" '+(showMoreOpen?'open':'')+'><summary>추가 조건</summary><div class="handbook-filter-more-body"><div class="handbook-filter-caption">겸직, 신입/준단원, 사진 누락처럼 운영 확인용으로만 따로 보는 조건입니다.</div><div class="handbook-chip-row">';
   html+=chip('photoMissing','사진 없음',photoMissing,true);
   HANDBOOK_ROLE_TAGS.forEach(function(tag){
     html+=chip('role:'+tag,tag,roleCounts[tag],false);
   });
-  html+='</div></div><div class="handbook-summary-note">주 파트는 단원 1명당 1번만 집계합니다. 겸직/상태는 필터용이라 주 파트 인원과 별도로 표시됩니다.</div></div>';
+  html+='</div></div></details><div class="handbook-summary-note">겸직은 파트 인원을 더하는 기준이 아니라, 필요한 사람을 빠르게 찾기 위한 표시입니다.</div></div>';
   container.innerHTML = html;
 }
 
