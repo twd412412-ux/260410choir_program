@@ -2287,6 +2287,7 @@ var storage = firebase.storage();
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='home';
 var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false;
+var scoreLoadTimer=null;
 var SCORE_CACHE_KEY='choir_scores_public';
 var songRecommendCache=[];
 var adminRole=null;
@@ -2718,7 +2719,6 @@ function syncAccessShell(){
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
   if(navScores)navScores.classList.toggle('hidden',!canViewScores());
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
-  if(canViewScores()&&!scoresLoaded&&!scoresLoadPromise)initScores();
   if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
 }
@@ -3308,6 +3308,7 @@ function loginUser(){
     syncAccessShell();
     updateAdminTabs();
     refreshHomeAccessState();
+    scheduleScoresLoad(800);
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
@@ -3891,11 +3892,24 @@ function scoreSearchKey(value){
   return normalizeSearchText(value||'');
 }
 function clearScoreAccessCache(){
+  if(scoreLoadTimer){clearTimeout(scoreLoadTimer);scoreLoadTimer=null;}
   allScores=[];
   scoresLoaded=false;
   scoresLoadedPrivate=false;
   scoresLoadPromise=null;
   try{localStorage.removeItem(SCORE_CACHE_KEY)}catch(e){}
+}
+function scheduleScoresLoad(delay){
+  if(!canViewScores()){
+    clearScoreAccessCache();
+    return Promise.resolve([]);
+  }
+  if(scoresLoaded||scoresLoadPromise||scoreLoadTimer)return Promise.resolve(allScores);
+  scoreLoadTimer=setTimeout(function(){
+    scoreLoadTimer=null;
+    initScores();
+  },typeof delay==='number'?delay:800);
+  return Promise.resolve(allScores);
 }
 function scoreRowFromDoc(doc){
   var d=doc.data()||{};
@@ -3989,6 +4003,8 @@ function loadScores(force, includePrivate){
   if(!force&&!includePrivate&&Array.isArray(cached)){
     allScores=cached;
     scoresLoaded=true;
+    requestHomeRender();
+    if(currentTab==='scores')setTimeout(renderScoresPage,0);
   }
   if(!force&&scoresLoadPromise&&(!includePrivate||scoresLoadedPrivate))return scoresLoadPromise;
   scoresLoadPromise=scoreSettingsRef().get().then(function(doc){
@@ -4015,7 +4031,10 @@ function loadScores(force, includePrivate){
   return scoresLoadPromise;
 }
 function initScores(){
-  if(!canViewScores())return Promise.resolve([]);
+  if(!canViewScores()){
+    clearScoreAccessCache();
+    return Promise.resolve([]);
+  }
   return loadScores(false,false).then(function(){
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
@@ -9906,11 +9925,11 @@ function init(){
   restoreUser();
   initCal();
   initSongs();
-  initScores();
   initAdminSettings();
   initNotice();
   initSchedules();
   if(currentTab==='home')renderHome();
+  scheduleScoresLoad(1000);
   handleAdminResetRedirectResult();
   initColorPicker();
   buildCatOptions();
