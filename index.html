@@ -543,6 +543,11 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-open-btn{border:0;border-radius:9px;background:var(--p);color:#fff;font-size:12px;font-weight:850;padding:8px 10px;white-space:nowrap;cursor:pointer}
 .score-light-btn{border:1px solid var(--bd);border-radius:9px;background:var(--pl);color:var(--pd);font-size:12px;font-weight:800;padding:8px 10px;cursor:pointer}
 .score-danger-btn{border:1px solid #FECACA;border-radius:9px;background:#FEE2E2;color:#B91C1C;font-size:12px;font-weight:800;padding:8px 10px;cursor:pointer}
+.score-action-btn{border-radius:10px;font-size:12px;font-weight:900;padding:8px 11px;white-space:nowrap;cursor:pointer;line-height:1;border:1px solid transparent}
+.score-action-btn.open{background:#526E53;color:#fff;border-color:#526E53}
+.score-action-btn.add{background:#FFF4D8;color:#7A4A00;border-color:#E4B950}
+.score-action-btn.empty{background:#F3F0E8;color:#8A8170;border-color:#D7CEBC;cursor:not-allowed}
+.score-action-btn.compact{font-size:11px;padding:5px 8px;border-radius:9px}
 .score-week-title{font-size:14px;font-weight:850;margin-bottom:8px}
 .score-week-grid{display:grid;gap:8px}
 .score-week-row{display:grid;grid-template-columns:68px 1fr auto;gap:8px;align-items:center;border-top:1px solid var(--bd);padding-top:8px;font-size:12px}
@@ -3596,7 +3601,7 @@ function renderHome(){
     if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
     return rows.map(function(s){
       var score=getPublicScoreForSong(s);
-      var scoreBtn=score?' <button class="score-light-btn" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">악보</button>':'';
+      var scoreBtn=score?' <button class="score-action-btn open compact" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 열기</button>':'';
       return '<div onclick="openDetail(\''+escAttr(s.id)+'\')" style="display:flex;align-items:center;justify-content:center;text-align:center;gap:6px;flex-wrap:wrap"><span style="font-weight:800">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
     }).join('<div style="height:6px"></div>');
   }
@@ -4035,10 +4040,10 @@ function renderScoreCard(score, adminMode){
     ? '<div class="score-admin-actions">'
       +'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">교체</button>'
       +'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>'
-      +'<button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">열기</button>'
+      +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 PDF 열기</button>'
       +'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>'
       +'</div>'
-    : '<button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">열기</button>';
+    : '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 PDF 열기</button>';
   return '<div class="score-card">'
     +'<div class="score-title-row"><div><div class="score-title">'+escHtml(score.title||'곡명 없음')+'</div><div class="score-meta">'+(meta||'<span>최신 악보</span>')+'</div></div>'+status+'</div>'
     +(score.linkedSongName?'<div class="score-meta"><span>연결 곡: '+escHtml(score.linkedSongName)+'</span></div>':'')
@@ -4072,10 +4077,10 @@ function renderScoreWeekPanel(){
     return rows.map(function(song){
       var score=getPublicScoreForSong(song);
       var action=score
-        ? '<button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">악보</button>'
+        ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 열기</button>'
         : canManageScores()
-          ? '<button class="score-light-btn" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">등록</button>'
-          : '<button class="score-light-btn" disabled style="opacity:.65">없음</button>';
+          ? '<button class="score-action-btn add" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">＋ 악보 등록</button>'
+          : '<button class="score-action-btn empty" disabled>악보 없음</button>';
       return '<div class="score-week-row"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openDetail(\''+escAttr(song.id)+'\')">'+escHtml(song.songName||'곡명 없음')+'</div><div>'+action+'</div></div>';
     }).join('');
   }).join('');
@@ -4112,7 +4117,7 @@ function renderSongScoreDetail(song){
   var score=getPublicScoreForSong(song);
   if(score){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div>'
-      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(score.title)+'</div><div class="score-meta">'+(renderScoreMeta(score)||'<span>최신 악보</span>')+'</div></div><div class="score-status-stack"><button class="score-open-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">열기</button>'+renderScoreVersionBadge(score)+'</div></div></div></div>';
+      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(score.title)+'</div><div class="score-meta">'+(renderScoreMeta(score)||'<span>최신 악보</span>')+'</div></div><div class="score-status-stack"><button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 PDF 열기</button>'+renderScoreVersionBadge(score)+'</div></div></div></div>';
   }
   if(canManageScores()){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div><button class="score-light-btn" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">이 곡 악보 등록</button></div>';
