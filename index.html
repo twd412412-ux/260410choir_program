@@ -533,6 +533,9 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-week-card,.score-admin-card{margin:12px 16px 0;padding:14px}
 .score-list{padding:0 16px 180px}
 .score-card{padding:10px 11px;margin-bottom:8px;border-radius:10px;box-shadow:none}
+.score-card.clickable{cursor:pointer}
+.score-card.clickable:hover{background:#FEFCF6;border-color:#CAD5B5}
+.score-card.clickable:active{transform:scale(.995)}
 .score-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0}
 .score-title-row>div:first-child{min-width:0}
 .score-title{font-size:14px;font-weight:850;line-height:1.25;word-break:keep-all}
@@ -4104,9 +4107,12 @@ function renderScoreMeta(score){
 function renderScoreCard(score, adminMode){
   var status=adminMode
     ? '<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>'
-    : '<div class="score-status-stack"><button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'+renderScoreVersionBadge(score)+'</div>';
+    : '<div class="score-status-stack"><button class="score-action-btn open" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'+renderScoreVersionBadge(score)+'</div>';
   var meta=renderScoreMeta(score);
   var showLinked=score.linkedSongName&&scoreSearchKey(score.linkedSongName)!==scoreSearchKey(score.title);
+  var cardAttrs=adminMode
+    ? 'class="score-card"'
+    : 'class="score-card clickable" role="button" tabindex="0" onclick="openScoreFileById(\''+escAttr(score.id)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openScoreFileById(\''+escAttr(score.id)+'\')}"';
   var actions=adminMode
     ? '<div class="score-admin-actions">'
       +'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">교체</button>'
@@ -4115,7 +4121,7 @@ function renderScoreCard(score, adminMode){
       +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
       +'</div>'
     : '';
-  return '<div class="score-card">'
+  return '<div '+cardAttrs+'>'
     +'<div class="score-title-row"><div><div class="score-title">'+escHtml(score.title||'곡명 없음')+'</div><div class="score-meta">'+(meta||'<span>최신 악보</span>')+'</div></div>'+status+'</div>'
     +(showLinked?'<div class="score-meta"><span>연결 곡: '+escHtml(score.linkedSongName)+'</span></div>':'')
     +actions
