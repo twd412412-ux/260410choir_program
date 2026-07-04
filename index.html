@@ -121,7 +121,18 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-link-line.none .account-link-status{color:#706B5D}
 .account-link-line.missing .account-link-dot,.account-link-line.warn .account-link-dot{background:#C15B50}
 .account-link-line.missing .account-link-status,.account-link-line.warn .account-link-status{color:#A9443B}
+.account-member-picker{position:relative}
 .account-member-search{margin-bottom:6px}
+.account-member-select-hidden{display:none}
+.account-member-results{position:absolute;left:0;right:0;top:42px;z-index:30;max-height:220px;overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:12px;box-shadow:0 14px 30px rgba(47,41,31,.16);padding:6px}
+.account-member-results.hidden{display:none}
+.account-member-result{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:0;background:var(--bg);color:var(--tx);border-radius:9px;padding:9px 10px;margin-bottom:4px;font-family:inherit;cursor:pointer}
+.account-member-result:last-child{margin-bottom:0}
+.account-member-result:hover,.account-member-result.on{background:var(--pl);color:var(--pd)}
+.account-member-result-name{font-size:13px;font-weight:900}
+.account-member-result-meta{font-size:11px;font-weight:800;color:var(--ts);white-space:nowrap}
+.account-member-result:hover .account-member-result-meta,.account-member-result.on .account-member-result-meta{color:var(--pd)}
+.account-member-empty{padding:10px;color:var(--ts);font-size:12px;font-weight:750}
 .account-member-count{font-size:11px;color:var(--ts);line-height:1.35;margin-top:4px}
 .account-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .account-action-btn{min-width:46px;padding:7px 10px;border:1px solid #CFC4AE;border-radius:10px;background:#F9F5EC;color:#465034;font-size:12px;font-weight:850;line-height:1;cursor:pointer}
@@ -1719,7 +1730,7 @@ body{font-weight:500}
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
-      <div class="form-group"><label class="form-label">명부 연결</label><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId')"><select class="form-sel" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-count" id="memMemberIdCount" data-default-note="선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
+      <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.">선택 사항입니다. 연결하면 본인이 명부 사진을 등록할 수 있습니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
@@ -4108,22 +4119,79 @@ function populateAccountMemberSelect(selectId,selectedId,query){
   var currentId=String(selectedId==null?sel.value:selectedId||'');
   sel.innerHTML=buildAccountMemberOptions(currentId,query);
   sel.value=currentId;
+  renderAccountMemberResults(selectId,currentId,query,false);
   var countEl=document.getElementById(selectId+'Count');
   if(countEl){
     var count=getFilteredAccountLinkMembers(query,currentId).length;
-    countEl.textContent=query?('검색 결과 '+count+'명'):(countEl.dataset.defaultNote||'이름, 파트, 겸직으로 검색할 수 있습니다');
+    var selected=accountLinkMemberMap[currentId]||null;
+    countEl.textContent=selected
+      ? ('연결됨: '+accountLinkMemberShortLabel(selected))
+      : (query?('검색 결과 '+count+'명'):(countEl.dataset.defaultNote||'이름, 파트, 겸직으로 검색할 수 있습니다'));
   }
 }
 
-function filterAccountMemberSelect(inputId,selectId){
+function renderAccountMemberResults(selectId,selectedId,query,open){
+  var box=document.getElementById(selectId+'Results');
+  if(!box)return;
+  query=String(query||'').trim();
+  if(!open||!query){
+    box.classList.add('hidden');
+    box.innerHTML='';
+    return;
+  }
+  var rows=getFilteredAccountLinkMembers(query,selectedId).slice(0,12);
+  if(rows.length===0){
+    box.innerHTML='<div class="account-member-empty">검색 결과가 없습니다</div>';
+    box.classList.remove('hidden');
+    return;
+  }
+  box.innerHTML=rows.map(function(m){
+    var selected=selectedId===m.id;
+    var meta=[normalizePartName(m.part)||'-',normalizePartName(m.subPart)||''].filter(Boolean).join(' · ');
+    return '<button type="button" class="account-member-result'+(selected?' on':'')+'" onmousedown="event.preventDefault();chooseAccountMemberLink(\''+escAttr(selectId)+'\',\''+escAttr(m.id)+'\')">'
+      +'<span class="account-member-result-name">'+escHtml(m.name||'이름 없음')+'</span>'
+      +'<span class="account-member-result-meta">'+escHtml(meta)+'</span>'
+      +'</button>';
+  }).join('');
+  box.classList.remove('hidden');
+}
+
+function chooseAccountMemberLink(selectId,memberId){
+  var sel=document.getElementById(selectId);
+  if(!sel)return;
+  var searchId=selectId==='memMemberId'?'memMemberSearch':(selectId==='accountEditMemberId'?'accountEditMemberSearch':'');
+  var input=searchId?document.getElementById(searchId):null;
+  var member=accountLinkMemberMap[memberId]||null;
+  if(input&&member)input.value=member.name||'';
+  populateAccountMemberSelect(selectId,memberId,input?input.value:'');
+  hideAccountMemberResults(selectId);
+}
+
+function hideAccountMemberResults(selectId){
+  var box=document.getElementById(selectId+'Results');
+  if(box)box.classList.add('hidden');
+}
+
+function hideAccountMemberResultsSoon(selectId){
+  setTimeout(function(){hideAccountMemberResults(selectId);},140);
+}
+
+function filterAccountMemberSelect(inputId,selectId,open){
   var input=document.getElementById(inputId);
   var sel=document.getElementById(selectId);
-  populateAccountMemberSelect(selectId,sel?sel.value:'',input?input.value:'');
+  var selectedId=sel?sel.value:'';
+  var selected=accountLinkMemberMap[selectedId]||null;
+  var query=input?input.value:'';
+  if(selected&&String(query||'').trim()!==String(selected.name||'').trim())selectedId='';
+  populateAccountMemberSelect(selectId,selectedId,query);
+  renderAccountMemberResults(selectId,selectedId,query,!!open);
 }
 
 function accountMemberLinkField(searchId,selectId,selectedId,note){
-  return '<input class="form-input account-member-search" id="'+searchId+'" placeholder="명부 이름 검색" oninput="filterAccountMemberSelect(\''+searchId+'\',\''+selectId+'\')">'
-    +'<select class="form-sel" id="'+selectId+'">'+buildAccountMemberOptions(selectedId||'')+'</select>'
+  var selected=accountLinkMemberMap[selectedId||'']||null;
+  return '<div class="account-member-picker"><input class="form-input account-member-search" id="'+searchId+'" placeholder="명부 이름 검색" autocomplete="off" value="'+escAttr(selected?selected.name:'')+'" onfocus="filterAccountMemberSelect(\''+searchId+'\',\''+selectId+'\',true)" oninput="filterAccountMemberSelect(\''+searchId+'\',\''+selectId+'\',true)" onblur="hideAccountMemberResultsSoon(\''+selectId+'\')">'
+    +'<select class="form-sel account-member-select-hidden" id="'+selectId+'">'+buildAccountMemberOptions(selectedId||'')+'</select>'
+    +'<div class="account-member-results hidden" id="'+selectId+'Results"></div></div>'
     +'<div class="account-member-count" id="'+selectId+'Count" data-default-note="'+escAttr(note||'이름, 파트, 겸직으로 검색할 수 있습니다')+'">'+escHtml(note||'이름, 파트, 겸직으로 검색할 수 있습니다')+'</div>';
 }
 
@@ -4350,6 +4418,7 @@ function addMember(){
     document.getElementById('memPin').value='';
     if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
     if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
+    populateAccountMemberSelect('memMemberId','','');
     
     setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
     writeLog('계정 발급', name + '님 로그인 계정 생성');
@@ -4552,6 +4621,7 @@ function openAccountEdit(id){
     +'<div class="form-group"><label class="form-label">명부 연결</label>'+accountMemberLinkField('accountEditMemberSearch','accountEditMemberId',m.memberId||'','연결하지 않아도 계정은 정상 사용됩니다')+'</div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountEdit()">저장</button></div>'
   );
+  populateAccountMemberSelect('accountEditMemberId',m.memberId||'',(accountLinkMemberMap[m.memberId||'']||{}).name||'');
 }
 
 function saveAccountEdit(){
