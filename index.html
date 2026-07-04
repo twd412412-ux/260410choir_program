@@ -4247,7 +4247,7 @@ function saveScoreUpload(){
       updatedAt:now,
       updatedById:actorId,
       updatedByName:actorName
-    },{merge:true}).then(function(){return score;});
+    }).then(function(){return score;});
   }).then(function(score){
     var oldPath=previous&&previous.currentFilePath&&previous.currentFilePath!==score.currentFilePath?previous.currentFilePath:'';
     writeLog(previous?'악보 교체':'악보 등록','📄 ['+score.title+'] '+(score.public?'공개':'비공개')+' 저장');
@@ -4289,7 +4289,7 @@ function toggleScorePublic(id){
   score.updatedAt=now;
   score.updatedById=currentActorId();
   score.updatedByName=currentActorName();
-  scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()},{merge:true}).then(function(){
+  scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()}).then(function(){
     savePublicScoreCache();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
@@ -4306,7 +4306,7 @@ function deleteScore(id){
   showToast('악보 삭제 중...');
   deleteScoreStoragePath(score.currentFilePath).then(function(){
     allScores=allScores.filter(function(s){return s.id!==id});
-    return scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:new Date().toISOString(),updatedById:currentActorId(),updatedByName:currentActorName()},{merge:true});
+    return scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:new Date().toISOString(),updatedById:currentActorId(),updatedByName:currentActorName()});
   }).then(function(){
     savePublicScoreCache();
     renderScoreManage();
