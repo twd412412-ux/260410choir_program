@@ -2263,14 +2263,13 @@ body{font-weight:500}
 <div class="bottom-nav">
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
-    <div class="nav-item hidden" data-t="scores" id="navScores" onclick="switchTab('scores')"><span class="nav-icon">📄</span>악보</div>
     <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐찾</div>
     <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
   </div>
   <button class="home-fab active" data-t="home" type="button" onclick="switchTab('home')"><span class="home-fab-icon">🏠</span><span class="home-fab-label">홈</span></button>
   <div class="nav-side nav-right">
     <div class="nav-item" data-t="calendar" onclick="switchTab('calendar')"><span class="nav-icon">📅</span>일정</div>
-    <div class="nav-item hidden" data-t="stats" id="navStats" onclick="switchTab('stats')"><span class="nav-icon">📊</span>통계</div>
+    <div class="nav-item hidden" data-t="scores" id="navScores" onclick="switchTab('scores')"><span class="nav-icon">📄</span>악보</div>
     <div class="nav-item hidden" data-t="admin" id="navAdmin" onclick="switchTab('admin')"><span class="nav-icon">⚙️</span>관리</div>
   </div>
 </div>
@@ -2714,12 +2713,10 @@ function syncAccessShell(){
   else if(adminRole==='songschedule')body.classList.add('songschedule-mode');
   if(canOpenAdminArea()&&adminRole!=='admin')body.classList.add('permission-mode');
   var navAdmin=document.getElementById('navAdmin');
-  var navStats=document.getElementById('navStats');
   var navArchive=document.getElementById('navArchive');
   var navScores=document.getElementById('navScores');
   var btnLock=document.getElementById('btnLock');
   if(navAdmin)navAdmin.classList.toggle('hidden',!canOpenAdminArea());
-  if(navStats)navStats.classList.toggle('hidden',!canUseStats());
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
   if(navScores)navScores.classList.toggle('hidden',!canViewScores());
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
