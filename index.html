@@ -135,14 +135,12 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-name-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .account-name{font-size:14px;font-weight:850;color:var(--tx)}
 .account-meta-line{font-size:11px;color:var(--ts);font-weight:720;margin-top:2px}
-.account-link-line{font-size:10.5px;color:var(--ts);margin-top:4px;display:flex;align-items:center;gap:5px;min-width:0}
-.account-link-dot{width:7px;height:7px;border-radius:50%;background:#6F8D52;flex:0 0 7px}
-.account-link-status{font-weight:900;color:#4F623A;white-space:nowrap}
-.account-link-detail{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4D4A42;font-weight:750}
-.account-link-line.none .account-link-dot{background:#B8B0A0}
-.account-link-line.none .account-link-status{color:#706B5D}
-.account-link-line.missing .account-link-dot,.account-link-line.warn .account-link-dot{background:#C15B50}
-.account-link-line.missing .account-link-status,.account-link-line.warn .account-link-status{color:#A9443B}
+.account-link-pill{display:inline-flex;align-items:center;gap:4px;border:1px solid #CBD7BE;background:#EEF3E6;color:#4F623A;border-radius:999px;padding:2px 6px;font-size:10px;font-weight:900;line-height:1.2;white-space:nowrap}
+.account-link-dot{width:6px;height:6px;border-radius:50%;background:#6F8D52;flex:0 0 6px}
+.account-link-pill.none{border-color:#DDD5C6;background:#F4EFE5;color:#706B5D}
+.account-link-pill.none .account-link-dot{background:#B8B0A0}
+.account-link-pill.missing,.account-link-pill.warn{border-color:#E5C3BA;background:#F7E6E0;color:#A9443B}
+.account-link-pill.missing .account-link-dot,.account-link-pill.warn .account-link-dot{background:#C15B50}
 .account-member-picker{position:relative}
 .account-member-search{margin-bottom:6px}
 .account-member-select-hidden{display:none}
@@ -6129,7 +6127,7 @@ function renderAccountLinkStatus(m){
     cls='missing';
     status='연결 끊김';
   }
-  return '<div class="account-link-line '+cls+'"><span class="account-link-dot"></span><span class="account-link-status">'+escHtml(status)+'</span>'+(detail?'<span class="account-link-detail">'+escHtml(detail)+'</span>':'')+'</div>';
+  return '<span class="account-link-pill '+cls+'"'+(detail?' title="'+escHtml(detail)+'"':'')+'><span class="account-link-dot"></span>'+escHtml(status)+'</span>';
 }
 
 function accountPartSortValue(part){
@@ -6227,10 +6225,9 @@ function renderAccountList(){
     }
     return groupHtml+`<div class="account-row ${accountPartClass(m.part)}">
       <div class="account-main">
-        <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span></div>
+        <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span>${linkHtml}</div>
         <div class="account-meta-line">${escHtml(m.part)} · ${escHtml(pinMeta)}</div>
         ${roleBadge}
-        ${linkHtml}
       </div>
       <div class="account-actions">
         ${canManageLoginAccounts()?`<button type="button" class="account-action-btn" onclick="openAccountEdit('${escAttr(m.id)}')">수정</button>`:''}
