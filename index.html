@@ -1311,12 +1311,17 @@ body{font-weight:500}
 .home-seating-card{cursor:pointer}
 .home-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .home-seating-pill{font-size:11px;font-weight:750;background:#EAEFDF;color:#4E5A35;border:1px solid #C8D0B9;border-radius:999px;padding:4px 8px}
-.public-seating-modal .modal-content{max-width:960px;max-height:88vh}
-.public-seating-search{width:100%;border:1.5px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;font-weight:760;padding:11px 12px;outline:none;margin-bottom:10px}
+.public-seating-modal .modal-content{max-width:min(1120px,96vw);max-height:92vh}
+.public-seating-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.public-seating-search{width:100%;border:1.5px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;font-weight:760;padding:11px 12px;outline:none;min-width:0}
+.public-seating-zoom{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.public-seating-zoom .btn{padding:8px 10px;font-size:12px;line-height:1}
+.public-seating-zoom-label{min-width:42px;text-align:center;font-size:12px;font-weight:900;color:var(--ts)}
 .public-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .public-seating-pill{font-size:11px;font-weight:850;background:var(--bg);border:1px solid var(--bd);border-radius:999px;color:var(--ts);padding:5px 8px}
 .public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
-.public-seating-board-scroll{max-height:52vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain}
+.public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain}
+.public-seating-board-scale{position:relative;width:max-content;min-width:100%}
 .public-seating-board{position:relative;width:max-content;min-width:100%}
 .public-seating-row{display:flex;align-items:center;height:42px;margin-bottom:8px}
 .public-seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
@@ -1346,6 +1351,8 @@ body{font-weight:500}
   .home-schedule-place{font-size:11px}
   .home-part-row{grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 10px;gap:5px;padding:10px}
   .home-part-session{font-size:11px}
+  .public-seating-tools{align-items:stretch;flex-direction:column}
+  .public-seating-zoom{justify-content:flex-end}
 }
 .att-summary-card{background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 5px 16px rgba(49,54,35,.055)}
 .att-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -1747,6 +1754,7 @@ body{font-weight:500}
           <div class="seating-toolbar-publish">
             <div class="seating-toolbar-group publish">
               <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
+              <button class="btn seating-btn-danger-soft" onclick="unpublishSeatingPlan()">공개 취소</button>
             </div>
           </div>
         </div>
@@ -2049,7 +2057,15 @@ body{font-weight:500}
 <div class="modal-overlay modal-center public-seating-modal" id="modalPublicSeating">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">🎚️ 찬양의밤 자리배치</span><button class="modal-close" onclick="closeModal('modalPublicSeating')">✕</button></div>
-    <input class="public-seating-search" id="publicSeatingSearch" placeholder="이름/파트 검색" oninput="publicSeatingSearch=this.value;renderPublicSeatingModalBody()">
+    <div class="public-seating-tools">
+      <input class="public-seating-search" id="publicSeatingSearch" placeholder="이름/파트 검색" oninput="publicSeatingSearch=this.value;renderPublicSeatingModalBody()">
+      <div class="public-seating-zoom" aria-label="자리배치 확대">
+        <button class="btn" onclick="changePublicSeatingZoom(-0.1)">-</button>
+        <span class="public-seating-zoom-label" id="publicSeatingZoomLabel">118%</span>
+        <button class="btn" onclick="changePublicSeatingZoom(0.1)">+</button>
+        <button class="btn" onclick="resetPublicSeatingZoom()">기본</button>
+      </div>
+    </div>
     <div id="publicSeatingBody"></div>
   </div>
 </div>
@@ -2334,7 +2350,7 @@ var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
-var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='';
+var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='', publicSeatingZoom=1.18;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
@@ -3524,6 +3540,31 @@ function publicSeatingMatches(seat,query){
   query=publicSeatingNormalizeText(query);
   return publicSeatingNormalizeText([seat.name,seat.part].join(' ')).indexOf(query)>-1;
 }
+function clampPublicSeatingZoom(value){
+  return Math.max(0.8,Math.min(1.8,Math.round(Number(value||1)*100)/100));
+}
+function applyPublicSeatingZoom(){
+  publicSeatingZoom=clampPublicSeatingZoom(publicSeatingZoom);
+  var board=document.getElementById('publicSeatingBoard');
+  var scale=document.getElementById('publicSeatingBoardScale');
+  var label=document.getElementById('publicSeatingZoomLabel');
+  if(label)label.textContent=Math.round(publicSeatingZoom*100)+'%';
+  if(!board||!scale)return;
+  board.style.transform='scale('+publicSeatingZoom+')';
+  board.style.transformOrigin='top left';
+  var baseWidth=Number(board.getAttribute('data-board-width'))||board.scrollWidth||0;
+  var baseHeight=Number(board.getAttribute('data-board-height'))||board.scrollHeight||0;
+  if(baseWidth)scale.style.width=Math.ceil(baseWidth*publicSeatingZoom)+'px';
+  if(baseHeight)scale.style.height=Math.ceil(baseHeight*publicSeatingZoom)+'px';
+}
+function changePublicSeatingZoom(delta){
+  publicSeatingZoom=clampPublicSeatingZoom(publicSeatingZoom+delta);
+  applyPublicSeatingZoom();
+}
+function resetPublicSeatingZoom(){
+  publicSeatingZoom=1.18;
+  applyPublicSeatingZoom();
+}
 function findPublicSeatingMine(plan){
   var found=[];
   if(!plan||!currentUser)return found;
@@ -3553,6 +3594,7 @@ function openPublicSeatingModal(){
     if(input)input.value=publicSeatingSearch||'';
     renderPublicSeatingModalBody();
     openModal('modalPublicSeating');
+    setTimeout(applyPublicSeatingZoom,0);
   }).catch(function(err){
     console.error(err);
     showToast('자리배치를 불러오지 못했습니다');
@@ -3569,6 +3611,7 @@ function renderPublicSeatingModalBody(){
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
   var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
+  var boardHeight=Math.max(110,(rows.length*50)+90);
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '로그인하면 내 자리가 자동으로 강조됩니다. 지금은 이름 검색으로 확인해 주세요.';
@@ -3578,7 +3621,7 @@ function renderPublicSeatingModalBody(){
     +(plan.program?'<span class="public-seating-pill">'+escHtml(plan.program)+'</span>':'')
     +'<span class="public-seating-pill">배치 '+stats.placed+'명</span>'
     +'</div><div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
-  html+='<div class="public-seating-board-scroll"><div class="public-seating-board" style="min-width:'+boardWidth+'px">';
+  html+='<div class="public-seating-board-scroll"><div class="public-seating-board-scale" id="publicSeatingBoardScale"><div class="public-seating-board" id="publicSeatingBoard" data-board-width="'+boardWidth+'" data-board-height="'+boardHeight+'" style="min-width:'+boardWidth+'px">';
   rows.forEach(function(row,r){
     html+='<div class="public-seating-row '+(row.offset===0.5?'offset':'')+'">'
       +'<div class="public-seating-row-label">'+escHtml(row.label||'')+'</div>'
@@ -3597,8 +3640,9 @@ function renderPublicSeatingModalBody(){
     html+='</div></div>';
   });
   html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
-  html+='</div></div>';
+  html+='</div></div></div>';
   box.innerHTML=html;
+  applyPublicSeatingZoom();
 }
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
@@ -8993,6 +9037,24 @@ function publishSeatingPlan(previewData){
   }).catch(function(err){
     console.error(err);
     showToast('공개 중 오류가 발생했습니다');
+  });
+}
+function unpublishSeatingPlan(){
+  if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
+  if(!confirm('단원에게 공개된 찬양의밤 자리배치를 취소할까요?\n취소하면 홈 화면에서 자리배치 카드가 사라집니다.'))return;
+  showToast('자리배치 공개를 취소하는 중...');
+  db.collection('settings').doc('publishedSeatingPlan').delete().then(function(){
+    publishedSeatingPlan=null;
+    publishedSeatingLoaded=true;
+    publishedSeatingPromise=null;
+    publicSeatingSearch='';
+    closeModal('modalPublicSeating');
+    writeLog('찬양의밤 자리배치 공개 취소','단원 홈 자리배치 공개 취소');
+    requestHomeRender();
+    showToast('자리배치 공개를 취소했습니다');
+  }).catch(function(err){
+    console.error(err);
+    showToast('공개 취소 중 오류가 발생했습니다');
   });
 }
 function upsertLocalSeatingPlan(data){
