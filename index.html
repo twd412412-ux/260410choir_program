@@ -1029,7 +1029,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .home-row-label{font-size:12px;color:var(--ts);margin-bottom:4px}
 .home-row-main{font-size:15px;font-weight:850;line-height:1.45;text-align:center}
 .home-row-main>div{justify-content:center;text-align:center}
-.home-song-line{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;width:100%;min-width:0;text-align:center;cursor:pointer}
+.home-song-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;width:100%;min-width:0;text-align:center;align-items:center;cursor:pointer}
 .home-song-line+.home-song-line{margin-top:6px}
 .home-row-main>.home-song-line{text-align:center}
 .home-song-title{min-width:0;font-weight:850;word-break:keep-all;overflow-wrap:anywhere;text-align:center}
@@ -1038,6 +1038,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .home-score-chip svg{width:15px;height:15px;display:block;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .home-score-chip:hover{background:#E2ECD5;color:#2F3B24}
 .home-score-chip:active{transform:scale(.98)}
+.home-main-title .home-score-chip{font-size:11px;padding:7px 9px;border-radius:10px}
 .home-main-title .home-score-chip.icon-only{width:32px;height:30px;padding:0}
 .home-timeline-item{padding:11px 12px;border-radius:17px;background:var(--bg);margin-top:8px;cursor:pointer}
 .home-part-item{padding:12px;border-radius:18px;background:var(--bg);margin-top:8px}
@@ -1241,9 +1242,10 @@ body{font-weight:500}
 .att-save-float .btn-p{background:#6F7D4E}
 .home-dashboard{position:relative;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:16px 16px 14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(49,54,35,.055);overflow:hidden}
 .home-dashboard-top{display:grid;grid-template-columns:minmax(0,1fr) 96px;align-items:center;gap:10px;min-height:98px}
-.home-feature-copy{min-width:0}
+.home-feature-copy{min-width:0;text-align:center}
+.home-dashboard-feature-label{font-size:13px;font-weight:820;color:#606554;text-align:center;margin-bottom:8px}
 .home-kicker{font-size:13px;font-weight:780;color:#606554;margin-bottom:7px;text-align:left}
-.home-main-title{font-size:28px;font-weight:850;color:#191A15;line-height:1.16;word-break:keep-all;text-align:left}
+.home-main-title{font-size:28px;font-weight:850;color:#191A15;line-height:1.16;word-break:keep-all;text-align:center}
 .home-main-sub{font-size:12px;font-weight:650;color:#606554;margin-top:8px}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
@@ -1320,7 +1322,7 @@ body{font-weight:500}
 .public-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .public-seating-pill{font-size:11px;font-weight:850;background:var(--bg);border:1px solid var(--bd);border-radius:999px;color:var(--ts);padding:5px 8px}
 .public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
-.public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain}
+.public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .public-seating-board-scale{position:relative;width:max-content;min-width:100%}
 .public-seating-board{position:relative;width:max-content;min-width:100%}
 .public-seating-row{display:flex;align-items:center;height:42px;margin-bottom:8px}
@@ -2351,6 +2353,7 @@ var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='', publicSeatingZoom=1.18;
+var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
@@ -3552,8 +3555,8 @@ function applyPublicSeatingZoom(){
   if(!board||!scale)return;
   board.style.transform='scale('+publicSeatingZoom+')';
   board.style.transformOrigin='top left';
-  var baseWidth=Number(board.getAttribute('data-board-width'))||board.scrollWidth||0;
-  var baseHeight=Number(board.getAttribute('data-board-height'))||board.scrollHeight||0;
+  var baseWidth=Math.max(Number(board.getAttribute('data-board-width'))||0,board.scrollWidth||0);
+  var baseHeight=Math.max(Number(board.getAttribute('data-board-height'))||0,board.scrollHeight||0);
   if(baseWidth)scale.style.width=Math.ceil(baseWidth*publicSeatingZoom)+'px';
   if(baseHeight)scale.style.height=Math.ceil(baseHeight*publicSeatingZoom)+'px';
 }
@@ -3564,6 +3567,63 @@ function changePublicSeatingZoom(delta){
 function resetPublicSeatingZoom(){
   publicSeatingZoom=1.18;
   applyPublicSeatingZoom();
+}
+function publicSeatingTouchDistance(touches){
+  var dx=touches[0].clientX-touches[1].clientX;
+  var dy=touches[0].clientY-touches[1].clientY;
+  return Math.hypot(dx,dy);
+}
+function setupPublicSeatingGestures(){
+  var scroller=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
+  if(!scroller||scroller.dataset.publicGesturesBound==='1')return;
+  scroller.dataset.publicGesturesBound='1';
+  scroller.addEventListener('touchstart',function(e){
+    if(e.touches.length===1){
+      publicSeatingTouchPanning=true;
+      publicSeatingPanStartX=e.touches[0].clientX;
+      publicSeatingPanStartY=e.touches[0].clientY;
+      publicSeatingPanScrollLeft=scroller.scrollLeft;
+      publicSeatingPanScrollTop=scroller.scrollTop;
+    }
+    if(e.touches.length===2){
+      publicSeatingTouchPanning=false;
+      publicSeatingPinchStartDist=publicSeatingTouchDistance(e.touches);
+      publicSeatingPinchStartZoom=publicSeatingZoom;
+    }
+  },{passive:false});
+  scroller.addEventListener('touchmove',function(e){
+    if(e.touches.length===2&&publicSeatingPinchStartDist>0){
+      e.preventDefault();
+      var rect=scroller.getBoundingClientRect();
+      var focusX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      var focusY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      var beforeZoom=publicSeatingZoom||1;
+      var contentX=scroller.scrollLeft+(focusX-rect.left);
+      var contentY=scroller.scrollTop+(focusY-rect.top);
+      var next=publicSeatingPinchStartZoom*(publicSeatingTouchDistance(e.touches)/publicSeatingPinchStartDist);
+      publicSeatingZoom=clampPublicSeatingZoom(next);
+      applyPublicSeatingZoom();
+      var ratio=publicSeatingZoom/beforeZoom;
+      scroller.scrollLeft=(contentX*ratio)-(focusX-rect.left);
+      scroller.scrollTop=(contentY*ratio)-(focusY-rect.top);
+    }else if(e.touches.length===1&&publicSeatingTouchPanning){
+      e.preventDefault();
+      scroller.scrollLeft=publicSeatingPanScrollLeft+(publicSeatingPanStartX-e.touches[0].clientX);
+      scroller.scrollTop=publicSeatingPanScrollTop+(publicSeatingPanStartY-e.touches[0].clientY);
+    }
+  },{passive:false});
+  scroller.addEventListener('touchend',function(e){
+    if(e.touches.length<2){
+      publicSeatingPinchStartDist=0;
+      publicSeatingPinchStartZoom=0;
+    }
+    if(e.touches.length===0)publicSeatingTouchPanning=false;
+  },{passive:false});
+  scroller.addEventListener('touchcancel',function(){
+    publicSeatingPinchStartDist=0;
+    publicSeatingPinchStartZoom=0;
+    publicSeatingTouchPanning=false;
+  },{passive:false});
 }
 function findPublicSeatingMine(plan){
   var found=[];
@@ -3643,6 +3703,7 @@ function renderPublicSeatingModalBody(){
   html+='</div></div></div>';
   box.innerHTML=html;
   applyPublicSeatingZoom();
+  setupPublicSeatingGestures();
 }
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
@@ -3719,7 +3780,7 @@ function renderHome(){
     return rows.map(function(s){
       var score=getPublicScoreForSong(s);
       var scoreIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h5"></path><path d="M10 17h4"></path></svg>';
-      var scoreBtn=score?'<button class="home-score-chip icon-only" aria-label="'+escAttr(s.songName)+' 악보 보기" title="악보 보기" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">'+scoreIcon+'</button>':'';
+      var scoreBtn=score?'<button class="home-score-chip" aria-label="'+escAttr(s.songName)+' 악보 보기" title="악보 보기" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">'+scoreIcon+'<span>악보</span></button>':'';
       return '<div class="home-song-line" onclick="openDetail(\''+escAttr(s.id)+'\')"><span class="home-song-title">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
     }).join('<div style="height:6px"></div>');
   }
@@ -3840,8 +3901,9 @@ function renderHome(){
 
     c.innerHTML=''
       +'<div class="home-dashboard">'
+        +'<div class="home-dashboard-feature-label">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div>'
         +'<div class="home-dashboard-top">'
-          +'<div class="home-feature-copy"><div class="home-kicker">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
+          +'<div class="home-feature-copy"><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
           +'<div class="home-hymn-art" aria-hidden="true"><img src="./assets/hymn-dove-book.png" alt=""></div>'
         +'</div>'
         +'<div class="home-dashboard-bottom">'
@@ -3857,9 +3919,14 @@ function renderHome(){
 
   var songCache=allSongs.length>0?allSongs:loadCache('choir_songs',600000);
   var scheduleCache=allSchedules.length>0?allSchedules:loadCache('choir_schedules',600000);
+  var canLoadHomeScores=canViewScores();
+  var scoreCache=canLoadHomeScores&&!scoresLoaded?loadCache(SCORE_CACHE_KEY,600000):null;
+  if(canLoadHomeScores&&!scoresLoaded&&Array.isArray(scoreCache)&&scoreCache.length){
+    allScores=scoreCache;
+  }
   var cachedSongs=Array.isArray(songCache)?songCache:[];
   var cachedSchedules=Array.isArray(scheduleCache)?scheduleCache:[];
-  var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache,publicSeatingPending:!publishedSeatingLoaded};
+  var shellState={songsPending:!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache,publicSeatingPending:!publishedSeatingLoaded,scoresPending:canLoadHomeScores&&!scoresLoaded&&!scoreCache};
   var currentHomeAttendance=null;
   function latestHomeSongs(){
     return allSongs.length>0?allSongs:cachedSongs;
@@ -3898,8 +3965,12 @@ function renderHome(){
     console.error(e);
     return null;
   });
+  var scorePromise=canLoadHomeScores?loadScores(false,false).catch(function(e){
+    console.error(e);
+    return allScores;
+  }):Promise.resolve([]);
 
-  Promise.all([songPromise,schedulePromise,publicSeatingPromise]).then(function(res){
+  Promise.all([songPromise,schedulePromise,publicSeatingPromise,scorePromise]).then(function(res){
     renderHomeShell(res[0],res[1],currentHomeAttendance,{publicSeating:res[2]});
   }).catch(function(e){console.error(e)});
 
