@@ -3032,9 +3032,21 @@ function accountLinkedSubPart(account){
   var linked=accountLinkedMember(account);
   return normalizePartName(account&&account.subPart)||normalizePartName(account&&account.linkedSubPart)||normalizePartName(linked&&linked.subPart);
 }
+function isAccountRoleSubPart(part){
+  part=normalizePartName(part);
+  return ['임원','지휘','반주','준단원','신입단원'].indexOf(part)>-1;
+}
+function accountRoleSubPart(account){
+  var sub=accountLinkedSubPart(account);
+  return isAccountRoleSubPart(sub)?sub:'';
+}
+function accountAccessRoleSubPart(account){
+  var sub=accountRoleSubPart(account);
+  return (sub==='지휘'||sub==='반주')?sub:'';
+}
 function accountPartDisplayLabel(account){
   var part=normalizePartName(account&&account.part)||accountLinkedPart(account)||'-';
-  var sub=accountLinkedSubPart(account);
+  var sub=accountRoleSubPart(account);
   return part+(sub?' · '+handbookRoleLabel(sub):'');
 }
 function scopeFromAccountParts(part,subPart){
@@ -3044,7 +3056,7 @@ function scopeFromAccountParts(part,subPart){
   return scopeFromAccountPart(part);
 }
 function accountDefaultScope(account){
-  return scopeFromAccountParts(normalizePartName(account&&account.part)||accountLinkedPart(account),accountLinkedSubPart(account));
+  return scopeFromAccountParts(normalizePartName(account&&account.part)||accountLinkedPart(account),accountAccessRoleSubPart(account));
 }
 function expandAttendanceScope(scope){
   scope=uniqueArray(scope||[]);
@@ -4763,9 +4775,8 @@ function isUserPart(user,part){
   user=user||currentUser||{};
   part=normalizePartName(part);
   return normalizePartName(user.part)===part
-    ||normalizePartName(user.subPart)===part
     ||accountLinkedPart(user)===part
-    ||accountLinkedSubPart(user)===part;
+    ||accountAccessRoleSubPart(user)===part;
 }
 function isUserOrchestra(user){
   return isUserPart(user,'관현악');
@@ -6131,6 +6142,7 @@ function accountLinkMemberLabel(member){
   if(!member)return '연결 끊김';
   var part=normalizePartName(member.part)||'-';
   var sub=normalizePartName(member.subPart);
+  if(!isAccountRoleSubPart(sub))sub='';
   var state=isHandbookExcludedMember(member)?' · 명단제외':'';
   return (member.name||'이름 없음')+' ('+part+(sub?' · '+sub:'')+state+')';
 }
@@ -6139,6 +6151,7 @@ function accountLinkMemberShortLabel(member){
   if(!member)return '연결 끊김';
   var part=normalizePartName(member.part)||'-';
   var sub=normalizePartName(member.subPart);
+  if(!isAccountRoleSubPart(sub))sub='';
   return (member.name||'이름 없음')+' / '+part+(sub?' · '+handbookRoleLabel(sub):'');
 }
 
@@ -6384,8 +6397,7 @@ function accountSearchText(m){
     normalizePartName(m.part)||'',
     linked&&linked.name||'',
     linked&&normalizePartName(linked.part)||'',
-    linked&&normalizePartName(linked.subPart)||'',
-    accountLinkedSubPart(m)||'',
+    accountRoleSubPart(m)||'',
     scoreAccessScopeLabel(m.scoreAccessScope),
     getUserPermissions(m).map(function(p){return PERMISSION_LABELS[p]||p}).join(' ')
   ].join(' ').toLowerCase();
@@ -8088,6 +8100,7 @@ function toggleHbPart(part) {
 
 function cleanMemberSubPart(part, subPart){
   var sub=normalizePartName(subPart);
+  if(['S1','S2','T1','T2','관현악'].indexOf(sub)>-1)return '';
   return sub&&sub!==part?sub:'';
 }
 
