@@ -3046,7 +3046,11 @@ function scoreCandidateMatchScore(song,queryKey,queryRaw){
   var matched=qChars.filter(function(ch){return key.indexOf(ch)>-1;}).length;
   var score=matched?Math.round(matched/qChars.length*55):0;
   if(String(name).toLowerCase().indexOf(String(queryRaw||'').toLowerCase())>-1)score+=15;
-  return score;
+  return Math.max(0,Math.min(100,score));
+}
+function scoreCandidateMatchLabel(score){
+  score=Math.max(0,Math.min(100,Math.round(Number(score)||0)));
+  return score===100?'곡명 일치 100%':'유사도 '+score+'%';
 }
 function scoreCandidateRows(){
   var titleEl=document.getElementById('scoreTitle');
@@ -3087,7 +3091,7 @@ function renderScoreSongCandidates(){
   box.innerHTML=rows.map(function(item){
     var song=item.song;
     var on=selected.indexOf(song.id)>-1;
-    var meta=[scoreSongLinkLabel(song),item.score===100?'이름 일치':'유사도 '+item.score].filter(Boolean).join(' · ');
+    var meta=[scoreSongLinkLabel(song),scoreCandidateMatchLabel(item.score)].filter(Boolean).join(' · ');
     return '<button type="button" class="score-link-candidate '+(on?'selected':'')+'" onclick="toggleScoreSongCandidate(\''+escAttr(song.id)+'\')">'
       +'<div class="score-link-candidate-main"><span>'+escHtml(song.songName||'곡명 없음')+'</span><span>'+(on?'선택됨':'선택')+'</span></div>'
       +'<div class="score-link-candidate-meta">'+escHtml(meta)+'</div>'
