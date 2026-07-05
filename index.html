@@ -3021,6 +3021,31 @@ function scopeFromAccountPart(part){
   if(part==='지휘')return ['ALL'];
   return part?[part]:[];
 }
+function accountLinkedMember(account){
+  return account&&account.memberId?accountLinkMemberMap[account.memberId]:null;
+}
+function accountLinkedPart(account){
+  var linked=accountLinkedMember(account);
+  return normalizePartName(account&&account.linkedPart)||normalizePartName(linked&&linked.part);
+}
+function accountLinkedSubPart(account){
+  var linked=accountLinkedMember(account);
+  return normalizePartName(account&&account.subPart)||normalizePartName(account&&account.linkedSubPart)||normalizePartName(linked&&linked.subPart);
+}
+function accountPartDisplayLabel(account){
+  var part=normalizePartName(account&&account.part)||accountLinkedPart(account)||'-';
+  var sub=accountLinkedSubPart(account);
+  return part+(sub?' · '+handbookRoleLabel(sub):'');
+}
+function scopeFromAccountParts(part,subPart){
+  part=normalizePartName(part);
+  subPart=normalizePartName(subPart);
+  if(part==='지휘'||subPart==='지휘')return ['ALL'];
+  return scopeFromAccountPart(part);
+}
+function accountDefaultScope(account){
+  return scopeFromAccountParts(normalizePartName(account&&account.part)||accountLinkedPart(account),accountLinkedSubPart(account));
+}
 function expandAttendanceScope(scope){
   scope=uniqueArray(scope||[]);
   if(scope.indexOf('ALL')!==-1)return ['ALL'];
@@ -3034,7 +3059,7 @@ function expandAttendanceScope(scope){
 function getAttendanceScopeKeys(){
   if(adminRole==='admin'||adminRole==='chongmu')return ['ALL'];
   if(currentUser&&Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length)return normalizeAttendanceScopeArray(currentUser.attendanceScope);
-  if(currentUser&&(currentUser.role==='attendance'||hasPermission('attendance.view')||hasPermission('attendance.check')))return scopeFromAccountPart(currentUser.part);
+  if(currentUser&&(currentUser.role==='attendance'||hasPermission('attendance.view')||hasPermission('attendance.check')))return accountDefaultScope(currentUser);
   return [];
 }
 function getAttendanceAllowedParts(){
@@ -3792,7 +3817,7 @@ function renderCurrentUserProfile(member,state){
       +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
   }
-  b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(currentUser.part||'')+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+  b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(accountPartDisplayLabel(currentUser))+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
 }
 
 function loadCurrentUserLinkedMember(){
@@ -3801,6 +3826,9 @@ function loadCurrentUserLinkedMember(){
     if(!currentUser||currentUser.memberId!==doc.id)return;
     if(!doc.exists)return renderCurrentUserProfile(null,'missing');
     var member=Object.assign({id:doc.id},doc.data());
+    applyLinkedMemberToUserSession(currentUser,member);
+    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    updateUserBar();
     if(isHandbookExcludedMember(member))return renderCurrentUserProfile(member,'inactive');
     renderCurrentUserProfile(member,'ready');
   }).catch(function(){
@@ -3853,6 +3881,27 @@ function removeMyProfilePhoto(){
   if(preview){preview.src='';preview.style.display='none';}
   showToast('사진을 비웠습니다. 저장을 누르면 명부에서도 제거됩니다');
 }
+function applyLinkedMemberToUserSession(user,member){
+  user=user||{};
+  member=member||{};
+  user.linkedPart=normalizePartName(member.part)||'';
+  user.linkedSubPart=normalizePartName(member.subPart)||'';
+  user.linkedMemberStatus=member.status||'active';
+  return user;
+}
+function hydrateUserLinkedMember(user){
+  if(!(user&&user.memberId))return Promise.resolve(user);
+  return db.collection('members').doc(user.memberId).get().then(function(doc){
+    if(doc.exists)return applyLinkedMemberToUserSession(user,doc.data()||{});
+    user.linkedPart='';
+    user.linkedSubPart='';
+    user.linkedMemberStatus='missing';
+    return user;
+  }).catch(function(e){
+    console.error(e);
+    return user;
+  });
+}
 function loginUser(){
   var nameInput=document.getElementById('userNameInput');
   var pin=document.getElementById('userPinInput');
@@ -3864,25 +3913,28 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[]),scoreAccessScope:normalizeScoreAccessScope(data.scoreAccessScope)};
-    localStorage.setItem('choir_user',JSON.stringify(currentUser));
-    if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
-    updateUserBar();closeModal('modalUser');
-    showToast(data.name+'님 환영합니다!');
+    var nextUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[]),scoreAccessScope:normalizeScoreAccessScope(data.scoreAccessScope),linkedPart:normalizePartName(data.linkedPart),linkedSubPart:normalizePartName(data.linkedSubPart)};
+    return hydrateUserLinkedMember(nextUser).then(function(user){
+      currentUser=user;
+      localStorage.setItem('choir_user',JSON.stringify(currentUser));
+      if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
+      updateUserBar();closeModal('modalUser');
+      showToast(data.name+'님 환영합니다!');
 
-    adminRole=getSessionRoleForUser(currentUser)||null;
-    syncAccessShell();
-    updateAdminTabs();
-    refreshHomeAccessState();
-    scheduleScoresLoad(500);
-    var nextTab=pendingTabAfterLogin;
-    pendingTabAfterLogin='';
-    initSongs(true).then(function(){
-      if(nextTab==='scores'&&canViewScores())switchTab('scores');
-      else if((nextTab==='songs'||nextTab==='favorites')&&canViewSongList())switchTab(nextTab);
-      else if(currentTab==='songs')renderSongList();
-      else if(currentTab==='favorites')renderFav();
-      requestHomeRender();
+      adminRole=getSessionRoleForUser(currentUser)||null;
+      syncAccessShell();
+      updateAdminTabs();
+      refreshHomeAccessState();
+      scheduleScoresLoad(500);
+      var nextTab=pendingTabAfterLogin;
+      pendingTabAfterLogin='';
+      initSongs(true).then(function(){
+        if(nextTab==='scores'&&canViewScores())switchTab('scores');
+        else if((nextTab==='songs'||nextTab==='favorites')&&canViewSongList())switchTab(nextTab);
+        else if(currentTab==='songs')renderSongList();
+        else if(currentTab==='favorites')renderFav();
+        requestHomeRender();
+      });
     });
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
@@ -3913,7 +3965,7 @@ function logoutUser(){
 }
 function updateUserBar(){
   var bar=document.getElementById('userBar');
-  if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+currentUser.part+')'}
+  if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')'}
   else{bar.classList.add('hidden')}
   syncAccessShell();
 }
@@ -3936,6 +3988,16 @@ function restoreUser() {
       updateUserBar();
       adminRole=getSessionRoleForUser(currentUser)||null;
       syncAccessShell();
+      hydrateUserLinkedMember(currentUser).then(function(user){
+        if(!currentUser||currentUser.id!==user.id)return;
+        currentUser=user;
+        localStorage.setItem('choir_user',JSON.stringify(currentUser));
+        updateUserBar();
+        adminRole=getSessionRoleForUser(currentUser)||null;
+        syncAccessShell();
+        refreshHomeAccessState();
+        if(currentTab==='scores')renderScoresPage();
+      });
     } catch (e) {
       console.error(e);
     }
@@ -4700,7 +4762,10 @@ function scoreKindRank(score){
 function isUserPart(user,part){
   user=user||currentUser||{};
   part=normalizePartName(part);
-  return normalizePartName(user.part)===part||normalizePartName(user.subPart)===part;
+  return normalizePartName(user.part)===part
+    ||normalizePartName(user.subPart)===part
+    ||accountLinkedPart(user)===part
+    ||accountLinkedSubPart(user)===part;
 }
 function isUserOrchestra(user){
   return isUserPart(user,'관현악');
@@ -6073,7 +6138,8 @@ function accountLinkMemberLabel(member){
 function accountLinkMemberShortLabel(member){
   if(!member)return '연결 끊김';
   var part=normalizePartName(member.part)||'-';
-  return (member.name||'이름 없음')+' / '+part;
+  var sub=normalizePartName(member.subPart);
+  return (member.name||'이름 없음')+' / '+part+(sub?' · '+handbookRoleLabel(sub):'');
 }
 
 function accountMemberSearchText(member){
@@ -6290,7 +6356,7 @@ function renderAccountLinkStatus(m){
     }else{
       cls='warn';
       status='이름 불일치';
-      detail=(linked.name||'이름 없음')+' / '+(normalizePartName(linked.part)||'-');
+      detail=accountLinkMemberShortLabel(linked);
     }
   }else if(m.memberId){
     cls='missing';
@@ -6318,6 +6384,8 @@ function accountSearchText(m){
     normalizePartName(m.part)||'',
     linked&&linked.name||'',
     linked&&normalizePartName(linked.part)||'',
+    linked&&normalizePartName(linked.subPart)||'',
+    accountLinkedSubPart(m)||'',
     scoreAccessScopeLabel(m.scoreAccessScope),
     getUserPermissions(m).map(function(p){return PERMISSION_LABELS[p]||p}).join(' ')
   ].join(' ').toLowerCase();
@@ -6411,7 +6479,7 @@ function renderAccountList(){
     return groupHtml+`<div class="account-row ${accountPartClass(m.part)}">
       <div class="account-main">
         <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span>${linkHtml}</div>
-        <div class="account-meta-line">${escHtml(m.part)} · ${escHtml(pinMeta)}</div>
+        <div class="account-meta-line">${escHtml(accountPartDisplayLabel(m))} · ${escHtml(pinMeta)}</div>
         ${roleBadge}
       </div>
       <div class="account-actions">
@@ -6768,7 +6836,7 @@ function renderAccountPermissionBadges(m){
   if(scoreScope!=='default')badges.push('<span class="perm-badge scope">악보 '+escHtml(scoreAccessScopeLabel(scoreScope))+'</span>');
   if(badges.length===0)return '';
   var scopeText=accountScopeLabel(m.attendanceScope);
-  if(!scopeText&&featureLabels.indexOf('출결')>-1)scopeText=accountScopeLabel(scopeFromAccountPart(m.part));
+  if(!scopeText&&featureLabels.indexOf('출결')>-1)scopeText=accountScopeLabel(accountDefaultScope(m));
   if(scopeText&&featureLabels.indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
   return '<div class="account-perm-line"><span class="account-line-label">권한</span><div class="perm-badges">'+badges.join('')+'</div></div>';
 }
@@ -6786,7 +6854,7 @@ function permissionPresetDefaultScope(presetKey){
   var preset=PERMISSION_PRESETS[presetKey]||PERMISSION_PRESETS.custom;
   if(presetKey==='partLeader'){
     var m=getAccountActionMember(accountActionId);
-    if(m)return scopeFromAccountPart(m.part);
+    if(m)return accountDefaultScope(m);
   }
   return normalizeAttendanceScopeArray(preset.scope||[]);
 }
@@ -6803,7 +6871,7 @@ function permissionEditorScopeFor(m,preset,permissions){
   var scope=m.attendanceScope&&m.attendanceScope.length?normalizeAttendanceScopeArray(m.attendanceScope):[];
   if(scope.length)return scope;
   if(m.role==='attendance'||permissions.indexOf('attendance.view')>-1||permissions.indexOf('attendance.check')>-1||permissions.indexOf('attendance.delete')>-1){
-    return preset==='chongmu'?['ALL']:scopeFromAccountPart(m.part);
+    return preset==='chongmu'?['ALL']:accountDefaultScope(m);
   }
   if(preset&&preset!=='none'&&preset!=='custom')return permissionPresetDefaultScope(preset);
   return [];
@@ -9340,7 +9408,7 @@ function seatingSubmissionScopeParts(){
   if(!currentUser)return [];
   var scope=Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length
     ? normalizeAttendanceScopeArray(currentUser.attendanceScope)
-    : scopeFromAccountPart(currentUser.part);
+    : accountDefaultScope(currentUser);
   var expanded=expandAttendanceScope(scope);
   if(expanded.indexOf('ALL')>-1||expanded.indexOf('all')>-1)return seatingPartOrder();
   return uniqueArray(expanded.map(normalizePartName)).filter(function(part){
