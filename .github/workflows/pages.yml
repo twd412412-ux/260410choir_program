@@ -1,0 +1,60 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Write deploy info
+        shell: bash
+        run: |
+          cat > deploy-info.json <<EOF
+          {"sha":"${GITHUB_SHA}","run_id":"${GITHUB_RUN_ID}","deployed_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+          EOF
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      - name: Verify deployed commit
+        shell: bash
+        run: |
+          url="${{ steps.deployment.outputs.page_url }}deploy-info.json?run=${GITHUB_RUN_ID}"
+          for i in {1..30}; do
+            body="$(curl -fsSL "$url" || true)"
+            if [[ "$body" == *"$GITHUB_SHA"* ]]; then
+              echo "Verified deployed SHA: $GITHUB_SHA"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Deployed page did not expose expected SHA: $GITHUB_SHA" >&2
+          exit 1
