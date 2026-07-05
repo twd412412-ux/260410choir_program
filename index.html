@@ -4481,7 +4481,7 @@ function renderScoreCard(score, adminMode){
     : '';
   return '<div '+cardAttrs+'>'
     +'<div class="score-title-row"><div><div class="score-title">'+escHtml(score.title||'곡명 없음')+'</div><div class="score-meta">'+(meta||'<span>최신 악보</span>')+'</div></div>'+status+'</div>'
-    +(linkedSummary?'<div class="score-meta"><span>'+escHtml(linkedSummary)+'</span></div>':'')
+    +(adminMode&&linkedSummary?'<div class="score-meta"><span>'+escHtml(linkedSummary)+'</span></div>':'')
     +actions
     +'</div>';
 }
