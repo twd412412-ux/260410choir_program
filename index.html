@@ -682,8 +682,16 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   max-width:100%;
   min-width:0;
   display:block;
-  -webkit-appearance:none;
-  appearance:none;
+  min-height:50px;
+  padding-left:8px;
+  padding-right:8px;
+  font-size:13px;
+}
+
+#subAddSong input[type="date"]{
+  padding-left:12px;
+  padding-right:12px;
+  font-size:14px;
 }
 
 /* 출석체크 */
@@ -1056,17 +1064,15 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   min-width:0;
 }
 
+#subSchedule .schedule-date-row{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+}
+
 #subAddSong input,
 #subAddSong select,
 #subSchedule input,
 #subSchedule select{
   min-width:0;
-}
-
-@media(max-width:420px){
-  #subSchedule > div[style*="grid-template-columns:1fr 1fr"]{
-    grid-template-columns:1fr!important;
-  }
 }
 
 /* 일정 목록 */
@@ -1994,7 +2000,7 @@ body{font-weight:500}
 
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="schedule-date-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-group"><label class="form-label">시작일 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" onchange="syncScheduleEndDate()"></div>
       <div class="form-group"><label class="form-label">종료일</label><input class="form-input" id="schEndDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     </div>
