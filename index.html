@@ -646,6 +646,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   padding-right:16px;
   max-width:100%;
   box-sizing:border-box;
+  overflow-x:hidden;
 }
 
 #pageAdmin > div{
@@ -659,6 +660,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   padding-bottom:130px;
   max-width:100%;
   box-sizing:border-box;
+  overflow-x:hidden;
 }
 
 #pageAdmin .admin-sub *{
@@ -668,9 +670,20 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #pageAdmin .form-input,
 #pageAdmin .form-sel,
 #pageAdmin .search-box{
+  width:100%;
   max-width:100%;
   min-width:0;
   box-sizing:border-box;
+}
+
+#pageAdmin input[type="date"],
+#pageAdmin input[type="time"]{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  display:block;
+  -webkit-appearance:none;
+  appearance:none;
 }
 
 /* 출석체크 */
@@ -1007,24 +1020,53 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   line-height:1.55;
 }
 
-/* 일정관리 */
-#subSchedule > .form-group{
-  min-width:0;
+/* 곡 추가 / 일정관리 입력 폭 보정 */
+#subAddSong,
+#subSchedule{
+  max-width:100%;
+  overflow-x:hidden;
 }
 
-#subSchedule > .form-group .form-input{
+#subAddSong .form-group,
+#subSchedule .form-group{
+  min-width:0;
+  max-width:100%;
+}
+
+#subAddSong .form-input,
+#subAddSong .form-sel,
+#subSchedule .form-input,
+#subSchedule .form-sel{
   width:100%;
+  min-width:0;
+  max-width:100%;
+  display:block;
 }
 
 #subSchedule > div[style*="grid-template-columns:1fr 1fr"]{
   display:grid!important;
-  grid-template-columns:minmax(110px,.42fr) minmax(0,.58fr)!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
   gap:8px!important;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
 }
 
+#subSchedule > div[style*="grid-template-columns:1fr 1fr"] > .form-group{
+  min-width:0;
+}
+
+#subAddSong input,
+#subAddSong select,
 #subSchedule input,
 #subSchedule select{
   min-width:0;
+}
+
+@media(max-width:420px){
+  #subSchedule > div[style*="grid-template-columns:1fr 1fr"]{
+    grid-template-columns:1fr!important;
+  }
 }
 
 /* 일정 목록 */
