@@ -1064,7 +1064,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   min-width:0;
 }
 
-#subSchedule .schedule-date-row{
+#subSchedule .schedule-inline-row{
   display:flex!important;
   align-items:flex-start;
   gap:8px;
@@ -1075,14 +1075,35 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   overflow:hidden;
 }
 
-#subSchedule .schedule-date-row .form-group{
+#subSchedule .schedule-inline-row .form-group{
   flex:1 1 0;
   min-width:0;
   margin-bottom:12px;
 }
 
-#subSchedule .schedule-date-row .form-label{
+#subSchedule .schedule-inline-row .form-label{
   white-space:nowrap;
+}
+
+#subSchedule .schedule-inline-row .form-input{
+  width:100%;
+  min-width:0;
+  min-height:50px;
+}
+
+@media(max-width:360px){
+  #subSchedule .schedule-inline-row{
+    gap:6px;
+  }
+  #subSchedule .schedule-inline-row .form-label{
+    font-size:12px;
+  }
+  #subSchedule .schedule-inline-row input[type="date"],
+  #subSchedule .schedule-inline-row input[type="time"]{
+    padding-left:6px;
+    padding-right:6px;
+    font-size:12px;
+  }
 }
 
 #subAddSong input,
@@ -2017,12 +2038,12 @@ body{font-weight:500}
 
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
-    <div class="schedule-date-row" style="display:flex;gap:8px">
+    <div class="schedule-inline-row schedule-date-row" style="display:flex;gap:8px">
       <div class="form-group"><label class="form-label">시작일 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" onchange="syncScheduleEndDate()"></div>
       <div class="form-group"><label class="form-label">종료일</label><input class="form-input" id="schEndDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     </div>
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
+    <div class="schedule-inline-row schedule-time-row" style="display:flex;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-input" id="schMemo" placeholder="추가 메모"></div>
     <div class="form-group" style="padding:12px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">
@@ -3067,6 +3088,7 @@ function switchAdminTab(sub,options){
   if(sub === 'songRecommend') initSongRecommendTool();
   if(sub === 'scoreManage') renderScoreManage();
   if(sub === 'seatingPlan') initSeatingPlanTool();
+  if(sub === 'schedule') ensureScheduleDefaultDate();
   if(sub === 'attendance'){ensureAttDate();loadAttendance()}
 }
 function updateAdminTabs(){
@@ -3140,6 +3162,7 @@ function resetScheduleForm(defaultDate){
   ['schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.value='';
   });
+  defaultDate=defaultDate||getTodayInputDate();
   var dateEl=document.getElementById('schDate');
   if(dateEl)dateEl.value=defaultDate||'';
   var endDateEl=document.getElementById('schEndDate');
@@ -3151,6 +3174,15 @@ function resetScheduleForm(defaultDate){
   document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
   var btn=document.getElementById('schSaveBtn');
   if(btn)btn.textContent='일정 추가';
+}
+
+function ensureScheduleDefaultDate(){
+  if(scheduleEditId)return;
+  var dateEl=document.getElementById('schDate');
+  var endDateEl=document.getElementById('schEndDate');
+  var today=getTodayInputDate();
+  if(dateEl&&!dateEl.value)dateEl.value=today;
+  if(endDateEl&&!endDateEl.value)endDateEl.value=(dateEl&&dateEl.value)||today;
 }
 
 function openQuickAddSong(defaultDate){
@@ -8045,11 +8077,7 @@ function addSchedule(){
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
     writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}`);
-    ['schDate','schEndDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){document.getElementById(id).value=''});
-    document.getElementById('schUseBriefing').checked=false;
-    toggleScheduleBriefing();
-    scheduleEditId='';
-    var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 추가';
+    resetScheduleForm(getTodayInputDate());
     loadSchAdmin();
     if(currentTab==='calendar')renderCal();
   });
@@ -10719,9 +10747,6 @@ function buildCatOptions(){
     sel.innerHTML='<option value="">선택</option>';
     if(major.length){
       sel.innerHTML+='<optgroup label="20곡 이상 · 많이 사용한 순">'+major.map(optionHtml).join('')+'</optgroup>';
-    }
-    if(major.length&&minor.length){
-      sel.innerHTML+='<option value="" disabled>────────────</option>';
     }
     if(minor.length){
       sel.innerHTML+='<optgroup label="20곡 미만 · 가나다순">'+minor.map(optionHtml).join('')+'</optgroup>';
