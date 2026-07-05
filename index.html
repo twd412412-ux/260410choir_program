@@ -2361,7 +2361,7 @@ var ADMIN_RESET_REDIRECT_KEY='choir_admin_reset_redirect';
 var firebaseAuthLoadPromise=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
-var currentUser=null, currentDetailSong=null;
+var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
@@ -2646,8 +2646,11 @@ function canManageSongs(){
 function canManageScores(){
   return adminRole==='admin'||hasPermission('score.manage');
 }
+function isMemberLoggedIn(){
+  return !!(currentUser&&currentUser.id&&currentUser.name);
+}
 function canViewScores(){
-  return !!currentUser||adminRole==='admin'||hasPermission('score.manage');
+  return isMemberLoggedIn()||adminRole==='admin'||hasPermission('score.manage');
 }
 function canEditScoreItem(score){
   if(adminRole==='admin')return true;
@@ -2821,6 +2824,7 @@ function switchTab(tab){
     return;
   }
   if(tab==='scores'&&!canViewScores()){
+    pendingTabAfterLogin='scores';
     showToast('로그인한 단원만 악보를 볼 수 있습니다');
     openUserModal();
     return;
@@ -3399,7 +3403,7 @@ function openUserModal(){
     renderCurrentUserProfile(null,'loading');
     loadCurrentUserLinkedMember();
   }else{
-    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">로그인하면 즐겨찾기가 다른 기기에서도 동기화됩니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 로그인 없이도 모든 곡 열람 가능</p>';
+    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">단원 계정으로 로그인하면 악보 탭과 즐겨찾기 동기화를 이용할 수 있습니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 곡목록은 로그인 없이도 볼 수 있고, 악보는 로그인 후 이용합니다.</p>';
   }
   openModal('modalUser');
 }
@@ -3511,6 +3515,9 @@ function loginUser(){
     updateAdminTabs();
     refreshHomeAccessState();
     scheduleScoresLoad(500);
+    var nextTab=pendingTabAfterLogin;
+    pendingTabAfterLogin='';
+    if(nextTab==='scores'&&canViewScores())switchTab('scores');
   }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
 }
 
@@ -3543,6 +3550,12 @@ function restoreUser() {
   if (s) {
     try {
       currentUser = JSON.parse(s);
+      if(!currentUser||!currentUser.id||!currentUser.name){
+        currentUser=null;
+        localStorage.removeItem('choir_user');
+        syncAccessShell();
+        return;
+      }
       currentUser.memberId=currentUser.memberId||'';
       currentUser.permissions=normalizePermissionArray(currentUser.permissions);
       currentUser.attendanceScope=normalizeAttendanceScopeArray(currentUser.attendanceScope||[]);
@@ -4531,7 +4544,7 @@ function renderScoresPage(){
   if(!list)return;
   if(!canViewScores()){
     if(count)count.textContent='악보 로그인 필요';
-    list.innerHTML='<div class="score-empty">로그인한 단원만 악보를 볼 수 있습니다.<br><button class="btn btn-p" style="margin-top:12px" onclick="openUserModal()">로그인</button></div>';
+    list.innerHTML='<div class="score-empty">로그인한 단원만 악보를 볼 수 있습니다.<br><button class="btn btn-p" style="margin-top:12px" onclick="pendingTabAfterLogin=\'scores\';openUserModal()">로그인</button></div>';
     return;
   }
   syncQuickCreateActions();
