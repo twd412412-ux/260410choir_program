@@ -6,6 +6,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#F2E9D8">
+<meta name="apple-mobile-web-app-title" content="찬양대">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/hymn-dove-book.png">
+<link rel="apple-touch-icon" href="assets/hymn-dove-book.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1302,6 +1307,7 @@ body{font-weight:500}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
+.home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
 .home-ring-stack{display:grid;gap:8px}
@@ -1485,6 +1491,7 @@ body{font-weight:500}
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-update-wrap">
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
+      <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면 설치</span></button>
       <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
     </div>
     <div class="home-credit">Engineered by JY</div>
@@ -2532,9 +2539,11 @@ function toggleDark(){var d=document.documentElement.classList.toggle('dark');lo
 
 // ==================== PWA ====================
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    regs.forEach(function(reg){reg.unregister();});
-  }).catch(function(){});
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      try{reg.update();}catch(e){}
+    }).catch(function(){});
+  });
 }
 
 // ==================== 모달 ====================
@@ -11121,24 +11130,99 @@ init();
 // ==================== PWA 설치 안내 ====================
 var deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){
-  e.preventDefault();deferredPrompt=e;
-  showInstallBanner();
+  e.preventDefault();
+  deferredPrompt=e;
+  updateInstallButtonVisibility();
+  setTimeout(function(){showInstallBanner('prompt',false);},300);
 });
-function showInstallBanner(){
-  if(localStorage.getItem('choir_install_dismissed'))return;
+window.addEventListener('appinstalled',function(){
+  deferredPrompt=null;
+  dismissInstall(false);
+  updateInstallButtonVisibility();
+  showToast('홈 화면에 설치되었습니다');
+});
+
+function isStandaloneApp(){
+  return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);
+}
+function isIOSDevice(){
+  var ua=navigator.userAgent||'';
+  return /iPhone|iPad|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+}
+function isAndroidDevice(){
+  return /Android/i.test(navigator.userAgent||'');
+}
+function updateInstallButtonVisibility(){
+  var btn=document.getElementById('homeInstallBtn');
+  if(btn)btn.classList.toggle('hidden',isStandaloneApp());
+}
+function initInstallUi(){
+  updateInstallButtonVisibility();
+  if(isStandaloneApp())return;
+  setTimeout(function(){
+    if(deferredPrompt)showInstallBanner('prompt',false);
+    else if(isIOSDevice())showInstallBanner('ios',false);
+  },1400);
+}
+function showInstallBanner(mode,force){
+  if(isStandaloneApp())return;
+  if(!force&&localStorage.getItem('choir_install_dismissed'))return;
+  var old=document.getElementById('installBanner');
+  if(old)old.remove();
+  mode=mode||((deferredPrompt&&isAndroidDevice())?'prompt':(isIOSDevice()?'ios':'manual'));
+  var desc='홈 화면에 추가하면 앱처럼 바로 열 수 있습니다.';
+  var btnText='설치';
+  var btnAction='installApp()';
+  if(mode==='ios'){
+    desc='iPhone/iPad는 Safari 공유 버튼에서 홈 화면에 추가합니다.';
+    btnText='방법 보기';
+    btnAction='showInstallHelp()';
+  }else if(mode==='manual'&&!deferredPrompt){
+    desc='브라우저 메뉴에서 홈 화면에 추가하거나 앱 설치를 선택하세요.';
+    btnText='방법 보기';
+    btnAction='showInstallHelp()';
+  }
   var b=document.createElement('div');
   b.id='installBanner';
   b.style.cssText='position:fixed;bottom:70px;left:12px;right:12px;background:var(--sf);border:2px solid var(--p);border-radius:16px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:150;display:flex;align-items:center;gap:12px';
-  b.innerHTML='<div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--tx)">📱 홈 화면에 추가</div><div style="font-size:12px;color:var(--ts);margin-top:2px">앱처럼 빠르게 접속하세요!</div></div><button onclick="installApp()" style="background:var(--p);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">설치</button><button onclick="dismissInstall()" style="background:none;border:none;font-size:18px;color:var(--ts);cursor:pointer">✕</button>';
+  b.innerHTML='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;color:var(--tx)">📱 홈 화면에 추가</div><div style="font-size:12px;color:var(--ts);margin-top:2px;line-height:1.35">'+desc+'</div></div><button onclick="'+btnAction+'" style="background:var(--p);color:#fff;border:none;padding:8px 14px;border-radius:9px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap">'+btnText+'</button><button onclick="dismissInstall(true)" aria-label="설치 안내 닫기" style="background:none;border:none;font-size:18px;color:var(--ts);cursor:pointer">×</button>';
   document.body.appendChild(b);
 }
 function installApp(){
-  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;var b=document.getElementById('installBanner');if(b)b.remove()})}
+  if(!deferredPrompt){showInstallHelp();return;}
+  var promptEvent=deferredPrompt;
+  deferredPrompt=null;
+  promptEvent.prompt();
+  promptEvent.userChoice.then(function(){
+    var b=document.getElementById('installBanner');
+    if(b)b.remove();
+    updateInstallButtonVisibility();
+  }).catch(function(){
+    showInstallHelp();
+  });
 }
-function dismissInstall(){
-  localStorage.setItem('choir_install_dismissed','true');
+function openInstallGuide(){
+  localStorage.removeItem('choir_install_dismissed');
+  if(deferredPrompt){installApp();return;}
+  showInstallBanner(isIOSDevice()?'ios':'manual',true);
+  showInstallHelp();
+}
+function showInstallHelp(){
+  if(isIOSDevice()){
+    alert('iPhone/iPad 설치 방법\n\n1. Safari에서 현재 링크를 엽니다.\n2. 하단 공유 버튼을 누릅니다.\n3. 홈 화면에 추가를 선택합니다.\n4. 추가를 누르면 앱처럼 실행됩니다.');
+    return;
+  }
+  if(isAndroidDevice()){
+    alert('Galaxy/Android 설치 방법\n\n1. Chrome 또는 Samsung Internet에서 현재 링크를 엽니다.\n2. 설치 버튼이 보이면 설치를 누릅니다.\n3. 버튼이 없으면 브라우저 메뉴(⋮)에서 홈 화면에 추가 또는 앱 설치를 선택합니다.');
+    return;
+  }
+  alert('설치 방법\n\n브라우저 메뉴에서 홈 화면에 추가 또는 앱 설치를 선택하면 앱처럼 바로 열 수 있습니다.');
+}
+function dismissInstall(saveChoice){
+  if(saveChoice)localStorage.setItem('choir_install_dismissed','true');
   var b=document.getElementById('installBanner');if(b)b.remove();
 }
+initInstallUi();
 
 // ==================== 가이드 슬라이드 ====================
 function openHomeGuide(){
