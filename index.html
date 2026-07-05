@@ -541,6 +541,18 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-card,.score-week-card,.score-admin-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh)}
 .score-week-card,.score-admin-card{margin:12px 16px 0;padding:14px}
 .score-list{padding:0 16px 180px}
+.score-mode-tabs{display:flex;gap:6px;padding:10px 16px 0}
+.score-mode-tabs.admin{padding:0;margin-bottom:10px}
+.score-mode-tab{flex:1;border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:12px;padding:10px 12px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer}
+.score-mode-tab.on{background:var(--p);border-color:var(--p);color:#fff}
+.score-kind-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.score-kind-tab{border:1px solid var(--bd);background:var(--sf);color:var(--ts);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer}
+.score-kind-tab.on{background:var(--p);border-color:var(--p);color:#fff}
+.score-picker-list{display:grid;gap:8px}
+.score-picker-section{font-size:12px;font-weight:950;color:var(--pd);margin:8px 0 2px}
+.score-picker-card{border:1px solid var(--bd);background:var(--sf);border-radius:12px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.score-picker-title{font-size:14px;font-weight:900;line-height:1.3;word-break:keep-all}
+.score-picker-meta{font-size:11px;color:var(--ts);line-height:1.45;margin-top:3px}
 .score-card{padding:10px 11px;margin-bottom:8px;border-radius:10px;box-shadow:none}
 .score-card.clickable{cursor:pointer}
 .score-card.clickable:hover{background:#FEFCF6;border-color:#CAD5B5}
@@ -1491,6 +1503,7 @@ body{font-weight:500}
     <h2>📄 악보</h2>
     <p>공개된 최신 악보만 표시됩니다. PDF는 열기 버튼을 눌렀을 때만 불러옵니다.</p>
   </div>
+  <div class="score-mode-tabs" id="scoreModeTabs"></div>
   <div class="search-section">
     <div class="search-wrap"><input class="search-box" id="scoreSearchInput" type="text" placeholder="곡명 또는 버전 검색..." oninput="renderScoresPage()"></div>
     <div class="quick-manage-row hidden" id="scoreQuickActions"><button type="button" class="quick-manage-btn primary" onclick="openQuickScoreManage()">+ 악보 등록</button></div>
@@ -1624,7 +1637,15 @@ body{font-weight:500}
       <input type="hidden" id="scoreLinkedSongId">
       <input type="hidden" id="scoreLinkedSongIds">
       <input type="hidden" id="scoreLinkedSongName">
+      <input type="hidden" id="scoreKind" value="singer">
       <div class="score-admin-form">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">악보 종류 *</label>
+          <div class="score-kind-tabs">
+            <button type="button" class="score-kind-tab on" data-score-kind="singer" onclick="setScoreFormKind('singer')">싱어 악보</button>
+            <button type="button" class="score-kind-tab" data-score-kind="orchestra" onclick="setScoreFormKind('orchestra')">관현악 파트보</button>
+          </div>
+        </div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜" oninput="scoreCandidateSelectedIds=[];renderScoreSongCandidates()" onfocus="renderScoreSongCandidates()"></div>
         <div class="score-linked-note empty" id="scoreLinkedSongNote">아직 악보를 연결할 곡이 선택되지 않았습니다.</div>
         <div class="score-link-picker" id="scoreSongCandidateBox">
@@ -1640,10 +1661,11 @@ body{font-weight:500}
           <button type="button" class="score-light-btn" onclick="clearScoreLinkedSongs()">악보 연결 해제</button>
         </div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" style="padding:8px"></div>
+        <div class="form-group hidden" id="scoreInstrumentWrap" style="margin-bottom:0"><label class="form-label">관현악 파트</label><select class="form-sel" id="scoreInstrument"></select></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" multiple style="padding:8px"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
-        <div class="score-form-note">곡명은 기존 곡목록과 같은 이름이면 곡 상세와 주일찬송곡 영역에 자동 연결됩니다. 기존 악보 수정 시 새 PDF나 URL을 넣지 않으면 현재 파일은 그대로 유지됩니다.</div>
+        <div class="score-form-note">싱어 악보는 기존 방식 그대로 등록됩니다. 관현악 파트보는 여러 PDF를 한 번에 선택하면 파일별로 악보가 생성되고, 파일명에서 악기를 최대한 추정합니다. 기존 악보 수정 시 새 PDF나 URL을 넣지 않으면 현재 파일은 그대로 유지됩니다.</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-p" id="scoreSaveBtn" style="flex:1" onclick="saveScoreUpload()">악보 등록</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="resetScoreForm()">초기화</button>
@@ -1651,6 +1673,7 @@ body{font-weight:500}
       </div>
     </div>
     <div class="score-admin-card">
+      <div class="score-mode-tabs admin" id="scoreAdminModeTabs"></div>
       <div class="form-group" style="margin-bottom:10px"><label class="form-label">등록된 악보 검색</label><input class="form-input" id="scoreAdminSearch" placeholder="곡명 검색" oninput="renderScoreManage()"></div>
       <div id="scoreAdminList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
     </div>
@@ -2087,6 +2110,14 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 악보 선택 -->
+<div class="modal-overlay modal-center" id="modalScorePicker">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="scorePickerTitle">📄 악보 보기</span><button class="modal-close" onclick="closeModal('modalScorePicker')">✕</button></div>
+    <div id="scorePickerBody"></div>
+  </div>
+</div>
+
 <!-- MODAL: 공개 자리배치 -->
 <div class="modal-overlay modal-center public-seating-modal" id="modalPublicSeating">
   <div class="modal-content">
@@ -2349,6 +2380,7 @@ var storage = firebase.storage();
 var allSongs=[], filteredSongs=[], currentTab='home';
 var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false, scoreCandidateSelectedIds=[];
 var scoreLoadTimer=null;
+var scoreViewMode=localStorage.getItem('choir_score_view')||'';
 var SCORE_CACHE_KEY='choir_scores_public';
 var songRecommendCache=[];
 var adminRole=null;
@@ -3189,6 +3221,7 @@ function openQuickScoreManage(songName,songId){
   switchAdminTab('scoreManage');
   setTimeout(function(){
     resetScoreForm();
+    if(getScoreAccessModes().indexOf(ensureScoreViewMode())!==-1)setScoreFormKind(ensureScoreViewMode());
     if(linkedName){
       var title=document.getElementById('scoreTitle');
       if(title)title.value=linkedName;
@@ -3935,9 +3968,9 @@ function renderHome(){
     var rows=(hymnSongs||[]).filter(function(s){return s.year===y&&s.month===m&&s.day===d});
     if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
     return rows.map(function(s){
-      var score=getPublicScoreForSong(s);
+      var scoreRows=findVisibleScoresForSong(s);
       var scoreIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h5"></path><path d="M10 17h4"></path></svg>';
-      var scoreBtn=score?'<button class="home-score-chip" aria-label="'+escAttr(s.songName)+' 악보 보기" title="악보 보기" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">'+scoreIcon+'<span>악보</span></button>':'';
+      var scoreBtn=scoreRows.length?'<button class="home-score-chip" aria-label="'+escAttr(s.songName)+' 악보 보기" title="악보 보기" onclick="event.stopPropagation();openScorePickerForSong(\''+escAttr(s.id)+'\',false)">'+scoreIcon+'<span>악보</span></button>':'';
       return '<div class="home-song-line" onclick="openDetail(\''+escAttr(s.id)+'\')"><span class="home-song-title">'+escHtml(s.songName)+'</span>'+scoreBtn+'</div>';
     }).join('<div style="height:6px"></div>');
   }
@@ -4213,6 +4246,152 @@ function initSongs(){
 function scoreSearchKey(value){
   return normalizeSearchText(value||'');
 }
+var SCORE_KINDS=[
+  {key:'singer',label:'싱어'},
+  {key:'orchestra',label:'관현악'}
+];
+var ORCHESTRA_SCORE_INSTRUMENTS=[
+  {key:'auto',label:'파일명에서 자동 추정'},
+  {key:'violin1',label:'바이올린1'},
+  {key:'violin2',label:'바이올린2'},
+  {key:'violin',label:'바이올린'},
+  {key:'viola',label:'비올라'},
+  {key:'cello',label:'첼로'},
+  {key:'bass',label:'콘트라베이스'},
+  {key:'flute',label:'플루트'},
+  {key:'oboe',label:'오보에'},
+  {key:'clarinet',label:'클라리넷'},
+  {key:'bassoon',label:'바순'},
+  {key:'saxophone',label:'색소폰'},
+  {key:'trumpet',label:'트럼펫'},
+  {key:'horn',label:'호른'},
+  {key:'trombone',label:'트롬본'},
+  {key:'tuba',label:'튜바'},
+  {key:'timpani',label:'팀파니'},
+  {key:'percussion',label:'타악기'},
+  {key:'etc',label:'기타'}
+];
+function normalizeScoreKind(kind){
+  kind=String(kind||'').trim().toLowerCase();
+  if(kind==='orchestra'||kind==='orch'||kind==='instrument'||kind==='part')return 'orchestra';
+  return 'singer';
+}
+function scoreKindLabel(kind){
+  return normalizeScoreKind(kind)==='orchestra'?'관현악':'싱어';
+}
+function normalizeScoreInstrument(key){
+  key=String(key||'').trim().toLowerCase();
+  if(!key)return '';
+  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===key});
+  return found&&found.key!=='auto'?found.key:(key==='auto'?'':key);
+}
+function scoreInstrumentLabel(key){
+  key=normalizeScoreInstrument(key);
+  if(!key)return '';
+  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===key});
+  return found?found.label:key;
+}
+function guessScoreInstrumentFromFileName(name){
+  var raw=String(name||'').toLowerCase();
+  var key=scoreSearchKey(raw);
+  var checks=[
+    [/violin\s*1|vn\s*1|vln\s*1|바이올린\s*1|바이올린1|1st|first/, 'violin1'],
+    [/violin\s*2|vn\s*2|vln\s*2|바이올린\s*2|바이올린2|2nd|second/, 'violin2'],
+    [/violin|vln|vn|바이올린/, 'violin'],
+    [/viola|vla|비올라/, 'viola'],
+    [/cello|vc|첼로/, 'cello'],
+    [/flute|fl|플루트/, 'flute'],
+    [/oboe|ob|오보에/, 'oboe'],
+    [/clarinet|cl|클라리넷/, 'clarinet'],
+    [/bassoon|bn|바순/, 'bassoon'],
+    [/contrabass|double\s*bass|bass|cb|콘트라베이스|더블베이스/, 'bass'],
+    [/sax|saxophone|색소폰/, 'saxophone'],
+    [/trumpet|tp|트럼펫/, 'trumpet'],
+    [/horn|hr|호른/, 'horn'],
+    [/trombone|tb|트롬본/, 'trombone'],
+    [/tuba|튜바/, 'tuba'],
+    [/timpani|팀파니/, 'timpani'],
+    [/percussion|perc|drum|타악|타악기/, 'percussion']
+  ];
+  for(var i=0;i<checks.length;i++){
+    if(checks[i][0].test(raw)||checks[i][0].test(key))return checks[i][1];
+  }
+  return 'etc';
+}
+function scoreInstrumentRank(score){
+  var key=normalizeScoreInstrument(score&&score.instrument);
+  var idx=ORCHESTRA_SCORE_INSTRUMENTS.findIndex(function(item){return item.key===key});
+  return idx<0?999:idx;
+}
+function scoreKindRank(score){
+  return normalizeScoreKind(score&&score.scoreKind)==='singer'?0:1;
+}
+function isUserPart(user,part){
+  user=user||currentUser||{};
+  part=normalizePartName(part);
+  return normalizePartName(user.part)===part||normalizePartName(user.subPart)===part;
+}
+function isUserOrchestra(user){
+  return isUserPart(user,'관현악');
+}
+function isUserPianistOrConductor(user){
+  return isUserPart(user,'반주')||isUserPart(user,'지휘');
+}
+function getScoreAccessModes(user){
+  user=user||currentUser;
+  if(adminRole==='admin'||canManageScores())return ['singer','orchestra'];
+  if(!isMemberLoggedIn())return [];
+  if(isUserPianistOrConductor(user))return ['singer','orchestra'];
+  if(isUserOrchestra(user))return ['orchestra'];
+  return ['singer'];
+}
+function ensureScoreViewMode(){
+  var modes=getScoreAccessModes();
+  if(!modes.length)return 'singer';
+  if(scoreViewMode&&modes.indexOf(scoreViewMode)!==-1)return scoreViewMode;
+  scoreViewMode=(isUserOrchestra(currentUser)&&modes.indexOf('orchestra')!==-1)?'orchestra':modes[0];
+  try{localStorage.setItem('choir_score_view',scoreViewMode)}catch(e){}
+  return scoreViewMode;
+}
+function setScoreViewMode(mode){
+  mode=normalizeScoreKind(mode);
+  var modes=getScoreAccessModes();
+  if(modes.indexOf(mode)===-1)return;
+  scoreViewMode=mode;
+  try{localStorage.setItem('choir_score_view',scoreViewMode)}catch(e){}
+  renderScoresPage();
+  renderScoreManage();
+  requestHomeRender();
+}
+function renderScoreModeTabs(targetId,adminClass){
+  var el=document.getElementById(targetId);
+  if(!el)return;
+  var modes=getScoreAccessModes();
+  if(modes.length<2){
+    el.innerHTML='';
+    el.classList.add('hidden');
+    ensureScoreViewMode();
+    return;
+  }
+  el.classList.remove('hidden');
+  el.className='score-mode-tabs'+(adminClass?' admin':'');
+  var active=ensureScoreViewMode();
+  el.innerHTML=SCORE_KINDS.filter(function(item){return modes.indexOf(item.key)!==-1;}).map(function(item){
+    return '<button type="button" class="score-mode-tab '+(active===item.key?'on':'')+'" onclick="setScoreViewMode(\''+item.key+'\')">'+item.label+'</button>';
+  }).join('');
+}
+function canViewScoreItem(score){
+  if(!canViewScores()||!isPublicScore(score))return false;
+  return getScoreAccessModes().indexOf(normalizeScoreKind(score&&score.scoreKind))!==-1;
+}
+function canOpenScoreItem(score){
+  if(!canViewScores()||!score||!score.currentFileUrl)return false;
+  if(canManageScores())return true;
+  return canViewScoreItem(score);
+}
+function scoreMatchesActiveMode(score){
+  return normalizeScoreKind(score&&score.scoreKind)===ensureScoreViewMode();
+}
 function clearScoreAccessCache(){
   if(scoreLoadTimer){clearTimeout(scoreLoadTimer);scoreLoadTimer=null;}
   allScores=[];
@@ -4247,6 +4426,9 @@ function scoreRowFromSettingsItem(id,d){
     id:id||d.id||'',
     title:title,
     searchKey:d.searchKey||scoreSearchKey(title),
+    scoreKind:normalizeScoreKind(d.scoreKind||d.kind),
+    instrument:normalizeScoreInstrument(d.instrument||d.scoreInstrument),
+    instrumentLabel:d.instrumentLabel||scoreInstrumentLabel(d.instrument||d.scoreInstrument),
     public:d.public!==false,
     currentFileUrl:d.currentFileUrl||d.fileUrl||'',
     currentFilePath:d.currentFilePath||d.filePath||'',
@@ -4273,6 +4455,9 @@ function scoreStorageItem(score){
     id:score.id,
     title:score.title||'',
     searchKey:score.searchKey||scoreSearchKey(score.title),
+    scoreKind:normalizeScoreKind(score.scoreKind),
+    instrument:normalizeScoreInstrument(score.instrument),
+    instrumentLabel:score.instrumentLabel||scoreInstrumentLabel(score.instrument),
     public:score.public!==false,
     currentFileUrl:score.currentFileUrl||'',
     currentFilePath:score.currentFilePath||'',
@@ -4308,6 +4493,15 @@ function sortScores(rows){
     return bt.localeCompare(at)||String(a.title||'').localeCompare(String(b.title||''),'ko');
   });
 }
+function sortScoreParts(rows){
+  return (rows||[]).slice().sort(function(a,b){
+    return scoreKindRank(a)-scoreKindRank(b)
+      ||scoreInstrumentRank(a)-scoreInstrumentRank(b)
+      ||String(a.instrumentLabel||scoreInstrumentLabel(a.instrument)||'').localeCompare(String(b.instrumentLabel||scoreInstrumentLabel(b.instrument)||''),'ko')
+      ||String(a.title||'').localeCompare(String(b.title||''),'ko')
+      ||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
+  });
+}
 function isPublicScore(score){
   return !!(score&&score.public!==false&&score.currentFileUrl);
 }
@@ -4316,7 +4510,7 @@ function savePublicScoreCache(){
     try{localStorage.removeItem(SCORE_CACHE_KEY)}catch(e){}
     return;
   }
-  saveCache(SCORE_CACHE_KEY,sortScores(allScores.filter(function(s){return isPublicScore(s)})));
+  saveCache(SCORE_CACHE_KEY,sortScores(allScores.filter(function(s){return canViewScoreItem(s)})));
 }
 function loadScores(force, includePrivate){
   if(!canViewScores()){
@@ -4402,8 +4596,14 @@ function findScoresForSong(song, includePrivate){
 }
 function getPublicScoreForSong(song){
   if(!canViewScores())return null;
-  var rows=findScoresForSong(song,false);
+  var rows=findVisibleScoresForSong(song);
   return rows.length?rows[0]:null;
+}
+function findVisibleScoresForSong(song){
+  return sortScoreParts(findScoresForSong(song,false).filter(canViewScoreItem));
+}
+function getActiveModeScoresForSong(song){
+  return findVisibleScoresForSong(song).filter(scoreMatchesActiveMode);
 }
 function songScheduleValue(song){
   if(!song||!song.year||!song.month)return Number.MAX_SAFE_INTEGER;
@@ -4455,6 +4655,8 @@ function sortScoresBySchedule(rows){
     var as=findSongForScore(a), bs=findSongForScore(b);
     var av=songScheduleRankValue(as), bv=songScheduleRankValue(bs);
     if(av!==bv)return av-bv;
+    if(scoreKindRank(a)!==scoreKindRank(b))return scoreKindRank(a)-scoreKindRank(b);
+    if(scoreInstrumentRank(a)!==scoreInstrumentRank(b))return scoreInstrumentRank(a)-scoreInstrumentRank(b);
     return String(a.title||'').localeCompare(String(b.title||''),'ko')
       ||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
   });
@@ -4473,7 +4675,8 @@ function openScoreFileById(id){
   }
   var score=allScores.find(function(s){return s.id===id});
   if(!score||!score.currentFileUrl)return showToast('열 수 있는 악보가 없습니다');
-  var details=[score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
+  if(!canOpenScoreItem(score))return showToast('이 악보를 볼 권한이 없습니다');
+  var details=[scoreKindLabel(score.scoreKind)+(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument)?' · '+scoreInstrumentLabel(score.instrument):''),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
   var message='악보를 볼까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 악보 파일을 불러옵니다.';
   if(!confirm(message))return;
   var win=window.open(score.currentFileUrl,'_blank','noopener');
@@ -4481,6 +4684,8 @@ function openScoreFileById(id){
 }
 function renderScoreMeta(score){
   var parts=[];
+  parts.push(scoreKindLabel(score.scoreKind));
+  if(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument))parts.push(scoreInstrumentLabel(score.instrument));
   if(score.currentLabel)parts.push(score.currentLabel);
   if(score.currentFileName)parts.push(score.currentFileName);
   if(scoreFileSizeText(score.currentFileSize))parts.push(scoreFileSizeText(score.currentFileSize));
@@ -4510,6 +4715,52 @@ function renderScoreCard(score, adminMode){
     +actions
     +'</div>';
 }
+function renderScoreActionForSong(song, activeOnly){
+  var rows=activeOnly?getActiveModeScoresForSong(song):findVisibleScoresForSong(song);
+  if(rows.length){
+    var label=rows.length>1?'📄 악보 '+rows.length+'개':'📄 악보 보기';
+    return '<button class="score-action-btn open" onclick="openScorePickerForSong(\''+escAttr(song.id)+'\','+(activeOnly?'true':'false')+')">'+label+'</button>';
+  }
+  return canManageScores()
+    ? '<button class="score-action-btn add" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">＋ 악보 등록</button>'
+    : '<button class="score-action-btn empty" disabled>악보 없음</button>';
+}
+function openScorePickerForSong(songId, activeOnly){
+  if(!canViewScores()){
+    showToast('로그인한 단원만 악보를 볼 수 있습니다');
+    openUserModal();
+    return;
+  }
+  var song=allSongs.find(function(s){return s.id===songId});
+  if(!song)return showToast('연결된 곡을 찾을 수 없습니다');
+  var rows=activeOnly?getActiveModeScoresForSong(song):findVisibleScoresForSong(song);
+  if(!rows.length)return showToast('볼 수 있는 악보가 없습니다');
+  if(rows.length===1)return openScoreFileById(rows[0].id);
+  var title=document.getElementById('scorePickerTitle');
+  var body=document.getElementById('scorePickerBody');
+  if(title)title.textContent='📄 '+(song.songName||'악보');
+  if(body)body.innerHTML=renderScorePickerRows(rows);
+  openModal('modalScorePicker');
+}
+function renderScorePickerRows(rows){
+  rows=sortScoreParts(rows).filter(canOpenScoreItem);
+  if(!rows.length)return '<div class="score-empty">볼 수 있는 악보가 없습니다.</div>';
+  var html='', lastKind='';
+  rows.forEach(function(score){
+    var kind=normalizeScoreKind(score.scoreKind);
+    if(kind!==lastKind){
+      html+='<div class="score-picker-section">'+scoreKindLabel(kind)+' 악보</div>';
+      lastKind=kind;
+    }
+    var part=kind==='orchestra'&&scoreInstrumentLabel(score.instrument)?scoreInstrumentLabel(score.instrument):scoreKindLabel(kind);
+    var meta=[part,score.currentLabel||'',score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
+    html+='<div class="score-picker-card">'
+      +'<div><div class="score-picker-title">'+escHtml(score.title||'악보')+'</div><div class="score-picker-meta">'+escHtml(meta)+'</div></div>'
+      +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">보기</button>'
+      +'</div>';
+  });
+  return '<div class="score-picker-list">'+html+'</div>';
+}
 function renderScoreWeekPanel(){
   var panel=document.getElementById('scoreWeekPanel');
   if(!panel)return;
@@ -4535,12 +4786,7 @@ function renderScoreWeekPanel(){
       return '<div class="score-week-row"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" style="color:var(--ts)">등록된 곡 없음</div><div></div></div>';
     }
     return rows.map(function(song){
-      var score=getPublicScoreForSong(song);
-      var action=score
-        ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
-        : canManageScores()
-          ? '<button class="score-action-btn add" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">＋ 악보 등록</button>'
-          : '<button class="score-action-btn empty" disabled>악보 없음</button>';
+      var action=renderScoreActionForSong(song,true);
       return '<div class="score-week-row"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openDetail(\''+escAttr(song.id)+'\')">'+escHtml(song.songName||'곡명 없음')+'</div><div>'+action+'</div></div>';
     }).join('');
   }).join('');
@@ -4556,6 +4802,7 @@ function renderScoresPage(){
     return;
   }
   syncQuickCreateActions();
+  renderScoreModeTabs('scoreModeTabs',false);
   if(!scoresLoaded){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
     loadScores(false,false).then(renderScoresPage);
@@ -4566,12 +4813,12 @@ function renderScoresPage(){
   var q=(qEl?qEl.value:'').trim().toLowerCase();
   var qKey=scoreSearchKey(q);
   var rows=sortScoresBySchedule(allScores.filter(function(score){
-    if(!isPublicScore(score))return false;
+    if(!canViewScoreItem(score)||!scoreMatchesActiveMode(score))return false;
     if(!q)return true;
-    var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName].join(' ').toLowerCase();
+    var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName,scoreKindLabel(score.scoreKind),scoreInstrumentLabel(score.instrument)].join(' ').toLowerCase();
     return text.indexOf(q)>-1||(qKey&&scoreSearchKey(text).indexOf(qKey)>-1);
   }));
-  if(count)count.textContent=q?'검색 결과 '+rows.length+'개':'악보 '+rows.length+'개';
+  if(count)count.textContent=q?'검색 결과 '+rows.length+'개':scoreKindLabel(ensureScoreViewMode())+' 악보 '+rows.length+'개';
   if(rows.length===0){
     list.innerHTML='<div class="score-empty">조건에 맞는 공개 악보가 없습니다.</div>';
     return;
@@ -4579,10 +4826,10 @@ function renderScoresPage(){
   list.innerHTML=rows.map(function(score){return renderScoreCard(score,false);}).join('');
 }
 function renderSongScoreDetail(song){
-  var score=getPublicScoreForSong(song);
-  if(score){
+  var scores=findVisibleScoresForSong(song);
+  if(scores.length){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div>'
-      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(score.title)+'</div><div class="score-meta">'+(renderScoreMeta(score)||'<span>최신 악보</span>')+'</div></div><div class="score-status-stack"><button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'+renderScoreVersionBadge(score)+'</div></div></div></div>';
+      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(song.songName||scores[0].title||'악보')+'</div><div class="score-meta"><span>연결 악보 '+scores.length+'개</span></div></div><div class="score-status-stack"><button class="score-action-btn open" onclick="openScorePickerForSong(\''+escAttr(song.id)+'\',false)">📄 악보 보기</button></div></div></div></div>';
   }
   if(canManageScores()){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div><button class="score-light-btn" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">이 곡 악보 등록</button></div>';
@@ -4594,6 +4841,7 @@ function renderScoreManage(){
   var list=document.getElementById('scoreAdminList');
   if(!list)return;
   syncQuickCreateActions();
+  renderScoreModeTabs('scoreAdminModeTabs',true);
   if(!scoresLoadedPrivate){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
     loadScores(true,true).then(renderScoreManage);
@@ -4603,8 +4851,9 @@ function renderScoreManage(){
   var q=(qEl?qEl.value:'').trim().toLowerCase();
   var qKey=scoreSearchKey(q);
   var rows=sortScores(allScores.filter(function(score){
+    if(!scoreMatchesActiveMode(score))return false;
     if(!q)return true;
-    var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName].join(' ').toLowerCase();
+    var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName,scoreKindLabel(score.scoreKind),scoreInstrumentLabel(score.instrument)].join(' ').toLowerCase();
     return text.indexOf(q)>-1||(qKey&&scoreSearchKey(text).indexOf(qKey)>-1);
   }));
   if(rows.length===0){
@@ -4613,9 +4862,36 @@ function renderScoreManage(){
   }
   list.innerHTML=rows.map(function(score){return renderScoreCard(score,true);}).join('');
 }
+function populateScoreInstrumentSelect(){
+  var sel=document.getElementById('scoreInstrument');
+  if(!sel)return;
+  if(sel.options&&sel.options.length)return;
+  sel.innerHTML=ORCHESTRA_SCORE_INSTRUMENTS.map(function(item){
+    return '<option value="'+escAttr(item.key)+'">'+escHtml(item.label)+'</option>';
+  }).join('');
+}
+function getScoreFormKind(){
+  var el=document.getElementById('scoreKind');
+  return normalizeScoreKind(el&&el.value);
+}
+function setScoreFormKind(kind){
+  kind=normalizeScoreKind(kind);
+  populateScoreInstrumentSelect();
+  var el=document.getElementById('scoreKind');
+  if(el)el.value=kind;
+  document.querySelectorAll('[data-score-kind]').forEach(function(btn){
+    btn.classList.toggle('on',btn.dataset.scoreKind===kind);
+  });
+  var wrap=document.getElementById('scoreInstrumentWrap');
+  if(wrap)wrap.classList.toggle('hidden',kind!=='orchestra');
+  var file=document.getElementById('scoreFile');
+  if(file)file.multiple=kind==='orchestra';
+}
 function resetScoreForm(){
   scoreCandidateSelectedIds=[];
   ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  setScoreFormKind('singer');
+  var instrument=document.getElementById('scoreInstrument');if(instrument)instrument.value='auto';
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var pub=document.getElementById('scorePublic');if(pub)pub.checked=true;
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 등록';
@@ -4648,10 +4924,14 @@ function saveScoreUpload(){
   if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
   var title=(document.getElementById('scoreTitle').value||'').trim();
   var label=(document.getElementById('scoreLabel').value||'').trim();
+  var scoreKind=getScoreFormKind();
+  var instrumentEl=document.getElementById('scoreInstrument');
+  var selectedInstrument=scoreKind==='orchestra'?normalizeScoreInstrument(instrumentEl&&instrumentEl.value):'';
   var editId=(document.getElementById('scoreEditId').value||'').trim();
   var previous=editId?allScores.find(function(s){return s.id===editId}):null;
   var fileEl=document.getElementById('scoreFile');
-  var file=fileEl&&fileEl.files?fileEl.files[0]:null;
+  var files=fileEl&&fileEl.files?Array.prototype.slice.call(fileEl.files):[];
+  var file=files[0]||null;
   var urlInput=(document.getElementById('scoreUrl').value||'').trim();
   var linkedSongId=(document.getElementById('scoreLinkedSongId').value||'').trim();
   var linkedSongName=(document.getElementById('scoreLinkedSongName').value||'').trim();
@@ -4666,35 +4946,66 @@ function saveScoreUpload(){
   if(!title)return showToast('곡명을 입력해주세요');
   if(editId&&!previous)return showToast('수정할 악보를 찾을 수 없습니다');
   if(previous&&!canEditScoreItem(previous))return showToast('악보 수정 권한이 없습니다');
-  if(!file&&!urlInput&&!(previous&&previous.currentFileUrl))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
+  if(editId&&files.length>1)return showToast('기존 악보 수정 시 PDF는 1개만 선택해주세요');
+  if(scoreKind!=='orchestra'&&files.length>1)return showToast('여러 PDF 등록은 관현악 파트보에서만 사용할 수 있습니다');
+  if(files.length>1&&urlInput)return showToast('여러 PDF 등록 시 PDF URL은 함께 사용할 수 없습니다');
+  if(!files.length&&!urlInput&&!(previous&&previous.currentFileUrl))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
   if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
-  if(file&&file.size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
-  if(file&&file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name))return showToast('PDF 파일만 업로드할 수 있습니다');
+  for(var vf=0;vf<files.length;vf++){
+    if(files[vf].size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
+    if(files[vf].type&&files[vf].type!=='application/pdf'&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
+    if(!files[vf].type&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
+  }
   var scoreId=editId||createScoreId();
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
   var btn=document.getElementById('scoreSaveBtn');
-  var replacingFile=!!(file||urlInput);
+  var replacingFile=!!(files.length||urlInput);
   if(btn){btn.disabled=true;btn.textContent=editId?'수정 저장 중...':'등록 중...';}
-  showToast(file?(editId?'악보 파일 교체 중...':'악보 업로드 중...'):(urlInput?'악보 링크 저장 중...':(editId?'악보 정보 저장 중...':'악보 등록 중...')));
+  showToast(files.length>1?('관현악 파트보 '+files.length+'개 업로드 중...'):(file?(editId?'악보 파일 교체 중...':'악보 업로드 중...'):(urlInput?'악보 링크 저장 중...':(editId?'악보 정보 저장 중...':'악보 등록 중...'))));
 
-  function buildScoreData(fileInfo){
+  function instrumentForName(name, previousScore){
+    if(scoreKind!=='orchestra')return '';
+    if(selectedInstrument)return selectedInstrument;
+    if(name)return guessScoreInstrumentFromFileName(name);
+    if(previousScore&&previousScore.instrument)return normalizeScoreInstrument(previousScore.instrument);
+    return 'etc';
+  }
+  function replacementScoreForInstrument(instrument, usedIds){
+    if(editId)return previous;
+    var titleKey=scoreSearchKey(title);
+    return allScores.find(function(score){
+      if(!score||usedIds[score.id]||!canEditScoreItem(score))return false;
+      if(normalizeScoreKind(score.scoreKind)!==scoreKind)return false;
+      if(scoreKind==='orchestra'&&normalizeScoreInstrument(score.instrument)!==instrument)return false;
+      var scoreIds=normalizeScoreLinkedSongIds(score.linkedSongIds||[]);
+      if(score.linkedSongId&&scoreIds.indexOf(score.linkedSongId)===-1)scoreIds.unshift(score.linkedSongId);
+      if(linkedSongIds.length&&scoreIds.some(function(id){return linkedSongIds.indexOf(id)!==-1;}))return true;
+      return !linkedSongIds.length&&scoreSearchKey(score.title)===titleKey;
+    })||null;
+  }
+  function buildScoreData(targetScoreId, previousScore, fileInfo, targetInstrument){
     fileInfo=fileInfo||{};
-    var nextFileUrl=fileInfo.url||urlInput||((previous&&previous.currentFileUrl)||'');
-    var nextFilePath=fileInfo.path||(urlInput?'':((previous&&previous.currentFilePath)||''));
-    var nextFileName=fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:((previous&&previous.currentFileName)||''));
-    var nextFileSize=typeof fileInfo.size==='number'?fileInfo.size:Number((urlInput?0:((previous&&previous.currentFileSize)||0))||0);
+    previousScore=previousScore||null;
+    var nextFileUrl=fileInfo.url||urlInput||((previousScore&&previousScore.currentFileUrl)||'');
+    var nextFilePath=fileInfo.path||(urlInput?'':((previousScore&&previousScore.currentFilePath)||''));
+    var nextFileName=fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:((previousScore&&previousScore.currentFileName)||''));
+    var nextFileSize=typeof fileInfo.size==='number'?fileInfo.size:Number((urlInput?0:((previousScore&&previousScore.currentFileSize)||0))||0);
+    var instrument=scoreKind==='orchestra'?(targetInstrument||instrumentForName(fileInfo.name,previousScore)):'';
     var data={
-      id:scoreId,
+      id:targetScoreId,
       title:title,
       searchKey:scoreSearchKey(title),
+      scoreKind:scoreKind,
+      instrument:instrument,
+      instrumentLabel:scoreKind==='orchestra'?scoreInstrumentLabel(instrument):'',
       public:isPublic,
       currentFileUrl:nextFileUrl,
       currentFilePath:nextFilePath,
       currentFileName:nextFileName,
       currentFileSize:nextFileSize,
-      currentUploadedAt:replacingFile?now:((previous&&previous.currentUploadedAt)||''),
+      currentUploadedAt:replacingFile?now:((previousScore&&previousScore.currentUploadedAt)||''),
       currentLabel:label,
       linkedSongId:linkedSongId,
       linkedSongIds:linkedSongIds,
@@ -4703,41 +5014,55 @@ function saveScoreUpload(){
       updatedById:actorId,
       updatedByName:actorName
     };
-    data.createdAt=(previous&&previous.createdAt)||now;
-    data.createdById=(previous&&previous.createdById)||actorId;
-    data.createdByName=(previous&&previous.createdByName)||actorName;
+    data.createdAt=(previousScore&&previousScore.createdAt)||now;
+    data.createdById=(previousScore&&previousScore.createdById)||actorId;
+    data.createdByName=(previousScore&&previousScore.createdByName)||actorName;
     return data;
   }
-  function uploadFileIfNeeded(){
-    if(!file)return Promise.resolve(buildScoreData());
+  function uploadFileIfNeeded(target){
+    if(!target.file)return Promise.resolve(buildScoreData(target.id,target.previous,null,target.instrument));
+    var file=target.file;
     var safeName=scoreSafeFileName(file.name);
-    var filePath='scores/'+scoreId+'/'+safeName;
+    var filePath='scores/'+target.id+'/'+safeName;
     return storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
       return snapshot.ref.getDownloadURL().then(function(url){
-        return buildScoreData({url:url,path:filePath,name:file.name,size:file.size});
+        return buildScoreData(target.id,target.previous,{url:url,path:filePath,name:file.name,size:file.size},target.instrument);
       });
     });
   }
+  var usedReplacementIds={};
+  var targets=files.length
+    ? files.map(function(f,idx){
+        var instrument=instrumentForName(f.name,previous);
+        var replace=editId?previous:replacementScoreForInstrument(instrument,usedReplacementIds);
+        if(replace)usedReplacementIds[replace.id]=true;
+        return {id:replace?replace.id:createScoreId(),previous:replace||null,file:f,instrument:instrument};
+      })
+    : [{id:scoreId,previous:previous,file:null,instrument:instrumentForName('',previous)}];
 
-  uploadFileIfNeeded().then(function(data){
-    var score=scoreRowFromSettingsItem(scoreId,data);
-    upsertScoreLocal(score);
+  return Promise.all(targets.map(uploadFileIfNeeded)).then(function(items){
+    var scores=items.map(function(data){return scoreRowFromSettingsItem(data.id,data);});
+    scores.forEach(upsertScoreLocal);
     return scoreSettingsRef().set({
       items:scoreItemsFromRows(allScores),
       updatedAt:now,
       updatedById:actorId,
       updatedByName:actorName
-    }).then(function(){return score;});
-  }).then(function(score){
-    var oldPath=previous&&previous.currentFilePath&&previous.currentFilePath!==score.currentFilePath?previous.currentFilePath:'';
-    var logAction=previous?(replacingFile?'악보 교체':'악보 수정'):'악보 등록';
-    writeLog(logAction,'📄 ['+score.title+'] '+(score.public?'공개':'비공개')+' 저장'+(score.linkedSongIds&&score.linkedSongIds.length?'\n연결 곡 '+score.linkedSongIds.length+'개':''));
+    }).then(function(){return scores;});
+  }).then(function(scores){
+    var oldPaths=[];
+    targets.forEach(function(target,idx){
+      var savedScore=scores[idx];
+      if(target.previous&&target.previous.currentFilePath&&savedScore&&target.previous.currentFilePath!==savedScore.currentFilePath)oldPaths.push(target.previous.currentFilePath);
+    });
+    var logAction=previous?(replacingFile?'악보 교체':'악보 수정'):(scores.length>1?'관현악 파트보 등록':'악보 등록');
+    writeLog(logAction,'📄 ['+title+'] '+(isPublic?'공개':'비공개')+' 저장'+(scores.length>1?'\n파트보 '+scores.length+'개':'')+(linkedSongIds.length?'\n연결 곡 '+linkedSongIds.length+'개':''));
     resetScoreForm();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
-    showToast(previous?(replacingFile?'악보가 교체되었습니다':'악보 정보가 저장되었습니다'):'악보가 등록되었습니다');
-    return deleteScoreStoragePath(oldPath);
+    showToast(previous?(replacingFile?'악보가 교체되었습니다':'악보 정보가 저장되었습니다'):(scores.length>1?'관현악 파트보가 등록되었습니다':'악보가 등록되었습니다'));
+    return Promise.all(oldPaths.map(deleteScoreStoragePath));
   }).catch(function(e){
     console.error(e);
     if(e&&e.code==='storage/unauthorized')showToast('Storage 업로드 권한이 없습니다. PDF URL로 등록해주세요.');
@@ -4755,6 +5080,9 @@ function editScoreUpload(id){
   if(!score)return;
   if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
   document.getElementById('scoreEditId').value=score.id;
+  setScoreFormKind(score.scoreKind||'singer');
+  var instrument=document.getElementById('scoreInstrument');
+  if(instrument)instrument.value=normalizeScoreKind(score.scoreKind)==='orchestra'?(normalizeScoreInstrument(score.instrument)||'etc'):'auto';
   document.getElementById('scoreTitle').value=score.title||'';
   document.getElementById('scoreLabel').value=score.currentLabel||'';
   document.getElementById('scoreUrl').value=score.currentFilePath?'':(score.currentFileUrl||'');
@@ -7676,7 +8004,7 @@ function scheduleMatchedSongs(schedule){
 function scheduleMatchedScoreRows(schedule){
   var rows=[], seenScores={};
   scheduleMatchedSongs(schedule).forEach(function(song){
-    var scores=findScoresForSong(song,false);
+    var scores=findVisibleScoresForSong(song);
     if(scores.length){
       scores.forEach(function(score){
         if(seenScores[score.id])return;
@@ -7689,7 +8017,7 @@ function scheduleMatchedScoreRows(schedule){
   });
   var sourceKey=scoreSearchKey(scheduleScoreSource(schedule));
   if(sourceKey){
-    sortScores(allScores.filter(isPublicScore)).forEach(function(score){
+    sortScores(allScores.filter(canViewScoreItem)).forEach(function(score){
       var key=scoreSearchKey(score.title);
       if(key.length<2||sourceKey.indexOf(key)<0||seenScores[score.id])return;
       seenScores[score.id]=true;
@@ -7730,6 +8058,7 @@ function renderScheduleScoreSection(schedule,allowLoad){
     if(song&&song.category)meta.push(song.category);
     if(song&&song.year&&song.month&&song.day)meta.push(song.year+'.'+String(song.month).padStart(2,'0')+'.'+String(song.day).padStart(2,'0'));
     if(score&&score.title&&scoreSearchKey(score.title)!==scoreSearchKey(name))meta.push('악보 '+score.title);
+    if(score)meta.push(scoreKindLabel(score.scoreKind)+(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument)?' · '+scoreInstrumentLabel(score.instrument):''));
     if(score&&score.currentLabel)meta.push(score.currentLabel);
     var action=score
       ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
