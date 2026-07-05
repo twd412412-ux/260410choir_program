@@ -5188,7 +5188,7 @@ function renderScoreFolderCard(group, adminMode){
           +'<div class="score-part-main"><div class="score-part-name">'+escHtml(part)+'</div><div class="score-part-meta">'+escHtml(details||'파트보')+'</div></div>'
           +'<div class="score-part-actions">'
             +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">보기</button>'
-            +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">수정</button>':'')
+            +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">파트 수정</button>':'')
             +(canEdit?'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>':'')
             +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
           +'</div>'
@@ -5577,8 +5577,16 @@ function editScoreUpload(id){
   document.getElementById('scorePublic').checked=score.public!==false;
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='수정 저장';
-  var title=document.getElementById('scoreTitle');
-  if(title)title.scrollIntoView({block:'center',behavior:'smooth'});
+  var focusTarget=normalizeScoreKind(score.scoreKind)==='orchestra'
+    ? (document.getElementById('scoreInstrumentWrap')||document.getElementById('scoreInstrument'))
+    : document.getElementById('scoreTitle');
+  if(focusTarget)focusTarget.scrollIntoView({block:'center',behavior:'smooth'});
+  setTimeout(function(){
+    var target=normalizeScoreKind(score.scoreKind)==='orchestra'
+      ? ((document.getElementById('scoreInstrumentCustom')&&!document.getElementById('scoreInstrumentCustom').classList.contains('hidden'))?document.getElementById('scoreInstrumentCustom'):document.getElementById('scoreInstrument'))
+      : document.getElementById('scoreTitle');
+    if(target&&target.focus)target.focus();
+  },180);
 }
 function toggleScorePublic(id){
   if(!canManageScores())return;
