@@ -2101,7 +2101,7 @@ body{font-weight:500}
     <div class="modal-header"><span class="modal-title">🔒 관리자 로그인</span><button class="modal-close" onclick="closeModal('modalAdmin')">✕</button></div>
     <div class="form-group"><label class="form-label">권한 선택</label><select class="form-sel" id="roleSelect"><option value="admin">관리자</option><option value="chongmu">총무부</option></select></div>
     <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" id="adminPw" type="password" placeholder="비밀번호 입력" onkeypress="if(event.key==='Enter')checkAdminPw()"></div>
-    <button class="btn btn-p btn-bl" onclick="checkAdminPw()">로그인</button>
+    <button class="btn btn-p btn-bl" id="adminLoginBtn" onclick="checkAdminPw()">로그인</button>
     <button class="btn btn-bl" style="margin-top:8px;background:var(--sf);color:var(--pd);border:1px solid var(--bd)" onclick="startAdminPasswordReset()">Google 인증으로 관리자 비밀번호 초기화</button>
     <p style="font-size:11px;color:var(--ts);line-height:1.45;margin-top:8px">등록된 소유자 Google 계정으로만 초기화할 수 있습니다.</p>
   </div>
@@ -2403,6 +2403,9 @@ var adminRole=null;
 var chongmuPassword='';
 var adminPasswordHash='';
 var adminPasswordSalt='';
+var adminSettingsLoadPromise=null;
+var adminSettingsLoaded=false;
+var adminLoginBusy=false;
 var ADMIN_PASSWORD_MIN_LENGTH=4;
 var ADMIN_RECOVERY_EMAIL='twd412412@gmail.com';
 var ADMIN_RESET_REDIRECT_KEY='choir_admin_reset_redirect';
@@ -3421,14 +3424,25 @@ function openAdminLogin(){
     return;
   }
   openModal('modalAdmin');
+  loadAdminSettings(false).catch(function(){});
   setTimeout(function(){document.getElementById('adminPw').focus()},300);
 }
+function setAdminLoginBusy(busy){
+  adminLoginBusy=!!busy;
+  var btn=document.getElementById('adminLoginBtn');
+  if(btn){
+    btn.disabled=adminLoginBusy;
+    btn.textContent=adminLoginBusy?'확인 중...':'로그인';
+  }
+}
 function checkAdminPw(){
+  if(adminLoginBusy)return;
   var role=document.getElementById('roleSelect').value;
   var pw=document.getElementById('adminPw').value;
   if(role==='admin'){
     if(!pw)return showToast('비밀번호를 입력해주세요');
-    loadAdminSettings().then(function(){
+    setAdminLoginBusy(true);
+    loadAdminSettings(true).then(function(){
       if(!adminPasswordHash||!adminPasswordSalt)return showToast('관리자 비밀번호가 아직 설정되지 않았습니다');
       return verifyAdminPassword(pw).then(function(ok){
         if(!ok)return showToast('비밀번호가 틀렸습니다');
@@ -3439,17 +3453,25 @@ function checkAdminPw(){
       });
     }).catch(function(e){
       console.error(e);
-      showToast('비밀번호 확인 중 오류 발생');
+      showToast('관리자 설정을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요');
+    }).finally(function(){
+      setAdminLoginBusy(false);
     });
   }else if(role==='chongmu'){
-    loadAdminSettings().then(function(){
+    if(!pw)return showToast('비밀번호를 입력해주세요');
+    setAdminLoginBusy(true);
+    loadAdminSettings(true).then(function(){
       if(!chongmuPassword)return showToast('총무부 비밀번호가 아직 설정되지 않았습니다');
       if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
       adminRole='chongmu';
       syncAccessShell();
       document.getElementById('adminPw').value='';
       closeModal('modalAdmin');showToast('총무부 모드 활성화');renderSongList();refreshHomeAccessState();
-    }).catch(function(){showToast('비밀번호 확인 중 오류 발생')});
+    }).catch(function(){
+      showToast('관리자 설정을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요');
+    }).finally(function(){
+      setAdminLoginBusy(false);
+    });
   }else{showToast('비밀번호가 틀렸습니다')}
 }
 
@@ -7616,8 +7638,9 @@ function updatePartSummary() {
 function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 
 // ==================== 관리자 설정 ====================
-function loadAdminSettings(){
-  return db.collection('settings').doc('admin').get().then(function(doc){
+function loadAdminSettings(force){
+  if(adminSettingsLoadPromise&&!force)return adminSettingsLoadPromise;
+  adminSettingsLoadPromise=db.collection('settings').doc('admin').get().then(function(doc){
     if(doc.exists){
       var data=doc.data();
       if(data.chongmuPassword){
@@ -7627,12 +7650,19 @@ function loadAdminSettings(){
       adminPasswordHash=String(data.adminPasswordHash||'');
       adminPasswordSalt=String(data.adminPasswordSalt||'');
     }
-  }).catch(function(){
+    adminSettingsLoaded=true;
+    return true;
+  }).catch(function(e){
     var cached=loadCache('choir_admin_settings',600000);
     if(cached&&cached.chongmuPassword)chongmuPassword=String(cached.chongmuPassword);
+    if(force)throw e;
+    return false;
+  }).finally(function(){
+    adminSettingsLoadPromise=null;
   });
+  return adminSettingsLoadPromise;
 }
-function initAdminSettings(){loadAdminSettings()}
+function initAdminSettings(){loadAdminSettings(false).catch(function(){})}
 function saveAdminPassword(){
   if(adminRole!=='admin')return showToast('관리자만 변경할 수 있습니다');
   var pw=document.getElementById('adminPwNew').value.trim();
