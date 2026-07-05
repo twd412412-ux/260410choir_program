@@ -1643,7 +1643,7 @@ body{font-weight:500}
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" style="padding:8px"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
-        <div class="score-form-note">곡명은 기존 곡목록과 같은 이름이면 곡 상세와 주일찬송곡 영역에 자동 연결됩니다. PDF는 파일 또는 URL 중 하나로 등록할 수 있고, 단원이 열 때만 불러옵니다.</div>
+        <div class="score-form-note">곡명은 기존 곡목록과 같은 이름이면 곡 상세와 주일찬송곡 영역에 자동 연결됩니다. 기존 악보 수정 시 새 PDF나 URL을 넣지 않으면 현재 파일은 그대로 유지됩니다.</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-p" id="scoreSaveBtn" style="flex:1" onclick="saveScoreUpload()">악보 등록</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="resetScoreForm()">초기화</button>
@@ -2407,7 +2407,8 @@ var PERMISSION_GROUPS=[
   {title:'곡 / 일정',items:[
     {key:'song.manage',label:'곡 관리',desc:'곡 추가, 본인 등록곡 수정/삭제'},
     {key:'song.editAny',label:'타인 곡 수정',desc:'곡 관리 권한으로 타인 등록곡 수정'},
-    {key:'score.manage',label:'악보 관리',desc:'악보 PDF 업로드, 교체, 공개 설정'},
+    {key:'score.manage',label:'악보 관리',desc:'악보 PDF 등록, 본인 등록 악보 수정/교체'},
+    {key:'score.editAny',label:'타인 악보 수정',desc:'악보 관리 권한으로 타인 등록 악보 수정/교체/공개 설정'},
     {key:'schedule.manage',label:'일정 관리',desc:'일정 추가, 본인 등록 일정 수정/삭제'},
     {key:'schedule.editAny',label:'타인 일정 수정',desc:'일정 관리 권한으로 타인 등록 일정 수정'}
   ]},
@@ -2442,8 +2443,8 @@ PERMISSION_GROUPS.forEach(function(group){group.items.forEach(function(item){PER
 var PERMISSION_PRESETS={
   none:{label:'일반 단원',desc:'관리 메뉴 없이 곡 목록과 일정만 이용',permissions:[],scope:[]},
   partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine'],scope:[]},
-  operations:{label:'운영 스태프',desc:'곡/일정/악보 관리와 선곡 도우미',permissions:['song.manage','score.manage','schedule.manage','song.recommend','archive.view','archive.upload','archive.manageMine'],scope:[]},
-  chongmu:{label:'총무 스태프',desc:'곡/일정/악보, 출결, 명부 조회, 공지 관리',permissions:['song.manage','score.manage','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.view','archive.upload','archive.manageMine'],scope:['ALL']},
+  operations:{label:'운영 스태프',desc:'곡/일정/악보 관리와 선곡 도우미',permissions:['song.manage','score.manage','score.editAny','schedule.manage','song.recommend','archive.view','archive.upload','archive.manageMine'],scope:[]},
+  chongmu:{label:'총무 스태프',desc:'곡/일정/악보, 출결, 명부 조회, 공지 관리',permissions:['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.view','archive.upload','archive.manageMine'],scope:['ALL']},
   handbook:{label:'명부 스태프',desc:'단원 조회와 명부 추가/수정',permissions:['member.view','member.history','member.manage'],scope:[]},
   custom:{label:'직접 설정',desc:'필요한 항목만 직접 선택',permissions:[],scope:[]}
 };
@@ -2578,11 +2579,18 @@ function normalizeAttendanceScopeArray(list){
   if(expanded.indexOf('ALL')>-1)return ['ALL'];
   return expanded;
 }
+function expandPresetPermissions(permissions,preset){
+  var base=normalizePermissionArray(permissions||[]);
+  if(preset&&preset!=='custom'&&PERMISSION_PRESETS[preset]){
+    return uniqueArray(base.concat(PERMISSION_PRESETS[preset].permissions||[]));
+  }
+  return base;
+}
 function legacyPermissionsForRole(role, canArchiveUpload){
   var perms=[];
   if(role==='attendance')perms=perms.concat(['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine']);
-  if(role==='songschedule')perms=perms.concat(['song.manage','score.manage','schedule.manage','archive.view','archive.upload','archive.manageMine']);
-  if(role==='chongmu')perms=perms.concat(['song.manage','score.manage','schedule.manage','attendance.view','attendance.check','member.view','member.history','archive.view','archive.upload','archive.manageMine']);
+  if(role==='songschedule')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','archive.view','archive.upload','archive.manageMine']);
+  if(role==='chongmu')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','archive.view','archive.upload','archive.manageMine']);
   if(canArchiveUpload)perms=perms.concat(['archive.view','archive.upload','archive.manageMine']);
   return uniqueArray(perms);
 }
@@ -2590,7 +2598,7 @@ function getUserPermissions(user){
   user=user||currentUser||{};
   if(Array.isArray(user.permissions)){
     var stored=normalizePermissionArray(user.permissions);
-    if(stored.length||user.permissionPreset||(!user.role&&!user.canArchiveUpload))return stored;
+    if(stored.length||user.permissionPreset||(!user.role&&!user.canArchiveUpload))return expandPresetPermissions(stored,user.permissionPreset||'');
   }
   return legacyPermissionsForRole(user.role||'',!!user.canArchiveUpload);
 }
@@ -2640,6 +2648,12 @@ function canManageScores(){
 }
 function canViewScores(){
   return !!currentUser||adminRole==='admin'||hasPermission('score.manage');
+}
+function canEditScoreItem(score){
+  if(adminRole==='admin')return true;
+  if(!canManageScores())return false;
+  if(hasPermission('score.editAny'))return true;
+  return !!isOwnCreatedItem(score);
 }
 function canDeleteScores(){
   return adminRole==='admin';
@@ -4453,13 +4467,14 @@ function renderScoreCard(score, adminMode){
     : '<div class="score-status-stack"><button class="score-action-btn open" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'+renderScoreVersionBadge(score)+'</div>';
   var meta=renderScoreMeta(score);
   var linkedSummary=scoreLinkedSummary(score);
+  var canEdit=canEditScoreItem(score);
   var cardAttrs=adminMode
     ? 'class="score-card"'
     : 'class="score-card clickable" role="button" tabindex="0" onclick="openMatchedSongForScore(\''+escAttr(score.id)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openMatchedSongForScore(\''+escAttr(score.id)+'\')}"';
   var actions=adminMode
     ? '<div class="score-admin-actions">'
-      +'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">교체</button>'
-      +'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>'
+      +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">수정</button>':'<button class="score-light-btn" disabled style="opacity:.55;cursor:not-allowed">수정 권한 없음</button>')
+      +(canEdit?'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>':'')
       +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
       +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
       +'</div>'
@@ -4609,6 +4624,7 @@ function saveScoreUpload(){
   var title=(document.getElementById('scoreTitle').value||'').trim();
   var label=(document.getElementById('scoreLabel').value||'').trim();
   var editId=(document.getElementById('scoreEditId').value||'').trim();
+  var previous=editId?allScores.find(function(s){return s.id===editId}):null;
   var fileEl=document.getElementById('scoreFile');
   var file=fileEl&&fileEl.files?fileEl.files[0]:null;
   var urlInput=(document.getElementById('scoreUrl').value||'').trim();
@@ -4623,31 +4639,37 @@ function saveScoreUpload(){
   }
   var isPublic=!!document.getElementById('scorePublic').checked;
   if(!title)return showToast('곡명을 입력해주세요');
-  if(!file&&!urlInput)return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
+  if(editId&&!previous)return showToast('수정할 악보를 찾을 수 없습니다');
+  if(previous&&!canEditScoreItem(previous))return showToast('악보 수정 권한이 없습니다');
+  if(!file&&!urlInput&&!(previous&&previous.currentFileUrl))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
   if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
   if(file&&file.size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
   if(file&&file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name))return showToast('PDF 파일만 업로드할 수 있습니다');
-  var previous=editId?allScores.find(function(s){return s.id===editId}):null;
   var scoreId=editId||createScoreId();
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
   var btn=document.getElementById('scoreSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent=editId?'교체 중...':'등록 중...';}
-  showToast(file?(editId?'악보 교체 중...':'악보 업로드 중...'):'악보 링크 저장 중...');
+  var replacingFile=!!(file||urlInput);
+  if(btn){btn.disabled=true;btn.textContent=editId?'수정 저장 중...':'등록 중...';}
+  showToast(file?(editId?'악보 파일 교체 중...':'악보 업로드 중...'):(urlInput?'악보 링크 저장 중...':(editId?'악보 정보 저장 중...':'악보 등록 중...')));
 
   function buildScoreData(fileInfo){
     fileInfo=fileInfo||{};
+    var nextFileUrl=fileInfo.url||urlInput||((previous&&previous.currentFileUrl)||'');
+    var nextFilePath=fileInfo.path||(urlInput?'':((previous&&previous.currentFilePath)||''));
+    var nextFileName=fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:((previous&&previous.currentFileName)||''));
+    var nextFileSize=typeof fileInfo.size==='number'?fileInfo.size:Number((urlInput?0:((previous&&previous.currentFileSize)||0))||0);
     var data={
       id:scoreId,
       title:title,
       searchKey:scoreSearchKey(title),
       public:isPublic,
-      currentFileUrl:fileInfo.url||urlInput,
-      currentFilePath:fileInfo.path||'',
-      currentFileName:fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:''),
-      currentFileSize:fileInfo.size||0,
-      currentUploadedAt:now,
+      currentFileUrl:nextFileUrl,
+      currentFilePath:nextFilePath,
+      currentFileName:nextFileName,
+      currentFileSize:nextFileSize,
+      currentUploadedAt:replacingFile?now:((previous&&previous.currentUploadedAt)||''),
       currentLabel:label,
       linkedSongId:linkedSongId,
       linkedSongIds:linkedSongIds,
@@ -4656,11 +4678,9 @@ function saveScoreUpload(){
       updatedById:actorId,
       updatedByName:actorName
     };
-    if(!previous){
-      data.createdAt=now;
-      data.createdById=actorId;
-      data.createdByName=actorName;
-    }
+    data.createdAt=(previous&&previous.createdAt)||now;
+    data.createdById=(previous&&previous.createdById)||actorId;
+    data.createdByName=(previous&&previous.createdByName)||actorName;
     return data;
   }
   function uploadFileIfNeeded(){
@@ -4685,24 +4705,30 @@ function saveScoreUpload(){
     }).then(function(){return score;});
   }).then(function(score){
     var oldPath=previous&&previous.currentFilePath&&previous.currentFilePath!==score.currentFilePath?previous.currentFilePath:'';
-    writeLog(previous?'악보 교체':'악보 등록','📄 ['+score.title+'] '+(score.public?'공개':'비공개')+' 저장');
+    var logAction=previous?(replacingFile?'악보 교체':'악보 수정'):'악보 등록';
+    writeLog(logAction,'📄 ['+score.title+'] '+(score.public?'공개':'비공개')+' 저장'+(score.linkedSongIds&&score.linkedSongIds.length?'\n연결 곡 '+score.linkedSongIds.length+'개':''));
     resetScoreForm();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
-    showToast(previous?'악보가 교체되었습니다':'악보가 등록되었습니다');
+    showToast(previous?(replacingFile?'악보가 교체되었습니다':'악보 정보가 저장되었습니다'):'악보가 등록되었습니다');
     return deleteScoreStoragePath(oldPath);
   }).catch(function(e){
     console.error(e);
     if(e&&e.code==='storage/unauthorized')showToast('Storage 업로드 권한이 없습니다. PDF URL로 등록해주세요.');
     else showToast('악보 저장 중 오류가 발생했습니다');
   }).finally(function(){
-    if(btn){btn.disabled=false;btn.textContent=document.getElementById('scoreEditId').value?'악보 교체':'악보 등록';}
+    if(btn){
+      var stillEditing=(document.getElementById('scoreEditId').value||'').trim();
+      btn.disabled=false;
+      btn.textContent=stillEditing?'수정 저장':'악보 등록';
+    }
   });
 }
 function editScoreUpload(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score)return;
+  if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
   document.getElementById('scoreEditId').value=score.id;
   document.getElementById('scoreTitle').value=score.title||'';
   document.getElementById('scoreLabel').value=score.currentLabel||'';
@@ -4710,7 +4736,7 @@ function editScoreUpload(id){
   setScoreLinkedSongs(score.linkedSongIds&&score.linkedSongIds.length?score.linkedSongIds:(score.linkedSongId?[score.linkedSongId]:[]),score.linkedSongName||'');
   document.getElementById('scorePublic').checked=score.public!==false;
   var file=document.getElementById('scoreFile');if(file)file.value='';
-  var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 교체';
+  var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='수정 저장';
   var title=document.getElementById('scoreTitle');
   if(title)title.scrollIntoView({block:'center',behavior:'smooth'});
 }
@@ -4718,6 +4744,7 @@ function toggleScorePublic(id){
   if(!canManageScores())return;
   var score=allScores.find(function(s){return s.id===id});
   if(!score)return;
+  if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
   var next=!score.public;
   var now=new Date().toISOString();
   score.public=next;
@@ -5596,7 +5623,7 @@ function accountScopeLabel(scope){
 function accountFeatureLabels(perms){
   perms=normalizePermissionArray(perms);
   var labels=[];
-  if(perms.indexOf('song.manage')>-1||perms.indexOf('song.editAny')>-1||perms.indexOf('schedule.manage')>-1||perms.indexOf('schedule.editAny')>-1)labels.push('곡/일정');
+  if(perms.indexOf('song.manage')>-1||perms.indexOf('song.editAny')>-1||perms.indexOf('score.manage')>-1||perms.indexOf('score.editAny')>-1||perms.indexOf('schedule.manage')>-1||perms.indexOf('schedule.editAny')>-1)labels.push('곡/일정/악보');
   if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
   if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1)labels.push('명부');
   if(perms.indexOf('account.manage')>-1||perms.indexOf('account.pin')>-1)labels.push('계정');
