@@ -2686,7 +2686,7 @@ var ATTENDANCE_SCOPE_OPTIONS=[
   {key:'임원',label:'임원'}
 ];
 var SCORE_ACCESS_SCOPE_OPTIONS=[
-  {key:'default',label:'파트 기준 자동',desc:'S/T는 싱어, 관현악은 관현악, 지휘/반주는 전체'},
+  {key:'default',label:'파트 기준 자동',desc:'S/T/반주는 싱어, 관현악은 관현악, 지휘는 전체'},
   {key:'all',label:'전체 악보',desc:'싱어와 관현악 파트보 모두 조회'},
   {key:'singer',label:'싱어 악보만',desc:'싱어 악보만 조회'},
   {key:'orchestra',label:'관현악 악보만',desc:'관현악 파트보만 조회'},
@@ -4701,8 +4701,8 @@ function isUserPart(user,part){
 function isUserOrchestra(user){
   return isUserPart(user,'관현악');
 }
-function isUserPianistOrConductor(user){
-  return isUserPart(user,'반주')||isUserPart(user,'지휘');
+function isUserConductor(user){
+  return isUserPart(user,'지휘');
 }
 function getScoreAccessModes(user){
   user=user||currentUser;
@@ -4710,7 +4710,7 @@ function getScoreAccessModes(user){
   var explicitModes=scoreAccessModesFromScope(user&&user.scoreAccessScope);
   if(explicitModes)return explicitModes;
   if(!(user&&user.id&&user.name))return [];
-  if(isUserPianistOrConductor(user))return ['singer','orchestra'];
+  if(isUserConductor(user))return ['singer','orchestra'];
   if(isUserOrchestra(user))return ['orchestra'];
   return ['singer'];
 }
