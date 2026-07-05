@@ -116,10 +116,13 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-auto-link-btn{flex:0 0 auto;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .account-auto-link-btn:disabled{opacity:.55;cursor:not-allowed}
 .account-link-summary{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px}
-.account-summary-item{font-size:11px;font-weight:900;border:1px solid #DED0B8;background:#F8F2E8;color:#5F512D;border-radius:999px;padding:5px 8px}
+.account-summary-item{font-family:inherit;font-size:11px;font-weight:900;border:1px solid #DED0B8;background:#F8F2E8;color:#5F512D;border-radius:999px;padding:5px 8px;line-height:1.2}
+button.account-summary-item{cursor:pointer}
+button.account-summary-item.active{background:#5F6F45;border-color:#5F6F45;color:#fff;box-shadow:0 2px 8px rgba(95,111,69,.18)}
 .account-summary-item.ok{background:#EAEFDF;border-color:#CBD7BE;color:#4E5A35}
 .account-summary-item.warn{background:#F4E7CC;border-color:#E8D2A7;color:#7C571E}
 .account-summary-item.bad{background:#F7E6E0;border-color:#E5C3BA;color:#9D3E36}
+button.account-summary-item.active.ok,button.account-summary-item.active.warn,button.account-summary-item.active.bad{background:#5F6F45;border-color:#5F6F45;color:#fff}
 .account-part-heading{display:flex;align-items:center;gap:7px;margin:12px 0 6px;font-size:12px;font-weight:950;color:#4F623A}
 .account-part-heading::before{content:'';width:7px;height:7px;border-radius:50%;background:#6F7D4E}
 .account-part-heading span{font-size:11px;color:var(--ts);font-weight:800}
@@ -6153,10 +6156,13 @@ function accountSearchText(m){
   ].join(' ').toLowerCase();
 }
 
+var accountLinkFilter='';
+
 function filteredSortedAccounts(){
   var q=(document.getElementById('accountListSearch')||{}).value||'';
   q=q.trim().toLowerCase();
   return allMembers.filter(function(m){
+    if(accountLinkFilter&&accountLinkState(m)!==accountLinkFilter)return false;
     return !q||accountSearchText(m).indexOf(q)>-1;
   }).sort(function(a,b){
     return accountPartSortValue(a.part)-accountPartSortValue(b.part)
@@ -6173,6 +6179,17 @@ function accountLinkState(m){
   return 'linked';
 }
 
+function setAccountLinkFilter(filter){
+  filter=String(filter||'');
+  accountLinkFilter=accountLinkFilter===filter?'':filter;
+  renderAccountList();
+}
+
+function renderAccountSummaryButton(filter,label,count,cls){
+  var active=accountLinkFilter===filter;
+  return '<button type="button" class="account-summary-item '+(cls||'')+(active?' active':'')+'" onclick="setAccountLinkFilter(\''+escAttr(filter)+'\')">'+escHtml(label)+' '+count+'</button>';
+}
+
 function renderAccountLinkSummary(list){
   var box=document.getElementById('accountLinkSummary');
   if(!box)return;
@@ -6180,12 +6197,13 @@ function renderAccountLinkSummary(list){
   var counts={linked:0,none:0,missing:0,mismatch:0};
   allMembers.forEach(function(m){counts[accountLinkState(m)]++;});
   var q=(document.getElementById('accountListSearch')||{}).value||'';
-  var searchNote=q.trim()?'<span class="account-summary-item">검색 '+list.length+'/'+total+'명</span>':'';
+  var searchNote=(q.trim()||accountLinkFilter)?'<span class="account-summary-item">표시 '+list.length+'/'+total+'명</span>':'';
   box.innerHTML=''
-    +'<span class="account-summary-item ok">연결됨 '+counts.linked+'</span>'
-    +'<span class="account-summary-item">미연결 '+counts.none+'</span>'
-    +'<span class="account-summary-item warn">이름 불일치 '+counts.mismatch+'</span>'
-    +'<span class="account-summary-item bad">연결 끊김 '+counts.missing+'</span>'
+    +renderAccountSummaryButton('','전체',total,'')
+    +renderAccountSummaryButton('linked','연결됨',counts.linked,'ok')
+    +renderAccountSummaryButton('none','미연결',counts.none,'')
+    +renderAccountSummaryButton('mismatch','이름 불일치',counts.mismatch,'warn')
+    +renderAccountSummaryButton('missing','연결 끊김',counts.missing,'bad')
     +searchNote;
 }
 
