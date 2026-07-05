@@ -4710,7 +4710,9 @@ function openScoreFileById(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score||!score.currentFileUrl)return showToast('열 수 있는 악보가 없습니다');
   if(!canOpenScoreItem(score))return showToast('이 악보를 볼 권한이 없습니다');
-  var details=[scoreKindLabel(score.scoreKind)+(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument)?' · '+scoreInstrumentLabel(score.instrument):''),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
+  var details=normalizeScoreKind(score.scoreKind)==='orchestra'
+    ? [scorePartDisplayLabel(score),scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ')
+    : [scoreKindLabel(score.scoreKind),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
   var message='악보를 볼까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 악보 파일을 불러옵니다.';
   if(!confirm(message))return;
   var win=window.open(score.currentFileUrl,'_blank','noopener');
@@ -4718,8 +4720,8 @@ function openScoreFileById(id){
 }
 function renderScoreMeta(score){
   var parts=[];
-  parts.push(scoreKindLabel(score.scoreKind));
-  if(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument))parts.push(scoreInstrumentLabel(score.instrument));
+  if(normalizeScoreKind(score.scoreKind)==='orchestra')parts.push(scorePartDisplayLabel(score));
+  else parts.push(scoreKindLabel(score.scoreKind));
   if(score.currentLabel)parts.push(score.currentLabel);
   if(normalizeScoreKind(score.scoreKind)!=='orchestra'&&score.currentFileName)parts.push(score.currentFileName);
   if(scoreFileSizeText(score.currentFileSize))parts.push(scoreFileSizeText(score.currentFileSize));
@@ -8166,7 +8168,7 @@ function renderScheduleScoreSection(schedule,allowLoad){
     if(song&&song.category)meta.push(song.category);
     if(song&&song.year&&song.month&&song.day)meta.push(song.year+'.'+String(song.month).padStart(2,'0')+'.'+String(song.day).padStart(2,'0'));
     if(score&&score.title&&scoreSearchKey(score.title)!==scoreSearchKey(name))meta.push('악보 '+score.title);
-    if(score)meta.push(scoreKindLabel(score.scoreKind)+(normalizeScoreKind(score.scoreKind)==='orchestra'&&scoreInstrumentLabel(score.instrument)?' · '+scoreInstrumentLabel(score.instrument):''));
+    if(score)meta.push(normalizeScoreKind(score.scoreKind)==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(score.scoreKind));
     if(score&&score.currentLabel)meta.push(score.currentLabel);
     var action=score
       ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
