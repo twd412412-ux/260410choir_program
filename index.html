@@ -1877,7 +1877,10 @@ body{font-weight:500}
 
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
-    <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-group"><label class="form-label">시작일 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" onchange="syncScheduleEndDate()"></div>
+      <div class="form-group"><label class="form-label">종료일</label><input class="form-input" id="schEndDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
+    </div>
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
@@ -2803,8 +2806,9 @@ function switchTab(tab){
   }
 }
 
-function switchAdminTab(sub){
-  if(sub!=='seatingPlan'&&isSeatingPlanVisible()&&!confirmSeatingDiscardChanges())return;
+function switchAdminTab(sub,options){
+  options=options||{};
+  if(sub!=='seatingPlan'&&!options.skipSeatingConfirm&&isSeatingPlanVisible()&&!confirmSeatingDiscardChanges())return;
   if(sub==='memberHandbook'&&!canUseMemberHandbook()){
     showToast('단원 명부 권한이 필요합니다.');
     return;
@@ -2914,7 +2918,7 @@ function showFirstAdminTab(){
   });
 
   var target = preferredOrder.find(function(key){ return visible.indexOf(key)!==-1; }) || visible[0];
-  if(target) switchAdminTab(target);
+  if(target) switchAdminTab(target,{skipSeatingConfirm:true});
 }
 
 function getQuickCreateDate(){
@@ -2948,6 +2952,8 @@ function resetScheduleForm(defaultDate){
   });
   var dateEl=document.getElementById('schDate');
   if(dateEl)dateEl.value=defaultDate||'';
+  var endDateEl=document.getElementById('schEndDate');
+  if(endDateEl)endDateEl.value=defaultDate||'';
   var briefing=document.getElementById('schUseBriefing');
   if(briefing)briefing.checked=false;
   toggleScheduleBriefing();
@@ -3841,7 +3847,10 @@ function renderHome(){
   function renderHomeShell(hymnSongs, weekSchedules, attendance, state){
     state=state||{};
     hymnSongs=hymnSongs||[];
-    weekSchedules=(weekSchedules||[]).slice().sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
+    weekSchedules=(weekSchedules||[])
+      .filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)})
+      .slice()
+      .sort(function(a,b){return scheduleSortValue(a).localeCompare(scheduleSortValue(b))});
     var members=attendance&&attendance.members?attendance.members:null;
     var am=attendance&&attendance.am?attendance.am:null;
     var pm=attendance&&attendance.pm?attendance.pm:null;
@@ -3854,8 +3863,7 @@ function renderHome(){
       scheduleHtml='<div class="home-empty-row">이번 주 등록된 일정이 없습니다</div>';
     }else{
       scheduleHtml='<div class="home-schedule-list">'+weekSchedules.map(function(s){
-        var d=new Date(s.date+'T00:00:00');
-        return '<div class="home-schedule-row" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div class="home-schedule-time">'+homeDateStr(d)+' '+homeDowName(d)+(s.time?'<br>'+escHtml(s.time):'')+'</div><div class="home-schedule-title">'+escHtml(s.title)+(s.useBriefing?' <span class="home-ring-chip">브리핑</span>':'')+'</div><div class="home-schedule-place">'+(s.location?'📍 '+escHtml(s.location):'')+'</div><div class="home-chevron">›</div></div>';
+        return '<div class="home-schedule-row" onclick="openSchDetail(\''+escAttr(s.id)+'\')"><div class="home-schedule-time">'+escHtml(homeScheduleDateLabel(s))+(s.time?'<br>'+escHtml(s.time):'')+'</div><div class="home-schedule-title">'+escHtml(s.title)+(s.useBriefing?' <span class="home-ring-chip">브리핑</span>':'')+'</div><div class="home-schedule-place">'+(s.location?'📍 '+escHtml(s.location):'')+'</div><div class="home-chevron">›</div></div>';
       }).join('')+'</div>';
     }
 
@@ -3933,7 +3941,7 @@ function renderHome(){
   }
   function latestHomeSchedules(){
     var rows=allSchedules.length>0?allSchedules:cachedSchedules;
-    return rows.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr});
+    return rows.filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)});
   }
   function latestPublicSeating(){
     return publishedSeatingLoaded?publishedSeatingPlan:null;
@@ -3951,12 +3959,12 @@ function renderHome(){
         return rows;
       });
   var schedulePromise=allSchedules.length>0
-    ? Promise.resolve(allSchedules.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr}))
+    ? Promise.resolve(allSchedules.filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)}))
     : schedulesLoadPromise
-      ? schedulesLoadPromise.then(function(rows){return rows.filter(function(s){return s.date>=weekStartStr&&s.date<=weekEndStr})})
+      ? schedulesLoadPromise.then(function(rows){return rows.filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)})})
     : db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get().then(function(snap){
         var rows=[];
-        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,date:d.date,title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
+        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,date:d.date,endDate:d.endDate||d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
         schedulesLoaded=true;
         rows.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch)});
         return rows;
@@ -7111,6 +7119,66 @@ function delNotice(){
 }
 
 // ==================== 일정 (get + 캐시) ====================
+function dateKeyToLocalDate(key){
+  var date=normalizeDateKey(key);
+  if(!date)return null;
+  var p=date.split('-').map(Number);
+  return new Date(p[0],p[1]-1,p[2]);
+}
+function scheduleStartDate(schedule){
+  return normalizeDateKey(schedule&&schedule.date);
+}
+function scheduleEndDate(schedule){
+  var start=scheduleStartDate(schedule);
+  var end=normalizeDateKey(schedule&&schedule.endDate);
+  if(!start)return end||'';
+  return end&&end>=start?end:start;
+}
+function scheduleOccursOnDate(schedule,dateKey){
+  var date=normalizeDateKey(dateKey);
+  var start=scheduleStartDate(schedule);
+  var end=scheduleEndDate(schedule);
+  if(!date||!start)return false;
+  return start<=date&&date<=end;
+}
+function scheduleOverlapsRange(schedule,startKey,endKey){
+  var rangeStart=normalizeDateKey(startKey);
+  var rangeEnd=normalizeDateKey(endKey)||rangeStart;
+  var start=scheduleStartDate(schedule);
+  var end=scheduleEndDate(schedule);
+  if(!rangeStart||!rangeEnd||!start)return false;
+  return start<=rangeEnd&&end>=rangeStart;
+}
+function scheduleDateRangeLabel(schedule){
+  var start=scheduleStartDate(schedule);
+  var end=scheduleEndDate(schedule);
+  if(!start)return '';
+  function parts(key){
+    var p=key.split('-').map(Number);
+    return {y:p[0],m:p[1],d:p[2],yy:String(p[0]).slice(-2)};
+  }
+  var a=parts(start);
+  if(!end||end===start)return a.yy+'.'+a.m+'.'+a.d;
+  var b=parts(end);
+  if(a.y===b.y)return a.yy+'.'+a.m+'.'+a.d+'~'+b.m+'.'+b.d;
+  return a.yy+'.'+a.m+'.'+a.d+'~'+b.yy+'.'+b.m+'.'+b.d;
+}
+function homeScheduleDateLabel(schedule){
+  var start=scheduleStartDate(schedule);
+  var end=scheduleEndDate(schedule);
+  var d=dateKeyToLocalDate(start);
+  if(!d)return '';
+  if(!end||end===start)return homeDateStr(d)+' '+homeDowName(d);
+  return scheduleDateRangeLabel(schedule);
+}
+function scheduleSortValue(schedule){
+  return (scheduleStartDate(schedule)||'9999-12-31')+' '+(schedule.time||'');
+}
+function syncScheduleEndDate(){
+  var start=document.getElementById('schDate');
+  var end=document.getElementById('schEndDate');
+  if(start&&end&&(!end.value||end.value<start.value))end.value=start.value||'';
+}
 function initSchedules(){
   var cached=loadCache('choir_schedules',600000);
   if(Array.isArray(cached)){
@@ -7132,7 +7200,7 @@ function initSchedules(){
 }
 function scheduleRowFromDoc(doc){
   var d=doc.data()||{};
-  return {id:doc.id,date:d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
+  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -7152,13 +7220,15 @@ function addSchedule(){
     if(!canEditScheduleItem(editingSchedule))return showToast('일정 수정 권한이 없습니다');
   }
   var date=document.getElementById('schDate').value;
+  var endDate=(document.getElementById('schEndDate')||{}).value||date;
   var title=document.getElementById('schTitle').value.trim();
   if(!date||!title)return showToast('날짜와 제목은 필수입니다');
+  if(endDate<date)return showToast('종료일은 시작일보다 빠를 수 없습니다');
   var useBriefing=!!document.getElementById('schUseBriefing').checked;
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
-  var scheduleData={date:date,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
+  var scheduleData={date:date,endDate:endDate,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
   var write=scheduleEditId
     ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
     : db.collection('schedules').add(Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName})).then(function(docRef){return {id:docRef.id,updated:false};});
@@ -7171,8 +7241,8 @@ function addSchedule(){
     var logTime = scheduleData.time ? ` 🕐 ${scheduleData.time}` : '';
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
-    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${date}${logTime}${logLoc}${logBrief}`);
-    ['schDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){document.getElementById(id).value=''});
+    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}`);
+    ['schDate','schEndDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo'].forEach(function(id){document.getElementById(id).value=''});
     document.getElementById('schUseBriefing').checked=false;
     toggleScheduleBriefing();
     scheduleEditId='';
@@ -7184,15 +7254,15 @@ function addSchedule(){
 function loadSchAdmin(){
   if(!canManageSchedules())return;
   var c=document.getElementById('schList');if(!c)return;
-  var sorted=allSchedules.slice().sort(function(a,b){return b.date>a.date?-1:1});
+  var sorted=allSchedules.slice().sort(function(a,b){return scheduleSortValue(b).localeCompare(scheduleSortValue(a))});
   if(sorted.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts)">등록된 일정이 없습니다</div>';return}
   var today=new Date().toISOString().split('T')[0];
   c.innerHTML=sorted.map(function(s){
-    var past=s.date<today;
+    var past=scheduleEndDate(s)<today;
     var id=escAttr(s.id);
     var editBtn=canEditScheduleItem(s)?'<button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+id+'\')">수정</button>':'';
     var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+id+'\',\''+escAttr(s.title)+'\')">삭제</button>':'';
-    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(s.date)+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(scheduleDateRangeLabel(s))+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
   }).join('');
 }
 function editSchedule(id){
@@ -7201,6 +7271,7 @@ function editSchedule(id){
   if(!canEditScheduleItem(s))return showToast('일정 수정 권한이 없습니다');
   scheduleEditId=id;
   document.getElementById('schDate').value=s.date;
+  document.getElementById('schEndDate').value=scheduleEndDate(s);
   document.getElementById('schTitle').value=s.title;
   document.getElementById('schTime').value=s.time||'';
   document.getElementById('schLoc').value=s.location||'';
@@ -7256,7 +7327,7 @@ function renderCal(){
   for(var d=1;d<=ld;d++){
     var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isT=ds===todayStr;
-    var evts=allSchedules.filter(function(s){return s.date===ds});
+    var evts=allSchedules.filter(function(s){return scheduleOccursOnDate(s,ds)});
     var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d});
     var cls='cal-cell'+(isT?' today':'')+(calViewMode==='stack'?' stack':'');
     var inner='<div class="cal-date">'+d+'</div>';
@@ -7283,7 +7354,7 @@ function renderCal(){
 
 function showCalDay(ds,day){
   selectedCalDate=ds;
-  var evts=allSchedules.filter(function(s){return s.date===ds});
+  var evts=allSchedules.filter(function(s){return scheduleOccursOnDate(s,ds)});
   var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
   var body='';
@@ -7296,7 +7367,7 @@ function showCalDay(ds,day){
 function openSchDetail(id){
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
-  var body=[['날짜',s.date],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
+  var body=[['날짜',scheduleDateRangeLabel(s)],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
   if(s.useBriefing){
     body+='<div style="margin-top:14px;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">';
     body+='<div style="font-size:15px;font-weight:700;margin-bottom:10px">📋 프로그램 브리핑</div>';
@@ -8118,8 +8189,9 @@ function confirmSeatingDiscardChanges(){
   return confirm('이 페이지를 떠나면 수정된 내용이 저장되지 않습니다. 계속할까요?');
 }
 function isSeatingPlanVisible(){
+  var page=document.getElementById('pageAdmin');
   var el=document.getElementById('subSeatingPlan');
-  return !!(el&&!el.classList.contains('hidden'));
+  return !!(currentTab==='admin'&&page&&!page.classList.contains('hidden')&&el&&!el.classList.contains('hidden'));
 }
 function undoSeatingChange(){
   if(seatingUndoStack.length===0)return showToast('되돌릴 작업이 없습니다');
