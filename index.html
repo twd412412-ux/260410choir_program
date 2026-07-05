@@ -623,8 +623,13 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-form-note{font-size:12px;color:var(--ts);line-height:1.45}
 .score-linked-note{font-size:12px;color:var(--pd);background:var(--pl);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;line-height:1.4}
 .score-linked-note.empty{color:var(--ts);background:transparent}
-.score-link-picker{border:1px solid var(--bd);border-radius:12px;background:var(--bg);padding:10px;display:grid;gap:8px}
-.score-link-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.score-link-picker{border:1px solid var(--bd);border-radius:12px;background:var(--bg);overflow:hidden}
+.score-link-picker summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;cursor:pointer}
+.score-link-picker summary::-webkit-details-marker{display:none}
+.score-link-picker summary::after{content:'열기';font-size:11px;font-weight:900;color:var(--pd);background:var(--pl);border:1px solid var(--bd);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.score-link-picker[open] summary::after{content:'닫기'}
+.score-link-picker-body{display:grid;gap:8px;border-top:1px solid var(--bd);padding:10px}
+.score-link-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .score-link-picker-title{font-size:12px;font-weight:850;color:var(--ts)}
 .score-link-count{font-size:11px;font-weight:850;color:var(--pd);background:var(--pl);border-radius:999px;padding:3px 8px;white-space:nowrap}
 .score-link-candidates{display:grid;gap:6px;max-height:190px;overflow:auto}
@@ -1819,15 +1824,17 @@ body{font-weight:500}
         </div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜" oninput="scoreCandidateSelectedIds=[];renderScoreSongCandidates()" onfocus="renderScoreSongCandidates()"></div>
         <div class="score-linked-note empty" id="scoreLinkedSongNote">아직 악보를 연결할 곡이 선택되지 않았습니다.</div>
-        <div class="score-link-picker" id="scoreSongCandidateBox">
-          <div class="score-link-picker-head"><div class="score-link-picker-title">악보 연결 대상 찾기</div><div class="score-link-count" id="scoreSongCandidateCount">선택 0개</div></div>
-          <div class="score-link-candidates" id="scoreSongCandidates"><div class="score-link-empty">곡명을 입력하면 연결할 수 있는 곡이 표시됩니다.</div></div>
-          <div class="score-link-actions">
-            <button type="button" class="score-light-btn" onclick="applySelectedScoreSongCandidates()">선택한 곡에 연결</button>
-            <button type="button" class="score-light-btn" onclick="linkSameTitleScoreSongs()">곡명 일치 항목 선택</button>
-            <button type="button" class="score-light-btn" onclick="clearScoreSongCandidateSelection()">선택 해제</button>
+        <details class="score-link-picker" id="scoreSongCandidateBox">
+          <summary><div class="score-link-picker-head"><div class="score-link-picker-title">악보 연결 대상 찾기</div><div class="score-link-count" id="scoreSongCandidateCount">선택 0개</div></div></summary>
+          <div class="score-link-picker-body">
+            <div class="score-link-candidates" id="scoreSongCandidates"><div class="score-link-empty">곡명을 입력하면 연결할 수 있는 곡이 표시됩니다.</div></div>
+            <div class="score-link-actions">
+              <button type="button" class="score-light-btn" onclick="applySelectedScoreSongCandidates()">선택한 곡에 연결</button>
+              <button type="button" class="score-light-btn" onclick="linkSameTitleScoreSongs()">곡명 일치 항목 선택</button>
+              <button type="button" class="score-light-btn" onclick="clearScoreSongCandidateSelection()">선택 해제</button>
+            </div>
           </div>
-        </div>
+        </details>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button type="button" class="score-light-btn" onclick="clearScoreLinkedSongs()">악보 연결 해제</button>
         </div>
@@ -3360,6 +3367,10 @@ function scoreCandidateRows(){
 function selectedScoreCandidateIds(){
   return normalizeScoreLinkedSongIds(scoreCandidateSelectedIds);
 }
+function setScoreCandidatePanelOpen(open){
+  var panel=document.getElementById('scoreSongCandidateBox');
+  if(panel)panel.open=!!open;
+}
 function renderScoreSongCandidates(){
   var box=document.getElementById('scoreSongCandidates');
   var count=document.getElementById('scoreSongCandidateCount');
@@ -3391,6 +3402,7 @@ function renderScoreSongCandidates(){
   }).join('');
 }
 function toggleScoreSongCandidate(songId){
+  setScoreCandidatePanelOpen(true);
   var ids=selectedScoreCandidateIds();
   var idx=ids.indexOf(songId);
   if(idx>-1)ids.splice(idx,1);
@@ -3399,6 +3411,7 @@ function toggleScoreSongCandidate(songId){
   renderScoreSongCandidates();
 }
 function applySelectedScoreSongCandidates(){
+  setScoreCandidatePanelOpen(true);
   var ids=selectedScoreCandidateIds();
   if(!ids.length)return showToast('악보를 연결할 곡을 선택해주세요');
   var songs=ids.map(function(id){return allSongs.find(function(song){return song.id===id});}).filter(Boolean);
@@ -3449,6 +3462,7 @@ function clearScoreLinkedSong(){
   clearScoreLinkedSongs();
 }
 function linkSameTitleScoreSongs(){
+  setScoreCandidatePanelOpen(true);
   var titleEl=document.getElementById('scoreTitle');
   var nameEl=document.getElementById('scoreLinkedSongName');
   var key=scoreSearchKey((titleEl&&titleEl.value)|| (nameEl&&nameEl.value)||'');
@@ -5382,6 +5396,7 @@ function resetScoreForm(){
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var pub=document.getElementById('scorePublic');if(pub)pub.checked=true;
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 등록';
+  setScoreCandidatePanelOpen(false);
   renderScoreLinkedSongNote();
   renderScoreSongCandidates();
 }
