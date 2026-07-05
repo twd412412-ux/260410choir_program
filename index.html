@@ -7604,6 +7604,118 @@ function showCalDay(ds,day){
   document.getElementById('calEvtList').innerHTML=body;
 }
 
+function songDateKey(song){
+  if(!song||!song.year||!song.month||!song.day)return '';
+  return Number(song.year)+'-'+String(Number(song.month)).padStart(2,'0')+'-'+String(Number(song.day)).padStart(2,'0');
+}
+function scheduleScoreSource(schedule){
+  return [schedule&&schedule.songs,schedule&&schedule.program].filter(Boolean).join('\n');
+}
+function scheduleSongInRange(song,schedule){
+  var key=songDateKey(song);
+  return !!(key&&scheduleOccursOnDate(schedule,key));
+}
+function betterScheduleSongMatch(a,b){
+  if(!b)return true;
+  if(a.inRange!==b.inRange)return !!a.inRange;
+  return songScheduleRankValue(a.song)<songScheduleRankValue(b.song);
+}
+function scheduleMatchedSongs(schedule){
+  var source=scheduleScoreSource(schedule);
+  var sourceKey=scoreSearchKey(source);
+  if(!sourceKey)return [];
+  var bestByKey={};
+  (allSongs||[]).forEach(function(song){
+    var name=song&&song.songName||'';
+    var key=scoreSearchKey(name);
+    if(key.length<2)return;
+    var idx=sourceKey.indexOf(key);
+    if(idx<0)return;
+    var row={song:song,key:key,idx:idx,inRange:scheduleSongInRange(song,schedule)};
+    if(betterScheduleSongMatch(row,bestByKey[key]))bestByKey[key]=row;
+  });
+  var rows=Object.keys(bestByKey).map(function(key){return bestByKey[key];});
+  rows.sort(function(a,b){return b.key.length-a.key.length||a.idx-b.idx});
+  var selected=[];
+  rows.forEach(function(row){
+    var covered=selected.some(function(sel){
+      return sel.key.indexOf(row.key)>-1&&row.idx>=sel.idx&&row.idx<=(sel.idx+sel.key.length);
+    });
+    if(!covered)selected.push(row);
+  });
+  selected.sort(function(a,b){
+    return a.idx-b.idx||((b.inRange?1:0)-(a.inRange?1:0))||songScheduleRankValue(a.song)-songScheduleRankValue(b.song);
+  });
+  return selected.map(function(row){return row.song;});
+}
+function scheduleMatchedScoreRows(schedule){
+  var rows=[], seenScores={};
+  scheduleMatchedSongs(schedule).forEach(function(song){
+    var scores=findScoresForSong(song,false);
+    if(scores.length){
+      scores.forEach(function(score){
+        if(seenScores[score.id])return;
+        seenScores[score.id]=true;
+        rows.push({song:song,score:score});
+      });
+    }else{
+      rows.push({song:song,score:null});
+    }
+  });
+  var sourceKey=scoreSearchKey(scheduleScoreSource(schedule));
+  if(sourceKey){
+    sortScores(allScores.filter(isPublicScore)).forEach(function(score){
+      var key=scoreSearchKey(score.title);
+      if(key.length<2||sourceKey.indexOf(key)<0||seenScores[score.id])return;
+      seenScores[score.id]=true;
+      rows.push({song:null,score:score});
+    });
+  }
+  return rows;
+}
+function refreshScheduleScoreSection(scheduleId){
+  var wrap=document.getElementById('schScheduleScoreSection');
+  var schedule=allSchedules.find(function(x){return x.id===scheduleId});
+  if(wrap&&schedule)wrap.outerHTML=renderScheduleScoreSection(schedule,false);
+}
+function renderScheduleScoreSection(schedule,allowLoad){
+  var source=scheduleScoreSource(schedule);
+  if(!source)return '';
+  var id='schScheduleScoreSection';
+  if(!canViewScores()){
+    return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">로그인한 단원만 악보를 볼 수 있습니다.</div></div>';
+  }
+  var pending=[];
+  if(!songsLoaded&&songsLoadPromise)pending.push(songsLoadPromise);
+  if(!scoresLoaded)pending.push(loadScores(false,false));
+  if(pending.length){
+    if(allowLoad!==false){
+      Promise.all(pending).then(function(){refreshScheduleScoreSection(schedule.id);}).catch(function(e){console.error(e);});
+    }
+    return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">악보 연결을 확인하는 중입니다.</div></div>';
+  }
+  var rows=scheduleMatchedScoreRows(schedule);
+  if(!rows.length){
+    return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">연습곡 또는 프로그램 순서에서 기존 곡/악보와 일치하는 항목을 찾지 못했습니다.</div></div>';
+  }
+  var html=rows.map(function(row){
+    var song=row.song, score=row.score;
+    var name=song?(song.songName||'곡명 없음'):(score&&score.title||'악보');
+    var meta=[];
+    if(song&&song.category)meta.push(song.category);
+    if(song&&song.year&&song.month&&song.day)meta.push(song.year+'.'+String(song.month).padStart(2,'0')+'.'+String(song.day).padStart(2,'0'));
+    if(score&&score.title&&scoreSearchKey(score.title)!==scoreSearchKey(name))meta.push('악보 '+score.title);
+    if(score&&score.currentLabel)meta.push(score.currentLabel);
+    var action=score
+      ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
+      : canManageScores()
+        ? '<button class="score-action-btn add" onclick="closeModal(\'modalSchDetail\');openQuickScoreManage(\''+escAttr(name)+'\',\''+escAttr(song&&song.id||'')+'\')">＋ 악보 등록</button>'
+        : '<button class="score-action-btn empty" disabled>악보 없음</button>';
+    return '<div class="score-week-row"><div class="score-week-date">악보</div><div class="score-week-song" '+(song?'onclick="openDetail(\''+escAttr(song.id)+'\')"':'')+'>'+escHtml(name)+'<div class="score-meta">'+(meta.length?meta.map(function(v){return '<span>'+escHtml(v)+'</span>';}).join('<span>·</span>'):'<span>프로그램 자동 매칭</span>')+'</div></div><div>'+action+'</div></div>';
+  }).join('');
+  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-week-card" style="margin:0;padding:12px;box-shadow:none"><div class="score-week-grid">'+html+'</div></div></div>';
+}
+
 function openSchDetail(id){
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
@@ -7616,6 +7728,7 @@ function openSchDetail(id){
     body+='<div class="detail-row"><span class="detail-label">추가 안내</span><span class="detail-value" style="white-space:pre-line">'+escHtml(s.briefingMemo||'-')+'</span></div>';
     body+='</div>';
   }
+  body+=renderScheduleScoreSection(s,true);
   document.getElementById('schDetailBody').innerHTML=body+'<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="width:16px;height:16px;border-radius:4px;background:'+safeColor(s.color)+';display:inline-block"></span><span style="font-size:13px;color:var(--ts)">일정 색상</span></div>';
   openModal('modalSchDetail');
 }
