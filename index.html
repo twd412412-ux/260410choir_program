@@ -575,6 +575,18 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-form-note{font-size:12px;color:var(--ts);line-height:1.45}
 .score-linked-note{font-size:12px;color:var(--pd);background:var(--pl);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;line-height:1.4}
 .score-linked-note.empty{color:var(--ts);background:transparent}
+.score-link-picker{border:1px solid var(--bd);border-radius:12px;background:var(--bg);padding:10px;display:grid;gap:8px}
+.score-link-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.score-link-picker-title{font-size:12px;font-weight:850;color:var(--ts)}
+.score-link-count{font-size:11px;font-weight:850;color:var(--pd);background:var(--pl);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.score-link-candidates{display:grid;gap:6px;max-height:190px;overflow:auto}
+.score-link-candidate{width:100%;border:1px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:10px;padding:8px 10px;text-align:left;font-family:inherit;cursor:pointer;display:grid;gap:3px}
+.score-link-candidate:hover{border-color:#B7C4A6;background:#FEFCF6}
+.score-link-candidate.selected{border-color:#6F7D4E;background:#EAEFDF;color:#2F3B24}
+.score-link-candidate-main{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:900}
+.score-link-candidate-meta{font-size:11px;font-weight:700;color:var(--ts);line-height:1.35}
+.score-link-empty{font-size:12px;color:var(--ts);background:var(--sf);border:1px dashed var(--bd);border-radius:10px;padding:10px;text-align:center}
+.score-link-actions{display:flex;gap:6px;flex-wrap:wrap}
 .score-song-link{margin-top:12px;border-top:1px solid var(--bd);padding-top:12px}
 .score-song-link-title{font-size:13px;font-weight:850;margin-bottom:6px}
 .archive-reactions{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative}
@@ -1613,10 +1625,18 @@ body{font-weight:500}
       <input type="hidden" id="scoreLinkedSongIds">
       <input type="hidden" id="scoreLinkedSongName">
       <div class="score-admin-form">
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜" oninput="scoreCandidateSelectedIds=[];renderScoreSongCandidates()" onfocus="renderScoreSongCandidates()"></div>
         <div class="score-linked-note empty" id="scoreLinkedSongNote">곡 일정 연결 없이 등록됩니다.</div>
+        <div class="score-link-picker" id="scoreSongCandidateBox">
+          <div class="score-link-picker-head"><div class="score-link-picker-title">곡 일정 후보</div><div class="score-link-count" id="scoreSongCandidateCount">선택 0개</div></div>
+          <div class="score-link-candidates" id="scoreSongCandidates"><div class="score-link-empty">곡명을 입력하면 비슷한 곡 일정이 표시됩니다.</div></div>
+          <div class="score-link-actions">
+            <button type="button" class="score-light-btn" onclick="applySelectedScoreSongCandidates()">선택한 일정 연결</button>
+            <button type="button" class="score-light-btn" onclick="linkSameTitleScoreSongs()">같은 곡 모두 선택</button>
+            <button type="button" class="score-light-btn" onclick="clearScoreSongCandidateSelection()">선택 해제</button>
+          </div>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" class="score-light-btn" onclick="linkSameTitleScoreSongs()">같은 곡 일정 연결</button>
           <button type="button" class="score-light-btn" onclick="clearScoreLinkedSongs()">연결 해제</button>
         </div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
@@ -2327,7 +2347,7 @@ var db = firebase.firestore();
 var storage = firebase.storage();
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='home';
-var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false;
+var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false, scoreCandidateSelectedIds=[];
 var scoreLoadTimer=null;
 var SCORE_CACHE_KEY='choir_scores_public';
 var songRecommendCache=[];
@@ -3000,6 +3020,86 @@ function scoreSongLinkLabel(song){
   var date=(song.year&&song.month)?(song.year+'.'+String(song.month).padStart(2,'0')+(song.day?'.'+String(song.day).padStart(2,'0'):'')):'날짜 없음';
   return date+' · '+(song.category||'분류 없음')+' · '+(song.songName||'곡명 없음');
 }
+function scoreCandidateMatchScore(song,queryKey,queryRaw){
+  if(!song||!queryKey)return 0;
+  var name=song.songName||'';
+  var key=scoreSearchKey(name);
+  if(!key)return 0;
+  if(key===queryKey)return 100;
+  if(key.indexOf(queryKey)>-1)return 82;
+  if(queryKey.indexOf(key)>-1)return 74;
+  var qChars=uniqueArray(queryKey.split('')).filter(Boolean);
+  var matched=qChars.filter(function(ch){return key.indexOf(ch)>-1;}).length;
+  var score=matched?Math.round(matched/qChars.length*55):0;
+  if(String(name).toLowerCase().indexOf(String(queryRaw||'').toLowerCase())>-1)score+=15;
+  return score;
+}
+function scoreCandidateRows(){
+  var titleEl=document.getElementById('scoreTitle');
+  var q=(titleEl&&titleEl.value||'').trim();
+  var qKey=scoreSearchKey(q);
+  if(!qKey)return [];
+  return allSongs.map(function(song){
+    return {song:song,score:scoreCandidateMatchScore(song,qKey,q)};
+  }).filter(function(item){
+    return item.score>=28;
+  }).sort(function(a,b){
+    return b.score-a.score||songScheduleRankValue(a.song)-songScheduleRankValue(b.song)||String(a.song.songName||'').localeCompare(String(b.song.songName||''),'ko');
+  }).slice(0,30);
+}
+function selectedScoreCandidateIds(){
+  return normalizeScoreLinkedSongIds(scoreCandidateSelectedIds);
+}
+function renderScoreSongCandidates(){
+  var box=document.getElementById('scoreSongCandidates');
+  var count=document.getElementById('scoreSongCandidateCount');
+  if(!box)return;
+  if(!allSongs.length){
+    box.innerHTML='<div class="score-link-empty">곡 목록을 불러오는 중입니다.</div>';
+    if(count)count.textContent='선택 '+selectedScoreCandidateIds().length+'개';
+    if(!songsLoaded){
+      if(typeof initSongs==='function')initSongs();
+      if(songsLoadPromise)songsLoadPromise.then(function(){renderScoreSongCandidates();});
+    }
+    return;
+  }
+  var rows=scoreCandidateRows();
+  var selected=selectedScoreCandidateIds();
+  if(count)count.textContent='선택 '+selected.length+'개';
+  if(!rows.length){
+    box.innerHTML='<div class="score-link-empty">비슷한 곡 일정이 없습니다. 곡명을 더 입력하거나 직접 등록하세요.</div>';
+    return;
+  }
+  box.innerHTML=rows.map(function(item){
+    var song=item.song;
+    var on=selected.indexOf(song.id)>-1;
+    var meta=[scoreSongLinkLabel(song),item.score===100?'이름 일치':'유사도 '+item.score].filter(Boolean).join(' · ');
+    return '<button type="button" class="score-link-candidate '+(on?'selected':'')+'" onclick="toggleScoreSongCandidate(\''+escAttr(song.id)+'\')">'
+      +'<div class="score-link-candidate-main"><span>'+escHtml(song.songName||'곡명 없음')+'</span><span>'+(on?'선택됨':'선택')+'</span></div>'
+      +'<div class="score-link-candidate-meta">'+escHtml(meta)+'</div>'
+      +'</button>';
+  }).join('');
+}
+function toggleScoreSongCandidate(songId){
+  var ids=selectedScoreCandidateIds();
+  var idx=ids.indexOf(songId);
+  if(idx>-1)ids.splice(idx,1);
+  else ids.push(songId);
+  scoreCandidateSelectedIds=normalizeScoreLinkedSongIds(ids);
+  renderScoreSongCandidates();
+}
+function applySelectedScoreSongCandidates(){
+  var ids=selectedScoreCandidateIds();
+  if(!ids.length)return showToast('연결할 곡 일정을 선택해주세요');
+  var songs=ids.map(function(id){return allSongs.find(function(song){return song.id===id});}).filter(Boolean);
+  setScoreLinkedSongs(ids,songs[0]?(songs[0].songName||''):'');
+  renderScoreSongCandidates();
+  showToast('곡 일정 '+ids.length+'개를 연결했습니다');
+}
+function clearScoreSongCandidateSelection(){
+  scoreCandidateSelectedIds=[];
+  renderScoreSongCandidates();
+}
 function renderScoreLinkedSongNote(){
   var nameEl=document.getElementById('scoreLinkedSongName');
   var note=document.getElementById('scoreLinkedSongNote');
@@ -3019,6 +3119,7 @@ function renderScoreLinkedSongNote(){
 }
 function setScoreLinkedSongs(songIds,songName){
   var ids=normalizeScoreLinkedSongIds(songIds);
+  scoreCandidateSelectedIds=ids.slice();
   var idEl=document.getElementById('scoreLinkedSongId');
   var idsEl=document.getElementById('scoreLinkedSongIds');
   var nameEl=document.getElementById('scoreLinkedSongName');
@@ -3026,6 +3127,7 @@ function setScoreLinkedSongs(songIds,songName){
   if(idsEl)idsEl.value=ids.join(',');
   if(nameEl)nameEl.value=songName||'';
   renderScoreLinkedSongNote();
+  renderScoreSongCandidates();
 }
 function setScoreLinkedSong(songId,songName){
   setScoreLinkedSongs(songId?[songId]:[],songName||'');
@@ -3043,8 +3145,9 @@ function linkSameTitleScoreSongs(){
   if(!key)return showToast('먼저 곡명을 입력해주세요');
   var matches=allSongs.filter(function(song){return scoreSearchKey(song.songName)===key;}).sort(function(a,b){return songScheduleRankValue(a)-songScheduleRankValue(b);});
   if(!matches.length)return showToast('같은 곡명 일정이 없습니다');
-  setScoreLinkedSongs(matches.map(function(song){return song.id;}),matches[0].songName||'');
-  showToast('같은 곡명 일정 '+matches.length+'개를 연결했습니다');
+  scoreCandidateSelectedIds=matches.map(function(song){return song.id;});
+  renderScoreSongCandidates();
+  showToast('같은 곡명 일정 '+matches.length+'개를 선택했습니다. 연결하려면 선택한 일정 연결을 누르세요');
 }
 
 function openQuickScoreManage(songName,songId){
@@ -4471,11 +4574,13 @@ function renderScoreManage(){
   list.innerHTML=rows.map(function(score){return renderScoreCard(score,true);}).join('');
 }
 function resetScoreForm(){
+  scoreCandidateSelectedIds=[];
   ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var pub=document.getElementById('scorePublic');if(pub)pub.checked=true;
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 등록';
   renderScoreLinkedSongNote();
+  renderScoreSongCandidates();
 }
 function scoreSafeFileName(name){
   var base=String(name||'score.pdf').trim().replace(/[\\\/\u0000-\u001F]/g,'_');
