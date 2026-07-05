@@ -4604,19 +4604,13 @@ var ORCHESTRA_SCORE_INSTRUMENTS=[
   {key:'auto',label:'파일명에서 자동 추정'},
   {key:'fullscore',label:'총보'},
   {key:'synthscore',label:'신디용 총보'},
-  {key:'violin1',label:'바이올린1'},
-  {key:'violin2',label:'바이올린2'},
-  {key:'violin',label:'바이올린'},
-  {key:'viola',label:'비올라'},
-  {key:'cello',label:'첼로'},
-  {key:'bass',label:'콘트라베이스'},
   {key:'flute',label:'플루트'},
   {key:'oboe',label:'오보에'},
   {key:'clarinet',label:'클라리넷'},
   {key:'bassoon',label:'바순'},
   {key:'saxophone',label:'색소폰'},
-  {key:'trumpet',label:'트럼펫'},
   {key:'horn',label:'호른'},
+  {key:'trumpet',label:'트럼펫'},
   {key:'trombone',label:'트롬본'},
   {key:'tuba',label:'튜바'},
   {key:'timpani',label:'팀파니'},
@@ -4624,6 +4618,12 @@ var ORCHESTRA_SCORE_INSTRUMENTS=[
   {key:'cymbals',label:'심벌즈'},
   {key:'snare',label:'스네어드럼'},
   {key:'percussion',label:'타악기'},
+  {key:'violin1',label:'바이올린1'},
+  {key:'violin2',label:'바이올린2'},
+  {key:'violin',label:'바이올린'},
+  {key:'viola',label:'비올라'},
+  {key:'cello',label:'첼로'},
+  {key:'bass',label:'콘트라베이스'},
   {key:'etc',label:'기타'}
 ];
 function normalizeScoreKind(kind){
@@ -4664,10 +4664,10 @@ function guessScoreInstrumentFromFileName(name){
     [/violin|vln|vn|바이올린/, 'violin'],
     [/viola|vla|비올라/, 'viola'],
     [/cello|vc|첼로/, 'cello'],
-    [/flute|fl|플루트/, 'flute'],
+    [/flute|fl|플루트|플룻/, 'flute'],
     [/oboe|ob|오보에/, 'oboe'],
     [/clarinet|cl|클라리넷/, 'clarinet'],
-    [/bassoon|bn|바순/, 'bassoon'],
+    [/bassoon|basoon|bn|바순/, 'bassoon'],
     [/contrabass|double\s*bass|bass|cb|콘트라베이스|더블베이스/, 'bass'],
     [/sax|saxophone|색소폰/, 'saxophone'],
     [/trumpet|tp|트럼펫/, 'trumpet'],
@@ -4686,8 +4686,12 @@ function guessScoreInstrumentFromFileName(name){
   return 'etc';
 }
 function scoreInstrumentRank(score){
+  var text=[score&&score.instrument,score&&score.instrumentLabel,score&&score.currentFileName].filter(Boolean).join(' ');
   var key=normalizeScoreInstrument(score&&score.instrument);
   var idx=ORCHESTRA_SCORE_INSTRUMENTS.findIndex(function(item){return item.key===key});
+  if(idx>-1)return idx;
+  var guessed=guessScoreInstrumentFromFileName(text);
+  idx=ORCHESTRA_SCORE_INSTRUMENTS.findIndex(function(item){return item.key===guessed});
   return idx<0?999:idx;
 }
 function scoreKindRank(score){
@@ -4870,11 +4874,22 @@ function sortScores(rows){
     return bt.localeCompare(at)||String(a.title||'').localeCompare(String(b.title||''),'ko');
   });
 }
+var SCORE_PART_COLLATOR=(typeof Intl!=='undefined'&&Intl.Collator)?new Intl.Collator('ko',{numeric:true,sensitivity:'base'}):null;
+function scorePartSortText(score){
+  return String(scorePartDisplayLabel(score)||scoreInstrumentLabel(score&&score.instrument)||score&&score.currentFileName||'')
+    .replace(/플룻/g,'플루트')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function compareScorePartText(a,b){
+  var av=scorePartSortText(a), bv=scorePartSortText(b);
+  return SCORE_PART_COLLATOR?SCORE_PART_COLLATOR.compare(av,bv):av.localeCompare(bv,'ko');
+}
 function sortScoreParts(rows){
   return (rows||[]).slice().sort(function(a,b){
     return scoreKindRank(a)-scoreKindRank(b)
       ||scoreInstrumentRank(a)-scoreInstrumentRank(b)
-      ||String(a.instrumentLabel||scoreInstrumentLabel(a.instrument)||'').localeCompare(String(b.instrumentLabel||scoreInstrumentLabel(b.instrument)||''),'ko')
+      ||compareScorePartText(a,b)
       ||String(a.title||'').localeCompare(String(b.title||''),'ko')
       ||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
   });
