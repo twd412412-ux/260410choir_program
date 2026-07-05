@@ -2655,7 +2655,6 @@ var PERMISSION_GROUPS=[
     {key:'account.pin',label:'PIN 변경',desc:'로그인 PIN 변경과 초기화'}
   ]},
   {title:'아카이브',items:[
-    {key:'archive.view',label:'아카이브 조회',desc:'사진 자료 보기'},
     {key:'archive.upload',label:'아카이브 업로드',desc:'사진 자료 업로드'},
     {key:'archive.manageMine',label:'본인 자료 수정/삭제',desc:'본인이 올린 자료만 수정/삭제'}
   ]},
@@ -2669,9 +2668,9 @@ var PERMISSION_LABELS={};
 PERMISSION_GROUPS.forEach(function(group){group.items.forEach(function(item){PERMISSION_LABELS[item.key]=item.label;});});
 var PERMISSION_PRESETS={
   none:{label:'일반 단원',desc:'관리 메뉴 없이 곡 목록과 일정만 이용',permissions:[],scope:[]},
-  partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine'],scope:[]},
-  operations:{label:'운영 스태프',desc:'곡/일정/악보 관리와 선곡 도우미',permissions:['song.manage','score.manage','score.editAny','schedule.manage','song.recommend','archive.view','archive.upload','archive.manageMine'],scope:[]},
-  chongmu:{label:'총무 스태프',desc:'곡/일정/악보, 출결, 명부 조회, 공지 관리',permissions:['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.view','archive.upload','archive.manageMine'],scope:['ALL']},
+  partLeader:{label:'파트 리더',desc:'담당 파트 출결과 아카이브 업로드',permissions:['attendance.view','attendance.check','archive.upload','archive.manageMine'],scope:[]},
+  operations:{label:'운영 스태프',desc:'곡/일정/악보 관리와 선곡 도우미',permissions:['song.manage','score.manage','score.editAny','schedule.manage','song.recommend','archive.upload','archive.manageMine'],scope:[]},
+  chongmu:{label:'총무 스태프',desc:'곡/일정/악보, 출결, 명부 조회, 공지 관리',permissions:['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','notice.manage','archive.upload','archive.manageMine'],scope:['ALL']},
   handbook:{label:'명부 스태프',desc:'단원 조회와 명부 추가/수정',permissions:['member.view','member.history','member.manage'],scope:[]},
   custom:{label:'직접 설정',desc:'필요한 항목만 직접 선택',permissions:[],scope:[]}
 };
@@ -2852,10 +2851,10 @@ function expandPresetPermissions(permissions,preset){
 }
 function legacyPermissionsForRole(role, canArchiveUpload){
   var perms=[];
-  if(role==='attendance')perms=perms.concat(['attendance.view','attendance.check','archive.view','archive.upload','archive.manageMine']);
-  if(role==='songschedule')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','archive.view','archive.upload','archive.manageMine']);
-  if(role==='chongmu')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','archive.view','archive.upload','archive.manageMine']);
-  if(canArchiveUpload)perms=perms.concat(['archive.view','archive.upload','archive.manageMine']);
+  if(role==='attendance')perms=perms.concat(['attendance.view','attendance.check','archive.upload','archive.manageMine']);
+  if(role==='songschedule')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','archive.upload','archive.manageMine']);
+  if(role==='chongmu')perms=perms.concat(['song.manage','score.manage','score.editAny','schedule.manage','attendance.view','attendance.check','member.view','member.history','archive.upload','archive.manageMine']);
+  if(canArchiveUpload)perms=perms.concat(['archive.upload','archive.manageMine']);
   return uniqueArray(perms);
 }
 function getUserPermissions(user){
@@ -3006,7 +3005,7 @@ function canManageAttendanceReportExclusion(){
   return adminRole==='admin';
 }
 function hasArchiveView(){
-  return !!(currentUser||adminRole==='admin'||adminRole==='chongmu'||hasPermission('archive.view')||hasPermission('archive.upload'));
+  return !!(currentUser||adminRole==='admin'||adminRole==='chongmu');
 }
 function canUploadArchive(){
   return adminRole==='admin'||hasPermission('archive.upload');
@@ -6737,7 +6736,7 @@ function accountFeatureLabels(perms){
   if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
   if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1)labels.push('명부');
   if(perms.indexOf('account.manage')>-1||perms.indexOf('account.pin')>-1)labels.push('계정');
-  if(perms.indexOf('archive.view')>-1||perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1)labels.push('아카이브');
+  if(perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1)labels.push('아카이브');
   if(perms.indexOf('notice.manage')>-1||perms.indexOf('song.recommend')>-1||perms.indexOf('seating.manage')>-1)labels.push('도구');
   return labels;
 }
