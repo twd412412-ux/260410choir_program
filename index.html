@@ -1091,6 +1091,53 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   min-height:50px;
 }
 
+.schedule-picker-wrap{
+  position:relative;
+  width:100%;
+  min-width:0;
+  height:50px;
+  overflow:hidden;
+  border-radius:10px;
+}
+
+.schedule-picker-display{
+  width:100%;
+  height:50px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #D5C8B6;
+  border-radius:10px;
+  background:#FFFDF8;
+  color:var(--tx);
+  font-family:inherit;
+  font-size:14px;
+  font-weight:720;
+  line-height:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.schedule-picker-display.empty{
+  color:#9B9387;
+  font-weight:650;
+}
+
+#subSchedule .schedule-native-input{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:50px!important;
+  min-width:0!important;
+  max-width:100%!important;
+  opacity:.001;
+  padding:0!important;
+  border:0!important;
+  margin:0!important;
+  cursor:pointer;
+}
+
 @media(max-width:360px){
   #subSchedule .schedule-inline-row{
     gap:6px;
@@ -2039,11 +2086,11 @@ body{font-weight:500}
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
     <div class="schedule-inline-row schedule-date-row" style="display:flex;gap:8px">
-      <div class="form-group"><label class="form-label">시작일 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" onchange="syncScheduleEndDate()"></div>
-      <div class="form-group"><label class="form-label">종료일</label><input class="form-input" id="schEndDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
+      <div class="form-group"><label class="form-label">시작일 *</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display" id="schDateDisplay" tabindex="-1">날짜 선택</button><input class="schedule-native-input" id="schDate" type="date" aria-label="시작일" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleEndDate();syncScheduleDisplays()" onchange="syncScheduleEndDate();syncScheduleDisplays()"></div></div>
+      <div class="form-group"><label class="form-label">종료일</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display" id="schEndDateDisplay" tabindex="-1">날짜 선택</button><input class="schedule-native-input" id="schEndDate" type="date" aria-label="종료일" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleDisplays()" onchange="syncScheduleDisplays()"></div></div>
     </div>
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
-    <div class="schedule-inline-row schedule-time-row" style="display:flex;gap:8px"><div class="form-group"><label class="form-label">시간</label><input class="form-input" id="schTime" type="time"></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
+    <div class="schedule-inline-row schedule-time-row" style="display:flex;gap:8px"><div class="form-group"><label class="form-label">시간</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display empty" id="schTimeDisplay" tabindex="-1">시간 선택</button><input class="schedule-native-input" id="schTime" type="time" aria-label="시간" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleDisplays()" onchange="syncScheduleDisplays()"></div></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-input" id="schMemo" placeholder="추가 메모"></div>
     <div class="form-group" style="padding:12px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">
@@ -3174,6 +3221,7 @@ function resetScheduleForm(defaultDate){
   document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
   var btn=document.getElementById('schSaveBtn');
   if(btn)btn.textContent='일정 추가';
+  syncScheduleDisplays();
 }
 
 function ensureScheduleDefaultDate(){
@@ -3183,6 +3231,7 @@ function ensureScheduleDefaultDate(){
   var today=getTodayInputDate();
   if(dateEl&&!dateEl.value)dateEl.value=today;
   if(endDateEl&&!endDateEl.value)endDateEl.value=(dateEl&&dateEl.value)||today;
+  syncScheduleDisplays();
 }
 
 function openQuickAddSong(defaultDate){
@@ -8013,6 +8062,34 @@ function syncScheduleEndDate(){
   var start=document.getElementById('schDate');
   var end=document.getElementById('schEndDate');
   if(start&&end&&(!end.value||end.value<start.value))end.value=start.value||'';
+  syncScheduleDisplays();
+}
+function scheduleDateDisplay(value){
+  var parts=getDateParts(value);
+  if(!parts)return '';
+  return parts.year+'. '+parts.month+'. '+parts.day+'.';
+}
+function scheduleTimeDisplay(value){
+  var m=String(value||'').match(/^(\d{2}):(\d{2})$/);
+  if(!m)return '';
+  var h=parseInt(m[1],10), minute=m[2];
+  var label=h<12?'오전':'오후';
+  var hour=h%12||12;
+  return label+' '+hour+':'+minute;
+}
+function setScheduleDisplay(id,text,emptyText){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=text||emptyText;
+  el.classList.toggle('empty',!text);
+}
+function syncScheduleDisplays(){
+  var start=document.getElementById('schDate');
+  var end=document.getElementById('schEndDate');
+  var time=document.getElementById('schTime');
+  setScheduleDisplay('schDateDisplay',scheduleDateDisplay(start&&start.value),'날짜 선택');
+  setScheduleDisplay('schEndDateDisplay',scheduleDateDisplay(end&&end.value),'날짜 선택');
+  setScheduleDisplay('schTimeDisplay',scheduleTimeDisplay(time&&time.value),'시간 선택');
 }
 function initSchedules(){
   var cached=loadCache('choir_schedules',600000);
@@ -8113,6 +8190,7 @@ function editSchedule(id){
   document.getElementById('schDress').value=s.dress||'';
   document.getElementById('schBriefingMemo').value=s.briefingMemo||'';
   toggleScheduleBriefing();
+  syncScheduleDisplays();
   selColor=s.color||COLORS[0];
   document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
   var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 수정 저장';
