@@ -2678,6 +2678,13 @@ var ATTENDANCE_SCOPE_OPTIONS=[
   {key:'반주',label:'반주'},
   {key:'임원',label:'임원'}
 ];
+var SCORE_ACCESS_SCOPE_OPTIONS=[
+  {key:'default',label:'파트 기준 자동',desc:'S/T는 싱어, 관현악은 관현악, 지휘/반주는 전체'},
+  {key:'all',label:'전체 악보',desc:'싱어와 관현악 파트보 모두 조회'},
+  {key:'singer',label:'싱어 악보만',desc:'싱어 악보만 조회'},
+  {key:'orchestra',label:'관현악 악보만',desc:'관현악 파트보만 조회'},
+  {key:'none',label:'악보 숨김',desc:'악보 탭과 악보 보기 숨김'}
+];
 
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
@@ -2800,6 +2807,34 @@ function normalizeAttendanceScopeArray(list){
   if(expanded.indexOf('ALL')>-1)return ['ALL'];
   return expanded;
 }
+function normalizeScoreAccessScope(value){
+  if(Array.isArray(value)){
+    var list=uniqueArray(value);
+    if(list.indexOf('ALL')>-1||list.indexOf('all')>-1)return 'all';
+    if(list.indexOf('NONE')>-1||list.indexOf('none')>-1)return 'none';
+    var hasSinger=list.indexOf('singer')>-1;
+    var hasOrchestra=list.indexOf('orchestra')>-1;
+    if(hasSinger&&hasOrchestra)return 'all';
+    if(hasSinger)return 'singer';
+    if(hasOrchestra)return 'orchestra';
+    return 'default';
+  }
+  value=String(value||'').trim().toLowerCase();
+  return ['default','all','singer','orchestra','none'].indexOf(value)>-1?value:'default';
+}
+function scoreAccessScopeLabel(value){
+  value=normalizeScoreAccessScope(value);
+  var found=SCORE_ACCESS_SCOPE_OPTIONS.find(function(opt){return opt.key===value});
+  return found?found.label:'파트 기준 자동';
+}
+function scoreAccessModesFromScope(value){
+  value=normalizeScoreAccessScope(value);
+  if(value==='all')return ['singer','orchestra'];
+  if(value==='singer')return ['singer'];
+  if(value==='orchestra')return ['orchestra'];
+  if(value==='none')return [];
+  return null;
+}
 function expandPresetPermissions(permissions,preset){
   var base=normalizePermissionArray(permissions||[]);
   if(preset&&preset!=='custom'&&PERMISSION_PRESETS[preset]){
@@ -2871,7 +2906,7 @@ function isMemberLoggedIn(){
   return !!(currentUser&&currentUser.id&&currentUser.name);
 }
 function canViewScores(){
-  return isMemberLoggedIn()||adminRole==='admin'||hasPermission('score.manage');
+  return adminRole==='admin'||canManageScores()||getScoreAccessModes().length>0;
 }
 function canViewSongList(){
   return isMemberLoggedIn()||adminRole==='admin'||canManageSongs();
@@ -3783,7 +3818,7 @@ function loginUser(){
     if(snap.empty)return showToast('등록되지 않은 이름입니다');
     var doc=snap.docs[0];var data=doc.data();
     if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    currentUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[])};
+    currentUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[]),scoreAccessScope:normalizeScoreAccessScope(data.scoreAccessScope)};
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
     if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
     updateUserBar();closeModal('modalUser');
@@ -3851,6 +3886,7 @@ function restoreUser() {
       currentUser.memberId=currentUser.memberId||'';
       currentUser.permissions=normalizePermissionArray(currentUser.permissions);
       currentUser.attendanceScope=normalizeAttendanceScopeArray(currentUser.attendanceScope||[]);
+      currentUser.scoreAccessScope=normalizeScoreAccessScope(currentUser.scoreAccessScope);
       updateUserBar();
       adminRole=getSessionRoleForUser(currentUser)||null;
       syncAccessShell();
@@ -4617,7 +4653,9 @@ function isUserPianistOrConductor(user){
 function getScoreAccessModes(user){
   user=user||currentUser;
   if(adminRole==='admin'||canManageScores())return ['singer','orchestra'];
-  if(!isMemberLoggedIn())return [];
+  var explicitModes=scoreAccessModesFromScope(user&&user.scoreAccessScope);
+  if(explicitModes)return explicitModes;
+  if(!(user&&user.id&&user.name))return [];
   if(isUserPianistOrConductor(user))return ['singer','orchestra'];
   if(isUserOrchestra(user))return ['orchestra'];
   return ['singer'];
@@ -6152,6 +6190,7 @@ function accountSearchText(m){
     normalizePartName(m.part)||'',
     linked&&linked.name||'',
     linked&&normalizePartName(linked.part)||'',
+    scoreAccessScopeLabel(m.scoreAccessScope),
     getUserPermissions(m).map(function(p){return PERMISSION_LABELS[p]||p}).join(' ')
   ].join(' ').toLowerCase();
 }
@@ -6392,7 +6431,7 @@ function commitBulkAccountRows(rows){
       var batch=db.batch();
       chunk.forEach(function(row){
         var ref=db.collection('accounts').doc();
-        var data={name:row.name,part:row.part,pin:row.pin,memberId:row.memberId||'',favorites:[],createdAt:now,createdBy:actor};
+        var data={name:row.name,part:row.part,pin:row.pin,memberId:row.memberId||'',scoreAccessScope:'default',favorites:[],createdAt:now,createdBy:actor};
         if(row.memberId){
           data.memberLinkedAt=now;
           data.memberLinkedBy=actor;
@@ -6457,7 +6496,7 @@ function addMember(){
 
     // 👇 'accounts' 방에 저장!
     db.collection('accounts').add({ 
-      name:name, part:part, pin:pin, memberId:memberId,
+      name:name, part:part, pin:pin, memberId:memberId, scoreAccessScope:'default',
       favorites:[], createdAt:new Date().toISOString()
     }).then(function(){
       var msg=name+'님 로그인 계정 생성 완료';
@@ -6563,7 +6602,7 @@ function loadMembers(){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[])}); }
+      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(m.scoreAccessScope)}); }
     });
     renderAccountList();
   });
@@ -6591,13 +6630,15 @@ function accountFeatureLabels(perms){
 
 function renderAccountPermissionBadges(m){
   var perms=getUserPermissions(m);
-  if(perms.length===0)return '';
+  var scoreScope=normalizeScoreAccessScope(m&&m.scoreAccessScope);
+  if(perms.length===0&&scoreScope==='default')return '';
   var badges=[];
   var featureLabels=accountFeatureLabels(perms);
-  if(featureLabels.length===0)return '';
   featureLabels.forEach(function(label){
     badges.push('<span class="perm-badge">'+escHtml(label)+'</span>');
   });
+  if(scoreScope!=='default')badges.push('<span class="perm-badge scope">악보 '+escHtml(scoreAccessScopeLabel(scoreScope))+'</span>');
+  if(badges.length===0)return '';
   var scopeText=accountScopeLabel(m.attendanceScope);
   if(!scopeText&&featureLabels.indexOf('출결')>-1)scopeText=accountScopeLabel(scopeFromAccountPart(m.part));
   if(scopeText&&featureLabels.indexOf('출결')>-1)badges.push('<span class="perm-badge scope">'+escHtml(scopeText)+'</span>');
@@ -6640,9 +6681,10 @@ function permissionEditorScopeFor(m,preset,permissions){
   return [];
 }
 
-function renderPermissionEditor(preset, permissions, scope){
+function renderPermissionEditor(preset, permissions, scope, scoreScope){
   permissions=normalizePermissionArray(permissions);
   scope=uniqueArray(scope||[]);
+  scoreScope=normalizeScoreAccessScope(scoreScope);
   var presetOptions=Object.keys(PERMISSION_PRESETS).map(function(key){
     var p=PERMISSION_PRESETS[key];
     return '<option value="'+key+'"'+(preset===key?' selected':'')+'>'+escHtml(p.label)+' - '+escHtml(p.desc)+'</option>';
@@ -6657,6 +6699,11 @@ function renderPermissionEditor(preset, permissions, scope){
     html+='</div>';
   });
   html+='</div>';
+  html+='<div class="perm-group" id="scoreAccessScopeBox"><div class="perm-group-title">악보 조회 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45;margin-bottom:8px">관리 권한과 별개로 악보 탭에서 볼 수 있는 종류를 정합니다. 관리 권한이 있으면 등록/수정과 전체 조회가 가능합니다.</div><select class="form-sel" id="accountScoreAccessScope" onchange="markPermissionCustom()">';
+  SCORE_ACCESS_SCOPE_OPTIONS.forEach(function(opt){
+    html+='<option value="'+escHtml(opt.key)+'"'+(scoreScope===opt.key?' selected':'')+'>'+escHtml(opt.label)+' - '+escHtml(opt.desc)+'</option>';
+  });
+  html+='</select></div>';
   html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">출결 체크와 찬양의밤 파트 제출에서 여기서 지정한 범위만 열립니다. 비워두면 계정의 파트를 기본 범위로 사용하고, 지휘 계정은 전체 범위로 사용합니다.</div><div class="perm-scope-grid">';
   ATTENDANCE_SCOPE_OPTIONS.forEach(function(opt){
     html+='<label class="perm-scope-item"><input type="checkbox" class="perm-scope-input" value="'+escHtml(opt.key)+'" '+(scope.indexOf(opt.key)>-1?'checked':'')+'><span>'+escHtml(opt.label)+'</span></label>';
@@ -6700,6 +6747,11 @@ function readAttendanceScopeChecks(){
     if(input.checked)list.push(input.value);
   });
   return normalizeAttendanceScopeArray(list);
+}
+
+function readScoreAccessScope(){
+  var el=document.getElementById('accountScoreAccessScope');
+  return normalizeScoreAccessScope(el&&el.value);
 }
 
 function syncAttendanceScopeVisibility(){
@@ -6775,10 +6827,11 @@ function openAccountRole(id){
   var preset=m.permissionPreset||legacyPresetForAccount(m);
   var perms=permissionEditorPermissionsFor(m,preset);
   var scope=permissionEditorScopeFor(m,preset,perms);
+  var scoreScope=normalizeScoreAccessScope(m.scoreAccessScope);
   var presetLabel=permissionPresetLabel(preset);
   openAccountAction('계정 권한 변경',
     '<div class="account-action-note"><b>현재 프리셋: '+escHtml(presetLabel)+'</b><br>'+escHtml(m.name)+'님의 권한을 지정합니다. 출결 범위는 여기서 정한 값만 사용할 수 있습니다.</div>'
-    +renderPermissionEditor(preset,perms,scope)
+    +renderPermissionEditor(preset,perms,scope,scoreScope)
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountRole()">저장</button></div>'
   );
   setTimeout(function(){syncPermissionEditorFromPreset(false);},0);
@@ -6790,6 +6843,7 @@ function saveAccountRole(){
   var preset=document.getElementById('accountPermPreset').value||'custom';
   var permissions=readPermissionEditorChecks();
   var attendanceScope=readAttendanceScopeChecks();
+  var scoreAccessScope=readScoreAccessScope();
   if((permissions.indexOf('attendance.view')>-1||permissions.indexOf('attendance.check')>-1||permissions.indexOf('attendance.delete')>-1)&&attendanceScope.length===0){
     showToast('출결 권한은 담당 범위를 선택해야 합니다');
     return;
@@ -6797,12 +6851,12 @@ function saveAccountRole(){
   var role=legacyRoleFromPermissions(permissions,preset);
   var canArchiveUpload=permissions.indexOf('archive.upload')>-1;
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,permissionsUpdatedAt:new Date().toISOString(),permissionsUpdatedBy:currentActorName()}).then(function(){
+  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,scoreAccessScope:scoreAccessScope,permissionsUpdatedAt:new Date().toISOString(),permissionsUpdatedBy:currentActorName()}).then(function(){
     var label=permissionPresetLabel(preset);
     showToast(m.name+'님 권한: '+label);
     closeModal('modalAccountAction');
     loadMembers();
-    writeLog('권한 변경',m.name+'님 → '+label+'\n권한: '+permissions.map(function(p){return PERMISSION_LABELS[p]||p}).join(', ')+(attendanceScope.length?'\n출결 범위: '+attendanceScope.map(function(s){return s==='S_GROUP'?'S1/S2':s}).join(', '):''));
+    writeLog('권한 변경',m.name+'님 → '+label+'\n권한: '+permissions.map(function(p){return PERMISSION_LABELS[p]||p}).join(', ')+(attendanceScope.length?'\n출결 범위: '+attendanceScope.map(function(s){return s==='S_GROUP'?'S1/S2':s}).join(', '):'')+'\n악보 조회: '+scoreAccessScopeLabel(scoreAccessScope));
   }).catch(function(e){console.error(e);showToast('변경 중 오류 발생')});
 }
 
