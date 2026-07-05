@@ -2798,6 +2798,14 @@ function syncAccessShell(){
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
   if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
+  enforceCurrentTabAccess();
+}
+
+function enforceCurrentTabAccess(){
+  if(currentTab==='admin'&&!canOpenAdminArea())return switchTab('home');
+  if(currentTab==='stats'&&!canUseStats())return switchTab('home');
+  if(currentTab==='archive'&&!hasArchiveView())return switchTab('home');
+  if(currentTab==='scores'&&!canViewScores())return switchTab('home');
 }
 
 function syncQuickCreateActions(){
