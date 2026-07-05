@@ -2020,7 +2020,7 @@ body{font-weight:500}
           <option value="">회별 선택</option><option>어머니회</option><option>봉사회</option><option>청년회</option><option>대학회</option>
         </select>
         <select class="form-sel" id="hbSub">
-          <option value="">겸직 없음</option><option value="임원">겸직: 임원</option><option value="지휘">겸직: 지휘</option><option value="반주">겸직: 반주</option><option value="준단원">겸직: 준단원</option><option value="신입단원">겸직: 신입단원</option>
+          <option value="">겸직 없음</option><option value="임원">겸직: 임원</option><option value="지휘">겸직: 지휘</option><option value="반주">겸직: 반주자</option><option value="준단원">겸직: 준단원</option><option value="신입단원">겸직: 신입단원</option>
         </select>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
@@ -2447,7 +2447,7 @@ body{font-weight:500}
         <option value="">없음</option>
         <option value="임원">임원</option>
         <option value="지휘">지휘</option>
-        <option value="반주">반주</option>
+        <option value="반주">반주자</option>
         <option value="준단원">준단원</option>
         <option value="신입단원">신입단원</option>
       </select>
@@ -3960,6 +3960,8 @@ function normalizePartName(part){
   if(/^명.*외$/.test(v))return '명단제외';
   if(/^준.*단원$/.test(v))return '준단원';
   if(/^신.*단원$/.test(v))return '신입단원';
+  if(/^반주자?$/.test(v))return '반주';
+  if(/^지휘자?$/.test(v))return '지휘';
   var map={S1:'S1',S2:'S2',T1:'T1',T2:'T2'};
   return map[up]||v;
 }
@@ -7929,8 +7931,12 @@ function openMemberSongHistory(id){
 
 // 현재 선택된 파트 필터를 기억하는 변수
 var selectedHbPart = 'all';
-var HANDBOOK_MAIN_PARTS=['S1','S2','T1','T2','관현악','지휘','반주','임원'];
+var HANDBOOK_MAIN_PARTS=['S1','S2','T1','T2','관현악','지휘','임원'];
 var HANDBOOK_ROLE_TAGS=['임원','지휘','반주','준단원','신입단원'];
+
+function handbookRoleLabel(tag){
+  return tag==='반주'?'반주자':tag;
+}
 
 function isHandbookExcludedMember(member){
   var part=normalizePartName(member&&member.part);
@@ -8244,10 +8250,10 @@ function updatePartSummary() {
     if(selectedHbPart==='photoMissing')return '사진 없음';
     if(selectedHbPart==='otherMain')return '주파트 미지정';
     if(selectedHbPart.indexOf('main:')===0)return selectedHbPart.slice(5)+' 파트';
-    if(selectedHbPart.indexOf('role:')===0)return selectedHbPart.slice(5)+' 겸직';
+    if(selectedHbPart.indexOf('role:')===0)return handbookRoleLabel(selectedHbPart.slice(5))+' 겸직';
     return '실단원 전체';
   }
-  var showMoreOpen=(selectedHbPart==='photoMissing'||selectedHbPart==='excluded'||selectedHbPart.indexOf('role:')===0);
+  var showMoreOpen=(selectedHbPart==='photoMissing');
 
   var html='<div class="handbook-summary-card">';
   html+='<div class="handbook-summary-head"><div><div class="handbook-summary-title">명부 보기</div><div class="handbook-filter-caption" style="margin:2px 0 0">먼저 전체/출결 기준을 고르고, 필요할 때 파트나 추가 조건으로 좁혀봅니다.</div></div><div class="handbook-summary-active">'+escHtml(activeFilterLabel())+'</div></div>';
@@ -8263,11 +8269,13 @@ function updatePartSummary() {
   });
   if(otherMain>0)html+=chip('otherMain','주파트 미지정',otherMain,true);
   html+='</div></div>';
-  html+='<details class="handbook-filter-more" '+(showMoreOpen?'open':'')+'><summary>추가 조건</summary><div class="handbook-filter-more-body"><div class="handbook-filter-caption">겸직, 신입/준단원, 사진 누락처럼 운영 확인용으로만 따로 보는 조건입니다.</div><div class="handbook-chip-row">';
-  html+=chip('photoMissing','사진 없음',photoMissing,true);
+  html+='<div class="handbook-filter-block role"><div class="handbook-chip-title">겸직/상태 보기</div><div class="handbook-filter-caption">반주자, 임원, 신입/준단원처럼 실제 주파트와 별도로 붙는 표시입니다.</div><div class="handbook-chip-row">';
   HANDBOOK_ROLE_TAGS.forEach(function(tag){
-    html+=chip('role:'+tag,tag,roleCounts[tag],false);
+    html+=chip('role:'+tag,handbookRoleLabel(tag),roleCounts[tag],false);
   });
+  html+='</div></div>';
+  html+='<details class="handbook-filter-more" '+(showMoreOpen?'open':'')+'><summary>추가 확인</summary><div class="handbook-filter-more-body"><div class="handbook-filter-caption">사진 누락처럼 필요할 때만 보는 운영 점검용 조건입니다.</div><div class="handbook-chip-row">';
+  html+=chip('photoMissing','사진 없음',photoMissing,true);
   html+='</div></div></details><div class="handbook-summary-note">겸직은 파트 인원을 더하는 기준이 아니라, 필요한 사람을 빠르게 찾기 위한 표시입니다.</div></div>';
   container.innerHTML = html;
 }
