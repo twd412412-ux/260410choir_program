@@ -431,6 +431,15 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .cal-cell.stack{min-height:76px}
 .cal-cell.stack .cal-bar{font-size:8px;padding:2px 3px;margin:2px 0;line-height:1.25}
 .cal-bar.song{background:#64748B}
+.cal-grid.stack-mode{gap:4px}
+.cal-stack-week{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:relative}
+.cal-stack-week .cal-cell{grid-row:1;position:relative;min-height:94px}
+.cal-stack-layer{grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:18px;gap:3px 4px;align-content:start;padding:30px 3px 6px;pointer-events:none;z-index:2}
+.cal-range-bar{border:0;border-radius:7px;background:var(--p);color:#fff;font-family:inherit;font-size:9px;font-weight:800;line-height:1.2;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:3px 7px;min-width:0;box-shadow:0 1px 2px rgba(49,54,35,.12);pointer-events:auto;cursor:pointer}
+.cal-range-bar.song{background:#64748B}
+.cal-range-bar.continues-left{border-top-left-radius:2px;border-bottom-left-radius:2px}
+.cal-range-bar.continues-right{border-top-right-radius:2px;border-bottom-right-radius:2px}
+.cal-stack-more{position:absolute;right:5px;bottom:4px;font-size:9px;font-weight:800;color:var(--ts);background:rgba(255,253,248,.86);border-radius:999px;padding:1px 5px;z-index:3}
 .log-item{padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
@@ -7309,6 +7318,97 @@ function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
 function setCalViewMode(v){calViewMode=v||'default';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
 function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
 function safeColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||''))?String(v):COLORS[0]}
+function calDateKeyDay(key){
+  var p=String(key||'').split('-');
+  return Number(p[2]||0);
+}
+function calSongMatchesDate(song,dateKey){
+  var p=String(dateKey||'').split('-').map(Number);
+  return !!(song&&song.year===p[0]&&song.month===p[1]&&song.day===p[2]);
+}
+function calStackWeekData(weekDates,todayStr){
+  var items=[];
+  allSchedules.forEach(function(s){
+    var start=-1,end=-1;
+    weekDates.forEach(function(ds,i){
+      if(ds&&scheduleOccursOnDate(s,ds)){
+        if(start<0)start=i;
+        end=i;
+      }
+    });
+    if(start>-1){
+      items.push({
+        kind:'schedule',
+        id:s.id,
+        title:(s.useBriefing?'📋 ':'📅 ')+(s.title||'일정'),
+        color:safeColor(s.color),
+        start:start,
+        end:end,
+        realStart:scheduleStartDate(s)===weekDates[start],
+        realEnd:scheduleEndDate(s)===weekDates[end],
+        sortKey:(scheduleStartDate(s)||'')+' '+(s.time||'')
+      });
+    }
+  });
+  weekDates.forEach(function(ds,i){
+    if(!ds)return;
+    allSongs.filter(function(song){return calSongMatchesDate(song,ds);}).forEach(function(song){
+      items.push({
+        kind:'song',
+        id:song.id,
+        title:'🎵 '+(song.songName||'찬양곡'),
+        color:'#64748B',
+        start:i,
+        end:i,
+        realStart:true,
+        realEnd:true,
+        sortKey:ds+' 99'
+      });
+    });
+  });
+  items.sort(function(a,b){
+    return a.start-b.start||(b.end-b.start)-(a.end-a.start)||a.kind.localeCompare(b.kind)||a.sortKey.localeCompare(b.sortKey);
+  });
+  var slotEnds=[], visible=[], hidden=weekDates.map(function(){return 0;});
+  items.forEach(function(item){
+    var slot=0;
+    while(slot<slotEnds.length&&item.start<=slotEnds[slot])slot++;
+    item.slot=slot;
+    slotEnds[slot]=item.end;
+    if(slot<3)visible.push(item);
+    else{
+      for(var i=item.start;i<=item.end;i++)hidden[i]++;
+    }
+  });
+  var cells=weekDates.map(function(ds,i){
+    if(!ds)return '<div class="cal-cell stack empty"></div>';
+    var day=calDateKeyDay(ds);
+    var cls='cal-cell stack'+(ds===todayStr?' today':'');
+    return '<div class="'+cls+'" onclick="showCalDay(\''+ds+'\','+day+')"><div class="cal-date">'+day+'</div>'+(hidden[i]?'<div class="cal-stack-more">+'+hidden[i]+'개</div>':'')+'</div>';
+  }).join('');
+  var bars=visible.map(function(item){
+    var cls='cal-range-bar '+(item.kind==='song'?'song ':'')+(!item.realStart?'continues-left ':'')+(!item.realEnd?'continues-right ':'');
+    var action=item.kind==='song'?'openDetail':'openSchDetail';
+    return '<button type="button" class="'+cls+'" style="grid-column:'+(item.start+1)+' / '+(item.end+2)+';grid-row:'+(item.slot+1)+';background:'+item.color+'" title="'+escHtml(item.title)+'" onclick="event.stopPropagation();'+action+'(\''+escAttr(item.id)+'\')">'+escHtml(item.title)+'</button>';
+  }).join('');
+  return '<div class="cal-stack-week">'+cells+'<div class="cal-stack-layer">'+bars+'</div></div>';
+}
+function renderCalStackMonth(fd,ld,todayStr){
+  var html='', week=[];
+  for(var i=0;i<fd;i++)week.push('');
+  for(var d=1;d<=ld;d++){
+    week.push(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'));
+    if(week.length===7){
+      html+=calStackWeekData(week,todayStr);
+      week=[];
+    }
+  }
+  if(week.length){
+    while(week.length<7)week.push('');
+    html+=calStackWeekData(week,todayStr);
+  }
+  return html;
+}
 
 function renderCal(){
   selectedCalDate='';
@@ -7316,12 +7416,20 @@ function renderCal(){
   var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
   syncQuickCreateActions();
   var g=document.getElementById('calGrid');
+  g.classList.toggle('stack-mode',calViewMode==='stack');
   var hds=['일','월','화','수','목','금','토'];
   var h=hds.map(function(x){return '<div class="cal-hdr">'+x+'</div>'}).join('');
   var fd=new Date(calYear,calMonth,1).getDay();
   var ld=new Date(calYear,calMonth+1,0).getDate();
   var now=new Date();
   var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+  if(calViewMode==='stack'){
+    g.innerHTML=h+renderCalStackMonth(fd,ld,todayStr);
+    if(calYear===now.getFullYear()&&calMonth===now.getMonth())showCalDay(todayStr,now.getDate());
+    else{document.getElementById('calEvtTitle').textContent='일정';document.getElementById('calEvtList').innerHTML='<div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div>'}
+    return;
+  }
 
   for(var i=0;i<fd;i++)h+='<div class="cal-cell empty"></div>';
   for(var d=1;d<=ld;d++){
