@@ -1833,6 +1833,7 @@ body{font-weight:500}
         </div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
         <div class="form-group hidden" id="scoreInstrumentWrap" style="margin-bottom:0"><label class="form-label">관현악 파트</label><select class="form-sel" id="scoreInstrument" onchange="syncScoreInstrumentCustom()"></select><input class="form-input hidden" id="scoreInstrumentCustom" placeholder="예: 알토색소폰, 베이스클라리넷" style="margin-top:6px"></div>
+        <div class="score-linked-note empty hidden" id="scoreCurrentFileNote"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" multiple style="padding:8px"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
@@ -3459,6 +3460,18 @@ function linkSameTitleScoreSongs(){
   showToast('곡명이 일치하는 항목 '+matches.length+'개를 선택했습니다. 연결하려면 선택한 곡에 연결을 누르세요');
 }
 
+function setScoreCurrentFileNote(score){
+  var note=document.getElementById('scoreCurrentFileNote');
+  if(!note)return;
+  if(!score||!score.currentFileName){
+    note.classList.add('hidden','empty');
+    note.textContent='';
+    return;
+  }
+  note.classList.remove('hidden','empty');
+  note.innerHTML='현재 파일명<br><b>'+escHtml(score.currentFileName)+'</b>';
+}
+
 function openQuickScoreManage(songName,songId){
   if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
   if(document.getElementById('modalDetail')&&document.getElementById('modalDetail').classList.contains('active'))closeModal('modalDetail');
@@ -3476,6 +3489,26 @@ function openQuickScoreManage(songName,songId){
     setScoreLinkedSong(songId||'',songId?linkedName:'');
     var target=document.getElementById(linkedName?'scoreFile':'scoreTitle')||document.getElementById('scoreTitle');
     if(target)target.focus();
+  },0);
+}
+
+function openQuickScoreManageForGroup(groupKey){
+  if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
+  var group=scoreFolderGroups(allScores.filter(function(score){return normalizeScoreKind(score.scoreKind)==='orchestra';})).find(function(item){return item.key===groupKey});
+  if(!group||!group.scores.length)return showToast('악보 그룹을 찾을 수 없습니다');
+  var base=sortScoreParts(group.scores)[0];
+  switchTab('admin');
+  switchAdminTab('scoreManage');
+  setTimeout(function(){
+    resetScoreForm();
+    setScoreFormKind('orchestra');
+    var title=document.getElementById('scoreTitle');
+    if(title)title.value=base.title||group.title||'';
+    setScoreLinkedSongs(base.linkedSongIds&&base.linkedSongIds.length?base.linkedSongIds:(base.linkedSongId?[base.linkedSongId]:[]),base.linkedSongName||'');
+    setScoreInstrumentSelection('');
+    var file=document.getElementById('scoreFile');
+    if(file)file.focus();
+    showToast('같은 곡 그룹에 추가할 파트보를 선택해주세요');
   },0);
 }
 
@@ -5145,11 +5178,12 @@ function renderScoreFolderCard(group, adminMode){
   var scores=sortScoreParts(group.scores||[]);
   var updated=scoreGroupUpdatedText(scores);
   var meta=['관현악 파트보 '+scores.length+'개',updated?'업데이트 '+updated:''].filter(Boolean).join(' · ');
+  var groupAction=adminMode&&canManageScores()?'<div class="score-admin-actions"><button class="score-light-btn" onclick="openQuickScoreManageForGroup(\''+escAttr(group.key)+'\')">＋ 파트보 추가</button></div>':'';
   var body=adminMode
     ? '<div class="score-part-admin-list">'+scores.map(function(score){
         var canEdit=canEditScoreItem(score);
         var part=scorePartDisplayLabel(score);
-        var details=[scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
+        var details=[score.currentFileName||'',scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
         return '<div class="score-part-row">'
           +'<div class="score-part-main"><div class="score-part-name">'+escHtml(part)+'</div><div class="score-part-meta">'+escHtml(details||'파트보')+'</div></div>'
           +'<div class="score-part-actions">'
@@ -5159,7 +5193,7 @@ function renderScoreFolderCard(group, adminMode){
             +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
           +'</div>'
         +'</div>';
-      }).join('')+'</div>'
+      }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
         return '<button class="score-part-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+'</button>';
       }).join('')+'</div>';
@@ -5344,6 +5378,7 @@ function resetScoreForm(){
   ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   setScoreFormKind('singer');
   setScoreInstrumentSelection('');
+  setScoreCurrentFileNote(null);
   var file=document.getElementById('scoreFile');if(file)file.value='';
   var pub=document.getElementById('scorePublic');if(pub)pub.checked=true;
   var btn=document.getElementById('scoreSaveBtn');if(btn)btn.textContent='악보 등록';
@@ -5537,6 +5572,7 @@ function editScoreUpload(id){
   document.getElementById('scoreTitle').value=score.title||'';
   document.getElementById('scoreLabel').value=score.currentLabel||'';
   document.getElementById('scoreUrl').value=score.currentFilePath?'':(score.currentFileUrl||'');
+  setScoreCurrentFileNote(score);
   setScoreLinkedSongs(score.linkedSongIds&&score.linkedSongIds.length?score.linkedSongIds:(score.linkedSongId?[score.linkedSongId]:[]),score.linkedSongName||'');
   document.getElementById('scorePublic').checked=score.public!==false;
   var file=document.getElementById('scoreFile');if(file)file.value='';
