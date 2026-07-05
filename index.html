@@ -1065,7 +1065,24 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 }
 
 #subSchedule .schedule-date-row{
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  display:flex!important;
+  align-items:flex-start;
+  gap:8px;
+  flex-wrap:nowrap;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+
+#subSchedule .schedule-date-row .form-group{
+  flex:1 1 0;
+  min-width:0;
+  margin-bottom:12px;
+}
+
+#subSchedule .schedule-date-row .form-label{
+  white-space:nowrap;
 }
 
 #subAddSong input,
@@ -2000,7 +2017,7 @@ body{font-weight:500}
 
   <div class="admin-sub hidden" id="subSchedule">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📅 일정 관리</h3>
-    <div class="schedule-date-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="schedule-date-row" style="display:flex;gap:8px">
       <div class="form-group"><label class="form-label">시작일 *</label><input class="form-input" id="schDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" onchange="syncScheduleEndDate()"></div>
       <div class="form-group"><label class="form-label">종료일</label><input class="form-input" id="schEndDate" type="date" onfocus="openDatePicker(this)" onclick="openDatePicker(this)"></div>
     </div>
@@ -10688,15 +10705,33 @@ function getCatValue(prefix){
 function buildCatOptions(){
   var catMap={};
   allSongs.forEach(function(s){if(s.category)catMap[s.category]=(catMap[s.category]||0)+1});
-  var sorted=Object.entries(catMap).sort(function(a,b){return b[1]-a[1]});
+  var entries=Object.entries(catMap);
+  var major=entries.filter(function(e){return e[1]>=20}).sort(function(a,b){return b[1]-a[1]||a[0].localeCompare(b[0],'ko')});
+  var minor=entries.filter(function(e){return e[1]<20}).sort(function(a,b){return a[0].localeCompare(b[0],'ko')||b[1]-a[1]});
+  function optionHtml(e){
+    return '<option value="'+escHtml(e[0])+'">'+escHtml(e[0])+' ('+e[1]+'곡)</option>';
+  }
 
   ['add','edit'].forEach(function(prefix){
     var sel=document.getElementById(prefix+'CatSel');
     if(!sel)return;
     var cur=sel.value;
     sel.innerHTML='<option value="">선택</option>';
-    sorted.forEach(function(e){sel.innerHTML+='<option value="'+e[0]+'"'+(cur===e[0]?' selected':'')+'>'+e[0]+' ('+e[1]+'곡)</option>'});
+    if(major.length){
+      sel.innerHTML+='<optgroup label="20곡 이상 · 많이 사용한 순">'+major.map(optionHtml).join('')+'</optgroup>';
+    }
+    if(major.length&&minor.length){
+      sel.innerHTML+='<option value="" disabled>────────────</option>';
+    }
+    if(minor.length){
+      sel.innerHTML+='<optgroup label="20곡 미만 · 가나다순">'+minor.map(optionHtml).join('')+'</optgroup>';
+    }
     sel.innerHTML+='<option value="__custom">✏️ 직접 입력</option>';
+    if(cur){
+      for(var i=0;i<sel.options.length;i++){
+        if(sel.options[i].value===cur){sel.selectedIndex=i;break;}
+      }
+    }
   });
 }
 
