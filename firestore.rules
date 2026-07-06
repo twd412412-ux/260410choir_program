@@ -48,5 +48,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // 아카이브 댓글: 사진 1장당 댓글 묶음 문서 1개
+    match /archiveComments/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }
