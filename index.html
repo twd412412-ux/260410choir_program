@@ -542,8 +542,8 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .archive-upload-title{font-size:15px;font-weight:700;margin-bottom:10px}
 .archive-upload-note{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.archive-card{overflow:hidden;margin-bottom:10px}
-.archive-thumb{width:100%;height:120px;display:block;background:#000;object-fit:cover;cursor:pointer}
+.archive-card{overflow:visible;margin-bottom:10px}
+.archive-thumb{width:100%;height:120px;display:block;background:#000;object-fit:cover;cursor:pointer;border-radius:14px 14px 0 0}
 .archive-body{padding:8px}
 .archive-title-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .archive-title{font-size:12px;font-weight:700;line-height:1.3}
@@ -642,20 +642,28 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .score-link-actions{display:flex;gap:6px;flex-wrap:wrap}
 .score-song-link{margin-top:12px;border-top:1px solid var(--bd);padding-top:12px}
 .score-song-link-title{font-size:13px;font-weight:850;margin-bottom:6px}
-.archive-social{margin-top:9px;display:grid;gap:7px;position:relative}
-.archive-reaction-chips{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:18px}
-.archive-reaction-pill{border:1px solid #E3D7C4;background:#FFFCF5;color:#614F36;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:850;line-height:1}
-.archive-social-empty{font-size:11px;color:var(--ts);font-weight:700}
-.archive-social-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.archive-reaction-btn,.archive-comment-btn{border:1px solid #D8CBB7;background:#FFFDF8;color:#4F5B36;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;box-shadow:0 1px 2px rgba(86,72,49,.08)}
-.archive-reaction-btn.on{background:#6F7D4E;color:#fff;border-color:#6F7D4E}
-.archive-comment-btn{background:#EEF3E7;color:#44522F}
-.archive-reaction-picker{display:none;position:absolute;left:0;bottom:34px;width:min(360px,calc(100vw - 48px));background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:8px;gap:6px;z-index:5;grid-template-columns:repeat(4,minmax(0,1fr))}
+.archive-social{margin-top:9px;padding-top:8px;border-top:1px solid rgba(216,208,190,.72);display:grid;gap:4px;position:relative}
+.archive-social-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.archive-ig-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.archive-ig-action{width:30px;height:30px;border:0;background:transparent;color:#343126;border-radius:999px;padding:0;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .16s ease,color .16s ease,background .16s ease}
+.archive-ig-action:active{transform:scale(.9)}
+.archive-ig-action.on{color:#C94F55;background:#F7EAEA}
+.archive-like-icon{display:block;line-height:1}
+.archive-comment-icon{font-size:19px;line-height:1;transform:translateY(-1px)}
+.archive-social-caption{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;font-weight:850;color:#403A2D;line-height:1.25;min-height:16px}
+.archive-reaction-stack{display:inline-flex;align-items:center}
+.archive-reaction-dot{width:18px;height:18px;border-radius:999px;background:#FFFDF8;border:1.5px solid #FFFDF8;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 1px 4px rgba(56,49,38,.12);margin-left:-5px}
+.archive-reaction-dot:first-child{margin-left:0}
+.archive-social-muted{color:var(--ts);font-weight:800}
+.archive-social-link{border:0;background:transparent;color:var(--ts);font-size:11px;font-weight:850;padding:4px 0;cursor:pointer;white-space:nowrap}
+.archive-social-link:active{color:var(--p)}
+.archive-reaction-picker{display:none;position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 24px);background:rgba(255,253,248,.97);border:1px solid rgba(216,203,183,.92);border-radius:999px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:8px 10px;gap:4px;z-index:3000;grid-template-columns:repeat(7,38px);overflow-x:auto;backdrop-filter:blur(16px)}
 .archive-reaction-picker.show{display:grid}
-.archive-reaction-choice{min-width:0;min-height:48px;border:none;border-radius:13px;background:var(--bg);font-weight:900;cursor:pointer;padding:6px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:center;line-height:1.05;white-space:nowrap}
-.archive-reaction-choice-emoji{font-size:19px;line-height:1}
-.archive-reaction-choice-label{font-size:10px;letter-spacing:0}
-.archive-reaction-choice.on{background:var(--pl);box-shadow:inset 0 0 0 2px var(--p)}
+.archive-reaction-choice{width:38px;height:38px;min-width:38px;min-height:38px;border:none;border-radius:999px;background:transparent;font-weight:900;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;white-space:nowrap;transition:transform .16s ease,background .16s ease}
+.archive-reaction-choice:active{transform:scale(.9)}
+.archive-reaction-choice-emoji{font-size:24px;line-height:1;filter:drop-shadow(0 1px 1px rgba(56,49,38,.12))}
+.archive-reaction-choice-label{display:none}
+.archive-reaction-choice.on{background:#F7EAEA;box-shadow:inset 0 0 0 1px rgba(201,79,85,.24)}
 .archive-comment-list{display:grid;gap:8px;margin:10px 0 12px}
 .archive-comment-item{border:1px solid var(--bd);background:#FFFDF8;border-radius:12px;padding:10px}
 .archive-comment-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
@@ -1325,8 +1333,8 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .cal-bar{background:var(--p)!important;border-radius:6px}
 .cal-bar.song{background:#7A8D78!important}
 .stat-num{color:var(--p)}
-.archive-reaction-btn,.archive-reaction-pill{border-color:#E3B6B6;background:#F8EAEA;color:#954D4D}
-.archive-reaction-btn.on{background:var(--dg);border-color:var(--dg);color:#fff}
+.archive-ig-action.on{color:#C94F55;background:#F8EAEA}
+.archive-social-caption{color:#403A2D}
 .att-save-float{background:linear-gradient(to bottom, rgba(247,244,236,0), var(--bg) 28%, var(--bg))}
 .dark .att-save-float{background:linear-gradient(to bottom, rgba(20,24,19,0), var(--bg) 28%, var(--bg))}
 .att-row{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 4px 16px rgba(56,49,38,.05)}
@@ -9153,18 +9161,29 @@ function renderArchiveReactions(item){
   var users=item.reactionUsers||{};
   var counts=archiveReactionCounts(users);
   var selected=archiveReactionEntryType(users[archiveReactionUserKey()]);
+  var selectedInfo=archiveReactionInfo(selected);
   var total=Object.keys(users).length;
-  var chips=ARCHIVE_REACTIONS.map(function(r){
-    var n=counts[r.key]||0;
-    return n?'<span class="archive-reaction-pill">'+r.emoji+' '+n+'</span>':'';
-  }).join('');
-  if(!chips)chips='<span class="archive-social-empty">아직 공감 없음</span>';
+  var topReactions=ARCHIVE_REACTIONS
+    .map(function(r){return {emoji:r.emoji,count:counts[r.key]||0};})
+    .filter(function(r){return r.count>0;})
+    .sort(function(a,b){return b.count-a.count;})
+    .slice(0,3)
+    .map(function(r){return '<span class="archive-reaction-dot">'+r.emoji+'</span>';})
+    .join('');
+  var captionParts=[];
+  if(total>0){
+    captionParts.push('<span class="archive-reaction-stack">'+topReactions+'</span><span>공감 '+total+'개</span>');
+  }
+  if(item.commentCount){
+    captionParts.push('<span class="archive-social-muted">댓글 '+item.commentCount+'개</span>');
+  }
+  var caption=captionParts.length?'<div class="archive-social-caption">'+captionParts.join('')+'</div>':'';
   var choices=ARCHIVE_REACTIONS.map(function(r){
     return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')"><span class="archive-reaction-choice-emoji">'+r.emoji+'</span><span class="archive-reaction-choice-label">'+r.label+'</span></button>';
   }).join('');
-  var adminList=(adminRole==='admin')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
-  var commentLabel='댓글'+(item.commentCount?(' '+item.commentCount):'');
-  return '<div class="archive-social" id="archiveReactions-'+item.id+'"><div class="archive-reaction-chips">'+chips+'</div><div class="archive-social-actions"><button class="archive-reaction-btn '+(selected?'on':'')+'" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')">공감</button><button class="archive-comment-btn" onclick="event.stopPropagation();openArchiveComments(\''+item.id+'\')">'+commentLabel+'</button>'+adminList+'</div><div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
+  var adminList=(adminRole==='admin')&&total>0?'<button class="archive-social-link" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">공감 명단</button>':'';
+  var likeIcon=selectedInfo?selectedInfo.emoji:'♡';
+  return '<div class="archive-social" id="archiveReactions-'+item.id+'"><div class="archive-social-actions"><div class="archive-ig-actions"><button class="archive-ig-action '+(selected?'on':'')+'" title="공감" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')"><span class="archive-like-icon">'+likeIcon+'</span></button><button class="archive-ig-action" title="댓글" onclick="event.stopPropagation();openArchiveComments(\''+item.id+'\')"><span class="archive-comment-icon">💬</span></button></div>'+adminList+'</div>'+caption+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
 }
 function openArchiveReactionPicker(id){
   var el=document.getElementById('archiveReactionPicker-'+id);
