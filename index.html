@@ -649,7 +649,6 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .archive-ig-action:active{transform:scale(.9)}
 .archive-ig-action.on{color:#C94F55;background:#F7EAEA}
 .archive-like-icon{display:block;line-height:1}
-.archive-comment-icon{font-size:19px;line-height:1;transform:translateY(-1px)}
 .archive-social-caption{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;font-weight:850;color:#403A2D;line-height:1.25;min-height:16px}
 .archive-reaction-stack{display:inline-flex;align-items:center}
 .archive-reaction-dot{width:18px;height:18px;border-radius:999px;background:#FFFDF8;border:1.5px solid #FFFDF8;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 1px 4px rgba(56,49,38,.12);margin-left:-5px}
@@ -657,23 +656,13 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .archive-social-muted{color:var(--ts);font-weight:800}
 .archive-social-link{border:0;background:transparent;color:var(--ts);font-size:11px;font-weight:850;padding:4px 0;cursor:pointer;white-space:nowrap}
 .archive-social-link:active{color:var(--p)}
-.archive-reaction-picker{display:none;position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 24px);background:rgba(255,253,248,.97);border:1px solid rgba(216,203,183,.92);border-radius:999px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:8px 10px;gap:4px;z-index:3000;grid-template-columns:repeat(7,38px);overflow-x:auto;backdrop-filter:blur(16px)}
+.archive-reaction-picker{display:none;position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 24px);background:rgba(255,253,248,.97);border:1px solid rgba(216,203,183,.92);border-radius:999px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:8px 10px;gap:4px;z-index:3000;grid-template-columns:repeat(8,36px);overflow-x:auto;backdrop-filter:blur(16px)}
 .archive-reaction-picker.show{display:grid}
-.archive-reaction-choice{width:38px;height:38px;min-width:38px;min-height:38px;border:none;border-radius:999px;background:transparent;font-weight:900;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;white-space:nowrap;transition:transform .16s ease,background .16s ease}
+.archive-reaction-choice{width:36px;height:36px;min-width:36px;min-height:36px;border:none;border-radius:999px;background:transparent;font-weight:900;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;white-space:nowrap;transition:transform .16s ease,background .16s ease}
 .archive-reaction-choice:active{transform:scale(.9)}
-.archive-reaction-choice-emoji{font-size:24px;line-height:1;filter:drop-shadow(0 1px 1px rgba(56,49,38,.12))}
+.archive-reaction-choice-emoji{font-size:22px;line-height:1;filter:drop-shadow(0 1px 1px rgba(56,49,38,.12))}
 .archive-reaction-choice-label{display:none}
 .archive-reaction-choice.on{background:#F7EAEA;box-shadow:inset 0 0 0 1px rgba(201,79,85,.24)}
-.archive-comment-list{display:grid;gap:8px;margin:10px 0 12px}
-.archive-comment-item{border:1px solid var(--bd);background:#FFFDF8;border-radius:12px;padding:10px}
-.archive-comment-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
-.archive-comment-author{font-size:12px;font-weight:900;color:var(--tx)}
-.archive-comment-date{font-size:10px;font-weight:750;color:var(--ts);white-space:nowrap}
-.archive-comment-text{font-size:13px;line-height:1.45;white-space:pre-line;word-break:break-word}
-.archive-comment-delete{border:0;background:transparent;color:#B45353;font-size:11px;font-weight:850;cursor:pointer;padding:2px 0}
-.archive-comment-form{border-top:1px solid var(--bd);padding-top:12px;display:grid;gap:8px}
-.archive-comment-input{width:100%;min-height:74px;resize:vertical}
-.archive-comment-meta{font-size:11px;color:var(--ts);font-weight:700;line-height:1.45}
 @media(max-width:430px){
   .archive-grid{grid-template-columns:1fr 1fr}
 }
@@ -2411,13 +2400,6 @@ body{font-weight:500}
     <button class="btn btn-p btn-bl" onclick="saveArchiveEdit()">저장</button>
   </div>
 </div>
-<!-- MODAL: 아카이브 댓글 -->
-<div class="modal-overlay modal-center" id="modalArchiveComments">
-  <div class="modal-content">
-    <div class="modal-header"><span class="modal-title" id="archiveCommentTitle">댓글</span><button class="modal-close" onclick="closeModal('modalArchiveComments')">✕</button></div>
-    <div id="archiveCommentBody"></div>
-  </div>
-</div>
 <div class="modal-overlay modal-center" id="modalPhotoViewer">
   <div style="position:relative; max-width:85%; max-height:85%;">
     <img id="viewerImage" src="" style="width:100%; height:auto; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
@@ -2626,19 +2608,18 @@ var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
 var ARCHIVE_PAGE_SIZE=30;
-var ARCHIVE_COMMENT_LIMIT=50;
-var archiveCommentCache={};
-// 비용 산정 기준: 평균 50명/day, 주일 피크 100명/day. 댓글은 버튼을 눌렀을 때만 사진 1장당 1 read.
+// 운영 기준 메모: 평균 50명/day, 주일 피크 100명/day.
 var ARCHIVE_REACTIONS=[
   {key:'heart',emoji:'❤️',label:'좋아요'},
   {key:'grace',emoji:'🙏',label:'은혜'},
   {key:'cheer',emoji:'👏',label:'응원'},
-  {key:'laugh',emoji:'😊',label:'미소'},
   {key:'thanks',emoji:'🙌',label:'감사'},
   {key:'celebrate',emoji:'🎉',label:'축하'},
-  {key:'best',emoji:'👍',label:'최고'}
+  {key:'surprise',emoji:'😮',label:'놀라워요'},
+  {key:'awkward',emoji:'🫢',label:'당황스러워요'},
+  {key:'tricky',emoji:'😅',label:'난감해요'}
 ];
-var ARCHIVE_REACTION_ALIASES={agree:'grace',trouble:'cheer'};
+var ARCHIVE_REACTION_ALIASES={agree:'grace',trouble:'cheer',laugh:'surprise',best:'heart'};
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
 var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
 var activeDays=[];
@@ -9072,8 +9053,7 @@ function loadArchiveItems(more){
         uploadedByPart:d.uploadedByPart||'',
         path:d.path||'',
         reactions:d.reactions||{},
-        reactionUsers:d.reactionUsers||{},
-        commentCount:Number(d.commentCount||0)
+        reactionUsers:d.reactionUsers||{}
       });
     });
     archiveLastDoc=snap.docs.length?snap.docs[snap.docs.length-1]:archiveLastDoc;
@@ -9174,16 +9154,13 @@ function renderArchiveReactions(item){
   if(total>0){
     captionParts.push('<span class="archive-reaction-stack">'+topReactions+'</span><span>공감 '+total+'개</span>');
   }
-  if(item.commentCount){
-    captionParts.push('<span class="archive-social-muted">댓글 '+item.commentCount+'개</span>');
-  }
   var caption=captionParts.length?'<div class="archive-social-caption">'+captionParts.join('')+'</div>':'';
   var choices=ARCHIVE_REACTIONS.map(function(r){
     return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')"><span class="archive-reaction-choice-emoji">'+r.emoji+'</span><span class="archive-reaction-choice-label">'+r.label+'</span></button>';
   }).join('');
   var adminList=(adminRole==='admin')&&total>0?'<button class="archive-social-link" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">공감 명단</button>':'';
   var likeIcon=selectedInfo?selectedInfo.emoji:'♡';
-  return '<div class="archive-social" id="archiveReactions-'+item.id+'"><div class="archive-social-actions"><div class="archive-ig-actions"><button class="archive-ig-action '+(selected?'on':'')+'" title="공감" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')"><span class="archive-like-icon">'+likeIcon+'</span></button><button class="archive-ig-action" title="댓글" onclick="event.stopPropagation();openArchiveComments(\''+item.id+'\')"><span class="archive-comment-icon">💬</span></button></div>'+adminList+'</div>'+caption+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
+  return '<div class="archive-social" id="archiveReactions-'+item.id+'"><div class="archive-social-actions"><div class="archive-ig-actions"><button class="archive-ig-action '+(selected?'on':'')+'" title="공감" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')"><span class="archive-like-icon">'+likeIcon+'</span></button></div>'+adminList+'</div>'+caption+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
 }
 function openArchiveReactionPicker(id){
   var el=document.getElementById('archiveReactionPicker-'+id);
@@ -9244,157 +9221,6 @@ function showArchiveReactionUsers(id){
     return r.emoji+' '+r.label+': '+(names.length?names.join(', '):'-');
   });
   alert(lines.join('\n'));
-}
-function archiveCommentRef(id){
-  return db.collection('archiveComments').doc(id);
-}
-function archiveCommentState(id){
-  if(!archiveCommentCache[id])archiveCommentCache[id]={loaded:false,loading:false,items:[],totalCount:0};
-  return archiveCommentCache[id];
-}
-function archiveCommentDateText(raw){
-  if(!raw)return '';
-  return String(raw).slice(0,16).replace('T',' ');
-}
-function archiveCommentAuthorLabel(){
-  if(!currentUser)return '';
-  return currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')';
-}
-function sanitizeArchiveCommentText(text){
-  return String(text||'').trim().replace(/\n{3,}/g,'\n\n').slice(0,300);
-}
-function canDeleteArchiveComment(comment){
-  if(adminRole==='admin')return true;
-  return !!(currentUser&&comment&&comment.authorId===currentUser.id);
-}
-function openArchiveComments(id){
-  var item=archiveItems.find(function(x){return x.id===id});
-  if(!item)return showToast('자료를 찾을 수 없습니다');
-  var title=document.getElementById('archiveCommentTitle');
-  if(title)title.textContent='댓글 · '+(item.title||'아카이브');
-  openModal('modalArchiveComments');
-  renderArchiveCommentModal(id);
-  loadArchiveComments(id,false);
-}
-function loadArchiveComments(id,force){
-  var state=archiveCommentState(id);
-  if(state.loading)return Promise.resolve(state);
-  if(state.loaded&&!force)return Promise.resolve(state);
-  state.loading=true;
-  renderArchiveCommentModal(id);
-  return archiveCommentRef(id).get().then(function(doc){
-    var data=doc.exists?(doc.data()||{}):{};
-    state.items=Array.isArray(data.items)?data.items:[];
-    state.totalCount=Number(data.totalCount||data.commentCount||state.items.length||0);
-    state.loaded=true;
-    state.loading=false;
-    var item=archiveItems.find(function(x){return x.id===id});
-    if(item)item.commentCount=state.totalCount;
-    updateArchiveReactionView(item||{id:id,reactionUsers:{},commentCount:state.totalCount});
-    renderArchiveCommentModal(id);
-    return state;
-  }).catch(function(e){
-    console.error(e);
-    state.loading=false;
-    renderArchiveCommentModal(id,'댓글을 불러오지 못했습니다.');
-    return state;
-  });
-}
-function renderArchiveCommentModal(id,errorText){
-  var body=document.getElementById('archiveCommentBody');
-  if(!body)return;
-  var item=archiveItems.find(function(x){return x.id===id});
-  var state=archiveCommentState(id);
-  var comments=(state.items||[]).slice().sort(function(a,b){return String(a.createdAt||'').localeCompare(String(b.createdAt||''));});
-  var list='';
-  if(state.loading&&!state.loaded){
-    list='<div class="loading"><div class="spinner"></div>댓글 불러오는 중...</div>';
-  }else if(errorText){
-    list='<div class="archive-empty">'+escHtml(errorText)+'</div>';
-  }else if(!comments.length){
-    list='<div class="archive-empty">아직 댓글이 없습니다.</div>';
-  }else{
-    list='<div class="archive-comment-list">'+comments.map(function(c){
-      var del=canDeleteArchiveComment(c)?'<button class="archive-comment-delete" onclick="deleteArchiveComment(\''+escAttr(id)+'\',\''+escAttr(c.id)+'\')">삭제</button>':'';
-      return '<div class="archive-comment-item"><div class="archive-comment-head"><div><div class="archive-comment-author">'+escHtml(c.authorLabel||c.authorName||'단원')+'</div><div class="archive-comment-date">'+escHtml(archiveCommentDateText(c.createdAt))+'</div></div>'+del+'</div><div class="archive-comment-text">'+escHtml(c.text||'')+'</div></div>';
-    }).join('')+'</div>';
-  }
-  var form=currentUser
-    ? '<div class="archive-comment-form"><textarea class="form-input archive-comment-input" id="archiveCommentInput" maxlength="300" placeholder="댓글을 남겨주세요."></textarea><button class="btn btn-p btn-bl" onclick="saveArchiveComment(\''+escAttr(id)+'\')">댓글 등록</button></div>'
-    : '<div class="archive-comment-form"><div class="archive-comment-meta">댓글 작성은 단원 로그인 후 가능합니다.</div><button class="btn btn-p" onclick="pendingTabAfterLogin=&quot;archive&quot;;closeModal(&quot;modalArchiveComments&quot;);openUserModal()">로그인</button></div>';
-  body.innerHTML='<div class="archive-comment-meta">'+escHtml((item&&item.date)||'날짜 미입력')+' · 댓글 '+Number(state.totalCount||item&&item.commentCount||0)+'개</div>'+list+form;
-}
-function saveArchiveComment(id){
-  if(!currentUser)return showToast('로그인 후 댓글을 남길 수 있습니다');
-  var input=document.getElementById('archiveCommentInput');
-  var text=sanitizeArchiveCommentText(input&&input.value);
-  if(!text)return showToast('댓글 내용을 입력해주세요');
-  var item=archiveItems.find(function(x){return x.id===id});
-  if(!item)return showToast('자료를 찾을 수 없습니다');
-  var now=new Date().toISOString();
-  var comment={id:'c_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),text:text,authorId:currentUser.id,authorName:currentUser.name,authorPart:accountPartDisplayLabel(currentUser),authorLabel:archiveCommentAuthorLabel(),createdAt:now};
-  var commentsRef=archiveCommentRef(id);
-  var archiveRef=db.collection('mediaArchive').doc(id);
-  showToast('댓글 저장 중...');
-  db.runTransaction(function(tx){
-    return tx.get(commentsRef).then(function(docSnap){
-      var data=docSnap.exists?(docSnap.data()||{}):{};
-      var items=Array.isArray(data.items)?data.items.slice():[];
-      var totalCount=Number(data.totalCount||data.commentCount||items.length||0)+1;
-      items.push(comment);
-      if(items.length>ARCHIVE_COMMENT_LIMIT)items=items.slice(items.length-ARCHIVE_COMMENT_LIMIT);
-      tx.set(commentsRef,{archiveId:id,items:items,totalCount:totalCount,updatedAt:now,updatedBy:currentUser.name},{merge:true});
-      tx.update(archiveRef,{commentCount:totalCount,lastCommentAt:now,lastCommentBy:currentUser.name});
-      return {items:items,totalCount:totalCount};
-    });
-  }).then(function(next){
-    var state=archiveCommentState(id);
-    state.items=next.items;
-    state.totalCount=next.totalCount;
-    state.loaded=true;
-    state.loading=false;
-    item.commentCount=next.totalCount;
-    if(input)input.value='';
-    updateArchiveReactionView(item);
-    renderArchiveCommentModal(id);
-    showToast('댓글이 등록되었습니다');
-  }).catch(function(e){
-    console.error(e);
-    showToast('댓글 저장 중 오류 발생');
-  });
-}
-function deleteArchiveComment(id,commentId){
-  var state=archiveCommentState(id);
-  var target=(state.items||[]).find(function(c){return c.id===commentId});
-  if(!target)return showToast('댓글을 찾을 수 없습니다');
-  if(!canDeleteArchiveComment(target))return showToast('삭제 권한이 없습니다');
-  if(!confirm('댓글을 삭제할까요?'))return;
-  var commentsRef=archiveCommentRef(id);
-  var archiveRef=db.collection('mediaArchive').doc(id);
-  var now=new Date().toISOString();
-  db.runTransaction(function(tx){
-    return tx.get(commentsRef).then(function(docSnap){
-      if(!docSnap.exists)throw new Error('missing');
-      var data=docSnap.data()||{};
-      var items=Array.isArray(data.items)?data.items.slice():[];
-      var nextItems=items.filter(function(c){return c.id!==commentId});
-      var totalCount=Math.max(0,Number(data.totalCount||data.commentCount||items.length||0)-1);
-      tx.set(commentsRef,{items:nextItems,totalCount:totalCount,updatedAt:now},{merge:true});
-      tx.update(archiveRef,{commentCount:totalCount,lastCommentAt:now});
-      return {items:nextItems,totalCount:totalCount};
-    });
-  }).then(function(next){
-    state.items=next.items;
-    state.totalCount=next.totalCount;
-    var item=archiveItems.find(function(x){return x.id===id});
-    if(item)item.commentCount=next.totalCount;
-    updateArchiveReactionView(item||{id:id,reactionUsers:{},commentCount:next.totalCount});
-    renderArchiveCommentModal(id);
-    showToast('댓글이 삭제되었습니다');
-  }).catch(function(e){
-    console.error(e);
-    showToast('댓글 삭제 중 오류 발생');
-  });
 }
 function compressArchiveImage(file){
   return new Promise(function(resolve,reject){
@@ -9475,11 +9301,9 @@ function deleteArchiveItem(id,title,path){
   if(!canManageArchiveItem(item))return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+title+'" 사진을 삭제하시겠습니까?'))return;
   db.collection('mediaArchive').doc(id).delete().then(function(){
-    db.collection('archiveComments').doc(id).delete().catch(function(){});
     if(path){
       storage.ref().child(path).delete().catch(function(){});
     }
-    delete archiveCommentCache[id];
     archiveItems=archiveItems.filter(function(x){return x.id!==id});
     renderArchiveList();
     writeLog('아카이브 삭제',title+' 삭제됨');
@@ -9565,8 +9389,7 @@ function uploadArchiveMedia(){
             uploadedAt:new Date().toISOString(),
             uploadedById:uploaderId,
             uploadedBy:uploader,
-            uploadedByPart:uploaderPart,
-            commentCount:0
+            uploadedByPart:uploaderPart
           });
         });
       });
