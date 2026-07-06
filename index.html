@@ -544,6 +544,17 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .archive-upload-card,.archive-filter-card{margin:12px 16px 0;padding:14px}
 .archive-upload-title{font-size:15px;font-weight:700;margin-bottom:10px}
 .archive-upload-note{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
+.archive-album-card{margin:12px 16px 0;padding:13px 14px;background:var(--sf);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+.archive-album-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.archive-album-title{font-size:15px;font-weight:900;color:var(--tx)}
+.archive-album-add{border:1px solid #CAD8BD;background:#F4F8EE;color:#3F4B2F;border-radius:999px;padding:6px 10px;font-family:inherit;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}
+.archive-album-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.archive-album-chip{flex:0 0 auto;min-width:92px;max-width:178px;border:1px solid var(--bd);background:#FFFDF8;color:var(--tx);border-radius:12px;padding:8px 9px;text-align:left;cursor:pointer;display:grid;gap:3px;box-shadow:0 2px 8px rgba(47,41,31,.045)}
+.archive-album-chip.on{border-color:#6F7D4E;background:#EEF3E6;color:#354B36;box-shadow:0 4px 12px rgba(95,111,69,.12)}
+.archive-album-chip-name{font-size:12px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archive-album-chip-meta{font-size:10.5px;font-weight:750;color:var(--ts);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archive-album-manage{border:0;background:transparent;color:var(--pd);font-size:10.5px;font-weight:900;text-align:left;padding:1px 0;cursor:pointer}
+.archive-album-empty{font-size:12px;color:var(--ts);font-weight:750;padding:8px 2px}
 .archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .archive-card{overflow:visible;margin-bottom:10px}
 .archive-thumb{width:100%;height:120px;display:block;background:#000;object-fit:cover;cursor:pointer;border-radius:14px 14px 0 0}
@@ -556,6 +567,10 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .archive-upload-actions{display:flex;gap:8px;margin-top:12px}
 .archive-preview-note{font-size:11px;color:var(--ts);margin-top:6px}
 .archive-type-badge{background:rgba(37,99,235,.08);color:var(--p);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.archive-album-badge{background:#F4EFE5;color:#6B5B3E;border:1px solid #E1D7C5;border-radius:8px;padding:2px 7px;font-size:10.5px;font-weight:850}
+.archive-admin-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:8px}
+.archive-card-action{border:1px solid var(--bd);border-radius:7px;background:var(--pl);color:var(--pd);padding:5px 6px;font-family:inherit;font-size:10.5px;font-weight:850;cursor:pointer;white-space:nowrap}
+.archive-card-action.danger{background:#FEE2E2;color:#DC2626;border-color:#FECACA}
 #pageArchive{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
 #pageArchive #archiveList{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px))}
 .score-top{padding:12px 16px 0}
@@ -1730,12 +1745,23 @@ body{font-weight:500}
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">제목 *</label><input class="form-input" id="archiveTitle" placeholder="예: 4월 셋째 주 S1 연습"></div>
       <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">설명</label><input class="form-input" id="archiveDesc" placeholder="짧은 메모"></div>
     </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">
+      <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">앨범</label><select class="form-sel" id="archiveAlbum"><option value="">앨범 없음</option></select></div>
+      <button type="button" class="archive-album-add" onclick="openArchiveAlbumModal()">새 앨범</button>
+    </div>
     <div class="form-group" style="margin-bottom:0"><label class="form-label">파일 * (여러 장 선택 가능)</label><input class="form-input" id="archiveFile" type="file" accept="image/*" multiple style="padding:8px"></div>
     <div class="archive-preview-note">사진 파일만 업로드할 수 있어요. 여러 장을 한 번에 선택하면 순서대로 업로드됩니다.</div>
     <div class="archive-upload-actions">
       <button id="btnArchiveUpload" class="btn btn-p" style="flex:1" onclick="uploadArchiveMedia()">업로드</button>
       <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="loadArchiveItems()">새로고침</button>
     </div>
+  </div>
+  <div class="archive-album-card" id="archiveAlbumCard">
+    <div class="archive-album-head">
+      <div class="archive-album-title">📁 앨범</div>
+      <button type="button" class="archive-album-add hidden" id="btnArchiveAlbumCreate" onclick="openArchiveAlbumModal()">앨범 만들기</button>
+    </div>
+    <div class="archive-album-row" id="archiveAlbumList"><div class="archive-album-empty">앨범 불러오는 중...</div></div>
   </div>
   <div class="archive-filter-card">
     <div class="archive-upload-title" style="margin-bottom:8px">보기 설정</div>
@@ -2400,7 +2426,34 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="archiveEditDate" type="date"></div>
     <div class="form-group"><label class="form-label">제목 *</label><input class="form-input" id="archiveEditTitle"></div>
     <div class="form-group"><label class="form-label">설명</label><textarea class="form-input" id="archiveEditDesc" rows="3"></textarea></div>
+    <div class="form-group"><label class="form-label">앨범</label><select class="form-sel" id="archiveEditAlbum"><option value="">앨범 없음</option></select></div>
     <button class="btn btn-p btn-bl" onclick="saveArchiveEdit()">저장</button>
+  </div>
+</div>
+<!-- MODAL: 아카이브 앨범 -->
+<div class="modal-overlay modal-center" id="modalArchiveAlbum">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="archiveAlbumModalTitle">📁 앨범 만들기</span><button class="modal-close" onclick="closeModal('modalArchiveAlbum')">✕</button></div>
+    <input type="hidden" id="archiveAlbumEditId">
+    <div class="form-group"><label class="form-label">앨범 이름 *</label><input class="form-input" id="archiveAlbumTitle" placeholder="예: 2026 하계수양회"></div>
+    <div class="form-group"><label class="form-label">설명</label><input class="form-input" id="archiveAlbumDesc" placeholder="짧은 설명"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" style="flex:1" onclick="saveArchiveAlbum()">저장</button>
+      <button class="btn btn-d hidden" style="flex:1" id="btnArchiveAlbumDelete" onclick="deleteArchiveAlbum()">앨범 삭제</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: 아카이브 앨범 연결 -->
+<div class="modal-overlay modal-center" id="modalArchiveMove">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">📁 앨범에 넣기</span><button class="modal-close" onclick="closeModal('modalArchiveMove')">✕</button></div>
+    <input type="hidden" id="archiveMoveItemId">
+    <div class="archive-preview-note" id="archiveMoveItemTitle" style="margin:0 0 10px"></div>
+    <div class="form-group"><label class="form-label">앨범 선택</label><select class="form-sel" id="archiveMoveAlbum"><option value="">앨범 없음</option></select></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" style="flex:1" onclick="saveArchiveMove()">저장</button>
+      <button class="btn" style="flex:1;background:var(--pl);color:var(--pd)" onclick="removeArchiveFromAlbum()">앨범에서 빼기</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay modal-center" id="modalPhotoViewer">
@@ -2611,6 +2664,10 @@ var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
 var ARCHIVE_PAGE_SIZE=30;
+var archiveAlbums=[];
+var archiveAlbumsLoaded=false;
+var archiveAlbumsLoading=false;
+var archiveSelectedAlbumId='all';
 // 운영 기준 메모: 평균 50명/day, 주일 피크 100명/day.
 var ARCHIVE_REACTIONS=[
   {key:'heart',emoji:'❤️',label:'좋아요'},
@@ -9019,9 +9076,207 @@ function openSchDetail(id){
 }
 
 // ==================== 파트 아카이브 ====================
+function archiveAlbumById(id){
+  return archiveAlbums.find(function(a){return a.id===id})||null;
+}
+function canManageArchiveAlbum(album){
+  if(adminRole==='admin')return true;
+  if(!album||!canUploadArchive())return false;
+  return !!(album.createdById&&album.createdById===currentActorId());
+}
+function archiveAlbumOptions(selectedId){
+  selectedId=selectedId||'';
+  var html='<option value="">앨범 없음</option>';
+  archiveAlbums.forEach(function(album){
+    html+='<option value="'+escAttr(album.id)+'" '+(album.id===selectedId?'selected':'')+'>'+escHtml(album.title)+'</option>';
+  });
+  return html;
+}
+function syncArchiveAlbumSelects(){
+  var uploadSel=document.getElementById('archiveAlbum');
+  if(uploadSel){
+    var prev=uploadSel.value||(archiveSelectedAlbumId!=='all'?archiveSelectedAlbumId:'');
+    if(prev&&!archiveAlbumById(prev))prev='';
+    uploadSel.innerHTML=archiveAlbumOptions(prev);
+    uploadSel.value=prev;
+  }
+}
+function loadArchiveAlbums(force){
+  if(archiveAlbumsLoading)return Promise.resolve(archiveAlbums);
+  if(archiveAlbumsLoaded&&!force){
+    renderArchiveAlbumPanel();
+    syncArchiveAlbumSelects();
+    return Promise.resolve(archiveAlbums);
+  }
+  archiveAlbumsLoading=true;
+  return db.collection('archiveAlbums').orderBy('createdAt','desc').get().then(function(snap){
+    archiveAlbums=[];
+    snap.forEach(function(doc){
+      var d=doc.data()||{};
+      archiveAlbums.push({
+        id:doc.id,
+        title:d.title||'이름 없는 앨범',
+        description:d.description||'',
+        createdAt:d.createdAt||'',
+        createdById:d.createdById||'',
+        createdBy:d.createdBy||''
+      });
+    });
+    archiveAlbumsLoaded=true;
+    archiveAlbumsLoading=false;
+    if(archiveSelectedAlbumId!=='all'&&!archiveAlbumById(archiveSelectedAlbumId))archiveSelectedAlbumId='all';
+    renderArchiveAlbumPanel();
+    syncArchiveAlbumSelects();
+    return archiveAlbums;
+  }).catch(function(e){
+    console.error(e);
+    archiveAlbumsLoading=false;
+    renderArchiveAlbumPanel('앨범을 불러오지 못했습니다.');
+    return archiveAlbums;
+  });
+}
+function renderArchiveAlbumPanel(errorText){
+  var box=document.getElementById('archiveAlbumList');
+  var createBtn=document.getElementById('btnArchiveAlbumCreate');
+  if(createBtn)createBtn.classList.toggle('hidden',!canUploadArchive());
+  if(!box)return;
+  if(errorText){
+    box.innerHTML='<div class="archive-album-empty">'+escHtml(errorText)+'</div>';
+    return;
+  }
+  var html='<div class="archive-album-chip '+(archiveSelectedAlbumId==='all'?'on':'')+'" role="button" tabindex="0" onclick="selectArchiveAlbum(\'all\')"><div class="archive-album-chip-name">전체 사진</div><div class="archive-album-chip-meta">모든 아카이브</div></div>';
+  if(!archiveAlbums.length){
+    html+='<div class="archive-album-empty">아직 앨범이 없습니다.</div>';
+  }
+  archiveAlbums.forEach(function(album){
+    var manage=canManageArchiveAlbum(album)?'<button type="button" class="archive-album-manage" onclick="event.stopPropagation();openArchiveAlbumModal(\''+escAttr(album.id)+'\')">관리</button>':'';
+    html+='<div class="archive-album-chip '+(archiveSelectedAlbumId===album.id?'on':'')+'" role="button" tabindex="0" onclick="selectArchiveAlbum(\''+escAttr(album.id)+'\')"><div class="archive-album-chip-name">📁 '+escHtml(album.title)+'</div><div class="archive-album-chip-meta">'+escHtml(album.description||'앨범 보기')+'</div>'+manage+'</div>';
+  });
+  box.innerHTML=html;
+}
+function selectArchiveAlbum(id){
+  archiveSelectedAlbumId=(id&&id!=='all'&&archiveAlbumById(id))?id:'all';
+  renderArchiveAlbumPanel();
+  loadArchiveItems(false);
+}
+function openArchiveAlbumModal(id){
+  if(!canUploadArchive())return showToast('앨범을 만들 권한이 없습니다');
+  var album=id?archiveAlbumById(id):null;
+  if(id&&!album)return showToast('앨범을 찾을 수 없습니다');
+  if(album&&!canManageArchiveAlbum(album))return showToast('앨범 관리 권한이 없습니다');
+  document.getElementById('archiveAlbumEditId').value=album?album.id:'';
+  document.getElementById('archiveAlbumTitle').value=album?album.title:'';
+  document.getElementById('archiveAlbumDesc').value=album?album.description:'';
+  var title=document.getElementById('archiveAlbumModalTitle');
+  if(title)title.textContent=album?'📁 앨범 수정':'📁 앨범 만들기';
+  var del=document.getElementById('btnArchiveAlbumDelete');
+  if(del)del.classList.toggle('hidden',!album||!canManageArchiveAlbum(album));
+  openModal('modalArchiveAlbum');
+}
+function saveArchiveAlbum(){
+  if(!canUploadArchive())return showToast('앨범 저장 권한이 없습니다');
+  var id=document.getElementById('archiveAlbumEditId').value;
+  var title=document.getElementById('archiveAlbumTitle').value.trim();
+  var description=document.getElementById('archiveAlbumDesc').value.trim();
+  if(!title)return showToast('앨범 이름을 입력해주세요');
+  var now=new Date().toISOString();
+  if(id){
+    var album=archiveAlbumById(id);
+    if(!album||!canManageArchiveAlbum(album))return showToast('앨범 관리 권한이 없습니다');
+    db.collection('archiveAlbums').doc(id).update({title:title,description:description,updatedAt:now,updatedBy:currentActorName()}).then(function(){
+      archiveAlbums.forEach(function(a){if(a.id===id){a.title=title;a.description=description;}});
+      archiveItems.forEach(function(item){if(item.albumId===id)item.albumTitle=title;});
+      closeModal('modalArchiveAlbum');
+      renderArchiveAlbumPanel();
+      syncArchiveAlbumSelects();
+      renderArchiveList();
+      writeLog('아카이브 앨범 수정',title);
+      showToast('앨범이 수정되었습니다');
+    }).catch(function(e){console.error(e);showToast('앨범 수정 중 오류 발생')});
+    return;
+  }
+  db.collection('archiveAlbums').add({title:title,description:description,createdAt:now,createdById:currentActorId(),createdBy:currentActorName(),updatedAt:now,updatedBy:currentActorName()}).then(function(docRef){
+    archiveSelectedAlbumId=docRef.id;
+    closeModal('modalArchiveAlbum');
+    writeLog('아카이브 앨범 생성',title);
+    return loadArchiveAlbums(true).then(function(){loadArchiveItems(false);});
+  }).then(function(){
+    showToast('앨범이 만들어졌습니다');
+  }).catch(function(e){console.error(e);showToast('앨범 저장 중 오류 발생')});
+}
+function deleteArchiveAlbum(){
+  var id=document.getElementById('archiveAlbumEditId').value;
+  var album=archiveAlbumById(id);
+  if(!album||!canManageArchiveAlbum(album))return showToast('앨범 삭제 권한이 없습니다');
+  if(!confirm('"'+album.title+'" 앨범을 삭제할까요?\n사진은 삭제되지 않고 앨범에서만 빠집니다.'))return;
+  var now=new Date().toISOString();
+  db.collection('mediaArchive').where('albumId','==',id).get().then(function(snap){
+    var commits=[];
+    var batch=db.batch();
+    var ops=0;
+    snap.forEach(function(doc){
+      batch.update(doc.ref,{albumId:'',albumTitle:'',updatedAt:now,updatedBy:currentActorName()});
+      ops++;
+      if(ops>=450){commits.push(batch.commit());batch=db.batch();ops=0;}
+    });
+    if(ops>0)commits.push(batch.commit());
+    return Promise.all(commits);
+  }).then(function(){
+    return db.collection('archiveAlbums').doc(id).delete();
+  }).then(function(){
+    archiveItems.forEach(function(item){if(item.albumId===id){item.albumId='';item.albumTitle='';}});
+    archiveAlbums=archiveAlbums.filter(function(a){return a.id!==id});
+    if(archiveSelectedAlbumId===id)archiveSelectedAlbumId='all';
+    closeModal('modalArchiveAlbum');
+    renderArchiveAlbumPanel();
+    syncArchiveAlbumSelects();
+    loadArchiveItems(false);
+    writeLog('아카이브 앨범 삭제',album.title);
+    showToast('앨범이 삭제되었습니다');
+  }).catch(function(e){console.error(e);showToast('앨범 삭제 중 오류 발생')});
+}
+function archiveAlbumFields(albumId){
+  var album=albumId?archiveAlbumById(albumId):null;
+  return {albumId:album?album.id:'',albumTitle:album?album.title:''};
+}
+function openArchiveMove(id){
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('자료를 찾을 수 없습니다');
+  if(!canManageArchiveItem(item))return showToast('앨범 변경 권한이 없습니다');
+  loadArchiveAlbums(false).then(function(){
+    document.getElementById('archiveMoveItemId').value=item.id;
+    var album=archiveAlbumById(item.albumId);
+    var currentAlbumTitle=(album&&album.title)||item.albumTitle||'';
+    document.getElementById('archiveMoveItemTitle').textContent=item.title+(currentAlbumTitle?' · 현재 '+currentAlbumTitle:'');
+    var sel=document.getElementById('archiveMoveAlbum');
+    if(sel){sel.innerHTML=archiveAlbumOptions(item.albumId||'');sel.value=item.albumId||'';}
+    openModal('modalArchiveMove');
+  });
+}
+function updateArchiveItemAlbum(id,albumId){
+  var item=archiveItems.find(function(x){return x.id===id});
+  if(!item)return showToast('자료를 찾을 수 없습니다');
+  if(!canManageArchiveItem(item))return showToast('앨범 변경 권한이 없습니다');
+  var fields=archiveAlbumFields(albumId);
+  db.collection('mediaArchive').doc(id).update({albumId:fields.albumId,albumTitle:fields.albumTitle,updatedAt:new Date().toISOString(),updatedBy:currentActorName()}).then(function(){
+    item.albumId=fields.albumId;
+    item.albumTitle=fields.albumTitle;
+    closeModal('modalArchiveMove');
+    renderArchiveList();
+    writeLog('아카이브 앨범 변경',item.title+' → '+(fields.albumTitle||'앨범 없음'));
+    showToast(fields.albumTitle?'앨범에 넣었습니다':'앨범에서 뺐습니다');
+  }).catch(function(e){console.error(e);showToast('앨범 변경 중 오류 발생')});
+}
+function saveArchiveMove(){
+  updateArchiveItemAlbum(document.getElementById('archiveMoveItemId').value,document.getElementById('archiveMoveAlbum').value);
+}
+function removeArchiveFromAlbum(){
+  updateArchiveItemAlbum(document.getElementById('archiveMoveItemId').value,'');
+}
 function renderArchivePage(){
   var uploadCard=document.getElementById('archiveUploadCard');
   if(uploadCard)uploadCard.classList.toggle('hidden',!canUploadArchive());
+  loadArchiveAlbums(false);
   if(document.getElementById('archiveDate') && !document.getElementById('archiveDate').value){
     document.getElementById('archiveDate').value=new Date().toISOString().split('T')[0];
   }
@@ -9031,6 +9286,8 @@ function renderArchivePage(){
 function loadArchiveItems(more){
   var list=document.getElementById('archiveList');
   if(archiveLoading)return;
+  var albumMode=archiveSelectedAlbumId&&archiveSelectedAlbumId!=='all';
+  if(albumMode&&more)return;
   archiveLoading=true;
   if(!more){
     archiveItems=[];
@@ -9040,8 +9297,13 @@ function loadArchiveItems(more){
   }else{
     renderArchiveList();
   }
-  var query=db.collection('mediaArchive').orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE);
-  if(more&&archiveLastDoc)query=query.startAfter(archiveLastDoc);
+  var query=db.collection('mediaArchive');
+  if(albumMode){
+    query=query.where('albumId','==',archiveSelectedAlbumId);
+  }else{
+    query=query.orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE);
+    if(more&&archiveLastDoc)query=query.startAfter(archiveLastDoc);
+  }
   query.get().then(function(snap){
     snap.forEach(function(doc){
       var d=doc.data()||{};
@@ -9057,13 +9319,16 @@ function loadArchiveItems(more){
         uploadedById:d.uploadedById||'',
         uploadedBy:d.uploadedBy||'',
         uploadedByPart:d.uploadedByPart||'',
+        albumId:d.albumId||'',
+        albumTitle:d.albumTitle||'',
         path:d.path||'',
         reactions:d.reactions||{},
         reactionUsers:d.reactionUsers||{}
       });
     });
-    archiveLastDoc=snap.docs.length?snap.docs[snap.docs.length-1]:archiveLastDoc;
-    archiveHasMore=snap.docs.length===ARCHIVE_PAGE_SIZE;
+    archiveItems.sort(function(a,b){return String(b.uploadedAt||'').localeCompare(String(a.uploadedAt||''));});
+    archiveLastDoc=(!albumMode&&snap.docs.length)?snap.docs[snap.docs.length-1]:archiveLastDoc;
+    archiveHasMore=albumMode?false:(snap.docs.length===ARCHIVE_PAGE_SIZE);
     archiveLoading=false;
     renderArchiveList();
   }).catch(function(e){
@@ -9082,9 +9347,11 @@ function renderArchiveList(){
   var items=archiveItems.filter(function(item){
     var partOk=(partFilter==='all'||item.part===partFilter);
     var typeOk=(typeFilter==='all'||item.type===typeFilter);
-    return partOk&&typeOk;
+    var albumOk=(archiveSelectedAlbumId==='all'||item.albumId===archiveSelectedAlbumId);
+    return partOk&&typeOk&&albumOk;
   });
-  count.textContent='아카이브 '+items.length+'개 표시';
+  var selectedAlbum=archiveSelectedAlbumId==='all'?null:archiveAlbumById(archiveSelectedAlbumId);
+  count.textContent=(selectedAlbum?selectedAlbum.title:'아카이브')+' · '+items.length+'개 표시';
   if(items.length===0){
     list.innerHTML='<div class="archive-empty">조건에 맞는 사진이 없습니다.</div>';
     return;
@@ -9105,11 +9372,15 @@ function renderArchiveList(){
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
     var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
+    var albumForItem=item.albumId?archiveAlbumById(item.albumId):null;
+    var albumTitle=(albumForItem&&albumForItem.title)||item.albumTitle||'';
+    var albumBadge=albumTitle?'<span class="archive-album-badge">📁 '+escHtml(albumTitle)+'</span>':'';
     var canManage=canManageArchiveItem(item);
+    var safeId=escAttr(item.id);
     var safeTitle=escAttr(item.title);
     var safePath=escAttr(item.path);
-    var actionBtns=canManage?'<div style="display:flex;gap:6px;margin-top:8px"><button onclick="event.stopPropagation();openArchiveEdit(\''+item.id+'\')" style="flex:1;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ 수정</button><button onclick="event.stopPropagation();deleteArchiveItem(\''+item.id+'\',\''+safeTitle+'\',\''+safePath+'\')" style="flex:1;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button></div>':'';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span></div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
+    var actionBtns=canManage?'<div class="archive-admin-actions"><button class="archive-card-action" onclick="event.stopPropagation();openArchiveMove(\''+safeId+'\')">📁 앨범</button><button class="archive-card-action" onclick="event.stopPropagation();openArchiveEdit(\''+safeId+'\')">수정</button><button class="archive-card-action danger" onclick="event.stopPropagation();deleteArchiveItem(\''+safeId+'\',\''+safeTitle+'\',\''+safePath+'\')">삭제</button></div>':'';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span>'+albumBadge+'</div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
   }).join('')+renderArchiveMoreButton();
 }
 function renderArchiveMoreButton(){
@@ -9284,6 +9555,8 @@ function openArchiveEdit(id){
   document.getElementById('archiveEditDate').value=item.date||'';
   document.getElementById('archiveEditTitle').value=item.title||'';
   document.getElementById('archiveEditDesc').value=item.description||'';
+  var albumSel=document.getElementById('archiveEditAlbum');
+  if(albumSel){albumSel.innerHTML=archiveAlbumOptions(item.albumId||'');albumSel.value=item.albumId||'';}
   openModal('modalArchiveEdit');
 }
 function saveArchiveEdit(){
@@ -9292,12 +9565,13 @@ function saveArchiveEdit(){
   var date=document.getElementById('archiveEditDate').value;
   var title=document.getElementById('archiveEditTitle').value.trim();
   var description=document.getElementById('archiveEditDesc').value.trim();
+  var albumFields=archiveAlbumFields(document.getElementById('archiveEditAlbum')?document.getElementById('archiveEditAlbum').value:'');
   if(!id||!part||!date||!title)return showToast('파트, 날짜, 제목은 필수입니다');
   var item=archiveItems.find(function(x){return x.id===id});
   if(!item)return showToast('수정할 자료를 찾을 수 없습니다');
   if(!canManageArchiveItem(item))return showToast('수정 권한이 없습니다');
-  db.collection('mediaArchive').doc(id).update({part:part,date:date,title:title,description:description,updatedAt:new Date().toISOString(),updatedBy:currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부')}).then(function(){
-    item.part=part;item.date=date;item.title=title;item.description=description;
+  db.collection('mediaArchive').doc(id).update({part:part,date:date,title:title,description:description,albumId:albumFields.albumId,albumTitle:albumFields.albumTitle,updatedAt:new Date().toISOString(),updatedBy:currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부')}).then(function(){
+    item.part=part;item.date=date;item.title=title;item.description=description;item.albumId=albumFields.albumId;item.albumTitle=albumFields.albumTitle;
     closeModal('modalArchiveEdit');renderArchiveList();
     writeLog('아카이브 수정',title+' ['+part+'] 수정됨');showToast('수정되었습니다');
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
@@ -9330,6 +9604,7 @@ function uploadArchiveMedia(){
   var dateEl=document.getElementById('archiveDate');
   var titleEl=document.getElementById('archiveTitle');
   var descEl=document.getElementById('archiveDesc');
+  var albumEl=document.getElementById('archiveAlbum');
   var fileEl=document.getElementById('archiveFile');
   var btn=document.getElementById('btnArchiveUpload');
 
@@ -9337,6 +9612,7 @@ function uploadArchiveMedia(){
   var date=dateEl.value;
   var title=titleEl.value.trim();
   var description=descEl.value.trim();
+  var albumFields=archiveAlbumFields(albumEl?albumEl.value:'');
   var files=fileEl.files;
 
   if(!part||!date||!title||!files||files.length===0)return showToast('파트, 날짜, 제목, 파일을 모두 입력해주세요');
@@ -9368,6 +9644,7 @@ function uploadArchiveMedia(){
       dateEl.value=new Date().toISOString().split('T')[0];
       titleEl.value='';
       descEl.value='';
+      if(albumEl)albumEl.value=archiveSelectedAlbumId!=='all'?archiveSelectedAlbumId:'';
       fileEl.value='';
       showToast(fileArr.length+'장 업로드 완료!');
       writeLog('아카이브 업로드',title+' ['+part+'] '+fileArr.length+'장 업로드');
@@ -9395,7 +9672,9 @@ function uploadArchiveMedia(){
             uploadedAt:new Date().toISOString(),
             uploadedById:uploaderId,
             uploadedBy:uploader,
-            uploadedByPart:uploaderPart
+            uploadedByPart:uploaderPart,
+            albumId:albumFields.albumId,
+            albumTitle:albumFields.albumTitle
           });
         });
       });

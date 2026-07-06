@@ -49,6 +49,12 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // 아카이브 앨범: 사진을 폴더처럼 묶는 메타데이터
+    match /archiveAlbums/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // 아카이브 댓글 기능은 사용하지 않음
     match /archiveComments/{doc} {
       allow read, write: if false;
