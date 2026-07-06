@@ -650,9 +650,11 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .archive-reaction-btn,.archive-comment-btn{border:1px solid #D8CBB7;background:#FFFDF8;color:#4F5B36;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;box-shadow:0 1px 2px rgba(86,72,49,.08)}
 .archive-reaction-btn.on{background:#6F7D4E;color:#fff;border-color:#6F7D4E}
 .archive-comment-btn{background:#EEF3E7;color:#44522F}
-.archive-reaction-picker{display:none;position:absolute;left:0;bottom:34px;background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:6px;gap:4px;z-index:5}
-.archive-reaction-picker.show{display:flex}
-.archive-reaction-choice{min-width:46px;height:34px;border:none;border-radius:999px;background:var(--bg);font-size:12px;font-weight:900;cursor:pointer;padding:0 10px;display:flex;align-items:center;gap:4px;justify-content:center}
+.archive-reaction-picker{display:none;position:absolute;left:0;bottom:34px;width:min(360px,calc(100vw - 48px));background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:8px;gap:6px;z-index:5;grid-template-columns:repeat(4,minmax(0,1fr))}
+.archive-reaction-picker.show{display:grid}
+.archive-reaction-choice{min-width:0;min-height:48px;border:none;border-radius:13px;background:var(--bg);font-weight:900;cursor:pointer;padding:6px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:center;line-height:1.05;white-space:nowrap}
+.archive-reaction-choice-emoji{font-size:19px;line-height:1}
+.archive-reaction-choice-label{font-size:10px;letter-spacing:0}
 .archive-reaction-choice.on{background:var(--pl);box-shadow:inset 0 0 0 2px var(--p)}
 .archive-comment-list{display:grid;gap:8px;margin:10px 0 12px}
 .archive-comment-item{border:1px solid var(--bd);background:#FFFDF8;border-radius:12px;padding:10px}
@@ -2623,7 +2625,10 @@ var ARCHIVE_REACTIONS=[
   {key:'heart',emoji:'❤️',label:'좋아요'},
   {key:'grace',emoji:'🙏',label:'은혜'},
   {key:'cheer',emoji:'👏',label:'응원'},
-  {key:'laugh',emoji:'😊',label:'미소'}
+  {key:'laugh',emoji:'😊',label:'미소'},
+  {key:'thanks',emoji:'🙌',label:'감사'},
+  {key:'celebrate',emoji:'🎉',label:'축하'},
+  {key:'best',emoji:'👍',label:'최고'}
 ];
 var ARCHIVE_REACTION_ALIASES={agree:'grace',trouble:'cheer'};
 var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
@@ -9155,7 +9160,7 @@ function renderArchiveReactions(item){
   }).join('');
   if(!chips)chips='<span class="archive-social-empty">아직 공감 없음</span>';
   var choices=ARCHIVE_REACTIONS.map(function(r){
-    return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')"><span>'+r.emoji+'</span><span>'+r.label+'</span></button>';
+    return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')"><span class="archive-reaction-choice-emoji">'+r.emoji+'</span><span class="archive-reaction-choice-label">'+r.label+'</span></button>';
   }).join('');
   var adminList=(adminRole==='admin')&&total>0?'<button class="archive-reaction-btn" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">명단</button>':'';
   var commentLabel='댓글'+(item.commentCount?(' '+item.commentCount):'');
@@ -9296,7 +9301,7 @@ function renderArchiveCommentModal(id,errorText){
     }).join('')+'</div>';
   }
   var form=currentUser
-    ? '<div class="archive-comment-form"><textarea class="form-input archive-comment-input" id="archiveCommentInput" maxlength="300" placeholder="댓글을 남겨주세요."></textarea><div class="archive-comment-meta">댓글은 사진을 열 때 자동으로 불러오지 않고, 이 창을 열 때만 불러옵니다. 최근 '+ARCHIVE_COMMENT_LIMIT+'개까지 보관됩니다.</div><button class="btn btn-p btn-bl" onclick="saveArchiveComment(\''+escAttr(id)+'\')">댓글 등록</button></div>'
+    ? '<div class="archive-comment-form"><textarea class="form-input archive-comment-input" id="archiveCommentInput" maxlength="300" placeholder="댓글을 남겨주세요."></textarea><button class="btn btn-p btn-bl" onclick="saveArchiveComment(\''+escAttr(id)+'\')">댓글 등록</button></div>'
     : '<div class="archive-comment-form"><div class="archive-comment-meta">댓글 작성은 단원 로그인 후 가능합니다.</div><button class="btn btn-p" onclick="pendingTabAfterLogin=&quot;archive&quot;;closeModal(&quot;modalArchiveComments&quot;);openUserModal()">로그인</button></div>';
   body.innerHTML='<div class="archive-comment-meta">'+escHtml((item&&item.date)||'날짜 미입력')+' · 댓글 '+Number(state.totalCount||item&&item.commentCount||0)+'개</div>'+list+form;
 }
