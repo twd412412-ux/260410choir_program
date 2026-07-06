@@ -3038,6 +3038,9 @@ function canManageArchiveItem(item){
   if(item.uploadedById)return item.uploadedById===currentUser.id;
   return item.uploadedBy===currentUser.name;
 }
+function canViewArchiveReactionUsers(){
+  return adminRole==='admin'&&!currentUser;
+}
 function scopeFromAccountPart(part){
   part=normalizePartName(part);
   if(part==='지휘')return ['ALL'];
@@ -9161,7 +9164,7 @@ function renderArchiveReactions(item){
   var choices=ARCHIVE_REACTIONS.map(function(r){
     return '<button class="archive-reaction-choice '+(selected===r.key?'on':'')+'" title="'+r.label+'" onclick="event.stopPropagation();toggleArchiveReaction(\''+item.id+'\',\''+r.key+'\')"><span class="archive-reaction-choice-emoji">'+r.emoji+'</span><span class="archive-reaction-choice-label">'+r.label+'</span></button>';
   }).join('');
-  var adminList=(adminRole==='admin')&&total>0?'<button class="archive-social-link" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">공감 명단</button>':'';
+  var adminList=canViewArchiveReactionUsers()&&total>0?'<button class="archive-social-link" onclick="event.stopPropagation();showArchiveReactionUsers(\''+item.id+'\')">공감 명단</button>':'';
   var likeIcon=selectedInfo?selectedInfo.emoji:'♡';
   return '<div class="archive-social" id="archiveReactions-'+item.id+'"><div class="archive-social-actions"><div class="archive-ig-actions"><button class="archive-ig-action '+(selected?'on':'')+'" title="공감" onclick="event.stopPropagation();openArchiveReactionPicker(\''+item.id+'\')"><span class="archive-like-icon">'+likeIcon+'</span></button></div>'+adminList+'</div>'+caption+'<div class="archive-reaction-picker" id="archiveReactionPicker-'+item.id+'">'+choices+'</div></div>';
 }
@@ -9210,7 +9213,7 @@ function updateArchiveReactionView(item){
 function showArchiveReactionUsers(id){
   var item=archiveItems.find(function(x){return x.id===id});
   if(!item)return showToast('자료를 찾을 수 없습니다');
-  if(adminRole!=='admin')return showToast('관리자만 볼 수 있습니다');
+  if(!canViewArchiveReactionUsers())return showToast('관리자만 볼 수 있습니다');
   var grouped={};
   ARCHIVE_REACTIONS.forEach(function(r){grouped[r.key]=[]});
   Object.keys(item.reactionUsers||{}).forEach(function(uid){
