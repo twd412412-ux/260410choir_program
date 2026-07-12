@@ -9667,7 +9667,7 @@ function renderArchiveList(){
     else if(item.description){desc='<div class="archive-desc">'+escHtml(item.description)+'</div>'}
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
     var uploader=canViewArchiveUploader()&&item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
-    var typeLabel=item.type==='video'?'영상':'사진';
+    var typeBadge=item.type==='video'?'<span class="archive-type-badge">영상</span>':'';
     var albumForItem=item.albumId?archiveAlbumById(item.albumId):null;
     var albumTitle=(albumForItem&&albumForItem.title)||item.albumTitle||'';
     var albumBadge=albumTitle?'<span class="archive-album-badge">📁 '+escHtml(albumTitle)+'</span>':'';
@@ -9681,7 +9681,7 @@ function renderArchiveList(){
     if(canManage)actions.push('<button class="archive-card-action" onclick="event.stopPropagation();openArchiveEdit(\''+safeId+'\')">수정</button>');
     if(canManage)actions.push('<button class="archive-card-action danger" onclick="event.stopPropagation();deleteArchiveItem(\''+safeId+'\',\''+safeTitle+'\',\''+safePath+'\')">삭제</button>');
     var actionBtns=actions.length?'<div class="archive-admin-actions">'+actions.join('')+'</div>':'';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span><span class="archive-type-badge">'+typeLabel+'</span>'+albumBadge+'</div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span>'+typeBadge+albumBadge+'</div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
   }).join('')+renderArchiveMoreButton();
 }
 function renderArchiveMoreButton(){
