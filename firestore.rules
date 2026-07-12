@@ -2,61 +2,189 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    match /songs/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    match /scores/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function elevationValid() {
+      return signedIn()
+        && request.auth.token.elevatedUntil is int
+        && request.auth.token.elevatedUntil > request.time.toMillis();
     }
 
-    match /schedules/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function isAdmin() {
+      return elevationValid() && request.auth.token.admin == true;
     }
 
-    match /settings/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function isAccount() {
+      return signedIn() && request.auth.token.account == true;
     }
 
-    match /members/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function isElevatedStaff() {
+      return elevationValid()
+        && (request.auth.token.admin == true || request.auth.token.legacyRole == 'chongmu');
     }
 
-    match /activityLogs/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function isAppUser() {
+      return isAccount() || isElevatedStaff();
     }
 
-    match /accounts/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function hasPermission(permission) {
+      return isAdmin()
+        || (isAppUser()
+          && request.auth.token.permissions is list
+          && request.auth.token.permissions.hasAny([permission]));
     }
 
-    match /attendance/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function ownsCreatedDoc(data) {
+      return signedIn()
+        && (data.createdById == request.auth.uid
+          || (elevationValid()
+            && request.auth.token.legacyRole == 'chongmu'
+            && data.createdById == 'chongmu'));
     }
 
-    // 미디어 아카이브: 사진 업로드/불러오기용
-    match /mediaArchive/{doc} {
-      allow read: if true;
-      allow write: if true;
+    function ownMember(memberId) {
+      return isAccount() && request.auth.token.memberId == memberId;
     }
 
-    // 아카이브 앨범: 사진을 폴더처럼 묶는 메타데이터
-    match /archiveAlbums/{doc} {
-      allow read: if true;
-      allow write: if true;
+    match /songs/{songId} {
+      allow read: if isAppUser();
+      allow create: if hasPermission('song.manage');
+      allow update: if isAdmin()
+        || hasPermission('song.editAny')
+        || (hasPermission('song.manage') && ownsCreatedDoc(resource.data));
+      allow delete: if isAdmin()
+        || (hasPermission('song.manage') && ownsCreatedDoc(resource.data));
     }
 
-    // 아카이브 댓글 기능은 사용하지 않음
-    match /archiveComments/{doc} {
+    match /schedules/{scheduleId} {
+      allow read: if true;
+      allow create: if hasPermission('schedule.manage');
+      allow update: if isAdmin()
+        || hasPermission('schedule.editAny')
+        || (hasPermission('schedule.manage') && ownsCreatedDoc(resource.data));
+      allow delete: if isAdmin()
+        || (hasPermission('schedule.manage') && ownsCreatedDoc(resource.data));
+    }
+
+    match /settings/notice {
+      allow read: if true;
+      allow write: if hasPermission('notice.manage');
+    }
+
+    match /settings/publishedSeatingPlan {
+      allow read: if true;
+      allow write: if hasPermission('seating.manage');
+    }
+
+    match /settings/seatingPlans {
+      allow read, write: if hasPermission('seating.manage');
+    }
+
+    match /settings/scores {
+      allow read: if isAppUser();
+      allow write: if hasPermission('score.manage');
+    }
+
+    match /settings/admin {
+      allow read, write: if false;
+    }
+
+    match /settings/{otherSetting} {
+      allow read, write: if isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow read: if ownMember(memberId)
+        || isAdmin()
+        || hasPermission('member.view')
+        || hasPermission('member.history')
+        || hasPermission('member.manage')
+        || hasPermission('member.delete')
+        || hasPermission('attendance.view')
+        || hasPermission('attendance.check')
+        || hasPermission('attendance.delete')
+        || hasPermission('account.manage')
+        || hasPermission('song.manage')
+        || hasPermission('seating.manage');
+      allow create: if isAdmin() || hasPermission('member.manage');
+      allow update: if isAdmin()
+        || hasPermission('member.manage')
+        || (ownMember(memberId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'photo', 'photoUpdatedAt', 'photoUpdatedByAccountId', 'photoUpdatedBy'
+          ])
+          && request.resource.data.photoUpdatedByAccountId == request.auth.uid);
+      allow delete: if isAdmin() || hasPermission('member.delete');
+    }
+
+    match /accounts/{accountId} {
+      allow read: if isAdmin()
+        || hasPermission('account.manage')
+        || hasPermission('account.pin')
+        || (isAccount() && request.auth.uid == accountId);
+      allow update: if isAccount()
+        && request.auth.uid == accountId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favorites']);
+      allow create, delete: if false;
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAdmin()
+        || hasPermission('attendance.view')
+        || hasPermission('attendance.check')
+        || hasPermission('attendance.delete');
+      allow create, update: if isAdmin() || hasPermission('attendance.check');
+      allow delete: if isAdmin() || hasPermission('attendance.delete');
+    }
+
+    match /activityLogs/{logId} {
+      allow create: if isAppUser();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /mediaArchive/{archiveId} {
+      allow read: if isAppUser();
+      allow create: if isAdmin()
+        || (hasPermission('archive.upload')
+          && request.resource.data.uploadedById == request.auth.uid);
+      allow update: if isAdmin()
+        || (hasPermission('archive.manageMine')
+          && resource.data.uploadedById == request.auth.uid)
+        || (hasPermission('archive.organize')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'albumId', 'albumTitle', 'updatedAt', 'updatedBy'
+          ]))
+        || (isAccount()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'reactionUsers', 'reactions', 'reactionUpdatedAt'
+          ])
+          && request.resource.data.get('reactionUsers', {}).diff(resource.data.get('reactionUsers', {})).affectedKeys().hasOnly([request.auth.uid]));
+      allow delete: if isAdmin()
+        || (hasPermission('archive.manageMine')
+          && resource.data.uploadedById == request.auth.uid);
+    }
+
+    match /archiveAlbums/{albumId} {
+      allow read: if isAppUser();
+      allow create, update, delete: if isAdmin() || hasPermission('archive.organize');
+    }
+
+    match /archiveComments/{commentId} {
+      allow read, write: if false;
+    }
+
+    match /scores/{scoreId} {
+      allow read: if isAppUser();
+      allow write: if hasPermission('score.manage');
+    }
+
+    match /authSecrets/{secretId} {
+      allow read, write: if false;
+    }
+
+    match /securityRateLimits/{limitId} {
       allow read, write: if false;
     }
   }

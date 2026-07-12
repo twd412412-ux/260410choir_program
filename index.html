@@ -2658,16 +2658,17 @@ var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false;
 var songRecommendCache=[];
 var adminRole=null;
-var chongmuPassword='';
-var adminPasswordHash='';
-var adminPasswordSalt='';
-var adminSettingsLoadPromise=null;
-var adminSettingsLoaded=false;
 var adminLoginBusy=false;
 var ADMIN_PASSWORD_MIN_LENGTH=4;
 var ADMIN_RECOVERY_EMAIL='twd412412@gmail.com';
 var ADMIN_RESET_REDIRECT_KEY='choir_admin_reset_redirect';
 var firebaseAuthLoadPromise=null;
+var firebaseFunctionsLoadPromise=null;
+var firebaseStorageModulePromise=null;
+var firebaseAuthReadyPromise=null;
+var firebaseAuthReady=false;
+var secureElevatedSession=false;
+var recoveryFirebaseApp=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
@@ -2703,6 +2704,7 @@ var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+var sharedMembersCache={ts:0,rows:null,promise:null};
 var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='', publicSeatingZoom=1.18;
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
@@ -2961,6 +2963,7 @@ function getUserPermissions(user){
 }
 function getCurrentPermissions(){
   if(adminRole==='admin')return Object.keys(PERMISSION_LABELS);
+  if(!firebaseAuthReady)return [];
   return getUserPermissions(currentUser);
 }
 function hasPermission(key){
@@ -2989,7 +2992,9 @@ function currentActorName(){
   return '권한자';
 }
 function currentActorId(){
-  return currentUser&&currentUser.id?currentUser.id:(adminRole||'');
+  if(currentUser&&currentUser.id)return currentUser.id;
+  if(firebase.auth&&firebase.auth().currentUser)return firebase.auth().currentUser.uid;
+  return adminRole||'';
 }
 function canOpenAdminArea(){
   return adminRole==='admin'||adminRole==='chongmu'||hasAnyPermission();
@@ -3004,7 +3009,7 @@ function canManageScores(){
   return adminRole==='admin'||hasPermission('score.manage');
 }
 function isMemberLoggedIn(){
-  return !!(currentUser&&currentUser.id&&currentUser.name);
+  return !!(firebaseAuthReady&&currentUser&&currentUser.id&&currentUser.name);
 }
 function canViewScores(){
   return adminRole==='admin'||canManageScores()||getScoreAccessModes().length>0;
@@ -3099,7 +3104,7 @@ function canManageAttendanceReportExclusion(){
   return adminRole==='admin';
 }
 function hasArchiveView(){
-  return !!(currentUser||adminRole==='admin'||adminRole==='chongmu');
+  return !!(isMemberLoggedIn()||adminRole==='admin'||adminRole==='chongmu');
 }
 function canUploadArchive(){
   return adminRole==='admin'||hasPermission('archive.upload');
@@ -3684,36 +3689,20 @@ function openQuickAddSchedule(defaultDate){
 
 
 // ==================== 관리자 로그인 ====================
-function hasPasswordHashSupport(){
-  return !!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
-}
-function bytesToHex(buffer){
-  return Array.prototype.map.call(new Uint8Array(buffer),function(b){return b.toString(16).padStart(2,'0')}).join('');
-}
-function randomPasswordSalt(){
-  var bytes=new Uint8Array(16);
-  window.crypto.getRandomValues(bytes);
-  return Array.prototype.map.call(bytes,function(b){return b.toString(16).padStart(2,'0')}).join('');
-}
-function sha256Hex(text){
-  if(!hasPasswordHashSupport())return Promise.reject(new Error('crypto_unavailable'));
-  return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)).then(bytesToHex);
-}
-function hashAdminPassword(pw,salt){
-  return sha256Hex(String(salt||'')+':'+String(pw||''));
-}
-function verifyAdminPassword(pw){
-  if(!adminPasswordHash||!adminPasswordSalt)return Promise.resolve(false);
-  return hashAdminPassword(pw,adminPasswordSalt).then(function(hash){return hash===adminPasswordHash});
-}
 function loadScriptOnce(id,src){
   var existing=document.getElementById(id);
-  if(existing)return Promise.resolve();
+  if(existing){
+    if(existing.dataset.loaded==='true')return Promise.resolve();
+    return new Promise(function(resolve,reject){
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',reject,{once:true});
+    });
+  }
   return new Promise(function(resolve,reject){
     var script=document.createElement('script');
     script.id=id;
     script.src=src;
-    script.onload=function(){resolve()};
+    script.onload=function(){script.dataset.loaded='true';resolve()};
     script.onerror=function(){reject(new Error('script_load_failed'))};
     document.head.appendChild(script);
   });
@@ -3725,6 +3714,46 @@ function ensureFirebaseAuth(){
     return firebase.auth();
   });
   return firebaseAuthLoadPromise;
+}
+function ensureFirebaseFunctions(){
+  if(firebase.functions)return Promise.resolve(firebase.app().functions('asia-northeast3'));
+  if(firebaseFunctionsLoadPromise)return firebaseFunctionsLoadPromise;
+  firebaseFunctionsLoadPromise=loadScriptOnce('firebaseFunctionsCompatSdk','https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js').then(function(){
+    return firebase.app().functions('asia-northeast3');
+  });
+  return firebaseFunctionsLoadPromise;
+}
+function callSecureFunction(name,data,app){
+  data=data||{};
+  return Promise.all([ensureFirebaseAuth(),ensureFirebaseFunctions()]).then(function(){
+    var targetApp=app||firebase.app();
+    return targetApp.functions('asia-northeast3').httpsCallable(name)(data);
+  }).then(function(result){return result&&result.data?result.data:{};});
+}
+function authGateway(action,data,app){
+  return callSecureFunction('authGateway',Object.assign({action:action},data||{}),app);
+}
+function accountAdminCall(action,data){
+  return callSecureFunction('accountAdmin',Object.assign({action:action},data||{}));
+}
+function securityErrorMessage(error,fallback){
+  var code=String(error&&error.code||'').replace(/^functions\//,'');
+  if(code==='unauthenticated')return '로그인이 만료되었습니다. 다시 로그인해주세요';
+  if(code==='permission-denied')return '이 작업을 할 권한이 없습니다';
+  if(code==='resource-exhausted')return '로그인 시도가 많아 잠시 후 다시 시도해주세요';
+  if(code==='already-exists')return error.message||'이미 등록된 계정입니다';
+  if(code==='not-found')return error.message||'대상을 찾을 수 없습니다';
+  if(code==='invalid-argument')return error.message||fallback||'입력 내용을 확인해주세요';
+  return fallback||'처리 중 오류가 발생했습니다';
+}
+function ensureRecoveryFirebase(){
+  return Promise.all([ensureFirebaseAuth(),ensureFirebaseFunctions()]).then(function(){
+    if(!recoveryFirebaseApp){
+      try{recoveryFirebaseApp=firebase.app('adminRecovery');}
+      catch(e){recoveryFirebaseApp=firebase.initializeApp(firebase.app().options,'adminRecovery');}
+    }
+    return recoveryFirebaseApp;
+  });
 }
 function clearAdminPasswordResetState(){
   adminResetVerified=false;
@@ -3770,9 +3799,9 @@ function completeAdminPasswordResetSignIn(result){
 function handleAdminResetRedirectResult(){
   if(!sessionStorage.getItem(ADMIN_RESET_REDIRECT_KEY))return;
   sessionStorage.removeItem(ADMIN_RESET_REDIRECT_KEY);
-  ensureFirebaseAuth().then(function(auth){
-    adminResetAuth=auth;
-    return auth.getRedirectResult();
+  ensureRecoveryFirebase().then(function(app){
+    adminResetAuth=app.auth();
+    return adminResetAuth.getRedirectResult();
   }).then(function(result){
     if(result&&result.user)completeAdminPasswordResetSignIn(result);
   }).catch(function(error){
@@ -3782,15 +3811,15 @@ function handleAdminResetRedirectResult(){
 }
 function startAdminPasswordReset(){
   showToast('Google 인증 창을 여는 중...');
-  ensureFirebaseAuth().then(function(auth){
-    adminResetAuth=auth;
+  ensureRecoveryFirebase().then(function(app){
+    adminResetAuth=app.auth();
     var provider=new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({prompt:'select_account'});
-    return auth.signInWithPopup(provider).catch(function(error){
+    return adminResetAuth.signInWithPopup(provider).catch(function(error){
       if(error&&error.code==='auth/popup-blocked'){
         showToast('팝업이 차단되어 Google 인증 페이지로 이동합니다');
         sessionStorage.setItem(ADMIN_RESET_REDIRECT_KEY,'1');
-        return auth.signInWithRedirect(provider).then(function(){return null;});
+        return adminResetAuth.signInWithRedirect(provider).then(function(){return null;});
       }
       throw error;
     });
@@ -3808,47 +3837,123 @@ function saveAdminPasswordFromRecovery(){
   if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
   if(pw.length<ADMIN_PASSWORD_MIN_LENGTH)return showToast('관리자 비밀번호는 '+ADMIN_PASSWORD_MIN_LENGTH+'자리 이상으로 입력해주세요');
   if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
-  if(!hasPasswordHashSupport())return showToast('현재 브라우저에서는 보안 해시 기능을 사용할 수 없습니다');
-  var salt=randomPasswordSalt();
-  hashAdminPassword(pw,salt).then(function(hash){
-    return db.collection('settings').doc('admin').set({
-      adminPasswordHash:hash,
-      adminPasswordSalt:salt,
-      adminPasswordUpdatedAt:new Date().toISOString(),
-      adminPasswordUpdatedBy:ADMIN_RECOVERY_EMAIL,
-      updatedAt:new Date().toISOString()
-    },{merge:true}).then(function(){
-      adminPasswordHash=hash;
-      adminPasswordSalt=salt;
-      writeLog('관리자 비밀번호 초기화','Google 인증으로 관리자 비밀번호를 초기화함');
-      closeModal('modalAdminReset');
-      showToast('관리자 비밀번호가 초기화되었습니다');
-    });
+  ensureRecoveryFirebase().then(function(app){
+    return authGateway('resetLegacyPassword',{role:'admin',password:pw},app);
+  }).then(function(){
+    writeLog('관리자 비밀번호 초기화','Google 인증으로 관리자 비밀번호를 초기화함');
+    closeModal('modalAdminReset');
+    showToast('관리자 비밀번호가 초기화되었습니다');
   }).catch(function(e){
     console.error(e);
-    showToast('비밀번호 저장 중 오류 발생');
+    showToast(securityErrorMessage(e,'비밀번호 저장 중 오류가 발생했습니다'));
+  });
+}
+function secureProfileFromClaims(uid,claims,profile){
+  claims=claims||{};
+  profile=profile||{};
+  var cached=currentUser&&currentUser.id===uid?currentUser:{};
+  return {
+    id:uid,
+    name:profile.name||claims.choirName||cached.name||'',
+    part:profile.part||claims.choirPart||cached.part||'',
+    memberId:profile.memberId||claims.memberId||cached.memberId||'',
+    role:profile.role||claims.role||'',
+    canArchiveUpload:!!(profile.canArchiveUpload||normalizePermissionArray(claims.permissions).indexOf('archive.upload')>-1),
+    permissionPreset:profile.permissionPreset||claims.permissionPreset||'',
+    permissions:normalizePermissionArray(profile.permissions||claims.permissions),
+    attendanceScope:normalizeAttendanceScopeArray(profile.attendanceScope||claims.attendanceScope||[]),
+    scoreAccessScope:normalizeScoreAccessScope(profile.scoreAccessScope||claims.scoreAccessScope),
+    linkedPart:normalizePartName(profile.linkedPart||cached.linkedPart),
+    linkedSubPart:normalizePartName(profile.linkedSubPart||cached.linkedSubPart),
+    linkedMemberStatus:profile.linkedMemberStatus||cached.linkedMemberStatus||'',
+    favorites:Array.isArray(profile.favorites)?profile.favorites:(Array.isArray(cached.favorites)?cached.favorites:favorites)
+  };
+}
+function applySecureAuthState(firebaseUser,claims,profile){
+  claims=claims||{};
+  firebaseAuthReady=true;
+  secureElevatedSession=Number(claims.elevatedUntil||0)>Date.now()&&(claims.admin===true||claims.legacyRole==='chongmu');
+  if(claims.account===true){
+    currentUser=secureProfileFromClaims(firebaseUser.uid,claims,profile);
+    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    if(Array.isArray(currentUser.favorites)){
+      favorites=currentUser.favorites;
+      localStorage.setItem('choir_fav',JSON.stringify(favorites));
+    }
+  }else{
+    currentUser=null;
+    localStorage.removeItem('choir_user');
+  }
+  if(secureElevatedSession&&claims.admin===true)adminRole='admin';
+  else if(secureElevatedSession&&claims.legacyRole==='chongmu')adminRole='chongmu';
+  else adminRole=getSessionRoleForUser(currentUser)||null;
+  updateUserBar();
+  syncAccessShell();
+}
+function refreshAfterSecureAuth(){
+  updateAdminTabs();
+  refreshHomeAccessState();
+  if(currentUser&&currentUser.memberId){
+    hydrateUserLinkedMember(currentUser).then(function(user){
+      if(!currentUser||currentUser.id!==user.id)return;
+      currentUser=user;
+      localStorage.setItem('choir_user',JSON.stringify(currentUser));
+      updateUserBar();
+      refreshHomeAccessState();
+    });
+  }
+  var songsPromise=initSongs(true);
+  scheduleScoresLoad(100);
+  requestHomeRender();
+  return songsPromise;
+}
+function signInWithSecureToken(data){
+  if(!data||!data.token)return Promise.reject(new Error('missing_custom_token'));
+  return ensureFirebaseAuth().then(function(auth){
+    return auth.signInWithCustomToken(data.token);
+  }).then(function(credential){
+    return credential.user.getIdTokenResult(true).then(function(tokenResult){
+      applySecureAuthState(credential.user,tokenResult.claims,data.profile||null);
+      return {user:credential.user,claims:tokenResult.claims};
+    });
+  });
+}
+function exitAdminMode(){
+  if(!secureElevatedSession){
+    adminRole=getSessionRoleForUser(currentUser)||null;
+    syncAccessShell();
+    refreshHomeAccessState();
+    return Promise.resolve();
+  }
+  showToast('관리자 모드를 종료하는 중...');
+  return authGateway('endElevatedSession',{}).then(function(data){
+    if(data.signOut){
+      return ensureFirebaseAuth().then(function(auth){return auth.signOut()}).then(function(){
+        currentUser=null;
+        adminRole=null;
+        secureElevatedSession=false;
+        firebaseAuthReady=true;
+        localStorage.removeItem('choir_user');
+      });
+    }
+    return signInWithSecureToken(data);
+  }).then(function(){
+    syncAccessShell();
+    refreshHomeAccessState();
+    if(currentTab==='admin'||currentTab==='stats')switchTab(canViewSongList()?'songs':'home');
+    showToast('관리자 모드 종료');
+  }).catch(function(e){
+    console.error(e);
+    showToast(securityErrorMessage(e,'관리자 모드를 종료하지 못했습니다'));
   });
 }
 function openAdminLogin(){
   var userSessionRole=getSessionRoleForUser(currentUser);
   if(adminRole&&(!currentUser||adminRole==='admin'||(adminRole==='chongmu'&&userSessionRole!=='chongmu'))){
-    adminRole=getSessionRoleForUser(currentUser)||null;
-    syncAccessShell();
-    if(!canViewSongList()){
-      allSongs=[];
-      filteredSongs=[];
-      songsLoaded=false;
-      songsLoadPromise=null;
-      localStorage.removeItem('choir_songs');
-    }
-    showToast('관리자 모드 종료');
-    if(currentTab==='admin'||currentTab==='stats')switchTab(canViewSongList()?'songs':'home');
-    renderSongList();
-    refreshHomeAccessState();
+    exitAdminMode();
     return;
   }
   openModal('modalAdmin');
-  loadAdminSettings(false).catch(function(){});
   setTimeout(function(){document.getElementById('adminPw').focus()},300);
 }
 function setAdminLoginBusy(busy){
@@ -3863,46 +3968,26 @@ function checkAdminPw(){
   if(adminLoginBusy)return;
   var role=document.getElementById('roleSelect').value;
   var pw=document.getElementById('adminPw').value;
-  if(role==='admin'){
-    if(!pw)return showToast('비밀번호를 입력해주세요');
-    setAdminLoginBusy(true);
-    loadAdminSettings(true).then(function(){
-      if(!adminPasswordHash||!adminPasswordSalt)return showToast('관리자 비밀번호가 아직 설정되지 않았습니다');
-      return verifyAdminPassword(pw).then(function(ok){
-        if(!ok)return showToast('비밀번호가 틀렸습니다');
-        adminRole='admin';
-        syncAccessShell();
-        document.getElementById('adminPw').value='';
-        closeModal('modalAdmin');showToast('관리자 모드 활성화');initSongs(true);refreshHomeAccessState();
-      });
-    }).catch(function(e){
-      console.error(e);
-      showToast('관리자 설정을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요');
-    }).finally(function(){
-      setAdminLoginBusy(false);
-    });
-  }else if(role==='chongmu'){
-    if(!pw)return showToast('비밀번호를 입력해주세요');
-    setAdminLoginBusy(true);
-    loadAdminSettings(true).then(function(){
-      if(!chongmuPassword)return showToast('총무부 비밀번호가 아직 설정되지 않았습니다');
-      if(pw!==chongmuPassword)return showToast('비밀번호가 틀렸습니다');
-      adminRole='chongmu';
-      syncAccessShell();
-      document.getElementById('adminPw').value='';
-      closeModal('modalAdmin');showToast('총무부 모드 활성화');initSongs(true);refreshHomeAccessState();
-    }).catch(function(){
-      showToast('관리자 설정을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요');
-    }).finally(function(){
-      setAdminLoginBusy(false);
-    });
-  }else{showToast('비밀번호가 틀렸습니다')}
+  if(!pw)return showToast('비밀번호를 입력해주세요');
+  if(role!=='admin'&&role!=='chongmu')return showToast('로그인 종류를 확인해주세요');
+  setAdminLoginBusy(true);
+  authGateway('loginLegacyRole',{role:role,password:pw}).then(signInWithSecureToken).then(function(){
+    document.getElementById('adminPw').value='';
+    closeModal('modalAdmin');
+    showToast(role==='admin'?'관리자 모드 활성화':'총무부 모드 활성화');
+    refreshAfterSecureAuth();
+  }).catch(function(e){
+    console.error(e);
+    showToast(securityErrorMessage(e,'비밀번호를 확인해주세요'));
+  }).finally(function(){
+    setAdminLoginBusy(false);
+  });
 }
 
 // ==================== 사용자 ====================
 function openUserModal(){
   var b=document.getElementById('userModalBody');
-  if(currentUser){
+  if(isMemberLoggedIn()){
     renderCurrentUserProfile(null,'loading');
     loadCurrentUserLinkedMember();
   }else{
@@ -3976,6 +4061,7 @@ function saveMyProfilePhoto(){
   }).then(function(){
     if(input)setPhotoSavedUrl(input,url);
     if(previousPhoto&&previousPhoto!==url)deleteStoragePhotoByUrl(previousPhoto);
+    invalidateSharedMembers();
     showToast('프로필 사진이 저장되었습니다');
     loadCurrentUserLinkedMember();
   }).catch(function(e){
@@ -4026,35 +4112,28 @@ function loginUser(){
   if(!nameInput||!nameInput.value.trim())return showToast('이름을 입력해주세요');
   if(!pin||!pin.value)return showToast('PIN을 입력해주세요');
   var inputName=nameInput.value.trim();
-  
-  db.collection('accounts').where('name','==',inputName).get().then(function(snap){
-    if(snap.empty)return showToast('등록되지 않은 이름입니다');
-    var doc=snap.docs[0];var data=doc.data();
-    if(data.pin!==pin.value)return showToast('PIN이 틀렸습니다');
-    var nextUser={id:doc.id,name:data.name,part:data.part,memberId:data.memberId||'',role:data.role||'',canArchiveUpload:!!data.canArchiveUpload,permissionPreset:data.permissionPreset||'',permissions:normalizePermissionArray(data.permissions),attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[]),scoreAccessScope:normalizeScoreAccessScope(data.scoreAccessScope),linkedPart:normalizePartName(data.linkedPart),linkedSubPart:normalizePartName(data.linkedSubPart)};
-    return hydrateUserLinkedMember(nextUser).then(function(user){
-      currentUser=user;
-      localStorage.setItem('choir_user',JSON.stringify(currentUser));
-      if(data.favorites){favorites=data.favorites;localStorage.setItem('choir_fav',JSON.stringify(favorites))}
-      updateUserBar();closeModal('modalUser');
-      showToast(data.name+'님 환영합니다!');
-
-      adminRole=getSessionRoleForUser(currentUser)||null;
-      syncAccessShell();
-      updateAdminTabs();
-      refreshHomeAccessState();
-      scheduleScoresLoad(500);
-      var nextTab=pendingTabAfterLogin;
-      pendingTabAfterLogin='';
-      initSongs(true).then(function(){
-        if(nextTab==='scores'&&canViewScores())switchTab('scores');
-        else if((nextTab==='songs'||nextTab==='favorites')&&canViewSongList())switchTab(nextTab);
-        else if(currentTab==='songs')renderSongList();
-        else if(currentTab==='favorites')renderFav();
-        requestHomeRender();
-      });
+  var pinValue=pin.value;
+  var button=document.querySelector('#userModalBody button[onclick="loginUser()"]');
+  if(button){button.disabled=true;button.textContent='로그인 중...';}
+  authGateway('loginWithPin',{name:inputName,pin:pinValue}).then(signInWithSecureToken).then(function(){
+    pin.value='';
+    closeModal('modalUser');
+    showToast(currentUser.name+'님 환영합니다!');
+    var nextTab=pendingTabAfterLogin;
+    pendingTabAfterLogin='';
+    return refreshAfterSecureAuth().then(function(){
+      if(nextTab==='scores'&&canViewScores())switchTab('scores');
+      else if((nextTab==='songs'||nextTab==='favorites')&&canViewSongList())switchTab(nextTab);
+      else if(currentTab==='songs')renderSongList();
+      else if(currentTab==='favorites')renderFav();
+      requestHomeRender();
     });
-  }).catch(function(){showToast('로그인 중 오류가 발생했습니다')});
+  }).catch(function(e){
+    console.error(e);
+    showToast(securityErrorMessage(e,'이름 또는 PIN을 확인해주세요'));
+  }).finally(function(){
+    if(button){button.disabled=false;button.textContent='로그인';}
+  });
 }
 
 function logoutUser(){
@@ -4064,6 +4143,7 @@ function logoutUser(){
     if(currentTab==='admin'||currentTab==='stats')switchTab('home');
   }
   currentUser=null;
+  secureElevatedSession=false;
   localStorage.removeItem('choir_user');
   if(!canViewScores())clearScoreAccessCache();
   syncAccessShell();
@@ -4079,6 +4159,7 @@ function logoutUser(){
   if(currentTab==='archive'||currentTab==='scores'||currentTab==='songs'||currentTab==='favorites')switchTab('home');
   renderSongList();
   refreshHomeAccessState();
+  ensureFirebaseAuth().then(function(auth){return auth.signOut()}).catch(function(e){console.error(e)});
   showToast('로그아웃 되었습니다');
 }
 function updateUserBar(){
@@ -4087,44 +4168,69 @@ function updateUserBar(){
   else{bar.classList.add('hidden')}
   syncAccessShell();
 }
-// [수정됨] 앱을 다시 켰을 때, 이름뿐만 아니라 '권한(하단 탭)'까지 완벽하게 기억해내는 기능
 function restoreUser() {
-  var s = localStorage.getItem('choir_user');
-  if (s) {
-    try {
-      currentUser = JSON.parse(s);
-      if(!currentUser||!currentUser.id||!currentUser.name){
-        currentUser=null;
-        localStorage.removeItem('choir_user');
-        syncAccessShell();
-        return;
-      }
-      currentUser.memberId=currentUser.memberId||'';
-      currentUser.permissions=normalizePermissionArray(currentUser.permissions);
-      currentUser.attendanceScope=normalizeAttendanceScopeArray(currentUser.attendanceScope||[]);
-      currentUser.scoreAccessScope=normalizeScoreAccessScope(currentUser.scoreAccessScope);
-      updateUserBar();
-      adminRole=getSessionRoleForUser(currentUser)||null;
-      syncAccessShell();
-      hydrateUserLinkedMember(currentUser).then(function(user){
-        if(!currentUser||currentUser.id!==user.id)return;
-        currentUser=user;
-        localStorage.setItem('choir_user',JSON.stringify(currentUser));
-        updateUserBar();
-        adminRole=getSessionRoleForUser(currentUser)||null;
-        syncAccessShell();
-        refreshHomeAccessState();
-        if(currentTab==='scores')renderScoresPage();
-      });
-    } catch (e) {
-      console.error(e);
+  if(firebaseAuthReadyPromise)return firebaseAuthReadyPromise;
+  var hadCachedUser=false;
+  try{
+    var saved=JSON.parse(localStorage.getItem('choir_user')||'null');
+    if(saved&&saved.id&&saved.name){
+      currentUser=saved;
+      hadCachedUser=true;
     }
-  }
+  }catch(e){localStorage.removeItem('choir_user');}
+  firebaseAuthReadyPromise=ensureFirebaseAuth().then(function(auth){
+    return new Promise(function(resolve){
+      var unsubscribe=auth.onAuthStateChanged(function(firebaseUser){
+        unsubscribe();
+        if(!firebaseUser){
+          currentUser=null;
+          adminRole=null;
+          secureElevatedSession=false;
+          firebaseAuthReady=true;
+          localStorage.removeItem('choir_user');
+          updateUserBar();
+          syncAccessShell();
+          if(hadCachedUser&&!sessionStorage.getItem('choir_secure_relogin_notice')){
+            sessionStorage.setItem('choir_secure_relogin_notice','1');
+            showToast('보안 업데이트로 한 번만 다시 로그인해주세요');
+          }
+          resolve(null);
+          return;
+        }
+        firebaseUser.getIdTokenResult().then(function(tokenResult){
+          var claims=tokenResult.claims||{};
+          if(claims.account!==true&&claims.admin!==true&&claims.legacyRole!=='chongmu'){
+            return auth.signOut().then(function(){throw new Error('unsupported_auth_session')});
+          }
+          applySecureAuthState(firebaseUser,claims,null);
+          refreshAfterSecureAuth();
+          resolve(currentUser);
+        }).catch(function(e){
+          console.error(e);
+          currentUser=null;
+          adminRole=null;
+          firebaseAuthReady=true;
+          localStorage.removeItem('choir_user');
+          updateUserBar();
+          syncAccessShell();
+          resolve(null);
+        });
+      },function(e){
+        console.error(e);
+        firebaseAuthReady=true;
+        currentUser=null;
+        adminRole=null;
+        updateUserBar();
+        syncAccessShell();
+        resolve(null);
+      });
+    });
+  });
+  return firebaseAuthReadyPromise;
 }
 function syncFav(){
   localStorage.setItem('choir_fav',JSON.stringify(favorites));
-  // 💡 즐겨찾기도 'accounts' 방에 동기화합니다!
-  if(currentUser){db.collection('accounts').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
+  if(firebaseAuthReady&&currentUser){db.collection('accounts').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
 }
 
 
@@ -4410,6 +4516,41 @@ function renderPublicSeatingModalBody(){
   applyPublicSeatingZoom();
   setupPublicSeatingGestures();
 }
+function loadSharedMembers(force){
+  var now=Date.now();
+  if(!force&&sharedMembersCache.rows&&(now-sharedMembersCache.ts)<120000)return Promise.resolve(sharedMembersCache.rows);
+  if(!force&&sharedMembersCache.promise)return sharedMembersCache.promise;
+  var promise=db.collection('members').get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()||{}));});
+    rows.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'ko');});
+    sharedMembersCache={ts:Date.now(),rows:rows,promise:null};
+    return rows;
+  }).catch(function(error){
+    if(sharedMembersCache.promise===promise)sharedMembersCache.promise=null;
+    throw error;
+  });
+  sharedMembersCache.promise=promise;
+  return promise;
+}
+function invalidateSharedMembers(){
+  sharedMembersCache={ts:0,rows:null,promise:null};
+  homeAttendanceCache={key:'',ts:0,promise:null,data:null};
+  accountLinkMembers=[];
+  accountLinkMemberMap={};
+  accountLinkMembersLoaded=false;
+  accountLinkMembersPromise=null;
+  songMemberDirectory=[];
+  songMemberDirectoryLoaded=false;
+  songMemberDirectoryPromise=null;
+  if(typeof attAllMembers!=='undefined'){
+    attAllMembers=[];
+    attMembers=[];
+    attMembersLoaded=false;
+    attMembersSourceLoaded=false;
+    attMembersLoadedFor='';
+  }
+}
 function getHomeAttendanceData(dateKey){
   var now=Date.now();
   if(homeAttendanceCache.key===dateKey&&homeAttendanceCache.data&&(now-homeAttendanceCache.ts)<30000){
@@ -4419,14 +4560,13 @@ function getHomeAttendanceData(dateKey){
     return homeAttendanceCache.promise;
   }
   var promise=Promise.all([
-    db.collection('members').get(),
+    loadSharedMembers(false),
     db.collection('attendance').doc(dateKey+'_오전').get(),
     db.collection('attendance').doc(dateKey+'_오후').get()
   ]).then(function(res){
     var members=[];
-    res[0].forEach(function(doc){
-      var d=doc.data();
-      if(isMemberActiveOnAttendanceDate(d,dateKey))members.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),attendanceStartDate:memberAttendanceStartDate(d)});
+    res[0].forEach(function(d){
+      if(isMemberActiveOnAttendanceDate(d,dateKey))members.push({id:d.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),attendanceStartDate:memberAttendanceStartDate(d)});
     });
     if(getAttendanceAllowedParts().indexOf('all')===-1){
       members=members.filter(function(m){return isMemberInAttendanceScope(m);});
@@ -4940,7 +5080,7 @@ function canViewScoreItem(score){
   return getScoreAccessModes().indexOf(normalizeScoreKind(score&&score.scoreKind))!==-1;
 }
 function canOpenScoreItem(score){
-  if(!canViewScores()||!score||!score.currentFileUrl)return false;
+  if(!canViewScores()||!score||(!score.currentFilePath&&!score.currentFileUrl))return false;
   if(canManageScores())return true;
   return canViewScoreItem(score);
 }
@@ -5077,7 +5217,7 @@ function sortScoreParts(rows){
   });
 }
 function isPublicScore(score){
-  return !!(score&&score.public!==false&&score.currentFileUrl);
+  return !!(score&&score.public!==false&&(score.currentFilePath||score.currentFileUrl));
 }
 function savePublicScoreCache(){
   if(!canViewScores()){
@@ -5368,6 +5508,29 @@ function openMatchedSongForScore(id){
   if(song)return openDetail(song.id);
   showToast('연결된 곡 상세정보를 찾을 수 없습니다');
 }
+function ensureFirebaseStorageModule(){
+  if(!firebaseStorageModulePromise){
+    firebaseStorageModulePromise=import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
+  }
+  return firebaseStorageModulePromise;
+}
+function getProtectedScoreBlob(path){
+  return Promise.all([ensureFirebaseAuth(),ensureFirebaseStorageModule()]).then(function(values){
+    var auth=values[0], module=values[1];
+    if(!auth.currentUser)throw new Error('score_auth_required');
+    var compatRef=storage.ref().child(path);
+    if(!compatRef._delegate)throw new Error('storage_reference_unavailable');
+    return module.getBlob(compatRef._delegate,35*1024*1024);
+  });
+}
+function openScoreBlob(score,win){
+  return getProtectedScoreBlob(score.currentFilePath).then(function(blob){
+    var objectUrl=URL.createObjectURL(blob);
+    if(win&&!win.closed)win.location.replace(objectUrl);
+    else window.location.href=objectUrl;
+    setTimeout(function(){URL.revokeObjectURL(objectUrl);},5*60*1000);
+  });
+}
 function openScoreFileById(id){
   if(!canViewScores()){
     showToast('로그인한 단원만 악보를 열 수 있습니다');
@@ -5375,17 +5538,28 @@ function openScoreFileById(id){
     return;
   }
   var score=allScores.find(function(s){return s.id===id});
-  if(!score||!score.currentFileUrl)return showToast('열 수 있는 악보가 없습니다');
+  if(!score||(!score.currentFilePath&&!score.currentFileUrl))return showToast('열 수 있는 악보가 없습니다');
   if(!canOpenScoreItem(score))return showToast('이 악보를 볼 권한이 없습니다');
   var details=normalizeScoreKind(score.scoreKind)==='orchestra'
     ? [scorePartDisplayLabel(score),scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ')
     : [scoreKindLabel(score.scoreKind),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
   var message='악보를 볼까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 악보 파일을 불러옵니다.';
   if(!confirm(message))return;
-  var readChanged=markScoreRead(score);
-  var win=window.open(score.currentFileUrl,'_blank','noopener');
-  if(!win){location.href=score.currentFileUrl;return;}
-  if(readChanged)refreshScoreUnreadViews();
+  var win=window.open('about:blank','_blank');
+  if(score.currentFilePath){
+    showToast('악보를 불러오는 중...');
+    openScoreBlob(score,win).then(function(){
+      if(markScoreRead(score))refreshScoreUnreadViews();
+    }).catch(function(e){
+      console.error(e);
+      if(win&&!win.closed)win.close();
+      showToast(e&&e.code==='storage/unauthorized'?'이 악보를 볼 권한이 없습니다':'악보를 불러오지 못했습니다');
+    });
+    return;
+  }
+  if(win&&!win.closed)win.location.replace(score.currentFileUrl);
+  else location.href=score.currentFileUrl;
+  if(markScoreRead(score))refreshScoreUnreadViews();
 }
 function renderScoreMeta(score){
   var parts=[];
@@ -5782,7 +5956,7 @@ function saveScoreUpload(){
   if(editId&&files.length>1)return showToast('기존 악보 수정 시 PDF는 1개만 선택해주세요');
   if(scoreKind!=='orchestra'&&files.length>1)return showToast('여러 PDF 등록은 관현악 파트보에서만 사용할 수 있습니다');
   if(files.length>1&&urlInput)return showToast('여러 PDF 등록 시 PDF URL은 함께 사용할 수 없습니다');
-  if(!files.length&&!urlInput&&!(previous&&previous.currentFileUrl))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
+  if(!files.length&&!urlInput&&!(previous&&(previous.currentFilePath||previous.currentFileUrl)))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
   if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
   for(var vf=0;vf<files.length;vf++){
     if(files[vf].size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
@@ -5821,7 +5995,7 @@ function saveScoreUpload(){
   function buildScoreData(targetScoreId, previousScore, fileInfo, targetInstrument){
     fileInfo=fileInfo||{};
     previousScore=previousScore||null;
-    var nextFileUrl=fileInfo.url||urlInput||((previousScore&&previousScore.currentFileUrl)||'');
+    var nextFileUrl=fileInfo.path?'':(fileInfo.url||urlInput||((previousScore&&previousScore.currentFileUrl)||''));
     var nextFilePath=fileInfo.path||(urlInput?'':((previousScore&&previousScore.currentFilePath)||''));
     var nextFileName=fileInfo.name||(urlInput?urlInput.split('/').pop().split('?')[0]:((previousScore&&previousScore.currentFileName)||''));
     var nextFileSize=typeof fileInfo.size==='number'?fileInfo.size:Number((urlInput?0:((previousScore&&previousScore.currentFileSize)||0))||0);
@@ -5858,9 +6032,7 @@ function saveScoreUpload(){
     var safeName=scoreSafeFileName(file.name);
     var filePath='scores/'+target.id+'/'+safeName;
     return storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
-      return snapshot.ref.getDownloadURL().then(function(url){
-        return buildScoreData(target.id,target.previous,{url:url,path:filePath,name:file.name,size:file.size},target.instrument);
-      });
+      return buildScoreData(target.id,target.previous,{path:filePath,name:file.name,size:file.size},target.instrument);
     });
   }
   var usedReplacementIds={};
@@ -6515,12 +6687,11 @@ function accountMemberLinkField(searchId,selectId,selectedId,note){
 function loadAccountLinkMembers(){
   if(accountLinkMembersLoaded)return Promise.resolve(accountLinkMembers);
   if(accountLinkMembersPromise)return accountLinkMembersPromise;
-  accountLinkMembersPromise=db.collection('members').orderBy('name').get().then(function(snap){
+  accountLinkMembersPromise=loadSharedMembers(false).then(function(rows){
     accountLinkMembers=[];
     accountLinkMemberMap={};
-    snap.forEach(function(doc){
-      var data=doc.data();
-      var row={id:doc.id,name:data.name||'',part:normalizePartName(data.part),subPart:normalizePartName(data.subPart),status:data.status||'active',noAtt:!!data.noAtt,photo:data.photo||''};
+    rows.forEach(function(data){
+      var row={id:data.id,name:data.name||'',part:normalizePartName(data.part),subPart:normalizePartName(data.subPart),status:data.status||'active',noAtt:!!data.noAtt,photo:data.photo||''};
       accountLinkMembers.push(row);
       accountLinkMemberMap[row.id]=row;
     });
@@ -6722,7 +6893,7 @@ function renderAccountList(){
       groupHtml='<div class="account-part-heading">'+escHtml(group)+' <span>'+groupCounts[group]+'명</span></div>';
     }
     var roleBadge=renderAccountPermissionBadges(m);
-    var pinMeta=canManageAccountPins()?('PIN '+m.pin):'PIN 권한 필요';
+    var pinMeta=canManageAccountPins()?(m.pinSet?'PIN 설정됨':'PIN 미설정'):'PIN 권한 필요';
     var linkHtml='';
     if(canManageLoginAccounts()||canManageAccountPermissions()){
       linkHtml=renderAccountLinkStatus(m);
@@ -6868,27 +7039,9 @@ function previewBulkAccounts(){
 }
 
 function commitBulkAccountRows(rows){
-  var now=new Date().toISOString();
-  var actor=currentActorName();
-  var chunks=[];
-  for(var i=0;i<rows.length;i+=450)chunks.push(rows.slice(i,i+450));
-  var chain=Promise.resolve();
-  chunks.forEach(function(chunk){
-    chain=chain.then(function(){
-      var batch=db.batch();
-      chunk.forEach(function(row){
-        var ref=db.collection('accounts').doc();
-        var data={name:row.name,part:row.part,pin:row.pin,memberId:row.memberId||'',scoreAccessScope:'default',favorites:[],createdAt:now,createdBy:actor};
-        if(row.memberId){
-          data.memberLinkedAt=now;
-          data.memberLinkedBy=actor;
-        }
-        batch.set(ref,data);
-      });
-      return batch.commit();
-    });
-  });
-  return chain;
+  return accountAdminCall('bulkCreate',{rows:rows.map(function(row){
+    return {name:row.name,part:row.part,pin:row.pin,memberId:row.memberId||''};
+  })});
 }
 
 function saveBulkAccounts(){
@@ -6941,11 +7094,7 @@ function addMember(){
     var linkedAccount=accountMemberLinkConflict(memberId,'');
     if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
 
-    // 👇 'accounts' 방에 저장!
-    db.collection('accounts').add({ 
-      name:name, part:part, pin:pin, memberId:memberId, scoreAccessScope:'default',
-      favorites:[], createdAt:new Date().toISOString()
-    }).then(function(){
+    accountAdminCall('create',{name:name,part:part,pin:pin,memberId:memberId}).then(function(){
       var msg=name+'님 로그인 계정 생성 완료';
       if(autoLink.status==='matched')msg+=' · 명부 자동 연결';
       else if(autoLink.status==='duplicate')msg+=' · 동명이인으로 명부 연결 보류';
@@ -6957,7 +7106,7 @@ function addMember(){
       if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
       populateAccountMemberSelect('memMemberId','','');
       
-      setTimeout(function() { loadMembers(); }, 500); // 0.5초 딜레이 새로고침
+      loadMembers();
       writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
     }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
   }).catch(function(e){
@@ -7003,16 +7152,9 @@ function autoLinkExistingAccounts(){
       +'\n\n동명이인 '+plan.duplicate.length+'명, 명부 없음 '+plan.none.length+'명, 이미 사용 중 '+plan.used.length+'명은 미연결로 둡니다.';
     if(!confirm(msg))return;
     if(btn)btn.disabled=true;
-    var batch=db.batch();
-    var now=new Date().toISOString();
-    plan.matched.forEach(function(item){
-      batch.update(db.collection('accounts').doc(item.account.id),{
-        memberId:item.member.id,
-        memberLinkedAt:now,
-        memberLinkedBy:currentActorName()
-      });
-    });
-    return batch.commit().then(function(){
+    return accountAdminCall('bulkLink',{rows:plan.matched.map(function(item){
+      return {accountId:item.account.id,memberId:item.member.id};
+    })}).then(function(){
       plan.matched.forEach(function(item){
         var local=allMembers.find(function(m){return m.id===item.account.id;});
         if(local)local.memberId=item.member.id;
@@ -7049,7 +7191,7 @@ function loadMembers(){
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
       var m = doc.data();
-      if(m.pin) { allMembers.push({id:doc.id, name:m.name, part:m.part, pin:m.pin, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(m.scoreAccessScope)}); }
+      allMembers.push({id:doc.id, name:m.name, part:m.part, pinSet:m.pinSet!==false, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(m.scoreAccessScope)});
     });
     renderAccountList();
   });
@@ -7258,7 +7400,7 @@ function saveAccountEdit(){
   var linkedAccount=accountMemberLinkConflict(memberId,accountActionId);
   if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({name:newName,part:newPart,memberId:memberId}).then(function(){
+  accountAdminCall('update',{accountId:accountActionId,mode:'profile',name:newName,part:newPart,memberId:memberId}).then(function(){
     showToast(newName+'님의 정보가 수정되었습니다');
     closeModal('modalAccountAction');
     loadMembers();
@@ -7298,7 +7440,7 @@ function saveAccountRole(){
   var role=legacyRoleFromPermissions(permissions,preset);
   var canArchiveUpload=permissions.indexOf('archive.upload')>-1;
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,scoreAccessScope:scoreAccessScope,permissionsUpdatedAt:new Date().toISOString(),permissionsUpdatedBy:currentActorName()}).then(function(){
+  accountAdminCall('update',{accountId:accountActionId,mode:'permissions',role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,scoreAccessScope:scoreAccessScope}).then(function(){
     var label=permissionPresetLabel(preset);
     showToast(m.name+'님 권한: '+label);
     closeModal('modalAccountAction');
@@ -7314,7 +7456,7 @@ function openAccountPin(id){
   accountActionId=id;
   openAccountAction('PIN 변경',
     '<div class="account-action-note">'+escHtml(m.name)+'님의 새 PIN 4자리를 입력하세요.</div>'
-    +'<div class="form-group"><label class="form-label">PIN</label><input class="form-input" id="accountPinValue" type="password" inputmode="numeric" maxlength="4" value="'+escHtml(m.pin||'')+'"></div>'
+    +'<div class="form-group"><label class="form-label">새 PIN</label><input class="form-input" id="accountPinValue" type="password" inputmode="numeric" maxlength="4" placeholder="숫자 4자리" autocomplete="new-password"></div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountPin()">저장</button></div>'
   );
 }
@@ -7326,7 +7468,7 @@ function saveAccountPin(){
   var pin=document.getElementById('accountPinValue').value.trim();
   if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
   showToast('저장 중...');
-  db.collection('accounts').doc(accountActionId).update({pin:pin}).then(function(){
+  accountAdminCall('setPin',{accountId:accountActionId,pin:pin}).then(function(){
     showToast('PIN 변경 완료');
     closeModal('modalAccountAction');
     loadMembers();
@@ -7349,7 +7491,7 @@ function confirmAccountDelete(){
   var m=getAccountActionMember(accountActionId);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   showToast('삭제 중...');
-  db.collection('accounts').doc(accountActionId).delete().then(function(){
+  accountAdminCall('delete',{accountId:accountActionId}).then(function(){
     showToast('삭제되었습니다');
     closeModal('modalAccountAction');
     loadMembers();
@@ -7368,9 +7510,8 @@ var directoryData = [];
 
 function loadHandbook() {
   if(!canUseMemberHandbook())return showToast('단원 명부 권한이 필요합니다');
-  db.collection('members').orderBy('name').get().then(function(snap) {
-    directoryData = [];
-    snap.forEach(function(doc) { directoryData.push({ id: doc.id, ...doc.data() }); });
+  loadSharedMembers(false).then(function(rows) {
+    directoryData = rows.slice();
     setSongMemberDirectory(directoryData);
     updatePartSummary();
     filterHandbook();
@@ -7576,9 +7717,7 @@ function loadSongMemberDirectory(callback){
     if(callback)songMemberDirectoryPromise.then(function(rows){callback(rows)});
     return songMemberDirectoryPromise;
   }
-  songMemberDirectoryPromise=db.collection('members').orderBy('name').get().then(function(snap){
-    var rows=[];
-    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()))});
+  songMemberDirectoryPromise=loadSharedMembers(false).then(function(rows){
     setSongMemberDirectory(rows);
     songMemberDirectoryPromise=null;
     return songMemberDirectory;
@@ -7794,9 +7933,7 @@ function setMemberLinkAuditStatus(message,state){
 
 function getSongMemberDirectoryForAudit(force){
   if(!force)return loadSongMemberDirectory();
-  return db.collection('members').orderBy('name').get().then(function(snap){
-    var rows=[];
-    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()))});
+  return loadSharedMembers(true).then(function(rows){
     setSongMemberDirectory(rows);
     return songMemberDirectory;
   }).catch(function(e){
@@ -8437,8 +8574,7 @@ function addHandbookMember(){
     var addPanel=document.getElementById('hbAddPanel');
     if(addPanel)addPanel.open=false;
     syncMemberAddOpen();
-    invalidateAttendanceMemberCache();
-    invalidateAccountLinkMemberCache();
+    invalidateSharedMembers();
     loadHandbook();
     writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 🏠 ${distInfo}`);
   });
@@ -8452,8 +8588,7 @@ function deleteHandbookMember(id, name){
   db.collection('members').doc(id).delete().then(function(){ 
     if(photoUrl)deleteStoragePhotoByUrl(photoUrl);
     showToast('삭제되었습니다'); 
-    invalidateAttendanceMemberCache();
-    invalidateAccountLinkMemberCache();
+    invalidateSharedMembers();
     loadHandbook(); 
     // 👇 활동 로그 추가
     writeLog('명부 삭제', name + ' 단원 삭제됨');
@@ -8540,8 +8675,7 @@ function updateHandbookMember(){
     if(previousPhoto&&previousPhoto!==data.photo)deleteStoragePhotoByUrl(previousPhoto);
     showToast(name + '님의 정보가 수정되었습니다');
     closeModal('modalMemberEdit');
-    invalidateAttendanceMemberCache();
-    invalidateAccountLinkMemberCache();
+    invalidateSharedMembers();
     loadHandbook();
     writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}${reactivatedForAttendance?' | 출결 시작일 '+data.attendanceStartDate:''}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
@@ -8618,31 +8752,9 @@ function updatePartSummary() {
 function exportMemberCSV() { showToast('준비 중인 기능입니다'); }
 
 // ==================== 관리자 설정 ====================
-function loadAdminSettings(force){
-  if(adminSettingsLoadPromise&&!force)return adminSettingsLoadPromise;
-  adminSettingsLoadPromise=db.collection('settings').doc('admin').get().then(function(doc){
-    if(doc.exists){
-      var data=doc.data();
-      if(data.chongmuPassword){
-        chongmuPassword=String(data.chongmuPassword);
-        saveCache('choir_admin_settings',{chongmuPassword:chongmuPassword});
-      }
-      adminPasswordHash=String(data.adminPasswordHash||'');
-      adminPasswordSalt=String(data.adminPasswordSalt||'');
-    }
-    adminSettingsLoaded=true;
-    return true;
-  }).catch(function(e){
-    var cached=loadCache('choir_admin_settings',600000);
-    if(cached&&cached.chongmuPassword)chongmuPassword=String(cached.chongmuPassword);
-    if(force)throw e;
-    return false;
-  }).finally(function(){
-    adminSettingsLoadPromise=null;
-  });
-  return adminSettingsLoadPromise;
+function initAdminSettings(){
+  localStorage.removeItem('choir_admin_settings');
 }
-function initAdminSettings(){loadAdminSettings(false).catch(function(){})}
 function saveAdminPassword(){
   if(adminRole!=='admin')return showToast('관리자만 변경할 수 있습니다');
   var pw=document.getElementById('adminPwNew').value.trim();
@@ -8650,25 +8762,14 @@ function saveAdminPassword(){
   if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
   if(pw.length<ADMIN_PASSWORD_MIN_LENGTH)return showToast('관리자 비밀번호는 '+ADMIN_PASSWORD_MIN_LENGTH+'자리 이상으로 입력해주세요');
   if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
-  if(!hasPasswordHashSupport())return showToast('현재 브라우저에서는 보안 해시 기능을 사용할 수 없습니다');
-  var salt=randomPasswordSalt();
-  hashAdminPassword(pw,salt).then(function(hash){
-    return db.collection('settings').doc('admin').set({
-      adminPasswordHash:hash,
-      adminPasswordSalt:salt,
-      adminPasswordUpdatedAt:new Date().toISOString(),
-      updatedAt:new Date().toISOString()
-    },{merge:true}).then(function(){
-      adminPasswordHash=hash;
-      adminPasswordSalt=salt;
-      document.getElementById('adminPwNew').value='';
-      document.getElementById('adminPwConfirm').value='';
-      writeLog('관리자 비밀번호 변경','관리자가 관리자 로그인 비밀번호를 변경함');
-      showToast('관리자 비밀번호 변경 완료');
-    });
+  authGateway('resetLegacyPassword',{role:'admin',password:pw}).then(function(){
+    document.getElementById('adminPwNew').value='';
+    document.getElementById('adminPwConfirm').value='';
+    writeLog('관리자 비밀번호 변경','관리자가 관리자 로그인 비밀번호를 변경함');
+    showToast('관리자 비밀번호 변경 완료');
   }).catch(function(e){
     console.error(e);
-    showToast('비밀번호 저장 중 오류 발생');
+    showToast(securityErrorMessage(e,'비밀번호 저장 중 오류가 발생했습니다'));
   });
 }
 function saveChongmuPassword(){
@@ -8678,14 +8779,15 @@ function saveChongmuPassword(){
   if(!pw||!confirmPw)return showToast('새 비밀번호를 입력해주세요');
   if(pw.length<4)return showToast('비밀번호는 4자리 이상으로 입력해주세요');
   if(pw!==confirmPw)return showToast('비밀번호 확인이 일치하지 않습니다');
-  db.collection('settings').doc('admin').set({chongmuPassword:pw,updatedAt:new Date().toISOString()},{merge:true}).then(function(){
-    chongmuPassword=pw;
-    saveCache('choir_admin_settings',{chongmuPassword:pw});
+  authGateway('resetLegacyPassword',{role:'chongmu',password:pw}).then(function(){
     document.getElementById('chongmuPwNew').value='';
     document.getElementById('chongmuPwConfirm').value='';
     writeLog('총무부 비밀번호 변경','관리자가 총무부 로그인 비밀번호를 변경함');
     showToast('총무부 비밀번호 변경 완료');
-  }).catch(function(){showToast('비밀번호 저장 중 오류 발생')});
+  }).catch(function(e){
+    console.error(e);
+    showToast(securityErrorMessage(e,'비밀번호 저장 중 오류가 발생했습니다'));
+  });
 }
 
 // ==================== 공지사항 (get + 캐시) ====================
@@ -9935,7 +10037,7 @@ function uploadArchiveMedia(){
 
   var uploaded=0;
   var uploader=currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부');
-  var uploaderId=currentUser?currentUser.id:(adminRole==='admin'?'admin':(adminRole==='chongmu'?'chongmu':''));
+  var uploaderId=currentActorId();
   var uploaderPart=currentUser?currentUser.part:(adminRole==='admin'?'관리자':'총무부');
 
   function uploadOne(idx){
@@ -9958,7 +10060,7 @@ function uploadArchiveMedia(){
     var fileTitle=fileArr.length>1?title+' ('+( idx+1)+'/'+fileArr.length+')':title;
 
     compressArchiveImage(file).then(function(uploadBlob){
-      var filePath='archive/'+part+'/'+Date.now()+'_'+safeName+'.jpg';
+      var filePath='archive/'+uploaderId+'/'+part+'/'+Date.now()+'_'+safeName+'.jpg';
       return storage.ref().child(filePath).put(uploadBlob,{contentType:'image/jpeg'}).then(function(snapshot){
         return snapshot.ref.getDownloadURL().then(function(downloadURL){
           return db.collection('mediaArchive').add({
@@ -10210,12 +10312,11 @@ function normalizeSeatingRows(rows){
   });
 }
 function loadSeatingMembers(){
-  return db.collection('members').orderBy('name').get().then(function(snap){
+  return loadSharedMembers(false).then(function(rows){
     seatingMembers=[];
-    snap.forEach(function(doc){
-      var d=doc.data()||{};
+    rows.forEach(function(d){
       if(isSeatingEligibleMember(d)){
-        seatingMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),group:d.group||''});
+        seatingMembers.push({id:d.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),group:d.group||''});
       }
     });
     var order=seatingPartOrder();
@@ -12785,11 +12886,10 @@ function loadAttMembers(callback,dateKey){
     applyLoadedMembers();
     return;
   }
-  db.collection('members').orderBy('name').get().then(function(snap){
+  loadSharedMembers(false).then(function(rows){
     attAllMembers=[];
-    snap.forEach(function(doc){
-      var d=doc.data();
-      if(isAttendanceTargetMember(d))attAllMembers.push({id:doc.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
+    rows.forEach(function(d){
+      if(isAttendanceTargetMember(d))attAllMembers.push({id:d.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
     });
     attMembersSourceLoaded=true;
     applyLoadedMembers();
@@ -14106,7 +14206,7 @@ function confirmPhotoCropUpload(){
   out.toBlob(function(blob){
     if(!blob){state.uploading=false;return showToast('사진 변환에 실패했습니다');}
     var safeName=String(state.file.name||'profile.jpg').replace(/[^\w.\-가-힣]/g,'_').replace(/\.[^.]+$/,'')+'.jpg';
-    var fileName='profiles/'+Date.now()+'_'+safeName;
+    var fileName='profiles/'+currentActorId()+'/'+Date.now()+'_'+safeName;
     var targetUrlInputId=state.urlInputId;
     var sourceInputId=state.fileInputId;
     storage.ref().child(fileName).put(blob,{contentType:'image/jpeg'}).then(function(snapshot){
@@ -14298,7 +14398,7 @@ function generateReport() {
   Promise.all([
     db.collection('songs').where('year', '==', year).where('month', '==', month).get(),
     db.collection('attendance').where('date', '>=', prefix + '-01').where('date', '<=', prefix + '-31').get(),
-    db.collection('members').get()
+    loadSharedMembers(false)
   ]).then(function(res) {
     
     // --- 데이터 가공 준비 ---
@@ -14342,11 +14442,10 @@ function generateReport() {
     }
 
     
-    res[2].forEach(doc => {
-       var d = doc.data();
+    res[2].forEach(d => {
        if(isAttendanceTargetMember(d)) {
-           activeMembers.push({id: doc.id, name: d.name, part: normalizePartName(d.part), attendanceStartDate: memberAttendanceStartDate(d)});
-           memStats[doc.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
+           activeMembers.push({id: d.id, name: d.name, part: normalizePartName(d.part), attendanceStartDate: memberAttendanceStartDate(d)});
+           memStats[d.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
        }
        // 신규 입단자 추출 (등록일이 이번 달인 사람)
        if(d.createdAt && d.createdAt.startsWith(prefix) && d.part !== '명단제외') {
