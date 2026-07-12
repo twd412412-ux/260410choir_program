@@ -7,6 +7,7 @@ const {getAuth} = require("firebase-admin/auth");
 const {FieldValue, getFirestore} = require("firebase-admin/firestore");
 const {getStorage} = require("firebase-admin/storage");
 const {setGlobalOptions} = require("firebase-functions/v2");
+const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {HttpsError, onCall} = require("firebase-functions/v2/https");
 
 initializeApp();
@@ -24,6 +25,7 @@ const RECOVERY_EMAIL = "twd412412@gmail.com";
 const ACCOUNT_PIN_PATTERN = /^\d{4}$/;
 const HASH_VERSION = "scrypt-v1";
 const ELEVATION_MS = 4 * 60 * 60 * 1000;
+const SONG_INDEX_SHARDS = 16;
 const ALLOWED_SCORE_SCOPES = new Set(["default", "all", "singer", "orchestra", "none"]);
 const ALLOWED_PERMISSIONS = new Set([
   "song.manage", "song.editAny", "score.manage", "score.editAny",
@@ -662,6 +664,40 @@ async function secureScoreFiles(request) {
   return {files: files.length, protectedRows};
 }
 
+function songIndexShardId(songId) {
+  const digest = crypto.createHash("sha256").update(String(songId)).digest();
+  return "shard_" + String(digest.readUInt16BE(0) % SONG_INDEX_SHARDS).padStart(2, "0");
+}
+
+async function rebuildSongIndex(request) {
+  requireAdmin(request);
+  const songsSnap = await db.collection("songs").get();
+  const shards = {};
+  for (let i = 0; i < SONG_INDEX_SHARDS; i++) shards["shard_" + String(i).padStart(2, "0")] = {};
+  songsSnap.docs.forEach((doc) => {
+    shards[songIndexShardId(doc.id)][doc.id] = doc.data() || {};
+  });
+  const shardBytes = Object.keys(shards).map((id) => ({id, bytes: Buffer.byteLength(JSON.stringify(shards[id]), "utf8")}));
+  const oversized = shardBytes.find((row) => row.bytes > 850000);
+  if (oversized) throw new HttpsError("resource-exhausted", "곡 색인 묶음 크기가 안전 한도를 넘었습니다.");
+  const batch = db.batch();
+  Object.keys(shards).forEach((id) => {
+    batch.set(db.collection("songIndex").doc(id), {items: shards[id], updatedAt: nowIso()});
+  });
+  batch.set(db.collection("songIndex").doc("_meta"), {
+    count: songsSnap.size,
+    shardCount: SONG_INDEX_SHARDS,
+    version: 1,
+    updatedAt: nowIso(),
+  });
+  await batch.commit();
+  return {
+    songs: songsSnap.size,
+    shards: SONG_INDEX_SHARDS,
+    maxShardBytes: Math.max(...shardBytes.map((row) => row.bytes), 0),
+  };
+}
+
 exports.authGateway = onCall(async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "loginWithPin") return loginWithPin(request);
@@ -686,5 +722,32 @@ exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB"}, as
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "bootstrap") return bootstrapSecurity(request);
   if (action === "secureScores") return secureScoreFiles(request);
+  if (action === "rebuildSongIndex") return rebuildSongIndex(request);
   throw new HttpsError("invalid-argument", "지원하지 않는 보안 정리 요청입니다.");
+});
+
+exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
+  const songId = event.params.songId;
+  const beforeExists = event.data.before.exists;
+  const afterExists = event.data.after.exists;
+  const shardRef = db.collection("songIndex").doc(songIndexShardId(songId));
+  const metaRef = db.collection("songIndex").doc("_meta");
+  await db.runTransaction(async (tx) => {
+    const [shardSnap, metaSnap] = await Promise.all([tx.get(shardRef), tx.get(metaRef)]);
+    const shardData = shardSnap.exists ? shardSnap.data() || {} : {};
+    const items = Object.assign({}, shardData.items || {});
+    if (afterExists) items[songId] = event.data.after.data() || {};
+    else delete items[songId];
+    const estimatedBytes = Buffer.byteLength(JSON.stringify(items), "utf8");
+    if (estimatedBytes > 850000) throw new Error("song_index_shard_too_large");
+    const oldCount = Number(metaSnap.exists ? (metaSnap.data() || {}).count : 0);
+    const delta = !beforeExists && afterExists ? 1 : (beforeExists && !afterExists ? -1 : 0);
+    tx.set(shardRef, {items, updatedAt: nowIso()});
+    tx.set(metaRef, {
+      count: Math.max(0, oldCount + delta),
+      shardCount: SONG_INDEX_SHARDS,
+      version: 1,
+      updatedAt: nowIso(),
+    });
+  });
 });

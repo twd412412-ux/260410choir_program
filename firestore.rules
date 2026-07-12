@@ -58,6 +58,11 @@ service cloud.firestore {
         || (hasPermission('song.manage') && ownsCreatedDoc(resource.data));
     }
 
+    match /songIndex/{shardId} {
+      allow read: if isAppUser();
+      allow write: if false;
+    }
+
     match /schedules/{scheduleId} {
       allow read: if true;
       allow create: if hasPermission('schedule.manage');
@@ -92,7 +97,7 @@ service cloud.firestore {
     }
 
     match /settings/{otherSetting} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin() && otherSetting != 'admin';
     }
 
     match /members/{memberId} {

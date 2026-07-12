@@ -2672,6 +2672,17 @@ var recoveryFirebaseApp=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
+var forceFreshDataOnInit=(function(){
+  try{
+    var url=new URL(window.location.href);
+    var force=url.searchParams.has('appUpdate');
+    if(force){
+      url.searchParams.delete('appUpdate');
+      window.history.replaceState({},'',url.toString());
+    }
+    return force;
+  }catch(e){return false;}
+})();
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
@@ -3890,7 +3901,7 @@ function applySecureAuthState(firebaseUser,claims,profile){
   updateUserBar();
   syncAccessShell();
 }
-function refreshAfterSecureAuth(){
+function refreshAfterSecureAuth(forceFresh){
   updateAdminTabs();
   refreshHomeAccessState();
   if(currentUser&&currentUser.memberId){
@@ -3902,7 +3913,7 @@ function refreshAfterSecureAuth(){
       refreshHomeAccessState();
     });
   }
-  var songsPromise=initSongs(true);
+  var songsPromise=initSongs(!!forceFresh);
   scheduleScoresLoad(100);
   requestHomeRender();
   return songsPromise;
@@ -3975,7 +3986,7 @@ function checkAdminPw(){
     document.getElementById('adminPw').value='';
     closeModal('modalAdmin');
     showToast(role==='admin'?'관리자 모드 활성화':'총무부 모드 활성화');
-    refreshAfterSecureAuth();
+    refreshAfterSecureAuth(false);
   }).catch(function(e){
     console.error(e);
     showToast(securityErrorMessage(e,'비밀번호를 확인해주세요'));
@@ -4121,7 +4132,7 @@ function loginUser(){
     showToast(currentUser.name+'님 환영합니다!');
     var nextTab=pendingTabAfterLogin;
     pendingTabAfterLogin='';
-    return refreshAfterSecureAuth().then(function(){
+    return refreshAfterSecureAuth(false).then(function(){
       if(nextTab==='scores'&&canViewScores())switchTab('scores');
       else if((nextTab==='songs'||nextTab==='favorites')&&canViewSongList())switchTab(nextTab);
       else if(currentTab==='songs')renderSongList();
@@ -4203,7 +4214,8 @@ function restoreUser() {
             return auth.signOut().then(function(){throw new Error('unsupported_auth_session')});
           }
           applySecureAuthState(firebaseUser,claims,null);
-          refreshAfterSecureAuth();
+          refreshAfterSecureAuth(forceFreshDataOnInit);
+          forceFreshDataOnInit=false;
           resolve(currentUser);
         }).catch(function(e){
           console.error(e);
@@ -4874,27 +4886,54 @@ function loadCache(key,maxAge){
 }
 
 // ==================== Firestore: 곡 로드 (get + 캐시) ====================
+function loadSongIndexRows(){
+  return db.collection('songIndex').get().then(function(snap){
+    var rows=[];
+    var expected=-1;
+    snap.forEach(function(doc){
+      var data=doc.data()||{};
+      if(doc.id==='_meta'){
+        expected=Number(data.count||0);
+        return;
+      }
+      var items=data.items||{};
+      Object.keys(items).forEach(function(id){
+        rows.push(songRowFromDoc({id:id,data:function(){return items[id]||{};}}));
+      });
+    });
+    if(expected<0||rows.length!==expected)throw new Error('song_index_incomplete');
+    return rows;
+  });
+}
+function loadSongsFromCollection(){
+  return db.collection('songs').get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push(songRowFromDoc(doc));});
+    return rows;
+  });
+}
 function initSongs(force){
   force=!!force;
-  if(!force&&!canViewSongList()){
+  if(!canViewSongList()){
     filteredSongs=[];
     renderSongLoginRequired();
     requestHomeRender();
     return Promise.resolve([]);
   }
   if(songsLoadPromise)return songsLoadPromise;
-  var cached=loadCache('choir_songs',600000);
+  var cached=force?null:loadCache('choir_songs',600000);
   if(Array.isArray(cached)){
     allSongs=cached;
     songsLoaded=true;
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
     requestHomeRender();
+    return Promise.resolve(allSongs);
   }
-  songsLoadPromise=db.collection('songs').get().then(function(snap){
-    allSongs=[];
-    snap.forEach(function(doc){
-      allSongs.push(songRowFromDoc(doc));
-    });
+  songsLoadPromise=loadSongIndexRows().catch(function(error){
+    console.warn('곡 색인을 사용할 수 없어 원본 목록으로 전환합니다',error);
+    return loadSongsFromCollection();
+  }).then(function(rows){
+    allSongs=rows;
     songsLoaded=true;
     saveCache('choir_songs',allSongs);
     buildFilters();buildCatOptions();buildYearOptions();doFilter();
@@ -5525,6 +5564,7 @@ function getProtectedScoreBlob(path){
 }
 function openScoreBlob(score,win){
   return getProtectedScoreBlob(score.currentFilePath).then(function(blob){
+    if(!blob.type)blob=new Blob([blob],{type:'application/pdf'});
     var objectUrl=URL.createObjectURL(blob);
     if(win&&!win.closed)win.location.replace(objectUrl);
     else window.location.href=objectUrl;
@@ -9057,13 +9097,16 @@ function syncScheduleDisplays(){
   setScheduleDisplay('schEndDateDisplay',scheduleDateDisplay(end&&end.value),'날짜 선택');
   setScheduleDisplay('schTimeDisplay',scheduleTimeDisplay(time&&time.value),'시간 선택');
 }
-function initSchedules(){
-  var cached=loadCache('choir_schedules',600000);
+function initSchedules(force){
+  force=!!force;
+  var cached=force?null:loadCache('choir_schedules',600000);
   if(Array.isArray(cached)){
     allSchedules=cached;
     schedulesLoaded=true;
     if(currentTab==='calendar')renderCal();
     requestHomeRender();
+    schedulesLoadPromise=Promise.resolve(allSchedules);
+    return schedulesLoadPromise;
   }
 
   schedulesLoadPromise=db.collection('schedules').get().then(function(snap){
@@ -12604,7 +12647,7 @@ function init(){
   initSongs();
   initAdminSettings();
   initNotice();
-  initSchedules();
+  initSchedules(forceFreshDataOnInit);
   if(currentTab==='home')renderHome();
   scheduleScoresLoad(600);
   handleAdminResetRedirectResult();

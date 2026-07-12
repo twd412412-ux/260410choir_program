@@ -1,4 +1,15 @@
 {
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "광주교회 찬양대",
+        "supportEmail": "twd412412@gmail.com",
+        "authorizedRedirectUris": [
+          "https://twd412412-ux.github.io"
+        ]
+      }
+    }
+  },
   "functions": [
     {
       "source": "functions",
