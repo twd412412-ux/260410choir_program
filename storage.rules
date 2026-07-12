@@ -8,7 +8,6 @@ service firebase.storage {
 
     function elevationValid() {
       return signedIn()
-        && request.auth.token.elevatedUntil is int
         && request.auth.token.elevatedUntil > request.time.toMillis();
     }
 
