@@ -5165,13 +5165,60 @@ function getScoreSeenState(){
   scoreSeenStateCache={key:key,items:items};
   return items;
 }
+function scoreFolderRowsForScore(score){
+  if(!score||normalizeScoreKind(score.scoreKind)!=='orchestra')return [];
+  var folderKey=scoreFolderKey(score);
+  var rows=(allScores||[]).filter(function(row){
+    return normalizeScoreKind(row&&row.scoreKind)==='orchestra'
+      &&scoreFolderKey(row)===folderKey
+      &&canViewScoreItem(row);
+  });
+  return rows.length?rows:[score];
+}
+function scoreFolderVersionToken(rows){
+  return JSON.stringify((rows||[]).filter(function(score){return score&&score.id;}).map(function(score){
+    return [String(score.id),scoreVersionToken(score)];
+  }).sort(function(a,b){return a[0].localeCompare(b[0]);}));
+}
+function scoreFolderSeenId(rows){
+  return rows&&rows.length?'folder:'+scoreFolderKey(rows[0]):'';
+}
+function isScoreFolderUnread(rows){
+  rows=(rows||[]).filter(function(score){return score&&canViewScoreItem(score);});
+  if(!currentUser||!rows.length)return false;
+  var folderId=scoreFolderSeenId(rows);
+  var version=scoreFolderVersionToken(rows);
+  return !!(folderId&&version&&getScoreSeenState()[folderId]!==version);
+}
+function markScoreFolderRead(score){
+  var key=scoreSeenStorageKey();
+  var rows=scoreFolderRowsForScore(score);
+  var folderId=scoreFolderSeenId(rows);
+  var version=scoreFolderVersionToken(rows);
+  if(!key||!folderId||!version)return false;
+  var items=getScoreSeenState();
+  var changed=items[folderId]!==version;
+  items[folderId]=version;
+  rows.forEach(function(row){
+    if(row&&row.id&&Object.prototype.hasOwnProperty.call(items,row.id)){
+      delete items[row.id];
+      changed=true;
+    }
+  });
+  if(!changed)return false;
+  scoreSeenStateCache={key:key,items:items};
+  try{localStorage.setItem(key,JSON.stringify(items));}catch(e){}
+  return true;
+}
 function isScoreUnread(score){
   if(!currentUser||!score||!score.id||!canViewScoreItem(score))return false;
+  if(normalizeScoreKind(score.scoreKind)==='orchestra')return isScoreFolderUnread(scoreFolderRowsForScore(score));
   var version=scoreVersionToken(score);
   if(!version)return false;
   return getScoreSeenState()[score.id]!==version;
 }
 function markScoreRead(score){
+  if(score&&normalizeScoreKind(score.scoreKind)==='orchestra')return markScoreFolderRead(score);
   var key=scoreSeenStorageKey();
   var version=scoreVersionToken(score);
   if(!key||!score||!score.id||!version)return false;
@@ -5183,15 +5230,32 @@ function markScoreRead(score){
   return true;
 }
 function scoreUnreadCount(rows){
-  return (rows||[]).filter(isScoreUnread).length;
+  var singerCount=(rows||[]).filter(function(score){
+    return normalizeScoreKind(score&&score.scoreKind)!=='orchestra'&&isScoreUnread(score);
+  }).length;
+  var orchestraGroups=scoreFolderGroups((rows||[]).filter(function(score){
+    return normalizeScoreKind(score&&score.scoreKind)==='orchestra';
+  }));
+  return singerCount+orchestraGroups.filter(function(group){return isScoreFolderUnread(group.scores);}).length;
 }
-function renderScoreNewBadge(score,className){
-  if(!isScoreUnread(score))return '';
+function renderScoreNewBadgeMarkup(className){
   return '<span class="score-new-badge'+(className?' '+className:'')+'" title="이 기기에서 아직 열지 않은 악보">NEW</span>';
 }
+function renderScoreNewBadge(score,className){
+  if(normalizeScoreKind(score&&score.scoreKind)==='orchestra')return '';
+  if(!isScoreUnread(score))return '';
+  return renderScoreNewBadgeMarkup(className);
+}
 function renderScoreRowsNewBadge(rows,className){
-  var unread=(rows||[]).find(isScoreUnread);
-  return unread?renderScoreNewBadge(unread,className):'';
+  rows=(rows||[]).filter(canViewScoreItem);
+  var unreadSinger=rows.find(function(score){
+    return normalizeScoreKind(score&&score.scoreKind)!=='orchestra'&&isScoreUnread(score);
+  });
+  if(unreadSinger)return renderScoreNewBadge(unreadSinger,className);
+  var unreadFolder=scoreFolderGroups(rows.filter(function(score){
+    return normalizeScoreKind(score&&score.scoreKind)==='orchestra';
+  })).some(function(group){return isScoreFolderUnread(group.scores);});
+  return unreadFolder?renderScoreNewBadgeMarkup(className):'';
 }
 function refreshScoreUnreadViews(){
   if(currentTab==='scores')renderScoresPage();
@@ -5392,7 +5456,8 @@ function renderScorePickerRows(rows){
   rows.forEach(function(score){
     var kind=normalizeScoreKind(score.scoreKind);
     if(kind!==lastKind){
-      html+='<div class="score-picker-section">'+scoreKindLabel(kind)+' 악보</div>';
+      var kindRows=rows.filter(function(row){return normalizeScoreKind(row&&row.scoreKind)===kind;});
+      html+='<div class="score-picker-section">'+scoreKindLabel(kind)+' 악보'+(kind==='orchestra'?renderScoreRowsNewBadge(kindRows,'group'):'')+'</div>';
       lastKind=kind;
     }
     var part=kind==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(kind);
@@ -5455,7 +5520,7 @@ function renderScoreFolderList(rows, adminMode){
 }
 function renderScoreFolderCard(group, adminMode){
   var scores=sortScoreParts(group.scores||[]);
-  var unreadCount=adminMode?0:scoreUnreadCount(scores);
+  var unreadBadge=adminMode?'':renderScoreRowsNewBadge(scores,'group');
   var updated=scoreGroupUpdatedText(scores);
   var meta=['관현악 파트보 '+scores.length+'개',updated?'업데이트 '+updated:''].filter(Boolean).join(' · ');
   var groupAction=adminMode&&canManageScores()?'<div class="score-admin-actions"><button class="score-light-btn" onclick="openQuickScoreManageForGroup(\''+escAttr(group.key)+'\')">＋ 파트보 추가</button></div>':'';
@@ -5475,10 +5540,10 @@ function renderScoreFolderCard(group, adminMode){
         +'</div>';
       }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
-        return '<button class="score-part-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+renderScoreNewBadge(score,'part')+'</button>';
+        return '<button class="score-part-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+'</button>';
       }).join('')+'</div>';
   return '<div class="score-folder-card">'
-    +'<div class="score-folder-head"><div><div class="score-folder-title">'+escHtml(group.title||'곡명 없음')+(unreadCount?'<span class="score-new-badge group">NEW '+unreadCount+'</span>':'')+'</div><div class="score-folder-meta">'+escHtml(meta)+'</div></div><div class="score-folder-count">'+scores.length+'개</div></div>'
+    +'<div class="score-folder-head"><div><div class="score-folder-title">'+escHtml(group.title||'곡명 없음')+unreadBadge+'</div><div class="score-folder-meta">'+escHtml(meta)+'</div></div><div class="score-folder-count">'+scores.length+'개</div></div>'
     +body
     +'</div>';
 }
@@ -9265,6 +9330,9 @@ function renderScheduleScoreSection(schedule,allowLoad){
   if(!rows.length){
     return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">연습곡 또는 프로그램 순서에서 기존 곡/악보와 일치하는 항목을 찾지 못했습니다.</div></div>';
   }
+  var orchestraBadge=renderScoreRowsNewBadge(rows.map(function(row){return row.score;}).filter(function(score){
+    return score&&normalizeScoreKind(score.scoreKind)==='orchestra';
+  }),'group');
   var html=rows.map(function(row){
     var song=row.song, score=row.score;
     var name=song?(song.songName||'곡명 없음'):(score&&score.title||'악보');
@@ -9281,7 +9349,7 @@ function renderScheduleScoreSection(schedule,allowLoad){
         : '<button class="score-action-btn empty" disabled>악보 없음</button>';
     return '<div class="score-week-row"><div class="score-week-date">악보</div><div class="score-week-song" '+(song?'onclick="openDetail(\''+escAttr(song.id)+'\')"':'')+'>'+escHtml(name)+'<div class="score-meta">'+(meta.length?meta.map(function(v){return '<span>'+escHtml(v)+'</span>';}).join('<span>·</span>'):'<span>프로그램 자동 매칭</span>')+'</div></div><div>'+action+'</div></div>';
   }).join('');
-  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-week-card" style="margin:0;padding:12px;box-shadow:none"><div class="score-week-grid">'+html+'</div></div></div>';
+  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보'+orchestraBadge+'</div><div class="score-week-card" style="margin:0;padding:12px;box-shadow:none"><div class="score-week-grid">'+html+'</div></div></div>';
 }
 
 function openSchDetail(id){
