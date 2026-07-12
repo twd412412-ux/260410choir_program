@@ -3105,6 +3105,9 @@ function canMoveArchiveItemAlbum(item){
 function canViewArchiveReactionUsers(){
   return adminRole==='admin'&&!currentUser;
 }
+function canViewArchiveUploader(){
+  return adminRole==='admin'&&!currentUser;
+}
 function scopeFromAccountPart(part){
   part=normalizePartName(part);
   if(part==='지휘')return ['ALL'];
@@ -9377,7 +9380,7 @@ function renderArchiveList(){
     if(viewMode==='grid3'){desc=''}
     else if(item.description){desc='<div class="archive-desc">'+escHtml(item.description)+'</div>'}
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
-    var uploader=item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
+    var uploader=canViewArchiveUploader()&&item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeLabel=item.type==='video'?'영상':'사진';
     var albumForItem=item.albumId?archiveAlbumById(item.albumId):null;
     var albumTitle=(albumForItem&&albumForItem.title)||item.albumTitle||'';
