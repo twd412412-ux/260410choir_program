@@ -1500,12 +1500,45 @@ body{font-weight:500}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
 .home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
+.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border:1px solid #DCCB9C;border-radius:10px;background:#FFF9E8;color:#3E3B30;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+.home-feature-update-notice:active{transform:scale(.995)}
+.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;background:#C94F55;color:#fff;padding:3px 5px;font-size:9px;font-weight:950;line-height:1;white-space:nowrap}
+.home-feature-update-copy{min-width:0;font-size:12px;font-weight:780;line-height:1.35}
+.home-feature-update-copy b{display:block;font-size:13px;font-weight:900;color:#2F3028;margin-bottom:1px}
+.home-feature-update-link{font-size:11px;font-weight:900;color:#6B5B2D;white-space:nowrap}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
+.home-update-btn.feature{position:relative;background:#FFF8E8;color:#6B5B2D;border-color:#DDC995}
+.home-update-btn.feature.seen{background:#FFFDF8;color:#606554;border-color:#D8D0BE}
+.feature-update-mini-badge{position:absolute;top:-7px;right:-5px;border-radius:4px;background:#C94F55;color:#fff;padding:2px 4px;font-size:8px;font-weight:950;line-height:1;box-shadow:0 1px 4px rgba(80,30,34,.18)}
+.home-update-btn.feature.seen .feature-update-mini-badge{display:none}
+.dark .home-feature-update-notice{background:#2A261B;border-color:#5B4C2C;color:#D9D2C2}
+.dark .home-feature-update-copy b{color:var(--tx)}
+.dark .home-feature-update-link{color:#D8BE73}
+.dark .home-update-btn.feature{background:#2A261B;color:#D8BE73;border-color:#5B4C2C}
+.dark .home-update-btn.feature.seen{background:var(--sf);color:var(--ts);border-color:var(--bd)}
 .home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
+.feature-update-modal .modal-content{max-width:440px;max-height:82vh}
+.feature-update-kicker{font-size:11px;font-weight:900;color:#8A6A25;margin-bottom:6px}
+.feature-update-title{font-size:20px;font-weight:900;line-height:1.35;color:var(--tx);word-break:keep-all}
+.feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 14px}
+.feature-update-steps{border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+.feature-update-step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;padding:10px 0;border-bottom:1px solid var(--bd)}
+.feature-update-step:last-child{border-bottom:0}
+.feature-update-step-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--p);color:#fff;font-size:11px;font-weight:900}
+.feature-update-step b{display:block;font-size:13px;font-weight:900;color:var(--tx);line-height:1.35}
+.feature-update-step>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
+.feature-update-more{display:grid;gap:0;margin-top:12px}
+.feature-update-more-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:start;padding:10px 0;border-bottom:1px solid var(--bd)}
+.feature-update-more-row:last-child{border-bottom:0}
+.feature-update-more-icon{font-size:20px;line-height:1.2;text-align:center}
+.feature-update-more-row b{display:block;font-size:13px;font-weight:900;color:var(--tx)}
+.feature-update-more-row>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
+.feature-update-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+@media(max-width:360px){.home-feature-update-notice{grid-template-columns:auto minmax(0,1fr)}.home-feature-update-link{display:none}.feature-update-actions{grid-template-columns:1fr}}
 .home-push-card{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:12px 14px;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:12px;box-shadow:0 4px 14px rgba(49,54,35,.045)}
 .home-push-copy{min-width:0;flex:1}
 .home-push-title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:820;color:#25261F}
@@ -1702,6 +1735,11 @@ body{font-weight:500}
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
+    <button class="home-feature-update-notice hidden" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
+      <span class="home-feature-update-tag">NEW</span>
+      <span class="home-feature-update-copy"><b>일정을 내 캘린더에 추가해보세요</b>악보 NEW 표시와 변경 알림도 함께 확인할 수 있습니다.</span>
+      <span class="home-feature-update-link">새 기능 보기 ›</span>
+    </button>
     <div class="home-push-card hidden" id="homePushCard">
       <div class="home-push-copy"><div class="home-push-title"><span>🔔</span><span>변경 알림</span></div><div class="home-push-state" id="homePushState">악보 · 일정</div></div>
       <div class="home-push-actions" id="homePushEnableWrap"><button class="home-push-enable" id="homePushEnableBtn" type="button" onclick="enablePushNotifications()">알림 켜기</button></div>
@@ -1713,6 +1751,7 @@ body{font-weight:500}
     </div>
     <div class="home-update-wrap">
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
+      <button class="home-update-btn feature" id="homeFeatureUpdateBtn" type="button" onclick="openFeatureUpdateGuide()"><span>✦</span><span>새 기능</span><span class="feature-update-mini-badge">NEW</span></button>
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
     </div>
@@ -2455,6 +2494,25 @@ body{font-weight:500}
     <div id="schDetailBody"></div>
   </div>
 </div>
+<!-- MODAL: 새 기능 안내 -->
+<div class="modal-overlay modal-center feature-update-modal" id="modalFeatureUpdate">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">새 기능 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
+    <div class="feature-update-kicker">2026.07 업데이트</div>
+    <div class="feature-update-title">찬양대 일정을 내 휴대폰 캘린더에</div>
+    <div class="feature-update-lead">앱의 일정 날짜, 시간, 장소와 메모를 휴대폰 캘린더로 옮겨두면 따로 다시 입력하지 않아도 됩니다.</div>
+    <div class="feature-update-steps">
+      <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정을 엽니다</b><span>홈의 이번 주 일정이나 일정 탭에서 원하는 일정을 누르세요.</span></div></div>
+      <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가를 누릅니다</b><span>일정 상세 화면 맨 위에서 바로 찾을 수 있습니다.</span></div></div>
+      <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>휴대폰에서 저장합니다</b><span>열린 캘린더 화면에서 추가 또는 저장을 완료하세요.</span></div></div>
+    </div>
+    <div class="feature-update-more">
+      <div class="feature-update-more-row"><span class="feature-update-more-icon"><span class="score-new-badge">NEW</span></span><div><b>새 악보는 NEW로 표시</b><span>새로 등록되거나 교체된 악보를 실제로 열면 NEW가 사라집니다. 관리자 화면에서도 동일하게 적용됩니다.</span></div></div>
+      <div class="feature-update-more-row"><span class="feature-update-more-icon">🔔</span><div><b>악보·일정 변경 알림</b><span>단원 로그인 후 홈에서 필요한 알림만 골라 켤 수 있습니다.</span></div></div>
+    </div>
+    <div class="feature-update-actions"><button type="button" class="btn" onclick="closeModal('modalFeatureUpdate')">확인</button><button type="button" class="btn btn-p" onclick="openCalendarFromFeatureGuide()">일정 탭 보기</button></div>
+  </div>
+</div>
 <!-- MODAL: 아카이브 수정 -->
 <div class="modal-overlay modal-center" id="modalArchiveEdit">
   <div class="modal-content">
@@ -3119,6 +3177,7 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalFeatureUpdate')markFeatureUpdateSeen();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
@@ -5605,8 +5664,8 @@ function scoreVersionToken(score){
   return String(score.currentUploadedAt||score.currentFilePath||score.currentFileUrl||score.updatedAt||score.createdAt||'');
 }
 function scoreSeenStorageKey(){
-  if(!currentUser||!currentUser.id)return '';
-  return SCORE_SEEN_STORAGE_PREFIX+encodeURIComponent(String(currentUser.id));
+  var identity=currentUser&&currentUser.id?String(currentUser.id):(adminRole==='admin'?'admin':'');
+  return identity?SCORE_SEEN_STORAGE_PREFIX+encodeURIComponent(identity):'';
 }
 function getScoreSeenState(){
   var key=scoreSeenStorageKey();
@@ -5640,7 +5699,7 @@ function scoreFolderSeenId(rows){
 }
 function isScoreFolderUnread(rows){
   rows=(rows||[]).filter(function(score){return score&&canViewScoreItem(score);});
-  if(!currentUser||!rows.length)return false;
+  if(!scoreSeenStorageKey()||!rows.length)return false;
   var folderId=scoreFolderSeenId(rows);
   var version=scoreFolderVersionToken(rows);
   return !!(folderId&&version&&getScoreSeenState()[folderId]!==version);
@@ -5666,7 +5725,7 @@ function markScoreFolderRead(score){
   return true;
 }
 function isScoreUnread(score){
-  if(!currentUser||!score||!score.id||!canViewScoreItem(score))return false;
+  if(!scoreSeenStorageKey()||!score||!score.id||!canViewScoreItem(score))return false;
   if(normalizeScoreKind(score.scoreKind)==='orchestra')return isScoreFolderUnread(scoreFolderRowsForScore(score));
   var version=scoreVersionToken(score);
   if(!version)return false;
@@ -13224,6 +13283,29 @@ function dismissInstall(saveChoice){
 initInstallUi();
 
 // ==================== 가이드 슬라이드 ====================
+var FEATURE_UPDATE_VERSION='2026-07-calendar-export';
+var FEATURE_UPDATE_SEEN_KEY='choir_feature_update_seen';
+function isFeatureUpdateSeen(){
+  try{return localStorage.getItem(FEATURE_UPDATE_SEEN_KEY)===FEATURE_UPDATE_VERSION;}catch(e){return false;}
+}
+function renderFeatureUpdateUi(){
+  var seen=isFeatureUpdateSeen();
+  var notice=document.getElementById('homeFeatureUpdateNotice');
+  var button=document.getElementById('homeFeatureUpdateBtn');
+  if(notice)notice.classList.toggle('hidden',seen);
+  if(button)button.classList.toggle('seen',seen);
+}
+function markFeatureUpdateSeen(){
+  try{localStorage.setItem(FEATURE_UPDATE_SEEN_KEY,FEATURE_UPDATE_VERSION);}catch(e){}
+  renderFeatureUpdateUi();
+}
+function openFeatureUpdateGuide(){
+  openModal('modalFeatureUpdate');
+}
+function openCalendarFromFeatureGuide(){
+  closeModal('modalFeatureUpdate');
+  switchTab('calendar');
+}
 function openHomeGuide(){
   showGuide(true);
 }
@@ -13235,7 +13317,8 @@ function showGuide(force){
   var slides=[
     {icon:'🎵',title:'곡 검색',desc:'곡명, 단원, 반주자로 검색하고\n연도/분류/요일로 좁혀볼 수 있습니다.'},
     {icon:'⭐',title:'즐겨찾기',desc:'자주 보는 곡은 별표를 눌러\n즐겨찾기 탭에서 바로 확인하세요.'},
-    {icon:'📅',title:'일정 확인',desc:'일정 탭에서 월별 일정을 보고\n날짜별 곡과 장소를 확인할 수 있습니다.'},
+    {icon:'📄',title:'최신 악보',desc:'로그인 후 악보 탭에서 최신 파일을 확인하세요.\nNEW는 악보를 실제로 열면 사라집니다.'},
+    {icon:'📅',title:'일정과 내 캘린더',desc:'일정을 열어 날짜와 장소를 확인하고\n내 캘린더에 추가할 수 있습니다.'},
     {icon:'🎚️',title:'자리배치 확인',desc:'공개된 찬양의밤 배치가 있으면\n홈에서 바로 열고 이름으로 찾을 수 있습니다.'},
     {icon:'👤',title:'로그인과 프로필',desc:'이름과 PIN으로 로그인하면\n즐겨찾기 동기화와 프로필 사진 등록을 사용할 수 있습니다.'},
     {icon:'↻',title:'앱 업데이트',desc:'기능이 바뀌었는데 화면이 그대로면\n홈 하단 앱 업데이트를 눌러 최신 화면을 불러오세요.'}
@@ -13266,6 +13349,7 @@ function showGuide(force){
   renderSlide();
   document.body.appendChild(ov);
 }
+renderFeatureUpdateUi();
 // ==================== 출석체크 ====================
 var attData={};
 var attPartFilter='all';
