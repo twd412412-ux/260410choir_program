@@ -1524,21 +1524,32 @@ body{font-weight:500}
 .feature-update-modal .modal-content{max-width:440px;max-height:82vh}
 .feature-update-kicker{font-size:11px;font-weight:900;color:#8A6A25;margin-bottom:6px}
 .feature-update-title{font-size:20px;font-weight:900;line-height:1.35;color:var(--tx);word-break:keep-all}
-.feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 14px}
-.feature-update-steps{border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
-.feature-update-step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;padding:10px 0;border-bottom:1px solid var(--bd)}
+.feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 12px}
+.feature-update-list{border-top:1px solid var(--bd)}
+.feature-update-item{border-bottom:1px solid var(--bd)}
+.feature-update-item summary{list-style:none;display:grid;grid-template-columns:38px minmax(0,1fr) 24px;align-items:center;gap:10px;padding:12px 0;cursor:pointer}
+.feature-update-item summary::-webkit-details-marker{display:none}
+.feature-update-summary-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--pl);color:var(--pd);font-size:19px;line-height:1}
+.feature-update-summary-icon .score-new-badge{font-size:8px;padding:3px 4px}
+.feature-update-summary-copy{min-width:0}
+.feature-update-summary-copy b{display:block;font-size:14px;font-weight:900;color:var(--tx);line-height:1.35;word-break:keep-all}
+.feature-update-summary-copy span{display:block;margin-top:2px;font-size:11px;font-weight:650;color:var(--ts);line-height:1.4;word-break:keep-all}
+.feature-update-chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--ts);font-size:20px;font-weight:500;line-height:1}
+.feature-update-chevron::before{content:'+'}
+.feature-update-item[open] .feature-update-chevron::before{content:'−'}
+.feature-update-item[open] .feature-update-summary-copy b{color:var(--pd)}
+.feature-update-panel{padding:0 0 14px 48px}
+.feature-update-steps{border-top:1px solid var(--bd)}
+.feature-update-step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;padding:9px 0;border-bottom:1px solid var(--bd)}
 .feature-update-step:last-child{border-bottom:0}
 .feature-update-step-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--p);color:#fff;font-size:11px;font-weight:900}
 .feature-update-step b{display:block;font-size:13px;font-weight:900;color:var(--tx);line-height:1.35}
 .feature-update-step>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
-.feature-update-more{display:grid;gap:0;margin-top:12px}
-.feature-update-more-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:start;padding:10px 0;border-bottom:1px solid var(--bd)}
-.feature-update-more-row:last-child{border-bottom:0}
-.feature-update-more-icon{font-size:20px;line-height:1.2;text-align:center}
-.feature-update-more-row b{display:block;font-size:13px;font-weight:900;color:var(--tx)}
-.feature-update-more-row>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
-.feature-update-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-@media(max-width:360px){.home-feature-update-notice{grid-template-columns:auto minmax(0,1fr)}.home-feature-update-link{display:none}.feature-update-actions{grid-template-columns:1fr}}
+.feature-update-panel-action{display:inline-flex;align-items:center;justify-content:center;margin-top:9px;border:1px solid var(--p);border-radius:9px;background:var(--p);color:#fff;padding:8px 10px;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.feature-update-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
+.home-push-card.feature-update-focus{animation:featureUpdateFocus 1.5s ease}
+@keyframes featureUpdateFocus{0%,100%{box-shadow:0 4px 14px rgba(49,54,35,.045)}35%{box-shadow:0 0 0 4px rgba(111,125,78,.22),0 8px 22px rgba(49,54,35,.12)}}
+@media(max-width:360px){.home-feature-update-notice{grid-template-columns:auto minmax(0,1fr)}.home-feature-update-link{display:none}.feature-update-panel{padding-left:0}}
 .home-push-card{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:12px 14px;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:12px;box-shadow:0 4px 14px rgba(49,54,35,.045)}
 .home-push-copy{min-width:0;flex:1}
 .home-push-title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:820;color:#25261F}
@@ -1737,7 +1748,7 @@ body{font-weight:500}
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <button class="home-feature-update-notice hidden" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
       <span class="home-feature-update-tag">NEW</span>
-      <span class="home-feature-update-copy"><b>일정을 내 캘린더에 추가해보세요</b>악보 NEW 표시와 변경 알림도 함께 확인할 수 있습니다.</span>
+      <span class="home-feature-update-copy"><b>새 기능 3가지를 확인하세요</b>내 캘린더 · 새 악보 NEW · 악보/일정 알림</span>
       <span class="home-feature-update-link">새 기능 보기 ›</span>
     </button>
     <div class="home-push-card hidden" id="homePushCard">
@@ -2499,18 +2510,35 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">새 기능 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
     <div class="feature-update-kicker">2026.07 업데이트</div>
-    <div class="feature-update-title">찬양대 일정을 내 휴대폰 캘린더에</div>
-    <div class="feature-update-lead">앱의 일정 날짜, 시간, 장소와 메모를 휴대폰 캘린더로 옮겨두면 따로 다시 입력하지 않아도 됩니다.</div>
-    <div class="feature-update-steps">
-      <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정을 엽니다</b><span>홈의 이번 주 일정이나 일정 탭에서 원하는 일정을 누르세요.</span></div></div>
-      <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가를 누릅니다</b><span>일정 상세 화면 맨 위에서 바로 찾을 수 있습니다.</span></div></div>
-      <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>휴대폰에서 저장합니다</b><span>열린 캘린더 화면에서 추가 또는 저장을 완료하세요.</span></div></div>
+    <div class="feature-update-title">새로 추가된 기능 3가지</div>
+    <div class="feature-update-lead">궁금한 기능을 누르면 사용 방법이 아래로 펼쳐집니다.</div>
+    <div class="feature-update-list">
+      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+        <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>내 캘린더에 일정 추가</b><span>날짜·시간·장소를 휴대폰 캘린더로 옮깁니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><div class="feature-update-steps">
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>원하는 일정을 엽니다</b><span>홈의 이번 주 일정이나 일정 탭에서 누르세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가를 누릅니다</b><span>일정 상세 화면 맨 위에서 찾을 수 있습니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>추가 또는 저장을 완료합니다</b><span>열린 휴대폰 캘린더 화면에서 저장하세요.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭에서 확인</button></div>
+      </details>
+      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+        <summary><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>새 악보 NEW 표시</b><span>새로 올라오거나 교체된 최신 악보를 알려줍니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><div class="feature-update-steps">
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>홈과 악보 탭에서 확인</b><span>아직 열지 않은 최신 악보에 NEW가 표시됩니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>악보를 실제로 열면 해제</b><span>파일을 불러온 뒤 이 기기에서 NEW가 사라집니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>관리자도 같은 방식</b><span>관리자 로그인으로 악보를 받을 때도 동일하게 작동합니다.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭에서 확인</button></div>
+      </details>
+      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 변경 알림</b><span>필요한 알림만 선택해 새 소식을 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><div class="feature-update-steps">
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인이 필요합니다</b><span>로그인 후 홈의 변경 알림에서 설정할 수 있습니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>알림 켜기를 누릅니다</b><span>아이폰은 홈 화면에 추가한 뒤 기기 알림을 허용하세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>악보와 일정을 따로 선택</b><span>받고 싶은 항목만 켜거나 끌 수 있습니다.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openPushSettingsFromFeatureGuide()">알림 설정 확인</button></div>
+      </details>
     </div>
-    <div class="feature-update-more">
-      <div class="feature-update-more-row"><span class="feature-update-more-icon"><span class="score-new-badge">NEW</span></span><div><b>새 악보는 NEW로 표시</b><span>새로 등록되거나 교체된 악보를 실제로 열면 NEW가 사라집니다. 관리자 화면에서도 동일하게 적용됩니다.</span></div></div>
-      <div class="feature-update-more-row"><span class="feature-update-more-icon">🔔</span><div><b>악보·일정 변경 알림</b><span>단원 로그인 후 홈에서 필요한 알림만 골라 켤 수 있습니다.</span></div></div>
-    </div>
-    <div class="feature-update-actions"><button type="button" class="btn" onclick="closeModal('modalFeatureUpdate')">확인</button><button type="button" class="btn btn-p" onclick="openCalendarFromFeatureGuide()">일정 탭 보기</button></div>
+    <div class="feature-update-actions"><button type="button" class="btn btn-p" onclick="closeModal('modalFeatureUpdate')">확인</button></div>
   </div>
 </div>
 <!-- MODAL: 아카이브 수정 -->
@@ -13299,12 +13327,42 @@ function markFeatureUpdateSeen(){
   try{localStorage.setItem(FEATURE_UPDATE_SEEN_KEY,FEATURE_UPDATE_VERSION);}catch(e){}
   renderFeatureUpdateUi();
 }
+function handleFeatureUpdateToggle(item){
+  if(!item||!item.open)return;
+  document.querySelectorAll('#modalFeatureUpdate .feature-update-item[open]').forEach(function(other){
+    if(other!==item)other.open=false;
+  });
+}
 function openFeatureUpdateGuide(){
+  document.querySelectorAll('#modalFeatureUpdate .feature-update-item').forEach(function(item){item.open=false;});
   openModal('modalFeatureUpdate');
 }
 function openCalendarFromFeatureGuide(){
   closeModal('modalFeatureUpdate');
   switchTab('calendar');
+}
+function openScoresFromFeatureGuide(){
+  closeModal('modalFeatureUpdate');
+  switchTab('scores');
+}
+function openPushSettingsFromFeatureGuide(){
+  closeModal('modalFeatureUpdate');
+  switchTab('home');
+  setTimeout(function(){
+    if(!isMemberLoggedIn()){
+      showToast('단원 로그인 후 알림을 설정할 수 있습니다');
+      openUserModal();
+      return;
+    }
+    renderPushSettings();
+    var card=document.getElementById('homePushCard');
+    if(!card||card.classList.contains('hidden'))return;
+    card.scrollIntoView({block:'center',behavior:'smooth'});
+    card.classList.remove('feature-update-focus');
+    void card.offsetWidth;
+    card.classList.add('feature-update-focus');
+    setTimeout(function(){card.classList.remove('feature-update-focus');},1600);
+  },120);
 }
 function openHomeGuide(){
   showGuide(true);
