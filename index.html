@@ -1500,18 +1500,18 @@ body{font-weight:500}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
 .home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
-.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border:1px solid #CBD7BE;border-radius:10px;background:#F1F5E8;color:#3E4931;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border:1px solid #E5D0A6;border-radius:10px;background:#FFF8EA;color:#50452F;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
 .home-feature-update-notice:active{transform:scale(.995)}
-.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;background:#6F7D4E;color:#fff;padding:3px 5px;font-size:8px;font-weight:950;line-height:1;white-space:nowrap}
+.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;background:#A8732E;color:#fff;padding:3px 5px;font-size:8px;font-weight:950;line-height:1;white-space:nowrap}
 .home-feature-update-copy{min-width:0;font-size:12px;font-weight:780;line-height:1.35}
-.home-feature-update-copy b{display:block;font-size:13px;font-weight:900;color:#2F3828;margin-bottom:1px}
-.home-feature-update-link{font-size:11px;font-weight:900;color:#53623A;white-space:nowrap}
+.home-feature-update-copy b{display:block;font-size:13px;font-weight:900;color:#302B23;margin-bottom:1px}
+.home-feature-update-link{font-size:11px;font-weight:900;color:#8A5E24;white-space:nowrap}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
-.dark .home-feature-update-notice{background:#252C21;border-color:#46553C;color:#D6DECF}
+.dark .home-feature-update-notice{background:#302719;border-color:#5D492D;color:#E7D9C2}
 .dark .home-feature-update-copy b{color:var(--tx)}
-.dark .home-feature-update-link{color:#BFD0B1}
+.dark .home-feature-update-link{color:#E4BE79}
 .home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
@@ -1520,10 +1520,16 @@ body{font-weight:500}
 .feature-update-title{font-size:20px;font-weight:900;line-height:1.35;color:var(--tx);word-break:keep-all}
 .feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 12px}
 .feature-update-list{border-top:1px solid var(--bd)}
-.feature-update-item{border-bottom:1px solid var(--bd)}
+.feature-update-item{--feature-accent:var(--p);--feature-soft:var(--pl);--feature-on:#fff;border-bottom:1px solid var(--bd)}
+.feature-update-item.feature-calendar{--feature-accent:#4E7480;--feature-soft:#E8F1F3}
+.feature-update-item.feature-score{--feature-accent:#A65359;--feature-soft:#F7E9EA}
+.feature-update-item.feature-alert{--feature-accent:#A36F28;--feature-soft:#FAEFD9}
+.dark .feature-update-item.feature-calendar{--feature-accent:#9BBEC6;--feature-soft:#26383D;--feature-on:#172024}
+.dark .feature-update-item.feature-score{--feature-accent:#DFA4A8;--feature-soft:#3A292B;--feature-on:#291719}
+.dark .feature-update-item.feature-alert{--feature-accent:#E0BB74;--feature-soft:#3B3120;--feature-on:#281E0F}
 .feature-update-item summary{list-style:none;display:grid;grid-template-columns:38px minmax(0,1fr) 24px;align-items:center;gap:10px;padding:12px 0;cursor:pointer}
 .feature-update-item summary::-webkit-details-marker{display:none}
-.feature-update-summary-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--pl);color:var(--pd);font-size:19px;line-height:1}
+.feature-update-summary-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--feature-soft);color:var(--feature-accent);font-size:19px;line-height:1}
 .feature-update-summary-icon .score-new-badge{font-size:8px;padding:3px 4px}
 .feature-update-summary-copy{min-width:0}
 .feature-update-summary-copy b{display:block;font-size:14px;font-weight:900;color:var(--tx);line-height:1.35;word-break:keep-all}
@@ -1531,15 +1537,15 @@ body{font-weight:500}
 .feature-update-chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--ts);font-size:20px;font-weight:500;line-height:1}
 .feature-update-chevron::before{content:'+'}
 .feature-update-item[open] .feature-update-chevron::before{content:'−'}
-.feature-update-item[open] .feature-update-summary-copy b{color:var(--pd)}
+.feature-update-item[open] .feature-update-summary-copy b{color:var(--feature-accent)}
 .feature-update-panel{padding:0 0 14px 48px}
 .feature-update-steps{border-top:1px solid var(--bd)}
 .feature-update-step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;padding:9px 0;border-bottom:1px solid var(--bd)}
 .feature-update-step:last-child{border-bottom:0}
-.feature-update-step-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--p);color:#fff;font-size:11px;font-weight:900}
+.feature-update-step-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--feature-accent);color:var(--feature-on);font-size:11px;font-weight:900}
 .feature-update-step b{display:block;font-size:13px;font-weight:900;color:var(--tx);line-height:1.35}
 .feature-update-step>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
-.feature-update-panel-action{display:inline-flex;align-items:center;justify-content:center;margin-top:9px;border:1px solid var(--p);border-radius:9px;background:var(--p);color:#fff;padding:8px 10px;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.feature-update-panel-action{display:inline-flex;align-items:center;justify-content:center;margin-top:9px;border:1px solid var(--feature-accent);border-radius:9px;background:var(--feature-accent);color:var(--feature-on);padding:8px 10px;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
 .feature-update-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
 .home-push-card.feature-update-focus{animation:featureUpdateFocus .72s ease 2}
 @keyframes featureUpdateFocus{0%,100%{box-shadow:0 4px 14px rgba(49,54,35,.045)}45%{box-shadow:0 0 0 4px rgba(111,125,78,.24),0 8px 22px rgba(49,54,35,.13)}}
@@ -2506,7 +2512,7 @@ body{font-weight:500}
     <div class="feature-update-title">더 편리해진 기능 3가지</div>
     <div class="feature-update-lead">항목을 누르면 간단한 이용 방법을 확인할 수 있습니다.</div>
     <div class="feature-update-list">
-      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+      <details class="feature-update-item feature-calendar" ontoggle="handleFeatureUpdateToggle(this)">
         <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b><span>앱 일정을 휴대폰 캘린더에 간편하게 저장합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
           <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정 상세 열기</b><span>홈의 이번 주 일정이나 일정 탭에서 선택하세요.</span></div></div>
@@ -2514,7 +2520,7 @@ body{font-weight:500}
           <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>캘린더에 저장</b><span>열린 휴대폰 캘린더에서 추가 또는 저장을 완료하세요.</span></div></div>
         </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭 열기</button></div>
       </details>
-      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+      <details class="feature-update-item feature-score" ontoggle="handleFeatureUpdateToggle(this)">
         <summary><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>최신 악보 확인</b><span>등록되거나 교체된 파일을 NEW로 구분합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
           <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>NEW 표시 확인</b><span>홈과 악보 탭에서 아직 열지 않은 파일을 확인하세요.</span></div></div>
@@ -2522,7 +2528,7 @@ body{font-weight:500}
           <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>교체된 파일 확인</b><span>수정본이 올라오면 NEW가 다시 표시됩니다.</span></div></div>
         </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭 열기</button></div>
       </details>
-      <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
+      <details class="feature-update-item feature-alert" ontoggle="handleFeatureUpdateToggle(this)">
         <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 알림</b><span>원하는 변경 소식만 선택해 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
           <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인</b><span>로그인 후 홈에서 알림을 설정할 수 있습니다.</span></div></div>
