@@ -28,6 +28,7 @@ const ACCOUNT_PIN_PATTERN = /^\d{4}$/;
 const HASH_VERSION = "scrypt-v1";
 const ELEVATION_MS = 4 * 60 * 60 * 1000;
 const SONG_INDEX_SHARDS = 16;
+const MAX_SAME_NAME_ACCOUNTS = 12;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
 const WEB_PUSH_SUBJECT = "mailto:twd412412@gmail.com";
@@ -66,6 +67,11 @@ function normalizeName(value) {
   let text = cleanString(value, 80);
   if (text.normalize) text = text.normalize("NFKC");
   return text.replace(/\s+/g, "").toLowerCase();
+}
+
+function isValidDocumentId(value) {
+  const id = cleanString(value, 1500);
+  return Boolean(id && id !== "." && id !== ".." && !id.includes("/") && !/^__.*__$/.test(id));
 }
 
 function uniqueAllowed(values, allowedSet, maxItems = 40) {
@@ -266,8 +272,8 @@ async function clearRateFailures(keys) {
 async function accountForName(name) {
   const nameKey = normalizeName(name);
   if (!nameKey) return {nameKey, rows: []};
-  let snap = await db.collection("accounts").where("nameKey", "==", nameKey).limit(3).get();
-  if (snap.empty) snap = await db.collection("accounts").where("name", "==", cleanString(name, 60)).limit(3).get();
+  let snap = await db.collection("accounts").where("nameKey", "==", nameKey).limit(MAX_SAME_NAME_ACCOUNTS).get();
+  if (snap.empty) snap = await db.collection("accounts").where("name", "==", cleanString(name, 60)).limit(MAX_SAME_NAME_ACCOUNTS).get();
   return {nameKey, rows: snap.docs};
 }
 
@@ -279,6 +285,56 @@ async function accountSecret(accountDoc) {
   return {ref, secret: null, legacyPin: cleanString(account.pin, 20)};
 }
 
+async function accountPinMatch(accountDoc, pin) {
+  const secretInfo = await accountSecret(accountDoc);
+  const valid = secretInfo.secret
+    ? await verifyPassword(pin, secretInfo.secret)
+    : Boolean(secretInfo.legacyPin && secretInfo.legacyPin === pin);
+  return {accountDoc, secretInfo, valid};
+}
+
+async function sameNameAccountRows(nameKey) {
+  if (!nameKey) return [];
+  const snap = await db.collection("accounts").where("nameKey", "==", nameKey).limit(MAX_SAME_NAME_ACCOUNTS).get();
+  return snap.docs;
+}
+
+async function assertPinAvailableForName(nameKey, pin, excludeId, knownRows) {
+  const rows = (knownRows || await sameNameAccountRows(nameKey)).filter((doc) => doc.id !== excludeId);
+  if (!rows.length) return;
+  const checks = await mapLimit(rows, 4, (doc) => accountPinMatch(doc, pin));
+  if (checks.some((check) => check.valid)) {
+    throw new HttpsError("already-exists", "동명이인은 서로 다른 PIN을 사용해야 합니다.");
+  }
+}
+
+async function assertMemberLinkValid(memberId, accountName, excludeAccountId) {
+  if (!memberId) return;
+  const [memberSnap, linkedSnap] = await Promise.all([
+    db.collection("members").doc(memberId).get(),
+    db.collection("accounts").where("memberId", "==", memberId).limit(2).get(),
+  ]);
+  if (!memberSnap.exists) throw new HttpsError("not-found", "연결할 단원 명부를 찾을 수 없습니다.");
+  if (normalizeName((memberSnap.data() || {}).name) !== normalizeName(accountName)) {
+    throw new HttpsError("invalid-argument", "계정 이름과 명부 이름이 같아야 연결할 수 있습니다.");
+  }
+  if (linkedSnap.docs.some((doc) => doc.id !== excludeAccountId)) {
+    throw new HttpsError("already-exists", "해당 단원 명부는 이미 다른 계정에 연결되어 있습니다.");
+  }
+}
+
+async function replacementPinForNameChange(oldNameKey, newNameKey, accountId, pin) {
+  if (!newNameKey || oldNameKey === newNameKey) return null;
+  const rows = await sameNameAccountRows(newNameKey);
+  const duplicates = rows.filter((doc) => doc.id !== accountId);
+  if (!duplicates.length) return null;
+  if (!ACCOUNT_PIN_PATTERN.test(pin)) {
+    throw new HttpsError("invalid-argument", "동명이인 이름으로 변경할 때는 새 PIN 4자리가 필요합니다.");
+  }
+  await assertPinAvailableForName(newNameKey, pin, accountId, duplicates);
+  return hashPassword(pin);
+}
+
 async function loginWithPin(request) {
   const name = cleanString(request.data && request.data.name, 60);
   const pin = cleanString(request.data && request.data.pin, 12);
@@ -286,20 +342,22 @@ async function loginWithPin(request) {
   const found = await accountForName(name);
   const rateKeys = [rateKey("account", found.nameKey), rateKey("ip", requestIp(request))];
   await assertRateAllowed(rateKeys);
-  if (found.rows.length !== 1) {
-    await recordRateFailure(rateKeys, 8, 10 * 60 * 1000);
-    throw new HttpsError("invalid-argument", found.rows.length > 1 ? "동명이인 계정은 관리자에게 문의해주세요." : "이름 또는 PIN을 확인해주세요.");
-  }
-  const accountDoc = found.rows[0];
-  const account = accountDoc.data() || {};
-  const secretInfo = await accountSecret(accountDoc);
-  let valid = false;
-  if (secretInfo.secret) valid = await verifyPassword(pin, secretInfo.secret);
-  else if (secretInfo.legacyPin) valid = secretInfo.legacyPin === pin;
-  if (!valid) {
+  if (!found.rows.length) {
     await recordRateFailure(rateKeys, 8, 10 * 60 * 1000);
     throw new HttpsError("invalid-argument", "이름 또는 PIN을 확인해주세요.");
   }
+  const checks = await mapLimit(found.rows, 4, (doc) => accountPinMatch(doc, pin));
+  const matched = checks.filter((check) => check.valid);
+  if (matched.length !== 1) {
+    await recordRateFailure(rateKeys, 8, 10 * 60 * 1000);
+    const message = matched.length > 1
+      ? "계정을 구분할 수 없습니다. 관리자에게 PIN 변경을 요청해주세요."
+      : "이름 또는 PIN을 확인해주세요.";
+    throw new HttpsError("invalid-argument", message);
+  }
+  const accountDoc = matched[0].accountDoc;
+  const account = accountDoc.data() || {};
+  const secretInfo = matched[0].secretInfo;
   if (!secretInfo.secret) {
     const hashed = await hashPassword(pin);
     const batch = db.batch();
@@ -418,6 +476,7 @@ function accountCreateData(input, actor) {
   const part = cleanString(input.part, 30);
   const memberId = cleanString(input.memberId, 80);
   if (!name || !part) throw new HttpsError("invalid-argument", "이름과 파트는 필수입니다.");
+  if (memberId && !isValidDocumentId(memberId)) throw new HttpsError("invalid-argument", "연결할 단원 명부 정보가 올바르지 않습니다.");
   return {
     name,
     nameKey: normalizeName(name),
@@ -433,21 +492,16 @@ function accountCreateData(input, actor) {
   };
 }
 
-async function assertUniqueNameKey(nameKey, excludeId, name) {
-  const queries = [db.collection("accounts").where("nameKey", "==", nameKey).limit(3).get()];
-  if (name) queries.push(db.collection("accounts").where("name", "==", cleanString(name, 60)).limit(3).get());
-  const snaps = await Promise.all(queries);
-  if (snaps.some((snap) => snap.docs.some((doc) => doc.id !== excludeId))) {
-    throw new HttpsError("already-exists", "같은 이름의 계정이 이미 있습니다.");
-  }
-}
-
 async function adminCreateAccount(request) {
   requirePermission(request, "account.manage");
   const pin = cleanString(request.data && request.data.pin, 12);
   if (!ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "PIN은 숫자 4자리여야 합니다.");
   const data = accountCreateData(request.data || {}, cleanString(request.auth.token.choirName, 60) || "관리자");
-  await assertUniqueNameKey(data.nameKey, "", data.name);
+  const sameNameRows = await sameNameAccountRows(data.nameKey);
+  await Promise.all([
+    assertPinAvailableForName(data.nameKey, pin, "", sameNameRows),
+    assertMemberLinkValid(data.memberId, data.name, ""),
+  ]);
   const ref = db.collection("accounts").doc();
   const secret = await hashPassword(pin);
   const batch = db.batch();
@@ -644,16 +698,53 @@ async function adminBulkCreateAccounts(request) {
   if (!rows.length) throw new HttpsError("invalid-argument", "등록할 계정이 없습니다.");
   const actor = cleanString(request.auth.token.choirName, 60) || "관리자";
   const existing = await db.collection("accounts").get();
-  const used = new Set(existing.docs.map((doc) => normalizeName((doc.data() || {}).name)));
+  const existingByName = new Map();
+  const linkedMemberIds = new Set();
+  existing.docs.forEach((doc) => {
+    const data = doc.data() || {};
+    const nameKey = normalizeName(data.name);
+    if (!existingByName.has(nameKey)) existingByName.set(nameKey, []);
+    existingByName.get(nameKey).push(doc);
+    const memberId = cleanString(data.memberId, 80);
+    if (memberId) linkedMemberIds.add(memberId);
+  });
+  const incomingPinsByName = new Map();
+  const incomingMemberIds = new Set();
   const prepared = [];
   for (const row of rows) {
     const pin = cleanString(row.pin, 12);
     if (!ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "모든 PIN은 숫자 4자리여야 합니다.");
     const data = accountCreateData(row, actor);
-    if (used.has(data.nameKey)) throw new HttpsError("already-exists", data.name + " 계정이 중복됩니다.");
-    used.add(data.nameKey);
+    if (!incomingPinsByName.has(data.nameKey)) incomingPinsByName.set(data.nameKey, new Set());
+    if (incomingPinsByName.get(data.nameKey).has(pin)) {
+      throw new HttpsError("already-exists", data.name + " 동명이인은 서로 다른 PIN을 사용해야 합니다.");
+    }
+    incomingPinsByName.get(data.nameKey).add(pin);
+    if (data.memberId && (linkedMemberIds.has(data.memberId) || incomingMemberIds.has(data.memberId))) {
+      throw new HttpsError("already-exists", data.name + "님의 명부는 이미 다른 계정에 연결되어 있습니다.");
+    }
+    if (data.memberId) incomingMemberIds.add(data.memberId);
     prepared.push({ref: db.collection("accounts").doc(), data, pin});
   }
+  const memberIds = Array.from(incomingMemberIds);
+  if (memberIds.length) {
+    const memberSnaps = await db.getAll(...memberIds.map((id) => db.collection("members").doc(id)));
+    const memberById = new Map(memberSnaps.map((snap) => [snap.id, snap]));
+    prepared.forEach((item) => {
+      if (!item.data.memberId) return;
+      const memberSnap = memberById.get(item.data.memberId);
+      if (!memberSnap || !memberSnap.exists) throw new HttpsError("not-found", item.data.name + "님의 단원 명부를 찾을 수 없습니다.");
+      if (normalizeName((memberSnap.data() || {}).name) !== item.data.nameKey) {
+        throw new HttpsError("invalid-argument", item.data.name + " 계정과 연결할 명부의 이름이 다릅니다.");
+      }
+    });
+  }
+  await mapLimit(prepared, 3, (item) => assertPinAvailableForName(
+    item.data.nameKey,
+    item.pin,
+    "",
+    existingByName.get(item.data.nameKey) || [],
+  ));
   const secrets = await mapLimit(prepared, 4, async (item) => hashPassword(item.pin));
   for (let start = 0; start < prepared.length; start += 400) {
     const batch = db.batch();
@@ -669,13 +760,14 @@ async function adminBulkCreateAccounts(request) {
 
 async function adminUpdateAccount(request) {
   const accountId = cleanString(request.data && request.data.accountId, 80);
-  if (!accountId) throw new HttpsError("invalid-argument", "계정 ID가 필요합니다.");
+  if (!isValidDocumentId(accountId)) throw new HttpsError("invalid-argument", "계정 정보가 올바르지 않습니다.");
   const ref = db.collection("accounts").doc(accountId);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "계정을 찾을 수 없습니다.");
   const old = snap.data() || {};
   const mode = cleanString(request.data && request.data.mode, 20) || "profile";
   const update = {};
+  let replacementPinSecret = null;
   if (mode === "profile") {
     requirePermission(request, "account.manage");
     update.name = cleanString(request.data.name, 60);
@@ -683,9 +775,20 @@ async function adminUpdateAccount(request) {
     update.memberId = cleanString(request.data.memberId, 80);
     if (!update.name || !update.part) throw new HttpsError("invalid-argument", "이름과 파트는 필수입니다.");
     update.nameKey = normalizeName(update.name);
-    await assertUniqueNameKey(update.nameKey, accountId, update.name);
+    await assertMemberLinkValid(update.memberId, update.name, accountId);
+    replacementPinSecret = await replacementPinForNameChange(
+      normalizeName(old.name),
+      update.nameKey,
+      accountId,
+      cleanString(request.data.pin, 12),
+    );
     update.memberLinkedAt = update.memberId ? nowIso() : "";
     update.memberLinkedBy = update.memberId ? (cleanString(request.auth.token.choirName, 60) || "관리자") : "";
+    if (replacementPinSecret) {
+      update.pin = FieldValue.delete();
+      update.pinSet = true;
+      update.pinUpdatedAt = nowIso();
+    }
   } else if (mode === "permissions") {
     requireAdmin(request);
     update.role = cleanString(request.data.role, 30);
@@ -700,7 +803,15 @@ async function adminUpdateAccount(request) {
   } else {
     throw new HttpsError("invalid-argument", "지원하지 않는 수정 방식입니다.");
   }
-  await ref.update(update);
+  if (replacementPinSecret) {
+    const batch = db.batch();
+    batch.update(ref, update);
+    batch.set(db.collection("authSecrets").doc(accountId), Object.assign({kind: "account", accountId}, replacementPinSecret));
+    await batch.commit();
+    try { await auth.revokeRefreshTokens(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
+  } else {
+    await ref.update(update);
+  }
   const next = Object.assign({}, old, update);
   await syncExistingAccountClaims(accountId, next);
   return {account: safeProfile(accountId, next)};
@@ -710,16 +821,54 @@ async function adminBulkLinkAccounts(request) {
   requirePermission(request, "account.manage");
   const rows = Array.isArray(request.data && request.data.rows) ? request.data.rows.slice(0, 300) : [];
   const actor = cleanString(request.auth.token.choirName, 60) || "관리자";
-  const batch = db.batch();
   const changed = [];
+  const accountIds = new Set();
+  const memberIds = new Set();
   for (const row of rows) {
     const accountId = cleanString(row.accountId, 80);
     const memberId = cleanString(row.memberId, 80);
     if (!accountId || !memberId) continue;
-    batch.update(db.collection("accounts").doc(accountId), {memberId, memberLinkedAt: nowIso(), memberLinkedBy: actor});
+    if (!isValidDocumentId(accountId) || !isValidDocumentId(memberId)) {
+      throw new HttpsError("invalid-argument", "계정 또는 단원 명부 정보가 올바르지 않습니다.");
+    }
+    if (accountIds.has(accountId) || memberIds.has(memberId)) {
+      throw new HttpsError("already-exists", "같은 계정이나 명부가 연결 목록에 중복되어 있습니다.");
+    }
+    accountIds.add(accountId);
+    memberIds.add(memberId);
     changed.push({accountId, memberId});
   }
-  if (changed.length) await batch.commit();
+  if (!changed.length) return {updated: 0};
+  const [accountSnaps, memberSnaps, allAccounts] = await Promise.all([
+    db.getAll(...changed.map((row) => db.collection("accounts").doc(row.accountId))),
+    db.getAll(...changed.map((row) => db.collection("members").doc(row.memberId))),
+    db.collection("accounts").get(),
+  ]);
+  const accountById = new Map(accountSnaps.map((snap) => [snap.id, snap]));
+  const memberById = new Map(memberSnaps.map((snap) => [snap.id, snap]));
+  const linkedByMember = new Map();
+  allAccounts.docs.forEach((doc) => {
+    const memberId = cleanString((doc.data() || {}).memberId, 80);
+    if (memberId) linkedByMember.set(memberId, doc.id);
+  });
+  changed.forEach((row) => {
+    const accountSnap = accountById.get(row.accountId);
+    const memberSnap = memberById.get(row.memberId);
+    if (!accountSnap || !accountSnap.exists) throw new HttpsError("not-found", "연결할 계정을 찾을 수 없습니다.");
+    if (!memberSnap || !memberSnap.exists) throw new HttpsError("not-found", "연결할 단원 명부를 찾을 수 없습니다.");
+    if (normalizeName((accountSnap.data() || {}).name) !== normalizeName((memberSnap.data() || {}).name)) {
+      throw new HttpsError("invalid-argument", "계정 이름과 명부 이름이 같아야 연결할 수 있습니다.");
+    }
+    const linkedAccountId = linkedByMember.get(row.memberId);
+    if (linkedAccountId && linkedAccountId !== row.accountId) {
+      throw new HttpsError("already-exists", "해당 단원 명부는 이미 다른 계정에 연결되어 있습니다.");
+    }
+  });
+  const batch = db.batch();
+  changed.forEach((row) => {
+    batch.update(db.collection("accounts").doc(row.accountId), {memberId: row.memberId, memberLinkedAt: nowIso(), memberLinkedBy: actor});
+  });
+  await batch.commit();
   await mapLimit(changed, 5, async (row) => {
     const snap = await db.collection("accounts").doc(row.accountId).get();
     if (snap.exists) await syncExistingAccountClaims(row.accountId, snap.data() || {});
@@ -731,9 +880,12 @@ async function adminSetAccountPin(request) {
   requirePermission(request, "account.pin");
   const accountId = cleanString(request.data && request.data.accountId, 80);
   const pin = cleanString(request.data && request.data.pin, 12);
-  if (!accountId || !ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "PIN은 숫자 4자리여야 합니다.");
+  if (!isValidDocumentId(accountId) || !ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "PIN은 숫자 4자리여야 합니다.");
   const accountRef = db.collection("accounts").doc(accountId);
-  if (!(await accountRef.get()).exists) throw new HttpsError("not-found", "계정을 찾을 수 없습니다.");
+  const accountSnap = await accountRef.get();
+  if (!accountSnap.exists) throw new HttpsError("not-found", "계정을 찾을 수 없습니다.");
+  const account = accountSnap.data() || {};
+  await assertPinAvailableForName(normalizeName(account.name), pin, accountId);
   const secret = await hashPassword(pin);
   const batch = db.batch();
   batch.set(db.collection("authSecrets").doc(accountId), Object.assign({kind: "account", accountId}, secret));
@@ -746,7 +898,7 @@ async function adminSetAccountPin(request) {
 async function adminDeleteAccount(request) {
   requireAdmin(request);
   const accountId = cleanString(request.data && request.data.accountId, 80);
-  if (!accountId) throw new HttpsError("invalid-argument", "계정 ID가 필요합니다.");
+  if (!isValidDocumentId(accountId)) throw new HttpsError("invalid-argument", "계정 정보가 올바르지 않습니다.");
   const batch = db.batch();
   batch.delete(db.collection("accounts").doc(accountId));
   batch.delete(db.collection("authSecrets").doc(accountId));

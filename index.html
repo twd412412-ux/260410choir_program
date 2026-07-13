@@ -2153,7 +2153,7 @@ body{font-weight:500}
     <div class="account-create-panel" id="accountCreatePanel">
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
-      <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" maxlength="4" placeholder="1234"></div>
+      <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" inputmode="numeric" maxlength="4" placeholder="1234"><div class="account-member-count">동명이인은 서로 다른 PIN으로 자동 구분됩니다.</div></div>
       <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.">비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
       <details class="account-bulk-panel" id="accountBulkPanel">
@@ -4010,6 +4010,7 @@ function securityErrorMessage(error,fallback){
   if(code==='permission-denied')return '이 작업을 할 권한이 없습니다';
   if(code==='resource-exhausted')return '로그인 시도가 많아 잠시 후 다시 시도해주세요';
   if(code==='already-exists')return error.message||'이미 등록된 계정입니다';
+  if(code==='failed-precondition')return error.message||fallback||'먼저 필요한 설정을 확인해주세요';
   if(code==='not-found')return error.message||'대상을 찾을 수 없습니다';
   if(code==='invalid-argument')return error.message||fallback||'입력 내용을 확인해주세요';
   return fallback||'처리 중 오류가 발생했습니다';
@@ -7022,7 +7023,9 @@ function accountMemberLinkConflict(memberId,excludeAccountId){
 }
 
 function normalizeAccountLinkName(name){
-  return String(name||'').replace(/\s+/g,'').trim().toLowerCase();
+  var text=String(name||'');
+  if(text.normalize)text=text.normalize('NFKC');
+  return text.replace(/\s+/g,'').trim().toLowerCase();
 }
 
 function accountMemberNameMatches(accountName,member){
@@ -7182,6 +7185,11 @@ function renderAccountList(){
     return;
   }
   var groupCounts={};
+  var sameNameCounts={};
+  allMembers.forEach(function(m){
+    var key=normalizeAccountLinkName(m.name);
+    if(key)sameNameCounts[key]=(sameNameCounts[key]||0)+1;
+  });
   list.forEach(function(m){
     var label=accountPartGroupLabel(m.part);
     groupCounts[label]=(groupCounts[label]||0)+1;
@@ -7196,6 +7204,7 @@ function renderAccountList(){
     }
     var roleBadge=renderAccountPermissionBadges(m);
     var pinMeta=canManageAccountPins()?(m.pinSet?'PIN 설정됨':'PIN 미설정'):'PIN 권한 필요';
+    var duplicateMeta=sameNameCounts[normalizeAccountLinkName(m.name)]>1?' · 동명이인':'';
     var linkHtml='';
     if(canManageLoginAccounts()||canManageAccountPermissions()){
       linkHtml=renderAccountLinkStatus(m);
@@ -7203,7 +7212,7 @@ function renderAccountList(){
     return groupHtml+`<div class="account-row ${accountPartClass(m.part)}">
       <div class="account-main">
         <div class="account-name-line"><span class="account-name">${escHtml(m.name)}</span>${linkHtml}</div>
-        <div class="account-meta-line">${escHtml(accountPartDisplayLabel(m))} · ${escHtml(pinMeta)}</div>
+        <div class="account-meta-line">${escHtml(accountPartDisplayLabel(m))} · ${escHtml(pinMeta)}${duplicateMeta}</div>
         ${roleBadge}
       </div>
       <div class="account-actions">
@@ -7244,13 +7253,18 @@ function parseAccountBulkRows(){
   var text=(document.getElementById('accountBulkText')||{}).value||'';
   var defaultPart=normalizeAccountBulkPart((document.getElementById('accountBulkDefaultPart')||{}).value||'');
   var lines=text.split(/\r?\n/);
-  var existingNames={};
-  var seenNames={};
+  var existingNames=Object.create(null);
+  var existingUnlinkedNames=Object.create(null);
+  var seenNamePins=Object.create(null);
   var usedMemberIds={};
   var rows=[];
   var errors=[];
   allMembers.forEach(function(m){
-    if(m.name)existingNames[normalizeAccountLinkName(m.name)]=true;
+    if(m.name){
+      var key=normalizeAccountLinkName(m.name);
+      existingNames[key]=(existingNames[key]||0)+1;
+      if(!m.memberId)existingUnlinkedNames[key]=true;
+    }
     if(m.memberId)usedMemberIds[m.memberId]=true;
   });
   lines.forEach(function(line,idx){
@@ -7283,32 +7297,41 @@ function parseAccountBulkRows(){
       errors.push({lineNo:lineNo,raw:raw,msg:'파트 없음'});
       return;
     }
-    if(existingNames[nameKey]){
-      errors.push({lineNo:lineNo,raw:raw,msg:'이미 등록된 이름'});
+    if(!seenNamePins[nameKey])seenNamePins[nameKey]=Object.create(null);
+    if(seenNamePins[nameKey][pin]){
+      errors.push({lineNo:lineNo,raw:raw,msg:'동명이인은 서로 다른 PIN 필요'});
       return;
     }
-    if(seenNames[nameKey]){
-      errors.push({lineNo:lineNo,raw:raw,msg:'입력값 안에서 이름 중복'});
-      return;
-    }
-    seenNames[nameKey]=true;
-    rows.push({lineNo:lineNo,name:name,pin:pin,part:part,raw:raw,memberId:'',linkStatus:'none'});
+    seenNamePins[nameKey][pin]=true;
+    rows.push({lineNo:lineNo,name:name,nameKey:nameKey,pin:pin,part:part,raw:raw,memberId:'',linkStatus:'none'});
   });
   rows.forEach(function(row){
     var matches=accountLinkMembers.filter(isHandbookRosterMember).filter(function(member){
       return accountMemberNameMatches(row.name,member);
     });
-    if(matches.length===1&&!usedMemberIds[matches[0].id]){
-      row.memberId=matches[0].id;
+    var available=matches.filter(function(member){return !usedMemberIds[member.id];});
+    var samePart=available.filter(function(member){
+      return normalizePartName(member.part)===normalizePartName(row.part);
+    });
+    var member=samePart.length===1?samePart[0]:(available.length===1?available[0]:null);
+    if(existingUnlinkedNames[row.nameKey]){
+      row.excludeReason='같은 이름의 미연결 계정 있음 · 개별 확인 필요';
+    }else if(member){
+      row.memberId=member.id;
       row.linkStatus='matched';
-      usedMemberIds[matches[0].id]=true;
-    }else if(matches.length>1){
-      row.linkStatus='duplicate';
-    }else if(matches.length===1&&usedMemberIds[matches[0].id]){
-      row.linkStatus='used';
+      usedMemberIds[member.id]=true;
+    }else if(available.length>1){
+      row.excludeReason='동명이인 명부 선택 필요 · 개별 등록';
+    }else if(matches.length>0&&available.length===0){
+      row.excludeReason='같은 이름의 명부가 이미 계정에 연결됨';
+    }else if(existingNames[row.nameKey]){
+      row.excludeReason='같은 이름 계정 있음 · 명부 확인 후 개별 등록';
     }
   });
-  return {rows:rows,errors:errors,total:lines.filter(function(v){return String(v||'').trim();}).length};
+  rows.filter(function(row){return row.excludeReason;}).forEach(function(row){
+    errors.push({lineNo:row.lineNo,raw:row.raw,msg:row.excludeReason});
+  });
+  return {rows:rows.filter(function(row){return !row.excludeReason;}),errors:errors,total:lines.filter(function(v){return String(v||'').trim();}).length};
 }
 
 function renderAccountBulkResult(plan){
@@ -7372,7 +7395,7 @@ function saveBulkAccounts(){
     });
   }).catch(function(e){
     console.error(e);
-    showToast('일괄 등록 중 오류 발생');
+    showToast(securityErrorMessage(e,'일괄 등록 중 오류가 발생했습니다'));
   }).finally(function(){
     if(btn)btn.disabled=false;
   });
@@ -7384,6 +7407,7 @@ function addMember(){
   var part=document.getElementById('memPart').value;
   var pin=document.getElementById('memPin').value.trim();
   var memberId=(document.getElementById('memMemberId')||{}).value||'';
+  var sameNameCount=allMembers.filter(function(m){return normalizeAccountLinkName(m.name)===normalizeAccountLinkName(name);}).length;
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
   loadAccountLinkMembers().then(function(){
@@ -7398,6 +7422,7 @@ function addMember(){
 
     accountAdminCall('create',{name:name,part:part,pin:pin,memberId:memberId}).then(function(){
       var msg=name+'님 로그인 계정 생성 완료';
+      if(sameNameCount)msg+=' · 동명이인 PIN 자동 구분';
       if(autoLink.status==='matched')msg+=' · 명부 자동 연결';
       else if(autoLink.status==='duplicate')msg+=' · 동명이인으로 명부 연결 보류';
       else if(autoLink.status==='used')msg+=' · 이미 연결된 명부라 연결 보류';
@@ -7410,7 +7435,7 @@ function addMember(){
       
       loadMembers();
       writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
-    }).catch(function(e){ console.error(e); showToast('등록 중 오류 발생'); });
+    }).catch(function(e){ console.error(e); showToast(securityErrorMessage(e,'등록 중 오류가 발생했습니다')); });
   }).catch(function(e){
     console.error(e);
     showToast('명부 확인 중 오류 발생');
@@ -7428,15 +7453,20 @@ function buildExistingAccountAutoLinkPlan(){
     var matches=accountLinkMembers.filter(isHandbookRosterMember).filter(function(member){
       return accountMemberNameMatches(account.name,member);
     });
+    var available=matches.filter(function(member){return !usedMemberIds[member.id];});
+    var samePart=available.filter(function(member){
+      return normalizePartName(member.part)===normalizePartName(account.part);
+    });
+    var member=samePart.length===1?samePart[0]:(available.length===1?available[0]:null);
     if(matches.length===0){
       plan.none.push(account);
-    }else if(matches.length>1){
-      plan.duplicate.push({account:account,count:matches.length});
-    }else if(usedMemberIds[matches[0].id]){
-      plan.used.push({account:account,member:matches[0]});
+    }else if(member){
+      plan.matched.push({account:account,member:member});
+      usedMemberIds[member.id]=true;
+    }else if(available.length>1){
+      plan.duplicate.push({account:account,count:available.length});
     }else{
-      plan.matched.push({account:account,member:matches[0]});
-      usedMemberIds[matches[0].id]=true;
+      plan.used.push({account:account,member:matches[0]});
     }
   });
   return plan;
@@ -7466,7 +7496,7 @@ function autoLinkExistingAccounts(){
       loadMembers();
     }).catch(function(e){
       console.error(e);
-      showToast('자동 연결 중 오류 발생');
+      showToast(securityErrorMessage(e,'자동 연결 중 오류가 발생했습니다'));
     }).finally(function(){
       if(btn)btn.disabled=false;
     });
@@ -7682,12 +7712,31 @@ function openAccountEdit(id){
     return '<option value="'+escHtml(p)+'"'+(m.part===p?' selected':'')+'>'+escHtml(p)+'</option>';
   }).join('');
   openAccountAction('로그인 계정 수정',
-    '<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="accountEditName" value="'+escHtml(m.name)+'"></div>'
+    '<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="accountEditName" value="'+escHtml(m.name)+'" oninput="syncAccountEditDuplicatePin()"></div>'
     +'<div class="form-group"><label class="form-label">파트</label><select class="form-sel" id="accountEditPart">'+partOptions+'</select></div>'
+    +'<div class="form-group hidden" id="accountEditDuplicatePinWrap"><label class="form-label">동명이인용 새 PIN *</label><input class="form-input" id="accountEditDuplicatePin" type="password" inputmode="numeric" maxlength="4" placeholder="숫자 4자리" autocomplete="new-password"><div class="account-member-count">같은 이름의 다른 계정과 다른 PIN을 입력하세요.</div></div>'
     +'<div class="form-group"><label class="form-label">명부 연결</label>'+accountMemberLinkField('accountEditMemberSearch','accountEditMemberId',m.memberId||'','연결하지 않아도 계정은 정상 사용됩니다')+'</div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountEdit()">저장</button></div>'
   );
   populateAccountMemberSelect('accountEditMemberId',m.memberId||'',(accountLinkMemberMap[m.memberId||'']||{}).name||'');
+}
+
+function accountEditNeedsDuplicatePin(){
+  var m=getAccountActionMember(accountActionId);
+  var nameEl=document.getElementById('accountEditName');
+  if(!m||!nameEl)return false;
+  var oldKey=normalizeAccountLinkName(m.name);
+  var newKey=normalizeAccountLinkName(nameEl.value);
+  if(!newKey||newKey===oldKey)return false;
+  return allMembers.some(function(row){return row.id!==m.id&&normalizeAccountLinkName(row.name)===newKey;});
+}
+
+function syncAccountEditDuplicatePin(){
+  var wrap=document.getElementById('accountEditDuplicatePinWrap');
+  if(!wrap)return;
+  var needsPin=accountEditNeedsDuplicatePin();
+  wrap.classList.toggle('hidden',!needsPin);
+  if(!needsPin){var input=document.getElementById('accountEditDuplicatePin');if(input)input.value='';}
 }
 
 function saveAccountEdit(){
@@ -7697,17 +7746,20 @@ function saveAccountEdit(){
   var newName=document.getElementById('accountEditName').value.trim();
   var newPart=document.getElementById('accountEditPart').value.trim();
   var memberId=(document.getElementById('accountEditMemberId')||{}).value||'';
+  var needsDuplicatePin=accountEditNeedsDuplicatePin();
+  var duplicatePin=needsDuplicatePin?String((document.getElementById('accountEditDuplicatePin')||{}).value||'').trim():'';
   if(!newName||!newPart)return showToast('이름과 파트는 필수입니다');
+  if(needsDuplicatePin&&!/^\d{4}$/.test(duplicatePin))return showToast('동명이인용 새 PIN 4자리를 입력해주세요');
   if(!validateAccountMemberLinkName(newName,memberId))return;
   var linkedAccount=accountMemberLinkConflict(memberId,accountActionId);
   if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
   showToast('저장 중...');
-  accountAdminCall('update',{accountId:accountActionId,mode:'profile',name:newName,part:newPart,memberId:memberId}).then(function(){
+  accountAdminCall('update',{accountId:accountActionId,mode:'profile',name:newName,part:newPart,memberId:memberId,pin:duplicatePin}).then(function(){
     showToast(newName+'님의 정보가 수정되었습니다');
     closeModal('modalAccountAction');
     loadMembers();
     writeLog('계정 수정',m.name+'('+m.part+') ➔ '+newName+'('+newPart+')');
-  }).catch(function(e){console.error(e);showToast('수정 중 오류가 발생했습니다')});
+  }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'수정 중 오류가 발생했습니다'))});
 }
 
 function openAccountRole(id){
@@ -7755,9 +7807,12 @@ function openAccountPin(id){
   if(!canManageAccountPins())return showToast('PIN 변경 권한이 없습니다');
   var m=getAccountActionMember(id);
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
+  var hasSameName=allMembers.some(function(row){
+    return row.id!==m.id&&normalizeAccountLinkName(row.name)===normalizeAccountLinkName(m.name);
+  });
   accountActionId=id;
   openAccountAction('PIN 변경',
-    '<div class="account-action-note">'+escHtml(m.name)+'님의 새 PIN 4자리를 입력하세요.</div>'
+    '<div class="account-action-note">'+escHtml(m.name)+'님의 새 PIN 4자리를 입력하세요.'+(hasSameName?'<br><b>같은 이름의 다른 계정과 다른 PIN을 사용해야 합니다.</b>':'')+'</div>'
     +'<div class="form-group"><label class="form-label">새 PIN</label><input class="form-input" id="accountPinValue" type="password" inputmode="numeric" maxlength="4" placeholder="숫자 4자리" autocomplete="new-password"></div>'
     +'<div class="account-action-actions"><button type="button" class="btn" onclick="closeModal(&quot;modalAccountAction&quot;)">취소</button><button type="button" class="btn btn-p" onclick="saveAccountPin()">저장</button></div>'
   );
@@ -7775,7 +7830,7 @@ function saveAccountPin(){
     closeModal('modalAccountAction');
     loadMembers();
     writeLog('PIN 변경',m.name+'님 PIN 초기화');
-  }).catch(function(e){console.error(e);showToast('PIN 변경 중 오류 발생')});
+  }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'PIN 변경 중 오류가 발생했습니다'))});
 }
 
 function openAccountDelete(id){
