@@ -2723,7 +2723,8 @@ var forceFreshDataOnInit=(function(){
   }catch(e){return false;}
 })();
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
-var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinRevealRequestId=0;
+var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
+var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
 var calViewMode=localStorage.getItem('choir_cal_view')||'default';
 var archiveItems=[];
@@ -3470,7 +3471,8 @@ function isMemberInAttendanceScope(member){
   return allowed.indexOf(member.part)!==-1||allowed.indexOf(member.subPart)!==-1;
 }
 function syncAccessShell(){
-  if(!canRevealAccountPins()&&(accountPinsVisible||accountPinsLoading))clearRevealedAccountPins(true);
+  if(!canRevealAccountPins()&&(accountPinsVisible||accountPinsLoading||accountPinsLoaded||Object.keys(revealedAccountPins).length))clearRevealedAccountPins(true);
+  if(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions()&&(accountMembersLoaded||accountMembersLoadPromise))clearAccountManagementSession(true);
   var body=document.body;
   body.classList.remove('admin-mode','chongmu-mode','songschedule-mode','permission-mode');
   if(adminRole==='admin')body.classList.add('admin-mode');
@@ -3533,7 +3535,7 @@ function switchTab(tab){
     openUserModal();
     return;
   }
-  if(tab!=='admin')clearRevealedAccountPins(true);
+  if(tab!=='admin')hideRevealedAccountPins(true);
   currentTab=tab;
   syncLayoutState();
   ['pageHome','pageSongs','pageScores','pageFavorites','pageCalendar','pageArchive','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
@@ -3608,7 +3610,7 @@ function switchAdminTab(sub,options){
     showToast('관리자만 이용할 수 있습니다.');
     return;
   }
-  if(sub!=='members')clearRevealedAccountPins(true);
+  if(sub!=='members')hideRevealedAccountPins(true);
   document.querySelectorAll('.admin-sub').forEach(function(el){el.classList.add('hidden')});
   document.querySelectorAll('[data-at]').forEach(function(el){el.classList.toggle('on',el.dataset.at===sub)});
   
@@ -4416,7 +4418,7 @@ function loginUser(){
 }
 
 function logoutUser(){
-  clearRevealedAccountPins(true);
+  clearAccountManagementSession(true);
   var userToLogout=currentUser;
   var pushCleanup=removePushSubscription(userToLogout,true).catch(function(error){console.error(error)});
   var pushLogoutWait=Promise.race([pushCleanup,new Promise(function(resolve){setTimeout(resolve,1500)})]);
@@ -7253,7 +7255,35 @@ function clearRevealedAccountPins(rerender){
   revealedAccountPins=Object.create(null);
   accountPinsVisible=false;
   accountPinsLoading=false;
+  accountPinsLoaded=false;
   if(rerender&&hadVisiblePins)renderAccountList();
+}
+
+function clearAccountManagementSession(rerender){
+  accountMembersLoadRequestId++;
+  accountMembersLoadPromise=null;
+  accountMembersLoaded=false;
+  allMembers=[];
+  clearRevealedAccountPins(false);
+  if(rerender)renderAccountList();
+}
+
+function hideRevealedAccountPins(rerender){
+  var wasVisible=accountPinsVisible;
+  accountPinsVisible=false;
+  if(rerender&&wasVisible)renderAccountList();
+}
+
+function showCachedAccountPins(){
+  if(!canRevealAccountPins()||!accountPinsLoaded||!isAccountManagementVisible())return false;
+  accountPinsVisible=true;
+  renderAccountList();
+  return true;
+}
+
+function cacheAccountPin(accountId,pin){
+  if(!canRevealAccountPins()||!accountId||!/^[0-9]{4}$/.test(String(pin||'')))return;
+  revealedAccountPins[accountId]=String(pin);
 }
 
 function isAccountManagementVisible(){
@@ -7262,7 +7292,8 @@ function isAccountManagementVisible(){
 }
 
 function revealAccountPins(){
-  if(!canRevealAccountPins()||!isAccountManagementVisible()||accountPinsLoading||accountPinsVisible)return;
+  if(!canRevealAccountPins()||!isAccountManagementVisible()||accountPinsLoading)return;
+  if(showCachedAccountPins())return;
   var accountIds=allMembers.map(function(m){return m.id;}).filter(Boolean);
   if(!accountIds.length)return;
   var requestId=++accountPinRevealRequestId;
@@ -7271,13 +7302,15 @@ function revealAccountPins(){
   accountAdminCall('revealPins',{accountIds:accountIds}).then(function(result){
     if(requestId!==accountPinRevealRequestId||!canRevealAccountPins())return;
     var pins=result&&result.pins&&typeof result.pins==='object'?result.pins:{};
-    var safePins=Object.create(null);
+    var safePins=Object.assign(Object.create(null),revealedAccountPins);
     accountIds.forEach(function(id){
+      delete safePins[id];
       var pin=String(pins[id]||'');
       if(/^\d{4}$/.test(pin))safePins[id]=pin;
     });
     revealedAccountPins=safePins;
-    accountPinsVisible=true;
+    accountPinsLoaded=true;
+    accountPinsVisible=isAccountManagementVisible();
     var unavailable=Array.isArray(result&&result.unavailable)?result.unavailable.length:accountIds.length-Object.keys(safePins).length;
     renderAccountList();
     if(unavailable)showToast(unavailable+'명은 PIN 재설정이 필요합니다');
@@ -7453,13 +7486,18 @@ function saveBulkAccounts(){
       +'\n명부 자동연결 '+linked+'명'
       +(plan.errors.length?('\n제외되는 줄 '+plan.errors.length+'개가 있습니다.'):'');
     if(!confirm(msg))return;
-    return commitBulkAccountRows(plan.rows).then(function(){
+    return commitBulkAccountRows(plan.rows).then(function(result){
+      var created=Array.isArray(result&&result.accounts)?result.accounts:[];
+      created.forEach(function(account,index){
+        upsertLocalAccount(account);
+        cacheAccountPin(account.id,(plan.rows[index]||{}).pin);
+      });
       showToast('계정 '+plan.rows.length+'명 일괄 등록 완료');
       writeLog('계정 일괄 등록','로그인 계정 '+plan.rows.length+'명 생성 · 명부 자동연결 '+linked+'명');
       var text=document.getElementById('accountBulkText');
       if(text)text.value='';
       renderAccountBulkResult({rows:[],errors:[],total:0});
-      loadMembers();
+      renderCachedAccountManagement();
     });
   }).catch(function(e){
     console.error(e);
@@ -7488,7 +7526,9 @@ function addMember(){
     var linkedAccount=accountMemberLinkConflict(memberId,'');
     if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
 
-    accountAdminCall('create',{name:name,part:part,pin:pin,memberId:memberId}).then(function(){
+    accountAdminCall('create',{name:name,part:part,pin:pin,memberId:memberId}).then(function(result){
+      var created=result&&result.account;
+      if(created){upsertLocalAccount(created);cacheAccountPin(created.id,pin);}
       var msg=name+'님 로그인 계정 생성 완료';
       if(sameNameCount)msg+=' · 동명이인 PIN 자동 구분';
       if(autoLink.status==='matched')msg+=' · 명부 자동 연결';
@@ -7500,8 +7540,7 @@ function addMember(){
       if(document.getElementById('memMemberId'))document.getElementById('memMemberId').value='';
       if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
       populateAccountMemberSelect('memMemberId','','');
-      
-      loadMembers();
+      renderCachedAccountManagement();
       writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
     }).catch(function(e){ console.error(e); showToast(securityErrorMessage(e,'등록 중 오류가 발생했습니다')); });
   }).catch(function(e){
@@ -7561,7 +7600,7 @@ function autoLinkExistingAccounts(){
       });
       showToast('기존 계정 '+plan.matched.length+'명 명부 자동 연결 완료');
       writeLog('계정 명부 자동 연결','기존 미연결 계정 '+plan.matched.length+'명 자동 연결');
-      loadMembers();
+      renderCachedAccountManagement();
     }).catch(function(e){
       console.error(e);
       showToast(securityErrorMessage(e,'자동 연결 중 오류가 발생했습니다'));
@@ -7574,29 +7613,63 @@ function autoLinkExistingAccounts(){
   });
 }
 
-function loadMembers(){
-  if(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions())return;
-  clearRevealedAccountPins(true);
+function accountListItem(id,data){
+  data=data||{};
+  return {id:id||data.id, name:data.name, part:data.part, pinSet:data.pinSet!==false, memberId:data.memberId||'', role:data.role||'', canArchiveUpload:!!data.canArchiveUpload, permissionPreset:data.permissionPreset||'', permissions:normalizePermissionArray(data.permissions), attendanceScope:normalizeAttendanceScopeArray(data.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(data.scoreAccessScope)};
+}
+
+function upsertLocalAccount(account){
+  if(!account||!account.id)return null;
+  var next=accountListItem(account.id,account);
+  var index=allMembers.findIndex(function(item){return item.id===next.id;});
+  if(index<0)allMembers.push(next);
+  else allMembers[index]=next;
+  accountMembersLoaded=true;
+  return next;
+}
+
+function renderCachedAccountManagement(){
+  renderAccountList();
+  if(canRevealAccountPins()&&isAccountManagementVisible()&&!showCachedAccountPins())revealAccountPins();
+}
+
+function loadMembers(force){
+  if(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions())return Promise.resolve([]);
   var createPanel=document.getElementById('accountCreatePanel');
   if(createPanel)createPanel.style.display=canManageLoginAccounts()?'block':'none';
   var autoLinkBtn=document.getElementById('accountAutoLinkBtn');
   if(autoLinkBtn)autoLinkBtn.style.display=canManageLoginAccounts()?'inline-flex':'none';
+  if(accountMembersLoaded&&!force){
+    renderCachedAccountManagement();
+    return Promise.resolve(allMembers);
+  }
+  if(accountMembersLoadPromise)return accountMembersLoadPromise;
+  var requestId=++accountMembersLoadRequestId;
   var linkPromise=(canManageLoginAccounts()||canManageAccountPermissions())?loadAccountLinkMembers():Promise.resolve([]);
-  linkPromise.then(function(){
+  accountMembersLoadPromise=linkPromise.then(function(){
     if(canManageLoginAccounts()){
       var search=document.getElementById('memMemberSearch');
       populateAccountMemberSelect('memMemberId','',search?search.value:'');
     }
     return db.collection('accounts').orderBy('name').get();
   }).then(function(snap){
+    if(requestId!==accountMembersLoadRequestId||(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions()))return [];
     allMembers=[]; var c=document.getElementById('memberList'); if(!c) return;
     snap.forEach(function(doc){
-      var m = doc.data();
-      allMembers.push({id:doc.id, name:m.name, part:m.part, pinSet:m.pinSet!==false, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(m.scoreAccessScope)});
+      allMembers.push(accountListItem(doc.id,doc.data()));
     });
-    renderAccountList();
-    if(canRevealAccountPins()&&isAccountManagementVisible())revealAccountPins();
+    accountMembersLoaded=true;
+    renderCachedAccountManagement();
+    return allMembers;
+  }).catch(function(error){
+    if(requestId!==accountMembersLoadRequestId)return [];
+    console.error(error);
+    showToast('계정 정보를 불러오지 못했습니다');
+    throw error;
+  }).finally(function(){
+    if(requestId===accountMembersLoadRequestId)accountMembersLoadPromise=null;
   });
+  return accountMembersLoadPromise;
 }
 var accountActionId='';
 
@@ -7824,10 +7897,12 @@ function saveAccountEdit(){
   var linkedAccount=accountMemberLinkConflict(memberId,accountActionId);
   if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
   showToast('저장 중...');
-  accountAdminCall('update',{accountId:accountActionId,mode:'profile',name:newName,part:newPart,memberId:memberId,pin:duplicatePin}).then(function(){
+  accountAdminCall('update',{accountId:accountActionId,mode:'profile',name:newName,part:newPart,memberId:memberId,pin:duplicatePin}).then(function(result){
+    if(result&&result.account)upsertLocalAccount(result.account);
+    if(duplicatePin)cacheAccountPin(accountActionId,duplicatePin);
     showToast(newName+'님의 정보가 수정되었습니다');
     closeModal('modalAccountAction');
-    loadMembers();
+    renderCachedAccountManagement();
     writeLog('계정 수정',m.name+'('+m.part+') ➔ '+newName+'('+newPart+')');
   }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'수정 중 오류가 발생했습니다'))});
 }
@@ -7864,11 +7939,12 @@ function saveAccountRole(){
   var role=legacyRoleFromPermissions(permissions,preset);
   var canArchiveUpload=permissions.indexOf('archive.upload')>-1;
   showToast('저장 중...');
-  accountAdminCall('update',{accountId:accountActionId,mode:'permissions',role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,scoreAccessScope:scoreAccessScope}).then(function(){
+  accountAdminCall('update',{accountId:accountActionId,mode:'permissions',role:role,canArchiveUpload:canArchiveUpload,permissionPreset:preset,permissions:permissions,attendanceScope:attendanceScope,scoreAccessScope:scoreAccessScope}).then(function(result){
+    if(result&&result.account)upsertLocalAccount(result.account);
     var label=permissionPresetLabel(preset);
     showToast(m.name+'님 권한: '+label);
     closeModal('modalAccountAction');
-    loadMembers();
+    renderCachedAccountManagement();
     writeLog('권한 변경',m.name+'님 → '+label+'\n권한: '+permissions.map(function(p){return PERMISSION_LABELS[p]||p}).join(', ')+(attendanceScope.length?'\n출결 범위: '+attendanceScope.map(function(s){return s==='S_GROUP'?'S1/S2':s}).join(', '):'')+'\n악보 조회: '+scoreAccessScopeLabel(scoreAccessScope));
   }).catch(function(e){console.error(e);showToast('변경 중 오류 발생')});
 }
@@ -7896,9 +7972,11 @@ function saveAccountPin(){
   if(pin.length!==4)return showToast('PIN은 4자리여야 합니다');
   showToast('저장 중...');
   accountAdminCall('setPin',{accountId:accountActionId,pin:pin}).then(function(){
+    m.pinSet=true;
+    cacheAccountPin(accountActionId,pin);
     showToast('PIN 변경 완료');
     closeModal('modalAccountAction');
-    loadMembers();
+    renderCachedAccountManagement();
     writeLog('PIN 변경',m.name+'님 PIN 초기화');
   }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'PIN 변경 중 오류가 발생했습니다'))});
 }
@@ -7919,9 +7997,11 @@ function confirmAccountDelete(){
   if(!m)return showToast('계정 정보를 찾을 수 없습니다');
   showToast('삭제 중...');
   accountAdminCall('delete',{accountId:accountActionId}).then(function(){
+    allMembers=allMembers.filter(function(item){return item.id!==accountActionId;});
+    delete revealedAccountPins[accountActionId];
     showToast('삭제되었습니다');
     closeModal('modalAccountAction');
-    loadMembers();
+    renderCachedAccountManagement();
     writeLog('계정 삭제',m.name+'님 계정 삭제됨');
   }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
 }

@@ -35,6 +35,7 @@ const ACCOUNT_PIN_ENCRYPTION_KEY = defineSecret("ACCOUNT_PIN_ENCRYPTION_KEY");
 const WEB_PUSH_SUBJECT = "mailto:twd412412@gmail.com";
 const APP_URL = "https://twd412412-ux.github.io/260410choir_program/";
 const ACCOUNT_PIN_CIPHER_VERSION = "aes-256-gcm-v1";
+const ACCOUNT_PIN_DIRECTORY_ID = "account-pin-directory";
 const ALLOWED_SCORE_SCOPES = new Set(["default", "all", "singer", "orchestra", "none"]);
 const ALLOWED_PERMISSIONS = new Set([
   "song.manage", "song.editAny", "score.manage", "score.editAny",
@@ -120,6 +121,7 @@ function safeProfile(id, account) {
     id,
     name: cleanString(account.name, 60),
     part: cleanString(account.part, 30),
+    pinSet: account.pinSet !== false,
     memberId: cleanString(account.memberId, 80),
     role: cleanString(account.role, 30),
     canArchiveUpload: Boolean(account.canArchiveUpload),
@@ -240,6 +242,44 @@ function decryptAccountPin(accountId, secret) {
 async function buildAccountPinSecret(accountId, pin) {
   const hashed = await hashPassword(pin);
   return Object.assign({kind: "account", accountId}, hashed, encryptAccountPin(accountId, pin));
+}
+
+function accountPinDirectoryRef() {
+  return db.collection("authSecrets").doc(ACCOUNT_PIN_DIRECTORY_ID);
+}
+
+function accountPinDirectoryEntry(secret) {
+  return {
+    pinCipherVersion: cleanString(secret && secret.pinCipherVersion, 40),
+    pinCiphertext: cleanString(secret && secret.pinCiphertext, 100),
+    pinCipherIv: cleanString(secret && secret.pinCipherIv, 100),
+    pinCipherTag: cleanString(secret && secret.pinCipherTag, 100),
+    pinEncryptedAt: cleanString(secret && secret.pinEncryptedAt, 60),
+  };
+}
+
+function setAccountPinDirectoryEntries(batch, secretsByAccountId) {
+  const pins = {};
+  Object.keys(secretsByAccountId || {}).forEach((accountId) => {
+    if (!isValidDocumentId(accountId)) return;
+    pins[accountId] = accountPinDirectoryEntry(secretsByAccountId[accountId]);
+  });
+  if (!Object.keys(pins).length) return;
+  batch.set(accountPinDirectoryRef(), {
+    kind: "account-pin-directory",
+    pins,
+    updatedAt: nowIso(),
+  }, {merge: true});
+}
+
+function deleteAccountPinDirectoryEntry(batch, accountId) {
+  const pins = {};
+  pins[accountId] = FieldValue.delete();
+  batch.set(accountPinDirectoryRef(), {
+    kind: "account-pin-directory",
+    pins,
+    updatedAt: nowIso(),
+  }, {merge: true});
 }
 
 async function ensureAuthUser(uid, displayName) {
@@ -414,6 +454,7 @@ async function loginWithPin(request) {
     const hashed = await buildAccountPinSecret(accountDoc.id, pin);
     const batch = db.batch();
     batch.set(secretInfo.ref, hashed);
+    setAccountPinDirectoryEntries(batch, {[accountDoc.id]: hashed});
     batch.update(accountDoc.ref, {pin: FieldValue.delete(), pinSet: true, nameKey: found.nameKey, securityMigratedAt: nowIso()});
     await batch.commit();
   } else if (account.nameKey !== found.nameKey || account.pin) {
@@ -559,6 +600,7 @@ async function adminCreateAccount(request) {
   const batch = db.batch();
   batch.set(ref, data);
   batch.set(db.collection("authSecrets").doc(ref.id), secret);
+  setAccountPinDirectoryEntries(batch, {[ref.id]: secret});
   await batch.commit();
   return {account: safeProfile(ref.id, data)};
 }
@@ -798,13 +840,16 @@ async function adminBulkCreateAccounts(request) {
     existingByName.get(item.data.nameKey) || [],
   ));
   const secrets = await mapLimit(prepared, 4, async (item) => buildAccountPinSecret(item.ref.id, item.pin));
-  for (let start = 0; start < prepared.length; start += 400) {
+  for (let start = 0; start < prepared.length; start += 200) {
     const batch = db.batch();
-    prepared.slice(start, start + 400).forEach((item, offset) => {
+    const directorySecrets = {};
+    prepared.slice(start, start + 200).forEach((item, offset) => {
       const secret = secrets[start + offset];
       batch.set(item.ref, item.data);
       batch.set(db.collection("authSecrets").doc(item.ref.id), secret);
+      directorySecrets[item.ref.id] = secret;
     });
+    setAccountPinDirectoryEntries(batch, directorySecrets);
     await batch.commit();
   }
   return {created: prepared.length, accounts: prepared.map((item) => safeProfile(item.ref.id, item.data))};
@@ -859,6 +904,7 @@ async function adminUpdateAccount(request) {
     const batch = db.batch();
     batch.update(ref, update);
     batch.set(db.collection("authSecrets").doc(accountId), replacementPinSecret);
+    setAccountPinDirectoryEntries(batch, {[accountId]: replacementPinSecret});
     await batch.commit();
     try { await auth.revokeRefreshTokens(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
   } else {
@@ -941,6 +987,7 @@ async function adminSetAccountPin(request) {
   const secret = await buildAccountPinSecret(accountId, pin);
   const batch = db.batch();
   batch.set(db.collection("authSecrets").doc(accountId), secret);
+  setAccountPinDirectoryEntries(batch, {[accountId]: secret});
   batch.update(accountRef, {pin: FieldValue.delete(), pinSet: true, pinUpdatedAt: nowIso()});
   await batch.commit();
   try { await auth.revokeRefreshTokens(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
@@ -954,6 +1001,7 @@ async function adminDeleteAccount(request) {
   const batch = db.batch();
   batch.delete(db.collection("accounts").doc(accountId));
   batch.delete(db.collection("authSecrets").doc(accountId));
+  deleteAccountPinDirectoryEntry(batch, accountId);
   await batch.commit();
   try { await auth.deleteUser(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
   return {ok: true};
@@ -969,16 +1017,54 @@ async function adminRevealAccountPins(request) {
     if (!accountIds.includes(id)) accountIds.push(id);
   });
   if (!accountIds.length) return {pins: {}, unavailable: []};
-  const snaps = await db.getAll(...accountIds.map((id) => db.collection("authSecrets").doc(id)));
+  const directorySnap = await accountPinDirectoryRef().get();
+  const directoryData = directorySnap.exists ? directorySnap.data() || {} : {};
+  const directoryPins = directoryData.pins && typeof directoryData.pins === "object" ? directoryData.pins : {};
   const pins = {};
   const unavailable = [];
-  snaps.forEach((snap, index) => {
-    const accountId = accountIds[index];
-    const pin = snap.exists ? decryptAccountPin(accountId, snap.data() || {}) : "";
+  const fallbackIds = [];
+  accountIds.forEach((accountId) => {
+    const entry = directoryPins[accountId];
+    if (entry && entry.unavailable === true) {
+      unavailable.push(accountId);
+      return;
+    }
+    const pin = decryptAccountPin(accountId, entry || {});
     if (pin) pins[accountId] = pin;
-    else unavailable.push(accountId);
+    else fallbackIds.push(accountId);
   });
-  return {pins, unavailable};
+  const repairedEntries = {};
+  if (fallbackIds.length) {
+    const snaps = await db.getAll(...fallbackIds.map((id) => db.collection("authSecrets").doc(id)));
+    snaps.forEach((snap, index) => {
+      const accountId = fallbackIds[index];
+      const secret = snap.exists ? snap.data() || {} : {};
+      const pin = decryptAccountPin(accountId, secret);
+      if (pin) {
+        pins[accountId] = pin;
+        repairedEntries[accountId] = secret;
+      } else {
+        unavailable.push(accountId);
+      }
+    });
+    const directoryPatch = {};
+    Object.keys(repairedEntries).forEach((accountId) => {
+      directoryPatch[accountId] = accountPinDirectoryEntry(repairedEntries[accountId]);
+    });
+    fallbackIds.forEach((accountId) => {
+      if (!directoryPatch[accountId]) directoryPatch[accountId] = {unavailable: true, checkedAt: nowIso()};
+    });
+    await accountPinDirectoryRef().set({
+      kind: "account-pin-directory",
+      pins: directoryPatch,
+      updatedAt: nowIso(),
+    }, {merge: true});
+  }
+  return {
+    pins,
+    unavailable,
+    diagnostics: {directoryReads: 1, fallbackReads: fallbackIds.length, repaired: Object.keys(repairedEntries).length},
+  };
 }
 
 async function bootstrapSecurity(request) {
@@ -996,15 +1082,18 @@ async function bootstrapSecurity(request) {
     }
     const secret = pin ? await buildAccountPinSecret(doc.id, pin) : null;
     if (pin) migrated++;
-    return {doc, data, secret, hasSecret: secretSnap.exists || Boolean(secret)};
+    return {doc, data, secret, directorySecret: secret || (secretSnap.exists ? secretSnap.data() || {} : null), hasSecret: secretSnap.exists || Boolean(secret)};
   });
-  for (let start = 0; start < prepared.length; start += 300) {
+  for (let start = 0; start < prepared.length; start += 200) {
     const batch = db.batch();
-    prepared.slice(start, start + 300).forEach((item) => {
+    const directorySecrets = {};
+    prepared.slice(start, start + 200).forEach((item) => {
       const update = {nameKey: normalizeName(item.data.name), pin: FieldValue.delete(), pinSet: Boolean(item.hasSecret || item.data.pinSet), securityMigratedAt: nowIso()};
       batch.update(item.doc.ref, update);
       if (item.secret) batch.set(db.collection("authSecrets").doc(item.doc.id), item.secret);
+      if (item.directorySecret) directorySecrets[item.doc.id] = item.directorySecret;
     });
+    setAccountPinDirectoryEntries(batch, directorySecrets);
     await batch.commit();
   }
   const adminSettings = await db.collection("settings").doc("admin").get();
