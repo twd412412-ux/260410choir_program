@@ -1532,8 +1532,10 @@ body{font-weight:500}
 .feature-update-summary-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--feature-soft);color:var(--feature-accent);font-size:19px;line-height:1}
 .feature-update-summary-icon .score-new-badge{font-size:8px;padding:3px 4px}
 .feature-update-summary-copy{min-width:0}
-.feature-update-summary-copy b{display:block;font-size:14px;font-weight:900;color:var(--tx);line-height:1.35;word-break:keep-all}
+.feature-update-summary-copy b{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:900;color:var(--tx);line-height:1.35;word-break:keep-all}
 .feature-update-summary-copy span{display:block;margin-top:2px;font-size:11px;font-weight:650;color:var(--ts);line-height:1.4;word-break:keep-all}
+.feature-recommend-badge{flex:0 0 auto;margin-left:auto;border:1px solid #D8B875;border-radius:999px;background:#F8E9C9;color:#855711;padding:3px 6px;font-size:9px;font-weight:900;font-style:normal;line-height:1;white-space:nowrap}
+.dark .feature-recommend-badge{border-color:#8B6D35;background:#46371F;color:#F1CE88}
 .feature-update-chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--ts);font-size:20px;font-weight:500;line-height:1}
 .feature-update-chevron::before{content:'+'}
 .feature-update-item[open] .feature-update-chevron::before{content:'−'}
@@ -2533,7 +2535,7 @@ body{font-weight:500}
         </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭 열기</button></div>
       </details>
       <details class="feature-update-item feature-alert" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 알림</b><span>원하는 변경 소식만 선택해 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 알림 <em class="feature-recommend-badge">강추</em></b><span>원하는 변경 소식만 선택해 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
           <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인</b><span>로그인 후 홈에서 알림을 설정할 수 있습니다.</span></div></div>
           <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>알림 허용</b><span>아이폰은 홈 화면에 추가한 뒤 기기 알림을 허용하세요.</span></div></div>
