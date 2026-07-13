@@ -1718,7 +1718,7 @@ body{font-weight:500}
 <div id="pageScores" class="hidden">
   <div class="score-top">
     <h2>📄 악보</h2>
-    <p>공개된 최신 악보만 표시됩니다. PDF는 열기 버튼을 눌렀을 때만 불러옵니다.</p>
+    <p>공개된 최신 악보만 표시됩니다. PDF는 보기 버튼을 눌렀을 때만 불러옵니다.</p>
   </div>
   <div class="score-mode-tabs" id="scoreModeTabs"></div>
   <div class="search-section">
@@ -2357,7 +2357,7 @@ body{font-weight:500}
 <!-- MODAL: 악보 선택 -->
 <div class="modal-overlay modal-center" id="modalScorePicker">
   <div class="modal-content">
-    <div class="modal-header"><span class="modal-title" id="scorePickerTitle">📄 악보 보기</span><button class="modal-close" onclick="closeModal('modalScorePicker')">✕</button></div>
+    <div class="modal-header"><span class="modal-title" id="scorePickerTitle">📄 악보</span><button class="modal-close" onclick="closeModal('modalScorePicker')">✕</button></div>
     <div id="scorePickerBody"></div>
   </div>
 </div>
@@ -5613,7 +5613,7 @@ function renderScoreMeta(score){
 function renderScoreCard(score, adminMode){
   var status=adminMode
     ? '<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>'
-    : '<div class="score-status-stack"><button class="score-action-btn open" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기'+renderScoreNewBadge(score)+'</button>'+renderScoreVersionBadge(score)+'</div>';
+    : '<div class="score-status-stack"><button class="score-action-btn open" onclick="event.stopPropagation();openScoreFileById(\''+escAttr(score.id)+'\')">📄 보기'+renderScoreNewBadge(score)+'</button>'+renderScoreVersionBadge(score)+'</div>';
   var meta=renderScoreMeta(score);
   var linkedSummary=scoreLinkedSummary(score);
   var canEdit=canEditScoreItem(score);
@@ -5624,7 +5624,7 @@ function renderScoreCard(score, adminMode){
     ? '<div class="score-admin-actions">'
       +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">수정</button>':'<button class="score-light-btn" disabled style="opacity:.55;cursor:not-allowed">수정 권한 없음</button>')
       +(canEdit?'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>':'')
-      +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기</button>'
+      +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 보기</button>'
       +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
       +'</div>'
     : '';
@@ -5637,7 +5637,7 @@ function renderScoreCard(score, adminMode){
 function renderScoreActionForSong(song, activeOnly){
   var rows=activeOnly?getActiveModeScoresForSong(song):findVisibleScoresForSong(song);
   if(rows.length){
-    var label=rows.length>1?'📄 악보 '+rows.length+'개':'📄 악보 보기';
+    var label=rows.length>1?'📄 악보 '+rows.length+'개':'📄 보기';
     return '<button class="score-action-btn open" onclick="openScorePickerForSong(\''+escAttr(song.id)+'\','+(activeOnly?'true':'false')+')">'+label+renderScoreRowsNewBadge(rows)+'</button>';
   }
   return canManageScores()
@@ -5829,7 +5829,7 @@ function renderSongScoreDetail(song){
   var scores=findVisibleScoresForSong(song);
   if(scores.length){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div>'
-      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(song.songName||scores[0].title||'악보')+'</div><div class="score-meta"><span>연결 악보 '+scores.length+'개</span></div></div><div class="score-status-stack"><button class="score-action-btn open" onclick="openScorePickerForSong(\''+escAttr(song.id)+'\',false)">📄 악보 보기'+renderScoreRowsNewBadge(scores)+'</button></div></div></div></div>';
+      +'<div class="score-card" style="margin:0;box-shadow:none"><div class="score-title-row"><div><div class="score-title">'+escHtml(song.songName||scores[0].title||'악보')+'</div><div class="score-meta"><span>연결 악보 '+scores.length+'개</span></div></div><div class="score-status-stack"><button class="score-action-btn open" onclick="openScorePickerForSong(\''+escAttr(song.id)+'\',false)">📄 보기'+renderScoreRowsNewBadge(scores)+'</button></div></div></div></div>';
   }
   if(canManageScores()){
     return '<div class="score-song-link"><div class="score-song-link-title">📄 연결된 악보</div><button class="score-light-btn" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">이 곡 악보 등록</button></div>';
@@ -9488,7 +9488,7 @@ function renderScheduleScoreSection(schedule,allowLoad){
     if(score)meta.push(normalizeScoreKind(score.scoreKind)==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(score.scoreKind));
     if(score&&score.currentLabel)meta.push(score.currentLabel);
     var action=score
-      ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 악보 보기'+renderScoreNewBadge(score)+'</button>'
+      ? '<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">📄 보기'+renderScoreNewBadge(score)+'</button>'
       : canManageScores()
         ? '<button class="score-action-btn add" onclick="closeModal(\'modalSchDetail\');openQuickScoreManage(\''+escAttr(name)+'\',\''+escAttr(song&&song.id||'')+'\')">＋ 악보 등록</button>'
         : '<button class="score-action-btn empty" disabled>악보 없음</button>';
