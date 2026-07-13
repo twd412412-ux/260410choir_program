@@ -115,7 +115,6 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-list-tools .form-input{flex:1 1 210px}
 .account-auto-link-btn{flex:0 0 auto;background:var(--pl);color:var(--pd);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .account-auto-link-btn:disabled{opacity:.55;cursor:not-allowed}
-.account-pin-reveal-btn.on{background:#4F623A;border-color:#4F623A;color:#fff}
 .account-pin-visible{color:#3F572D;font-weight:950;letter-spacing:0}
 .account-pin-unavailable{color:#A9443B;font-weight:900}
 .account-link-summary{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px}
@@ -2174,7 +2173,7 @@ body{font-weight:500}
       </details>
     </div>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
-    <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="계정 이름/파트/연결 검색" oninput="renderAccountList()"><button type="button" class="account-auto-link-btn" id="accountAutoLinkBtn" onclick="autoLinkExistingAccounts()">기존 미연결 자동 연결</button><button type="button" class="account-auto-link-btn account-pin-reveal-btn hidden" id="accountPinRevealBtn" onclick="toggleAccountPins()" title="관리자 전용 PIN 표시">PIN 표시</button></div>
+    <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="계정 이름/파트/연결 검색" oninput="renderAccountList()"><button type="button" class="account-auto-link-btn" id="accountAutoLinkBtn" onclick="autoLinkExistingAccounts()">기존 미연결 자동 연결</button></div>
     <div class="account-link-summary" id="accountLinkSummary"></div>
     <div id="memberList"></div>
   </div>
@@ -3549,7 +3548,6 @@ function switchTab(tab){
   if(tab==='stats')renderStats();
   syncQuickCreateActions();
   if(tab==='admin'){
-    if(canManageLoginAccounts()||canManageAccountPins()||canManageAccountPermissions())loadMembers();
     if(adminRole==='admin')loadLogs();
     if(canManageSchedules())loadSchAdmin();
     updateAdminTabs();showFirstAdminTab();
@@ -3633,6 +3631,7 @@ function switchAdminTab(sub,options){
   if(sub === 'seatingPlan') initSeatingPlanTool();
   if(sub === 'schedule') ensureScheduleDefaultDate();
   if(sub === 'attendance'){ensureAttDate();loadAttendance()}
+  if(sub === 'members') loadMembers();
 }
 function updateAdminTabs(){
   var tabs=document.getElementById('adminTabRow'); if(!tabs) return;
@@ -7184,7 +7183,6 @@ function renderAccountLinkSummary(list){
 function renderAccountList(){
   var c=document.getElementById('memberList');
   if(!c)return;
-  syncAccountPinRevealButton();
   var summaryBox=document.getElementById('accountLinkSummary');
   if(allMembers.length===0){
     if(summaryBox)summaryBox.innerHTML='';
@@ -7217,7 +7215,9 @@ function renderAccountList(){
     }
     var roleBadge=renderAccountPermissionBadges(m);
     var pinMetaHtml='';
-    if(accountPinsVisible&&canRevealAccountPins()){
+    if(accountPinsLoading&&canRevealAccountPins()){
+      pinMetaHtml='<span>PIN 확인 중...</span>';
+    }else if(accountPinsVisible&&canRevealAccountPins()){
       var visiblePin=Object.prototype.hasOwnProperty.call(revealedAccountPins,m.id)?revealedAccountPins[m.id]:'';
       pinMetaHtml=visiblePin
         ?'<span class="account-pin-visible">PIN: '+escHtml(visiblePin)+'</span>'
@@ -7247,38 +7247,27 @@ function renderAccountList(){
   }).join('');
 }
 
-function syncAccountPinRevealButton(){
-  var btn=document.getElementById('accountPinRevealBtn');
-  if(!btn)return;
-  var allowed=canRevealAccountPins();
-  btn.classList.toggle('hidden',!allowed);
-  btn.classList.toggle('on',allowed&&accountPinsVisible);
-  btn.disabled=accountPinsLoading;
-  btn.textContent=accountPinsLoading?'PIN 확인 중...':(accountPinsVisible?'PIN 숨김':'PIN 표시');
-}
-
 function clearRevealedAccountPins(rerender){
-  var hadVisiblePins=accountPinsVisible||Object.keys(revealedAccountPins).length>0;
+  var hadVisiblePins=accountPinsVisible||accountPinsLoading||Object.keys(revealedAccountPins).length>0;
   accountPinRevealRequestId++;
   revealedAccountPins=Object.create(null);
   accountPinsVisible=false;
   accountPinsLoading=false;
-  syncAccountPinRevealButton();
   if(rerender&&hadVisiblePins)renderAccountList();
 }
 
-function toggleAccountPins(){
-  if(!canRevealAccountPins())return showToast('관리자만 PIN을 확인할 수 있습니다');
-  if(accountPinsLoading)return;
-  if(accountPinsVisible){
-    clearRevealedAccountPins(true);
-    return;
-  }
+function isAccountManagementVisible(){
+  var panel=document.getElementById('subMembers');
+  return currentTab==='admin'&&panel&&!panel.classList.contains('hidden');
+}
+
+function revealAccountPins(){
+  if(!canRevealAccountPins()||!isAccountManagementVisible()||accountPinsLoading||accountPinsVisible)return;
   var accountIds=allMembers.map(function(m){return m.id;}).filter(Boolean);
-  if(!accountIds.length)return showToast('표시할 계정이 없습니다');
+  if(!accountIds.length)return;
   var requestId=++accountPinRevealRequestId;
   accountPinsLoading=true;
-  syncAccountPinRevealButton();
+  renderAccountList();
   accountAdminCall('revealPins',{accountIds:accountIds}).then(function(result){
     if(requestId!==accountPinRevealRequestId||!canRevealAccountPins())return;
     var pins=result&&result.pins&&typeof result.pins==='object'?result.pins:{};
@@ -7291,7 +7280,7 @@ function toggleAccountPins(){
     accountPinsVisible=true;
     var unavailable=Array.isArray(result&&result.unavailable)?result.unavailable.length:accountIds.length-Object.keys(safePins).length;
     renderAccountList();
-    showToast(unavailable?'PIN 표시 완료 · '+unavailable+'명은 재설정 필요':'PIN 표시 완료');
+    if(unavailable)showToast(unavailable+'명은 PIN 재설정이 필요합니다');
   }).catch(function(error){
     if(requestId!==accountPinRevealRequestId)return;
     console.error(error);
@@ -7300,7 +7289,7 @@ function toggleAccountPins(){
   }).finally(function(){
     if(requestId!==accountPinRevealRequestId)return;
     accountPinsLoading=false;
-    syncAccountPinRevealButton();
+    renderAccountList();
   });
 }
 
@@ -7592,7 +7581,6 @@ function loadMembers(){
   if(createPanel)createPanel.style.display=canManageLoginAccounts()?'block':'none';
   var autoLinkBtn=document.getElementById('accountAutoLinkBtn');
   if(autoLinkBtn)autoLinkBtn.style.display=canManageLoginAccounts()?'inline-flex':'none';
-  syncAccountPinRevealButton();
   var linkPromise=(canManageLoginAccounts()||canManageAccountPermissions())?loadAccountLinkMembers():Promise.resolve([]);
   linkPromise.then(function(){
     if(canManageLoginAccounts()){
@@ -7607,6 +7595,7 @@ function loadMembers(){
       allMembers.push({id:doc.id, name:m.name, part:m.part, pinSet:m.pinSet!==false, memberId:m.memberId||'', role:m.role||'', canArchiveUpload: !!m.canArchiveUpload, permissionPreset:m.permissionPreset||'', permissions:normalizePermissionArray(m.permissions), attendanceScope:normalizeAttendanceScopeArray(m.attendanceScope||[]), scoreAccessScope:normalizeScoreAccessScope(m.scoreAccessScope)});
     });
     renderAccountList();
+    if(canRevealAccountPins()&&isAccountManagementVisible())revealAccountPins();
   });
 }
 var accountActionId='';
