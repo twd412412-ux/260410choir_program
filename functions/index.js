@@ -31,8 +31,10 @@ const SONG_INDEX_SHARDS = 16;
 const MAX_SAME_NAME_ACCOUNTS = 12;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
+const ACCOUNT_PIN_ENCRYPTION_KEY = defineSecret("ACCOUNT_PIN_ENCRYPTION_KEY");
 const WEB_PUSH_SUBJECT = "mailto:twd412412@gmail.com";
 const APP_URL = "https://twd412412-ux.github.io/260410choir_program/";
+const ACCOUNT_PIN_CIPHER_VERSION = "aes-256-gcm-v1";
 const ALLOWED_SCORE_SCOPES = new Set(["default", "all", "singer", "orchestra", "none"]);
 const ALLOWED_PERMISSIONS = new Set([
   "song.manage", "song.editAny", "score.manage", "score.editAny",
@@ -190,6 +192,56 @@ async function verifyPassword(password, secret) {
   return false;
 }
 
+function accountPinEncryptionKey() {
+  const key = Buffer.from(cleanString(ACCOUNT_PIN_ENCRYPTION_KEY.value(), 200), "base64");
+  if (key.length !== 32) throw new Error("account_pin_encryption_key_invalid");
+  return key;
+}
+
+function accountPinCipherAad(accountId) {
+  return Buffer.from("account-pin:" + accountId + ":" + ACCOUNT_PIN_CIPHER_VERSION, "utf8");
+}
+
+function encryptAccountPin(accountId, pin) {
+  if (!isValidDocumentId(accountId) || !ACCOUNT_PIN_PATTERN.test(pin)) throw new Error("account_pin_encrypt_input_invalid");
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", accountPinEncryptionKey(), iv);
+  cipher.setAAD(accountPinCipherAad(accountId));
+  const encrypted = Buffer.concat([cipher.update(pin, "utf8"), cipher.final()]);
+  return {
+    pinCipherVersion: ACCOUNT_PIN_CIPHER_VERSION,
+    pinCiphertext: encrypted.toString("base64"),
+    pinCipherIv: iv.toString("base64"),
+    pinCipherTag: cipher.getAuthTag().toString("base64"),
+    pinEncryptedAt: nowIso(),
+  };
+}
+
+function decryptAccountPin(accountId, secret) {
+  if (!secret || secret.pinCipherVersion !== ACCOUNT_PIN_CIPHER_VERSION) return "";
+  try {
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      accountPinEncryptionKey(),
+      Buffer.from(cleanString(secret.pinCipherIv, 100), "base64"),
+    );
+    decipher.setAAD(accountPinCipherAad(accountId));
+    decipher.setAuthTag(Buffer.from(cleanString(secret.pinCipherTag, 100), "base64"));
+    const pin = Buffer.concat([
+      decipher.update(Buffer.from(cleanString(secret.pinCiphertext, 100), "base64")),
+      decipher.final(),
+    ]).toString("utf8");
+    return ACCOUNT_PIN_PATTERN.test(pin) ? pin : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+async function buildAccountPinSecret(accountId, pin) {
+  const hashed = await hashPassword(pin);
+  return Object.assign({kind: "account", accountId}, hashed, encryptAccountPin(accountId, pin));
+}
+
 async function ensureAuthUser(uid, displayName) {
   try {
     return await auth.getUser(uid);
@@ -332,7 +384,7 @@ async function replacementPinForNameChange(oldNameKey, newNameKey, accountId, pi
     throw new HttpsError("invalid-argument", "동명이인 이름으로 변경할 때는 새 PIN 4자리가 필요합니다.");
   }
   await assertPinAvailableForName(newNameKey, pin, accountId, duplicates);
-  return hashPassword(pin);
+  return buildAccountPinSecret(accountId, pin);
 }
 
 async function loginWithPin(request) {
@@ -359,9 +411,9 @@ async function loginWithPin(request) {
   const account = accountDoc.data() || {};
   const secretInfo = matched[0].secretInfo;
   if (!secretInfo.secret) {
-    const hashed = await hashPassword(pin);
+    const hashed = await buildAccountPinSecret(accountDoc.id, pin);
     const batch = db.batch();
-    batch.set(secretInfo.ref, Object.assign({kind: "account", accountId: accountDoc.id}, hashed));
+    batch.set(secretInfo.ref, hashed);
     batch.update(accountDoc.ref, {pin: FieldValue.delete(), pinSet: true, nameKey: found.nameKey, securityMigratedAt: nowIso()});
     await batch.commit();
   } else if (account.nameKey !== found.nameKey || account.pin) {
@@ -503,10 +555,10 @@ async function adminCreateAccount(request) {
     assertMemberLinkValid(data.memberId, data.name, ""),
   ]);
   const ref = db.collection("accounts").doc();
-  const secret = await hashPassword(pin);
+  const secret = await buildAccountPinSecret(ref.id, pin);
   const batch = db.batch();
   batch.set(ref, data);
-  batch.set(db.collection("authSecrets").doc(ref.id), Object.assign({kind: "account", accountId: ref.id}, secret));
+  batch.set(db.collection("authSecrets").doc(ref.id), secret);
   await batch.commit();
   return {account: safeProfile(ref.id, data)};
 }
@@ -745,13 +797,13 @@ async function adminBulkCreateAccounts(request) {
     "",
     existingByName.get(item.data.nameKey) || [],
   ));
-  const secrets = await mapLimit(prepared, 4, async (item) => hashPassword(item.pin));
+  const secrets = await mapLimit(prepared, 4, async (item) => buildAccountPinSecret(item.ref.id, item.pin));
   for (let start = 0; start < prepared.length; start += 400) {
     const batch = db.batch();
     prepared.slice(start, start + 400).forEach((item, offset) => {
       const secret = secrets[start + offset];
       batch.set(item.ref, item.data);
-      batch.set(db.collection("authSecrets").doc(item.ref.id), Object.assign({kind: "account", accountId: item.ref.id}, secret));
+      batch.set(db.collection("authSecrets").doc(item.ref.id), secret);
     });
     await batch.commit();
   }
@@ -806,7 +858,7 @@ async function adminUpdateAccount(request) {
   if (replacementPinSecret) {
     const batch = db.batch();
     batch.update(ref, update);
-    batch.set(db.collection("authSecrets").doc(accountId), Object.assign({kind: "account", accountId}, replacementPinSecret));
+    batch.set(db.collection("authSecrets").doc(accountId), replacementPinSecret);
     await batch.commit();
     try { await auth.revokeRefreshTokens(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
   } else {
@@ -886,9 +938,9 @@ async function adminSetAccountPin(request) {
   if (!accountSnap.exists) throw new HttpsError("not-found", "계정을 찾을 수 없습니다.");
   const account = accountSnap.data() || {};
   await assertPinAvailableForName(normalizeName(account.name), pin, accountId);
-  const secret = await hashPassword(pin);
+  const secret = await buildAccountPinSecret(accountId, pin);
   const batch = db.batch();
-  batch.set(db.collection("authSecrets").doc(accountId), Object.assign({kind: "account", accountId}, secret));
+  batch.set(db.collection("authSecrets").doc(accountId), secret);
   batch.update(accountRef, {pin: FieldValue.delete(), pinSet: true, pinUpdatedAt: nowIso()});
   await batch.commit();
   try { await auth.revokeRefreshTokens(accountId); } catch (error) { if (!error || error.code !== "auth/user-not-found") throw error; }
@@ -907,6 +959,28 @@ async function adminDeleteAccount(request) {
   return {ok: true};
 }
 
+async function adminRevealAccountPins(request) {
+  requireAdmin(request);
+  const rawIds = Array.isArray(request.data && request.data.accountIds) ? request.data.accountIds.slice(0, 250) : [];
+  const accountIds = [];
+  rawIds.forEach((value) => {
+    const id = cleanString(value, 80);
+    if (!isValidDocumentId(id)) throw new HttpsError("invalid-argument", "계정 정보가 올바르지 않습니다.");
+    if (!accountIds.includes(id)) accountIds.push(id);
+  });
+  if (!accountIds.length) return {pins: {}, unavailable: []};
+  const snaps = await db.getAll(...accountIds.map((id) => db.collection("authSecrets").doc(id)));
+  const pins = {};
+  const unavailable = [];
+  snaps.forEach((snap, index) => {
+    const accountId = accountIds[index];
+    const pin = snap.exists ? decryptAccountPin(accountId, snap.data() || {}) : "";
+    if (pin) pins[accountId] = pin;
+    else unavailable.push(accountId);
+  });
+  return {pins, unavailable};
+}
+
 async function bootstrapSecurity(request) {
   requireAdmin(request);
   const accountSnap = await db.collection("accounts").get();
@@ -920,7 +994,7 @@ async function bootstrapSecurity(request) {
       missingPin++;
       return {doc, data, secret: null, hasSecret: false};
     }
-    const secret = pin ? await hashPassword(pin) : null;
+    const secret = pin ? await buildAccountPinSecret(doc.id, pin) : null;
     if (pin) migrated++;
     return {doc, data, secret, hasSecret: secretSnap.exists || Boolean(secret)};
   });
@@ -929,7 +1003,7 @@ async function bootstrapSecurity(request) {
     prepared.slice(start, start + 300).forEach((item) => {
       const update = {nameKey: normalizeName(item.data.name), pin: FieldValue.delete(), pinSet: Boolean(item.hasSecret || item.data.pinSet), securityMigratedAt: nowIso()};
       batch.update(item.doc.ref, update);
-      if (item.secret) batch.set(db.collection("authSecrets").doc(item.doc.id), Object.assign({kind: "account", accountId: item.doc.id}, item.secret));
+      if (item.secret) batch.set(db.collection("authSecrets").doc(item.doc.id), item.secret);
     });
     await batch.commit();
   }
@@ -1024,7 +1098,7 @@ async function rebuildSongIndex(request) {
   };
 }
 
-exports.authGateway = onCall(async (request) => {
+exports.authGateway = onCall({secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "loginWithPin") return loginWithPin(request);
   if (action === "loginLegacyRole") return loginLegacyRole(request);
@@ -1033,18 +1107,19 @@ exports.authGateway = onCall(async (request) => {
   throw new HttpsError("invalid-argument", "지원하지 않는 인증 요청입니다.");
 });
 
-exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB"}, async (request) => {
+exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "create") return adminCreateAccount(request);
   if (action === "bulkCreate") return adminBulkCreateAccounts(request);
   if (action === "update") return adminUpdateAccount(request);
   if (action === "bulkLink") return adminBulkLinkAccounts(request);
   if (action === "setPin") return adminSetAccountPin(request);
+  if (action === "revealPins") return adminRevealAccountPins(request);
   if (action === "delete") return adminDeleteAccount(request);
   throw new HttpsError("invalid-argument", "지원하지 않는 계정 관리 요청입니다.");
 });
 
-exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB"}, async (request) => {
+exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "bootstrap") return bootstrapSecurity(request);
   if (action === "secureScores") return secureScoreFiles(request);
