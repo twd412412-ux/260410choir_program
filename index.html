@@ -1500,24 +1500,18 @@ body{font-weight:500}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
 .home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
-.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border:1px solid #DCCB9C;border-radius:10px;background:#FFF9E8;color:#3E3B30;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
+.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 12px;border:1px solid #CBD7BE;border-radius:10px;background:#F1F5E8;color:#3E4931;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
 .home-feature-update-notice:active{transform:scale(.995)}
-.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;background:#C94F55;color:#fff;padding:3px 5px;font-size:9px;font-weight:950;line-height:1;white-space:nowrap}
+.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;background:#6F7D4E;color:#fff;padding:3px 5px;font-size:8px;font-weight:950;line-height:1;white-space:nowrap}
 .home-feature-update-copy{min-width:0;font-size:12px;font-weight:780;line-height:1.35}
-.home-feature-update-copy b{display:block;font-size:13px;font-weight:900;color:#2F3028;margin-bottom:1px}
-.home-feature-update-link{font-size:11px;font-weight:900;color:#6B5B2D;white-space:nowrap}
+.home-feature-update-copy b{display:block;font-size:13px;font-weight:900;color:#2F3828;margin-bottom:1px}
+.home-feature-update-link{font-size:11px;font-weight:900;color:#53623A;white-space:nowrap}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
-.home-update-btn.feature{position:relative;background:#FFF8E8;color:#6B5B2D;border-color:#DDC995}
-.home-update-btn.feature.seen{background:#FFFDF8;color:#606554;border-color:#D8D0BE}
-.feature-update-mini-badge{position:absolute;top:-7px;right:-5px;border-radius:4px;background:#C94F55;color:#fff;padding:2px 4px;font-size:8px;font-weight:950;line-height:1;box-shadow:0 1px 4px rgba(80,30,34,.18)}
-.home-update-btn.feature.seen .feature-update-mini-badge{display:none}
-.dark .home-feature-update-notice{background:#2A261B;border-color:#5B4C2C;color:#D9D2C2}
+.dark .home-feature-update-notice{background:#252C21;border-color:#46553C;color:#D6DECF}
 .dark .home-feature-update-copy b{color:var(--tx)}
-.dark .home-feature-update-link{color:#D8BE73}
-.dark .home-update-btn.feature{background:#2A261B;color:#D8BE73;border-color:#5B4C2C}
-.dark .home-update-btn.feature.seen{background:var(--sf);color:var(--ts);border-color:var(--bd)}
+.dark .home-feature-update-link{color:#BFD0B1}
 .home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
@@ -1745,10 +1739,10 @@ body{font-weight:500}
 <div id="pageHome">
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
-    <button class="home-feature-update-notice hidden" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
-      <span class="home-feature-update-tag">NEW</span>
-      <span class="home-feature-update-copy"><b>새 기능 3가지를 확인하세요</b>내 캘린더 · 새 악보 NEW · 악보/일정 알림</span>
-      <span class="home-feature-update-link">새 기능 보기 ›</span>
+    <button class="home-feature-update-notice" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
+      <span class="home-feature-update-tag">UPDATE</span>
+      <span class="home-feature-update-copy"><b>이번 업데이트에서 달라진 점</b>캘린더 연동 · 최신 악보 확인 · 변경 알림</span>
+      <span class="home-feature-update-link">살펴보기 ›</span>
     </button>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-push-card hidden" id="homePushCard">
@@ -1762,7 +1756,6 @@ body{font-weight:500}
     </div>
     <div class="home-update-wrap">
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
-      <button class="home-update-btn feature" id="homeFeatureUpdateBtn" type="button" onclick="openFeatureUpdateGuide()"><span>✦</span><span>새 기능</span><span class="feature-update-mini-badge">NEW</span></button>
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
     </div>
@@ -2505,37 +2498,37 @@ body{font-weight:500}
     <div id="schDetailBody"></div>
   </div>
 </div>
-<!-- MODAL: 새 기능 안내 -->
+<!-- MODAL: 업데이트 안내 -->
 <div class="modal-overlay modal-center feature-update-modal" id="modalFeatureUpdate">
   <div class="modal-content">
-    <div class="modal-header"><span class="modal-title">새 기능 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
-    <div class="feature-update-kicker">2026.07 업데이트</div>
-    <div class="feature-update-title">새로 추가된 기능 3가지</div>
-    <div class="feature-update-lead">궁금한 기능을 누르면 사용 방법이 아래로 펼쳐집니다.</div>
+    <div class="modal-header"><span class="modal-title">업데이트 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
+    <div class="feature-update-kicker">2026.07 UPDATE</div>
+    <div class="feature-update-title">더 편리해진 기능 3가지</div>
+    <div class="feature-update-lead">항목을 누르면 간단한 이용 방법을 확인할 수 있습니다.</div>
     <div class="feature-update-list">
       <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>내 캘린더에 일정 추가</b><span>날짜·시간·장소를 휴대폰 캘린더로 옮깁니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b><span>앱 일정을 휴대폰 캘린더에 간편하게 저장합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>원하는 일정을 엽니다</b><span>홈의 이번 주 일정이나 일정 탭에서 누르세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가를 누릅니다</b><span>일정 상세 화면 맨 위에서 찾을 수 있습니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>추가 또는 저장을 완료합니다</b><span>열린 휴대폰 캘린더 화면에서 저장하세요.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭에서 확인</button></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정 상세 열기</b><span>홈의 이번 주 일정이나 일정 탭에서 선택하세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가 선택</b><span>일정 상세 화면 상단에서 누르세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>캘린더에 저장</b><span>열린 휴대폰 캘린더에서 추가 또는 저장을 완료하세요.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭 열기</button></div>
       </details>
       <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>새 악보 NEW 표시</b><span>새로 올라오거나 교체된 최신 악보를 알려줍니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>최신 악보 확인</b><span>등록되거나 교체된 파일을 NEW로 구분합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>홈과 악보 탭에서 확인</b><span>아직 열지 않은 최신 악보에 NEW가 표시됩니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>악보를 실제로 열면 해제</b><span>파일을 불러온 뒤 이 기기에서 NEW가 사라집니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>새 버전은 다시 NEW로 표시</b><span>수정된 악보로 교체되면 최신 파일을 다시 알려줍니다.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭에서 확인</button></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>NEW 표시 확인</b><span>홈과 악보 탭에서 아직 열지 않은 파일을 확인하세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>악보 열기</b><span>파일을 정상적으로 불러오면 NEW 표시가 사라집니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>교체된 파일 확인</b><span>수정본이 올라오면 NEW가 다시 표시됩니다.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭 열기</button></div>
       </details>
       <details class="feature-update-item" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 변경 알림</b><span>필요한 알림만 선택해 새 소식을 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 알림</b><span>원하는 변경 소식만 선택해 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인이 필요합니다</b><span>로그인 후 홈의 변경 알림에서 설정할 수 있습니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>알림 켜기를 누릅니다</b><span>아이폰은 홈 화면에 추가한 뒤 기기 알림을 허용하세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>악보와 일정을 따로 선택</b><span>받고 싶은 항목만 켜거나 끌 수 있습니다.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openPushSettingsFromFeatureGuide()">알림 설정 확인</button></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인</b><span>로그인 후 홈에서 알림을 설정할 수 있습니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>알림 허용</b><span>아이폰은 홈 화면에 추가한 뒤 기기 알림을 허용하세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>받을 항목 선택</b><span>악보와 일정 중 필요한 알림만 켜세요.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openPushSettingsFromFeatureGuide()">알림 설정으로 이동</button></div>
       </details>
     </div>
     <div class="feature-update-actions"><button type="button" class="btn btn-p" onclick="closeModal('modalFeatureUpdate')">확인</button></div>
@@ -3205,7 +3198,6 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
-  if(id==='modalFeatureUpdate')markFeatureUpdateSeen();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
@@ -13311,22 +13303,6 @@ function dismissInstall(saveChoice){
 initInstallUi();
 
 // ==================== 가이드 슬라이드 ====================
-var FEATURE_UPDATE_VERSION='2026-07-feature-guide-v2';
-var FEATURE_UPDATE_SEEN_KEY='choir_feature_update_seen';
-function isFeatureUpdateSeen(){
-  try{return localStorage.getItem(FEATURE_UPDATE_SEEN_KEY)===FEATURE_UPDATE_VERSION;}catch(e){return false;}
-}
-function renderFeatureUpdateUi(){
-  var seen=isFeatureUpdateSeen();
-  var notice=document.getElementById('homeFeatureUpdateNotice');
-  var button=document.getElementById('homeFeatureUpdateBtn');
-  if(notice)notice.classList.toggle('hidden',seen);
-  if(button)button.classList.toggle('seen',seen);
-}
-function markFeatureUpdateSeen(){
-  try{localStorage.setItem(FEATURE_UPDATE_SEEN_KEY,FEATURE_UPDATE_VERSION);}catch(e){}
-  renderFeatureUpdateUi();
-}
 function handleFeatureUpdateToggle(item){
   if(!item||!item.open)return;
   document.querySelectorAll('#modalFeatureUpdate .feature-update-item[open]').forEach(function(other){
@@ -13407,7 +13383,6 @@ function showGuide(force){
   renderSlide();
   document.body.appendChild(ov);
 }
-renderFeatureUpdateUi();
 // ==================== 출석체크 ====================
 var attData={};
 var attPartFilter='all';
