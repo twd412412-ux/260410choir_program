@@ -2,10 +2,12 @@
 
 const crypto = require("crypto");
 const {promisify} = require("util");
+const webpush = require("web-push");
 const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
 const {FieldValue, getFirestore} = require("firebase-admin/firestore");
 const {getStorage} = require("firebase-admin/storage");
+const {defineSecret} = require("firebase-functions/params");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {HttpsError, onCall} = require("firebase-functions/v2/https");
@@ -26,6 +28,10 @@ const ACCOUNT_PIN_PATTERN = /^\d{4}$/;
 const HASH_VERSION = "scrypt-v1";
 const ELEVATION_MS = 4 * 60 * 60 * 1000;
 const SONG_INDEX_SHARDS = 16;
+const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
+const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
+const WEB_PUSH_SUBJECT = "mailto:twd412412@gmail.com";
+const APP_URL = "https://twd412412-ux.github.io/260410choir_program/";
 const ALLOWED_SCORE_SCOPES = new Set(["default", "all", "singer", "orchestra", "none"]);
 const ALLOWED_PERMISSIONS = new Set([
   "song.manage", "song.editAny", "score.manage", "score.editAny",
@@ -464,6 +470,174 @@ async function mapLimit(items, limit, mapper) {
   return result;
 }
 
+function pushSubscriptionFromData(data) {
+  const subscription = data && data.subscription || {};
+  const keys = subscription.keys || {};
+  const endpoint = cleanString(subscription.endpoint, 4096);
+  const authKey = cleanString(keys.auth, 512);
+  const p256dh = cleanString(keys.p256dh, 512);
+  if (!endpoint || !authKey || !p256dh) return null;
+  return {endpoint, keys: {auth: authKey, p256dh}};
+}
+
+async function claimPushEvent(eventId, type) {
+  const id = crypto.createHash("sha256").update(String(eventId || "")).digest("hex");
+  if (!id) return false;
+  try {
+    await db.collection("pushDeliveryEvents").doc(id).create({type, createdAt: nowIso()});
+    return true;
+  } catch (error) {
+    if (error && (error.code === 6 || error.code === "already-exists")) return false;
+    throw error;
+  }
+}
+
+async function sendPushTopic(topic, notification) {
+  webpush.setVapidDetails(WEB_PUSH_SUBJECT, WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY.value());
+  const snap = await db.collection("pushSubscriptions").where("topics." + topic, "==", true).get();
+  if (snap.empty) return {sent: 0, stale: 0, failed: 0};
+  const payload = JSON.stringify(notification);
+  let sent = 0;
+  let stale = 0;
+  let failed = 0;
+  await mapLimit(snap.docs, 12, async (doc) => {
+    const subscription = pushSubscriptionFromData(doc.data() || {});
+    if (!subscription) {
+      stale++;
+      await doc.ref.delete().catch(() => {});
+      return;
+    }
+    try {
+      await webpush.sendNotification(subscription, payload, {TTL: 86400, urgency: "normal"});
+      sent++;
+    } catch (error) {
+      const status = Number(error && error.statusCode || 0);
+      if (status === 404 || status === 410) {
+        stale++;
+        await doc.ref.delete().catch(() => {});
+      } else {
+        failed++;
+        console.error("push_delivery_failed", {topic, status});
+      }
+    }
+  });
+  return {sent, stale, failed};
+}
+
+function scoreItemsById(data) {
+  const source = data && data.items || {};
+  if (Array.isArray(source)) {
+    return source.reduce((result, item, index) => {
+      const id = cleanString(item && item.id, 100) || "row_" + index;
+      result[id] = item || {};
+      return result;
+    }, {});
+  }
+  return source && typeof source === "object" ? source : {};
+}
+
+function isPublishedScore(item) {
+  return Boolean(item && item.public !== false && (item.currentFilePath || item.currentFileUrl));
+}
+
+function scoreNoticeFingerprint(item) {
+  if (!item) return "";
+  const linkedIds = Array.isArray(item.linkedSongIds) ? item.linkedSongIds.map(String).sort() : [];
+  return JSON.stringify([
+    cleanString(item.title, 120), cleanString(item.scoreKind, 30), cleanString(item.instrument, 60),
+    cleanString(item.currentFilePath, 1000), cleanString(item.currentFileUrl, 2000),
+    cleanString(item.currentFileName, 500), cleanString(item.currentUploadedAt, 100),
+    cleanString(item.currentLabel, 100), cleanString(item.linkedSongId, 100), linkedIds,
+    cleanString(item.linkedSongName, 120), item.public !== false,
+  ]);
+}
+
+function notificationTitleList(items) {
+  const titles = [];
+  items.forEach((item) => {
+    const title = cleanString(item && item.title, 60) || "제목 없는 악보";
+    if (!titles.includes(title)) titles.push(title);
+  });
+  if (titles.length <= 2) return titles.join(" · ");
+  return titles.slice(0, 2).join(" · ") + " 외 " + (titles.length - 2) + "곡";
+}
+
+function scheduleNoticeFingerprint(data) {
+  if (!data) return "";
+  return JSON.stringify([
+    cleanString(data.date, 20), cleanString(data.endDate, 20), cleanString(data.title, 160),
+    cleanString(data.time, 30), cleanString(data.location, 160), cleanString(data.songs, 2000),
+    cleanString(data.memo, 2000), Boolean(data.useBriefing), cleanString(data.program, 4000),
+    cleanString(data.dress, 500), cleanString(data.briefingMemo, 2000),
+  ]);
+}
+
+function scheduleDateText(data) {
+  const start = cleanString(data && data.date, 20);
+  const end = cleanString(data && data.endDate, 20) || start;
+  function shortDate(value) {
+    const parts = value.split("-").map(Number);
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return value;
+    return parts[0] + "." + parts[1] + "." + parts[2];
+  }
+  if (!start) return "날짜 미정";
+  return start === end ? shortDate(start) : shortDate(start) + "~" + shortDate(end);
+}
+
+async function notifyScoreWrite(event) {
+  if (!event.data || !event.data.after.exists) return null;
+  const before = event.data.before.exists ? scoreItemsById(event.data.before.data() || {}) : {};
+  const after = scoreItemsById(event.data.after.data() || {});
+  const changes = [];
+  Object.keys(after).forEach((id) => {
+    const next = after[id] || {};
+    if (!isPublishedScore(next)) return;
+    const previous = before[id] || null;
+    if (!isPublishedScore(previous)) {
+      changes.push({item: next, kind: "new"});
+    } else if (scoreNoticeFingerprint(previous) !== scoreNoticeFingerprint(next)) {
+      changes.push({item: next, kind: "updated"});
+    }
+  });
+  if (!changes.length) return null;
+  if (!await claimPushEvent(event.id, "scores")) return null;
+  const isOnlyNew = changes.every((change) => change.kind === "new");
+  const result = await sendPushTopic("scores", {
+    title: isOnlyNew ? "새 악보가 등록되었습니다" : "악보가 업데이트되었습니다",
+    body: notificationTitleList(changes.map((change) => change.item)),
+    url: APP_URL + "?push=scores",
+    tag: "choir-score-updates",
+    icon: APP_URL + "assets/hymn-dove-book.png",
+  });
+  console.log("score_push_complete", result);
+  return result;
+}
+
+async function notifyScheduleWrite(event) {
+  if (!event.data) return null;
+  const beforeExists = event.data.before.exists;
+  const afterExists = event.data.after.exists;
+  const before = beforeExists ? event.data.before.data() || {} : {};
+  const after = afterExists ? event.data.after.data() || {} : {};
+  if (beforeExists && afterExists && scheduleNoticeFingerprint(before) === scheduleNoticeFingerprint(after)) return null;
+  if (!beforeExists && !afterExists) return null;
+  if (!await claimPushEvent(event.id, "schedules")) return null;
+  const item = afterExists ? after : before;
+  const action = !beforeExists ? "새 일정이 등록되었습니다" : (!afterExists ? "일정이 취소되었습니다" : "일정이 변경되었습니다");
+  const details = [scheduleDateText(item), cleanString(item.title, 80) || "제목 없는 일정"];
+  if (afterExists && item.time) details.push(cleanString(item.time, 30));
+  if (afterExists && item.location) details.push(cleanString(item.location, 60));
+  const result = await sendPushTopic("schedules", {
+    title: action,
+    body: details.join(" · "),
+    url: APP_URL + "?push=calendar",
+    tag: "choir-schedule-" + cleanString(event.params.scheduleId, 100),
+    icon: APP_URL + "assets/hymn-dove-book.png",
+  });
+  console.log("schedule_push_complete", result);
+  return result;
+}
+
 async function adminBulkCreateAccounts(request) {
   requirePermission(request, "account.manage");
   const rows = Array.isArray(request.data && request.data.rows) ? request.data.rows.slice(0, 250) : [];
@@ -751,3 +925,15 @@ exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
     });
   });
 });
+
+exports.notifyScoreUpdates = onDocumentWritten({
+  document: "settings/scores",
+  secrets: [WEB_PUSH_PRIVATE_KEY],
+  retry: false,
+}, notifyScoreWrite);
+
+exports.notifyScheduleUpdates = onDocumentWritten({
+  document: "schedules/{scheduleId}",
+  secrets: [WEB_PUSH_PRIVATE_KEY],
+  retry: false,
+}, notifyScheduleWrite);

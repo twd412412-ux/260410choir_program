@@ -135,6 +135,43 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    match /pushSubscriptions/{subscriptionId} {
+      function validSubscription(data) {
+        return data.keys().hasOnly([
+            'uid', 'accountName', 'topics', 'subscription', 'userAgent', 'updatedAt'
+          ])
+          && data.uid == request.auth.uid
+          && data.accountName is string
+          && data.accountName.size() <= 60
+          && data.userAgent is string
+          && data.userAgent.size() <= 500
+          && data.updatedAt is string
+          && data.updatedAt.size() <= 40
+          && data.topics is map
+          && data.topics.keys().hasOnly(['scores', 'schedules'])
+          && data.topics.scores is bool
+          && data.topics.schedules is bool
+          && data.subscription is map
+          && data.subscription.keys().hasOnly(['endpoint', 'keys'])
+          && data.subscription.endpoint is string
+          && data.subscription.endpoint.size() <= 4096
+          && data.subscription.keys is map
+          && data.subscription.keys.keys().hasOnly(['auth', 'p256dh'])
+          && data.subscription.keys.auth is string
+          && data.subscription.keys.auth.size() <= 512
+          && data.subscription.keys.p256dh is string
+          && data.subscription.keys.p256dh.size() <= 512;
+      }
+
+      allow get: if isAccount() && resource.data.uid == request.auth.uid;
+      allow list: if false;
+      allow create: if isAccount() && validSubscription(request.resource.data);
+      allow update: if isAccount()
+        && resource.data.uid == request.auth.uid
+        && validSubscription(request.resource.data);
+      allow delete: if isAccount() && resource.data.uid == request.auth.uid;
+    }
+
     match /attendance/{attendanceId} {
       allow read: if isAdmin()
         || hasPermission('attendance.view')
@@ -190,6 +227,10 @@ service cloud.firestore {
     }
 
     match /securityRateLimits/{limitId} {
+      allow read, write: if false;
+    }
+
+    match /pushDeliveryEvents/{eventId} {
       allow read, write: if false;
     }
   }

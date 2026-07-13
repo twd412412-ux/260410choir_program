@@ -1504,6 +1504,20 @@ body{font-weight:500}
 .home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
 .home-update-btn:active{transform:scale(.98)}
+.home-push-card{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:12px 14px;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:12px;box-shadow:0 4px 14px rgba(49,54,35,.045)}
+.home-push-copy{min-width:0;flex:1}
+.home-push-title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:820;color:#25261F}
+.home-push-state{margin-top:3px;font-size:11px;font-weight:650;color:#777163;line-height:1.35}
+.home-push-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.home-push-enable,.home-push-off{border:1px solid #C9D4BA;background:#6F7D4E;color:#fff;border-radius:9px;padding:8px 11px;font:inherit;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.home-push-off{background:#FFFDF8;color:#777163;border-color:#D8D0BE;padding:7px 9px}
+.push-topic{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:760;color:#525548;white-space:nowrap;cursor:pointer}
+.push-topic input{position:absolute;opacity:0;pointer-events:none}
+.push-switch{position:relative;width:34px;height:20px;border-radius:999px;background:#D9D4C8;transition:background .16s ease;box-shadow:inset 0 0 0 1px rgba(70,68,57,.08)}
+.push-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .16s ease}
+.push-topic input:checked+.push-switch{background:#6F7D4E}
+.push-topic input:checked+.push-switch::after{transform:translateX(14px)}
+.push-topic input:focus-visible+.push-switch{outline:2px solid #6F7D4E;outline-offset:2px}
 .home-ring-stack{display:grid;gap:8px}
 .home-attendance-rings{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .home-mini-ring{background:#FFF9EE;border:1px solid #E4D2B3;border-radius:12px;padding:9px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:center}
@@ -1650,6 +1664,9 @@ body{font-weight:500}
   body.print-report-mode #reportCanvas{display:block!important;background:#fff!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important}
 }
 @media(max-width:390px){
+  .home-push-card{align-items:flex-start;flex-wrap:wrap}
+  .home-push-copy{flex-basis:100%}
+  .home-push-actions{width:100%;justify-content:flex-start}
   .att-ring-wrap{grid-template-columns:88px minmax(0,1fr);gap:12px}
   .att-ring{width:84px;height:84px}
   .att-ring::after{width:62px;height:62px}
@@ -1683,9 +1700,18 @@ body{font-weight:500}
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
+    <div class="home-push-card hidden" id="homePushCard">
+      <div class="home-push-copy"><div class="home-push-title"><span>🔔</span><span>변경 알림</span></div><div class="home-push-state" id="homePushState">악보 · 일정</div></div>
+      <div class="home-push-actions" id="homePushEnableWrap"><button class="home-push-enable" id="homePushEnableBtn" type="button" onclick="enablePushNotifications()">알림 켜기</button></div>
+      <div class="home-push-actions hidden" id="homePushTopics">
+        <label class="push-topic"><span>악보</span><input id="pushTopicScores" type="checkbox" onchange="updatePushTopic('scores',this.checked)"><span class="push-switch" aria-hidden="true"></span></label>
+        <label class="push-topic"><span>일정</span><input id="pushTopicSchedules" type="checkbox" onchange="updatePushTopic('schedules',this.checked)"><span class="push-switch" aria-hidden="true"></span></label>
+        <button class="home-push-off" type="button" onclick="disablePushNotifications()">끄기</button>
+      </div>
+    </div>
     <div class="home-update-wrap">
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
-      <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면 설치</span></button>
+      <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
     </div>
     <div class="home-credit">Engineered by JY</div>
@@ -2657,6 +2683,17 @@ var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
 var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false;
 var songRecommendCache=[];
+var WEB_PUSH_PUBLIC_KEY='BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY';
+var PUSH_STATE_PREFIX='choir_push_state_v1_';
+var PUSH_OWNER_KEY='choir_push_owner_v1';
+var pushUiBusy=false;
+var pushInitialTarget=(function(){
+  try{
+    var target=new URL(window.location.href).searchParams.get('push')||'';
+    return target==='scores'||target==='calendar'?target:'';
+  }catch(e){return '';}
+})();
+var pushLoginPrompted=false;
 var adminRole=null;
 var adminLoginBusy=false;
 var ADMIN_PASSWORD_MIN_LENGTH=4;
@@ -2826,6 +2863,226 @@ if('serviceWorker' in navigator){
       try{reg.update();}catch(e){}
     }).catch(function(){});
   });
+}
+
+function pushFeatureSupported(){
+  return !!(window.isSecureContext&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window);
+}
+function pushStateKey(user){return user&&user.id?PUSH_STATE_PREFIX+encodeURIComponent(String(user.id)):'';}
+function loadPushState(user){
+  var key=pushStateKey(user);
+  if(!key)return null;
+  try{
+    var state=JSON.parse(localStorage.getItem(key)||'null');
+    return state&&state.id&&state.uid===user.id?state:null;
+  }catch(e){return null;}
+}
+function savePushState(user,state){
+  var key=pushStateKey(user);
+  if(!key)return;
+  localStorage.setItem(key,JSON.stringify(state));
+  localStorage.setItem(PUSH_OWNER_KEY,user.id);
+}
+function clearPushState(user){
+  var key=pushStateKey(user);
+  if(key)localStorage.removeItem(key);
+  if(user&&localStorage.getItem(PUSH_OWNER_KEY)===user.id)localStorage.removeItem(PUSH_OWNER_KEY);
+}
+function pushBase64Url(buffer){
+  if(!buffer)return '';
+  var bytes=new Uint8Array(buffer),binary='';
+  for(var i=0;i<bytes.byteLength;i++)binary+=String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function pushApplicationServerKey(value){
+  var padding='='.repeat((4-value.length%4)%4);
+  var base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+  var raw=atob(base64),output=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++)output[i]=raw.charCodeAt(i);
+  return output;
+}
+function pushSubscriptionPayload(subscription){
+  var json=subscription&&subscription.toJSON?subscription.toJSON():{};
+  var keys=json.keys||{};
+  return {
+    endpoint:subscription.endpoint,
+    keys:{
+      auth:keys.auth||pushBase64Url(subscription.getKey&&subscription.getKey('auth')),
+      p256dh:keys.p256dh||pushBase64Url(subscription.getKey&&subscription.getKey('p256dh'))
+    }
+  };
+}
+function pushDocumentId(endpoint){
+  var bytes=new TextEncoder().encode(String(endpoint||''));
+  return crypto.subtle.digest('SHA-256',bytes).then(function(hash){return 'push_'+pushBase64Url(hash).slice(0,43);});
+}
+function currentPushSubscription(){
+  if(!pushFeatureSupported())return Promise.resolve(null);
+  return navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription();});
+}
+function pushTopicsFromState(state){
+  var topics=state&&state.topics||{};
+  return {scores:topics.scores!==false,schedules:topics.schedules!==false};
+}
+function pushDocumentData(user,subscription,topics){
+  return {
+    uid:user.id,
+    accountName:String(user.name||'').slice(0,60),
+    topics:{scores:!!topics.scores,schedules:!!topics.schedules},
+    subscription:pushSubscriptionPayload(subscription),
+    userAgent:String(navigator.userAgent||'').slice(0,500),
+    updatedAt:new Date().toISOString()
+  };
+}
+function setPushUiBusy(busy){
+  pushUiBusy=!!busy;
+  var enable=document.getElementById('homePushEnableBtn');
+  if(enable)enable.disabled=pushUiBusy;
+  ['pushTopicScores','pushTopicSchedules'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=pushUiBusy;});
+}
+function renderPushSettings(){
+  var card=document.getElementById('homePushCard');
+  if(!card)return;
+  var loggedIn=isMemberLoggedIn();
+  card.classList.toggle('hidden',!loggedIn);
+  if(!loggedIn)return;
+  var stateEl=document.getElementById('homePushState');
+  var enableWrap=document.getElementById('homePushEnableWrap');
+  var topicsWrap=document.getElementById('homePushTopics');
+  var enableBtn=document.getElementById('homePushEnableBtn');
+  var localState=loadPushState(currentUser);
+  var installed=isStandaloneApp();
+  if(isIOSDevice()&&!installed){
+    stateEl.textContent='홈 화면 추가 필요';
+    enableWrap.classList.remove('hidden');topicsWrap.classList.add('hidden');
+    enableBtn.textContent='추가 방법';enableBtn.onclick=openInstallGuide;enableBtn.disabled=false;
+    return;
+  }
+  if(!pushFeatureSupported()){
+    stateEl.textContent='이 기기에서는 알림을 지원하지 않습니다';
+    enableWrap.classList.add('hidden');topicsWrap.classList.add('hidden');
+    return;
+  }
+  if(Notification.permission==='denied'){
+    stateEl.textContent='기기 설정에서 알림 허용 필요';
+    enableWrap.classList.remove('hidden');topicsWrap.classList.add('hidden');
+    enableBtn.textContent='설정 확인';enableBtn.onclick=showPushPermissionHelp;enableBtn.disabled=false;
+    return;
+  }
+  if(localState&&Notification.permission==='granted'){
+    var topics=pushTopicsFromState(localState);
+    document.getElementById('pushTopicScores').checked=topics.scores;
+    document.getElementById('pushTopicSchedules').checked=topics.schedules;
+    stateEl.textContent=topics.scores||topics.schedules?'켜짐':'알림 항목 선택';
+    enableWrap.classList.add('hidden');topicsWrap.classList.remove('hidden');
+    return;
+  }
+  stateEl.textContent='악보 · 일정';
+  enableWrap.classList.remove('hidden');topicsWrap.classList.add('hidden');
+  enableBtn.textContent='알림 켜기';enableBtn.onclick=enablePushNotifications;enableBtn.disabled=pushUiBusy;
+}
+function showPushPermissionHelp(){
+  if(isIOSDevice())alert('iPhone/iPad 알림 설정\n\n설정 앱 → 알림 → 찬양대에서 알림 허용을 켜주세요.');
+  else alert('브라우저 또는 기기 설정에서 이 사이트의 알림 권한을 허용해주세요.');
+}
+function enablePushNotifications(){
+  if(pushUiBusy||!isMemberLoggedIn())return;
+  if(isIOSDevice()&&!isStandaloneApp()){openInstallGuide();return;}
+  if(!pushFeatureSupported()){showToast('이 기기에서는 알림을 사용할 수 없습니다');return;}
+  setPushUiBusy(true);
+  var user=currentUser;
+  var state=loadPushState(user);
+  var owner=localStorage.getItem(PUSH_OWNER_KEY)||'';
+  var permissionPromise=Notification.permission==='granted'?Promise.resolve('granted'):Notification.requestPermission();
+  var activeRegistration=null;
+  var activeSubscription=null;
+  permissionPromise.then(function(permission){
+    if(permission!=='granted')throw new Error('push_permission_denied');
+    return navigator.serviceWorker.ready;
+  }).then(function(reg){
+    activeRegistration=reg;
+    return reg.pushManager.getSubscription().then(function(existing){
+      if(existing&&(owner!==user.id||!state))return existing.unsubscribe().then(function(){return null;});
+      return existing;
+    }).then(function(existing){
+      if(existing)return existing;
+      return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushApplicationServerKey(WEB_PUSH_PUBLIC_KEY)});
+    }).then(function(subscription){
+      activeSubscription=subscription;
+      return pushDocumentId(subscription.endpoint);
+    }).then(function(id){
+      var topics=state?pushTopicsFromState(state):{scores:true,schedules:true};
+      return db.collection('pushSubscriptions').doc(id).set(pushDocumentData(user,activeSubscription,topics)).then(function(){
+        savePushState(user,{id:id,uid:user.id,topics:topics,endpoint:activeSubscription.endpoint});
+        return activeRegistration.showNotification('찬양대 알림이 켜졌습니다',{body:'악보와 일정 변경을 알려드립니다.',icon:'./assets/hymn-dove-book.png',tag:'choir-push-enabled',data:{url:'./'}}).catch(function(){});
+      });
+    });
+  }).then(function(){
+    renderPushSettings();
+    showToast('악보·일정 알림을 켰습니다');
+  }).catch(function(error){
+    console.error(error);
+    if(activeSubscription&&!state)activeSubscription.unsubscribe().catch(function(){});
+    if(error&&error.message==='push_permission_denied')showToast('알림 권한이 허용되지 않았습니다');
+    else showToast('알림을 설정하지 못했습니다');
+    renderPushSettings();
+  }).finally(function(){setPushUiBusy(false);renderPushSettings();});
+}
+function updatePushTopic(topic,enabled){
+  if(pushUiBusy||!isMemberLoggedIn()||['scores','schedules'].indexOf(topic)===-1)return;
+  var user=currentUser,state=loadPushState(user);
+  if(!state){enablePushNotifications();return;}
+  var previous=pushTopicsFromState(state),topics={scores:previous.scores,schedules:previous.schedules};
+  topics[topic]=!!enabled;
+  setPushUiBusy(true);
+  currentPushSubscription().then(function(subscription){
+    if(!subscription)throw new Error('push_subscription_missing');
+    return db.collection('pushSubscriptions').doc(state.id).set(pushDocumentData(user,subscription,topics),{merge:true});
+  }).then(function(){
+    state.topics=topics;savePushState(user,state);renderPushSettings();showToast((topic==='scores'?'악보':'일정')+' 알림을 '+(enabled?'켰습니다':'껐습니다'));
+  }).catch(function(error){
+    console.error(error);renderPushSettings();showToast('알림 설정을 저장하지 못했습니다');
+  }).finally(function(){setPushUiBusy(false);renderPushSettings();});
+}
+function removePushSubscription(user,silent){
+  if(!user||!user.id)return Promise.resolve();
+  var state=loadPushState(user);
+  if(!pushFeatureSupported()){
+    var removeDoc=state&&state.id?db.collection('pushSubscriptions').doc(state.id).delete().catch(function(){}):Promise.resolve();
+    return removeDoc.then(function(){clearPushState(user);if(!silent)showToast('변경 알림을 껐습니다');});
+  }
+  return currentPushSubscription().then(function(subscription){
+    var tasks=[];
+    if(state&&state.id)tasks.push(db.collection('pushSubscriptions').doc(state.id).delete().catch(function(){}));
+    if(subscription)tasks.push(subscription.unsubscribe().catch(function(){}));
+    return Promise.all(tasks);
+  }).then(function(){
+    clearPushState(user);
+    if(!silent)showToast('변경 알림을 껐습니다');
+  });
+}
+function disablePushNotifications(){
+  if(pushUiBusy||!isMemberLoggedIn())return;
+  setPushUiBusy(true);
+  removePushSubscription(currentUser,false).catch(function(error){console.error(error);showToast('알림을 끄지 못했습니다');}).finally(function(){setPushUiBusy(false);renderPushSettings();});
+}
+function clearPushTarget(){
+  pushInitialTarget='';
+  try{
+    var url=new URL(window.location.href);url.searchParams.delete('push');history.replaceState(null,'',url.toString());
+  }catch(e){}
+}
+function routePushTarget(){
+  if(!pushInitialTarget)return;
+  if(pushInitialTarget==='calendar'){
+    switchTab('calendar');clearPushTarget();return;
+  }
+  if(pushInitialTarget==='scores'&&canViewScores()){
+    switchTab('scores');clearPushTarget();return;
+  }
+  if(pushInitialTarget==='scores'&&firebaseAuthReady&&!currentUser&&!pushLoginPrompted){
+    pushLoginPrompted=true;showToast('로그인하면 악보를 확인할 수 있습니다');openUserModal();
+  }
 }
 
 // ==================== 모달 ====================
@@ -4148,6 +4405,9 @@ function loginUser(){
 }
 
 function logoutUser(){
+  var userToLogout=currentUser;
+  var pushCleanup=removePushSubscription(userToLogout,true).catch(function(error){console.error(error)});
+  var pushLogoutWait=Promise.race([pushCleanup,new Promise(function(resolve){setTimeout(resolve,1500)})]);
   var roleToClear=getSessionRoleForUser(currentUser);
   if(roleToClear&&adminRole===roleToClear){
     adminRole=null;
@@ -4170,7 +4430,7 @@ function logoutUser(){
   if(currentTab==='archive'||currentTab==='scores'||currentTab==='songs'||currentTab==='favorites')switchTab('home');
   renderSongList();
   refreshHomeAccessState();
-  ensureFirebaseAuth().then(function(auth){return auth.signOut()}).catch(function(e){console.error(e)});
+  pushLogoutWait.finally(function(){ensureFirebaseAuth().then(function(auth){return auth.signOut()}).catch(function(e){console.error(e)});});
   showToast('로그아웃 되었습니다');
 }
 function updateUserBar(){
@@ -4178,6 +4438,8 @@ function updateUserBar(){
   if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')'}
   else{bar.classList.add('hidden')}
   syncAccessShell();
+  renderPushSettings();
+  setTimeout(routePushTarget,0);
 }
 function restoreUser() {
   if(firebaseAuthReadyPromise)return firebaseAuthReadyPromise;
