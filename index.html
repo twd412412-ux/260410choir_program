@@ -1548,6 +1548,7 @@ body{font-weight:500}
 .home-feature-update-copy{min-width:0;font-size:12px;font-weight:780;line-height:1.35}
 .home-feature-update-copy b{display:block;font-size:14px;font-weight:900;color:#243236;margin-bottom:1px}
 .home-feature-update-link{font-size:11px;font-weight:900;color:#335F6B;white-space:nowrap}
+@media(max-width:380px){.home-feature-update-link-prefix{display:none}}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
@@ -1795,8 +1796,8 @@ body{font-weight:500}
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <button class="home-feature-update-notice" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
       <span class="home-feature-update-tag">UPDATE</span>
-      <span class="home-feature-update-copy"><b>이번 업데이트에서 달라진 점</b>캘린더 연동 · 최신 악보 확인 · 변경 알림</span>
-      <span class="home-feature-update-link">살펴보기 ›</span>
+      <span class="home-feature-update-copy"><b>이번 업데이트에서 달라진 점</b></span>
+      <span class="home-feature-update-link"><span class="home-feature-update-link-prefix">새 기능 </span>써보기 ›</span>
     </button>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-push-card hidden" id="homePushCard">
