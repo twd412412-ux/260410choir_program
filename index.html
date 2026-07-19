@@ -1932,7 +1932,7 @@ body{font-weight:500}
 <!-- PAGE: 캘린더 -->
 <div id="pageCalendar" class="hidden">
   <div class="cal-nav"><button onclick="calPrev()">◀</button><span class="cal-nav-title" id="calTitle"></span><button onclick="calNext()">▶</button></div>
-  <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="default">기본 · 점+밴드</option><option value="stack">스택형</option></select></div>
+  <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="stack">스택형</option><option value="default">기본 · 점+밴드</option></select></div>
   <div class="quick-manage-row hidden" id="calendarQuickActions" style="padding:0 16px 10px;margin-top:0"><button type="button" class="quick-manage-btn primary" id="calendarQuickScheduleBtn" onclick="openQuickAddSchedule()">+ 일정 추가</button><button type="button" class="quick-manage-btn" id="calendarQuickSongBtn" onclick="openQuickAddSong(getQuickCreateDate())">+ 곡 추가</button></div>
   <div class="cal-grid" id="calGrid"></div>
   <div style="padding:12px 16px"><div class="cal-selected-head"><h3 id="calEvtTitle">일정</h3></div><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
@@ -2966,6 +2966,7 @@ var ADMIN_PASSWORD_MIN_LENGTH=4;
 var ADMIN_RECOVERY_EMAIL='twd412412@gmail.com';
 var ADMIN_RESET_REDIRECT_KEY='choir_admin_reset_redirect';
 var firebaseAuthLoadPromise=null;
+var firebaseAuthPersistencePromise=null;
 var firebaseFunctionsLoadPromise=null;
 var firebaseStorageModulePromise=null;
 var firebaseAuthReadyPromise=null;
@@ -2991,7 +2992,7 @@ var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
 var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
-var calViewMode=localStorage.getItem('choir_cal_view')||'default';
+var calViewMode=localStorage.getItem('choir_cal_view')==='default'?'default':'stack';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
 var ARCHIVE_PAGE_SIZE=30;
@@ -4356,11 +4357,20 @@ function loadScriptOnce(id,src){
     document.head.appendChild(script);
   });
 }
+function configureFirebaseAuthPersistence(auth){
+  if(!auth||typeof auth.setPersistence!=='function')return Promise.resolve(auth);
+  if(!firebaseAuthPersistencePromise){
+    firebaseAuthPersistencePromise=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(error){
+      console.warn('auth_local_persistence_unavailable',error);
+    });
+  }
+  return firebaseAuthPersistencePromise.then(function(){return auth});
+}
 function ensureFirebaseAuth(){
-  if(firebase.auth)return Promise.resolve(firebase.auth());
+  if(firebase.auth)return configureFirebaseAuthPersistence(firebase.auth());
   if(firebaseAuthLoadPromise)return firebaseAuthLoadPromise;
   firebaseAuthLoadPromise=loadScriptOnce('firebaseAuthCompatSdk','https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js').then(function(){
-    return firebase.auth();
+    return configureFirebaseAuthPersistence(firebase.auth());
   });
   return firebaseAuthLoadPromise;
 }
@@ -10664,7 +10674,7 @@ function delSchedule(id,title){
 function initCal(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
-function setCalViewMode(v){calViewMode=v||'default';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
+function setCalViewMode(v){calViewMode=v==='default'?'default':'stack';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
 function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
 function safeColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||''))?String(v):COLORS[0]}
 function calDateKeyDay(key){
