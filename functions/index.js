@@ -1210,6 +1210,22 @@ async function canonicalScoreFile(bucket, scoreId, sourcePath, fileName) {
   return canonicalFile;
 }
 
+async function verifySignedScoreUrl(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {Range: "bytes=0-0"},
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error("score_signed_url_http_" + response.status);
+    if (response.body) await response.body.cancel().catch(() => {});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function openScoreFile(request) {
   requireAuth(request);
   const scoreId = cleanString(request.data && request.data.scoreId, 180);
@@ -1233,7 +1249,7 @@ async function openScoreFile(request) {
     throw new HttpsError("not-found", "저장된 악보 파일을 찾을 수 없습니다.");
   }
   const fileName = safeScoreFileName(score.currentFileName || score.fileName, score);
-  const expiresAt = Date.now() + 5 * 60 * 1000;
+  const expiresAt = Date.now() + 15 * 60 * 1000;
   const bucket = getStorage().bucket();
   const file = await canonicalScoreFile(bucket, scoreId, filePath, fileName);
   const [url] = await file.getSignedUrl({
@@ -1243,6 +1259,17 @@ async function openScoreFile(request) {
     responseDisposition: scoreContentDisposition(fileName),
     responseType: "application/pdf",
   });
+  try {
+    await verifySignedScoreUrl(url);
+  } catch (error) {
+    console.error("score_signed_url_verification_failed", {
+      scoreId,
+      filePath: file.name,
+      code: error && error.code,
+      message: error && error.message,
+    });
+    throw new HttpsError("internal", "악보 파일 주소를 확인하지 못했습니다.");
+  }
   return {url, fileName, expiresAt};
 }
 
@@ -1301,7 +1328,20 @@ exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [
   throw new HttpsError("invalid-argument", "지원하지 않는 계정 관리 요청입니다.");
 });
 
-exports.scoreFileAccess = onCall(async (request) => openScoreFile(request));
+exports.scoreFileAccess = onCall(async (request) => {
+  try {
+    return await openScoreFile(request);
+  } catch (error) {
+    if (!(error instanceof HttpsError)) {
+      console.error("score_file_access_failed", {
+        scoreId: cleanString(request.data && request.data.scoreId, 180),
+        code: error && error.code,
+        message: error && error.message,
+      });
+    }
+    throw error;
+  }
+});
 
 exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
