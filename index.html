@@ -1553,7 +1553,9 @@ body{font-weight:500}
 .home-main-sub{font-size:12px;font-weight:650;color:#606554;margin-top:8px}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
-.home-credit{text-align:right;font-size:9px;color:#C7BBA8;margin:2px 2px 0}
+.home-credit{display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;font-size:9px;color:#948D80;opacity:.68;margin:2px 2px 0}
+.home-app-version{font-variant-numeric:tabular-nums}
+.dark .home-credit{color:#B6AFA2;opacity:.72}
 .home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;margin:2px 0 12px;padding:14px 14px 14px 10px;border:1px solid #393B35;border-left:6px solid #C9A35F;border-radius:10px;background:#464841;color:#F5F1E8;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box;box-shadow:0 8px 20px rgba(51,47,39,.2)}
 .home-feature-update-notice:active{transform:scale(.995)}
 .home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border:1px solid #CFAE70;border-radius:5px;background:rgba(255,255,255,.06);color:#F0D39B;padding:5px 7px;font-size:10px;font-weight:950;line-height:1;white-space:nowrap}
@@ -1827,7 +1829,7 @@ body{font-weight:500}
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" id="homeAppUpdateBtn" type="button" onclick="reloadAppVersion()"><span>↻</span><span data-app-update-label>앱 업데이트</span></button>
     </div>
-    <div class="home-credit">Engineered by JY</div>
+    <div class="home-credit"><span class="home-app-version" id="homeAppVersion" hidden></span><span>Engineered by JY</span></div>
   </div>
 </div>
 
@@ -3016,6 +3018,13 @@ var SCORE_ACCESS_SCOPE_OPTIONS=[
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
 
 function isValidAppBuildSha(value){return /^[0-9a-f]{40}$/i.test(String(value||''))}
+function renderAppBuildVersion(){
+  var el=document.getElementById('homeAppVersion');
+  if(!el||!isValidAppBuildSha(APP_BUILD_SHA))return;
+  el.textContent='v'+APP_BUILD_SHA.slice(0,7);
+  el.title='앱 버전 '+APP_BUILD_SHA;
+  el.hidden=false;
+}
 function setAppUpdateButtonPending(pending){
   var btn=document.getElementById('homeAppUpdateBtn');
   if(!btn)return;
@@ -13679,6 +13688,7 @@ function init(){
   buildYearOptions();
   initPhotoViewerTouch();
   syncLayoutState();
+  renderAppBuildVersion();
   initAutoAppUpdate();
 }
 init();
