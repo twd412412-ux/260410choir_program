@@ -1187,6 +1187,29 @@ function scoreContentDisposition(value) {
   return `inline; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
+async function canonicalScoreFile(bucket, scoreId, sourcePath, fileName) {
+  const canonicalPath = `scores/${scoreId}/${fileName}`;
+  if (sourcePath === canonicalPath) return bucket.file(sourcePath);
+
+  const sourceFile = bucket.file(sourcePath);
+  const canonicalFile = bucket.file(canonicalPath);
+  let canonicalSource = "";
+  try {
+    const [metadata] = await canonicalFile.getMetadata();
+    canonicalSource = cleanString(metadata && metadata.metadata && metadata.metadata.choirSourcePath, 1500);
+  } catch (error) {
+    if (Number(error && error.code) !== 404) throw error;
+  }
+  if (canonicalSource !== sourcePath) {
+    await sourceFile.copy(canonicalFile, {
+      contentType: "application/pdf",
+      contentDisposition: scoreContentDisposition(fileName),
+      metadata: {choirSourcePath: sourcePath},
+    });
+  }
+  return canonicalFile;
+}
+
 async function openScoreFile(request) {
   requireAuth(request);
   const scoreId = cleanString(request.data && request.data.scoreId, 180);
@@ -1211,7 +1234,9 @@ async function openScoreFile(request) {
   }
   const fileName = safeScoreFileName(score.currentFileName || score.fileName, score);
   const expiresAt = Date.now() + 5 * 60 * 1000;
-  const [url] = await getStorage().bucket().file(filePath).getSignedUrl({
+  const bucket = getStorage().bucket();
+  const file = await canonicalScoreFile(bucket, scoreId, filePath, fileName);
+  const [url] = await file.getSignedUrl({
     version: "v4",
     action: "read",
     expires: expiresAt,
