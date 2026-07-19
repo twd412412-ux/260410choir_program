@@ -671,6 +671,11 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-part-meta{font-size:10.5px;color:var(--ts);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .score-part-actions{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .score-part-actions .score-light-btn,.score-part-actions .score-danger-btn,.score-part-actions .score-action-btn{font-size:11px;padding:6px 8px;border-radius:8px}
+.score-part-edit-context{border:1px solid var(--bd);background:var(--pl);border-radius:10px;padding:10px 11px;margin-bottom:12px}
+.score-part-edit-title{font-size:14px;font-weight:900;color:var(--tx);line-height:1.35}
+.score-part-edit-file{font-size:11px;color:var(--ts);line-height:1.4;margin-top:4px;overflow-wrap:anywhere}
+.score-part-edit-note{font-size:11px;color:var(--ts);line-height:1.45;margin-top:-2px}
+.score-part-edit-actions{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:8px;margin-top:14px}
 .score-card{padding:10px 11px;margin-bottom:8px;border-radius:10px;box-shadow:none}
 .score-card.clickable{cursor:pointer}
 .score-card.clickable:hover{background:#FEFCF6;border-color:#CAD5B5}
@@ -2585,6 +2590,28 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title" id="scorePickerTitle">📄 악보</span><button class="modal-close" onclick="closeModal('modalScorePicker')">✕</button></div>
     <div id="scorePickerBody"></div>
+  </div>
+</div>
+
+<!-- MODAL: 관현악 파트 변경 -->
+<div class="modal-overlay modal-center" id="modalScorePartEdit">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">관현악 파트 변경</span><button class="modal-close" onclick="closeModal('modalScorePartEdit')">✕</button></div>
+    <input type="hidden" id="scorePartEditId">
+    <div class="score-part-edit-context">
+      <div class="score-part-edit-title" id="scorePartEditTitle"></div>
+      <div class="score-part-edit-file" id="scorePartEditFile"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">변경할 파트</label>
+      <select class="form-sel" id="scorePartEditSelect" onchange="syncScorePartEditCustom()"></select>
+      <input class="form-input hidden" id="scorePartEditCustom" placeholder="예: 플루트 1,2 또는 플루트 3" style="margin-top:6px" onkeypress="if(event.key==='Enter')saveScorePartEdit()">
+    </div>
+    <div class="score-part-edit-note">원본 PDF와 파일명은 그대로 두고 관현악 파트 표시만 변경합니다.</div>
+    <div class="score-part-edit-actions">
+      <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="closeModal('modalScorePartEdit')">취소</button>
+      <button class="btn btn-p" id="scorePartEditSaveBtn" onclick="saveScorePartEdit()">파트 저장</button>
+    </div>
   </div>
 </div>
 
@@ -5611,6 +5638,8 @@ var ORCHESTRA_SCORE_INSTRUMENTS=[
   {key:'fullscore',label:'총보'},
   {key:'synthscore',label:'신디용 총보'},
   {key:'flute',label:'플루트'},
+  {key:'flute12',label:'플루트 1,2'},
+  {key:'flute3',label:'플루트 3'},
   {key:'oboe',label:'오보에'},
   {key:'clarinet',label:'클라리넷'},
   {key:'bassoon',label:'바순'},
@@ -5650,7 +5679,8 @@ function normalizeScoreInstrument(key){
   var lookup=raw.toLowerCase();
   if(!lookup)return '';
   if(lookup==='auto'||lookup==='__custom__')return '';
-  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===lookup});
+  var labelKey=scoreSearchKey(raw);
+  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===lookup||scoreSearchKey(item.label)===labelKey});
   return found&&found.key!=='auto'?found.key:raw;
 }
 function scoreInstrumentLabel(key){
@@ -5682,6 +5712,8 @@ function guessScoreInstrumentFromFileName(name){
   if(/violin|바이올린/.test(stem)||hasToken(['vln','vn']))return 'violin';
   if(/viola|비올라/.test(stem)||hasToken(['vla']))return 'viola';
   if(/cello|첼로/.test(stem)||hasNumberedToken(['vc']))return 'cello';
+  if(/flute[\s._-]*1[\s,;+&/_-]*2\b|플루트[\s._-]*1[\s,;+&/_-]*2\b/.test(stem))return 'flute12';
+  if(/flute[\s._-]*3\b|플루트[\s._-]*3\b/.test(stem)||hasNumberedToken(['fl3']))return 'flute3';
   if(/flute|플루트|플룻/.test(stem)||hasNumberedToken(['fl']))return 'flute';
   if(/oboe|오보에/.test(stem)||hasNumberedToken(['ob']))return 'oboe';
   if(/clarinet|클라리넷/.test(stem)||hasNumberedToken(['cl']))return 'clarinet';
@@ -6624,6 +6656,113 @@ function scoreFolderKey(score){
   if(ids.length)return 'songs:'+ids.slice().sort().join('|')+':'+scoreSearchKey(score.title);
   return 'title:'+scoreSearchKey(score&&score.title);
 }
+function scoreEditableInstrumentValue(score){
+  var instrument=normalizeScoreInstrument(score&&score.instrument);
+  var storedLabel=String(score&&score.instrumentLabel||'').trim();
+  if(storedLabel&&scoreSearchKey(storedLabel)!==scoreSearchKey(scoreInstrumentLabel(instrument)))return normalizeScoreInstrument(storedLabel);
+  return instrument||normalizeScoreInstrument(storedLabel);
+}
+function populateScorePartEditSelect(score){
+  var sel=document.getElementById('scorePartEditSelect');
+  var custom=document.getElementById('scorePartEditCustom');
+  if(!sel)return;
+  var current=scoreEditableInstrumentValue(score);
+  var existingCustom={};
+  (allScores||[]).forEach(function(row){
+    if(normalizeScoreKind(row&&row.scoreKind)!=='orchestra')return;
+    var key=scoreEditableInstrumentValue(row);
+    if(!key||isPresetScoreInstrument(key))return;
+    existingCustom[key]=scoreInstrumentLabel(key);
+  });
+  if(current&&!isPresetScoreInstrument(current))existingCustom[current]=scoreInstrumentLabel(current);
+  var presetOptions=ORCHESTRA_SCORE_INSTRUMENTS.filter(function(item){return item.key!=='auto';}).map(function(item){
+    return '<option value="'+escAttr(item.key)+'">'+escHtml(item.label)+'</option>';
+  }).join('');
+  var customOptions=Object.keys(existingCustom).sort(function(a,b){return existingCustom[a].localeCompare(existingCustom[b],'ko');}).map(function(key){
+    return '<option value="'+escAttr(key)+'">'+escHtml(existingCustom[key])+'</option>';
+  }).join('');
+  sel.innerHTML=presetOptions+customOptions+'<option value="__custom__">직접 입력...</option>';
+  if(current)sel.value=current;
+  if(!sel.value)sel.value='etc';
+  if(custom)custom.value='';
+  syncScorePartEditCustom();
+}
+function syncScorePartEditCustom(){
+  var sel=document.getElementById('scorePartEditSelect');
+  var custom=document.getElementById('scorePartEditCustom');
+  if(!custom)return;
+  var show=!!(sel&&sel.value==='__custom__');
+  custom.classList.toggle('hidden',!show);
+  if(show)setTimeout(function(){custom.focus();},0);
+}
+function readScorePartEditSelection(){
+  var sel=document.getElementById('scorePartEditSelect');
+  if(!sel)return '';
+  if(sel.value==='__custom__')return normalizeScoreInstrument((document.getElementById('scorePartEditCustom')||{}).value||'');
+  return normalizeScoreInstrument(sel.value);
+}
+function openScorePartEdit(id){
+  var score=allScores.find(function(row){return row.id===id});
+  if(!score||normalizeScoreKind(score.scoreKind)!=='orchestra')return showToast('관현악 파트보를 찾을 수 없습니다');
+  if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
+  document.getElementById('scorePartEditId').value=score.id;
+  document.getElementById('scorePartEditTitle').textContent=(score.title||'곡명 없음')+' · 현재 '+scorePartDisplayLabel(score);
+  document.getElementById('scorePartEditFile').textContent='파일명: '+(score.currentFileName||'파일명 없음');
+  populateScorePartEditSelect(score);
+  openModal('modalScorePartEdit');
+  setTimeout(function(){var sel=document.getElementById('scorePartEditSelect');if(sel)sel.focus();},120);
+}
+function saveScorePartEdit(){
+  if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
+  var id=(document.getElementById('scorePartEditId')||{}).value||'';
+  var score=allScores.find(function(row){return row.id===id});
+  if(!score||normalizeScoreKind(score.scoreKind)!=='orchestra')return showToast('수정할 관현악 파트보를 찾을 수 없습니다');
+  if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
+  var instrument=readScorePartEditSelection();
+  if(!instrument)return showToast('변경할 파트를 선택하거나 입력해주세요');
+  var label=scoreInstrumentLabel(instrument);
+  var previousLabel=scorePartDisplayLabel(score);
+  if(scoreSearchKey(previousLabel)===scoreSearchKey(label)){
+    closeModal('modalScorePartEdit');
+    return showToast('현재 파트와 동일합니다');
+  }
+  var duplicate=(allScores||[]).find(function(row){
+    return row&&row.id!==score.id&&normalizeScoreKind(row.scoreKind)==='orchestra'
+      &&scoreFolderKey(row)===scoreFolderKey(score)
+      &&scoreSearchKey(scorePartDisplayLabel(row))===scoreSearchKey(label);
+  });
+  if(duplicate&&!confirm('같은 곡에 '+label+' 파트가 이미 있습니다.\n그래도 이 파트로 변경할까요?'))return;
+  var now=new Date().toISOString();
+  var actorId=currentActorId(), actorName=currentActorName();
+  var base='items.'+score.id+'.';
+  var updates={updatedAt:now,updatedById:actorId,updatedByName:actorName};
+  updates[base+'instrument']=instrument;
+  updates[base+'instrumentLabel']=label;
+  updates[base+'updatedAt']=now;
+  updates[base+'updatedById']=actorId;
+  updates[base+'updatedByName']=actorName;
+  var btn=document.getElementById('scorePartEditSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  return scoreSettingsRef().update(updates).then(function(){
+    score.instrument=instrument;
+    score.instrumentLabel=label;
+    score.updatedAt=now;
+    score.updatedById=actorId;
+    score.updatedByName=actorName;
+    upsertScoreLocal(score);
+    closeModal('modalScorePartEdit');
+    renderScoreManage();
+    if(currentTab==='scores')renderScoresPage();
+    requestHomeRender();
+    writeLog('관현악 파트 변경','📄 ['+(score.title||'곡명 없음')+'] '+previousLabel+' → '+label+'\n'+(score.currentFileName||''));
+    showToast(label+' 파트로 변경했습니다');
+  }).catch(function(e){
+    console.error(e);
+    showToast('파트 변경 중 오류가 발생했습니다');
+  }).finally(function(){
+    if(btn){btn.disabled=false;btn.textContent='파트 저장';}
+  });
+}
 function scoreFolderGroups(rows){
   var groups=[], map={};
   (rows||[]).forEach(function(score){
@@ -6663,7 +6802,8 @@ function renderScoreFolderCard(group, adminMode){
           +'<div class="score-part-main"><div class="score-part-name">'+escHtml(part)+'</div><div class="score-part-meta">'+escHtml(details||'파트보')+'</div></div>'
           +'<div class="score-part-actions">'
             +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">보기</button>'
-            +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">파트 수정</button>':'')
+            +(canEdit?'<button class="score-light-btn" onclick="openScorePartEdit(\''+escAttr(score.id)+'\')">파트 변경</button>':'')
+            +(canEdit?'<button class="score-light-btn" onclick="editScoreUpload(\''+escAttr(score.id)+'\')">악보 수정</button>':'')
             +(canEdit?'<button class="score-light-btn" onclick="toggleScorePublic(\''+escAttr(score.id)+'\')">'+(score.public?'비공개':'공개')+'</button>':'')
             +(canDeleteScores()?'<button class="score-danger-btn" onclick="deleteScore(\''+escAttr(score.id)+'\')">삭제</button>':'')
           +'</div>'
