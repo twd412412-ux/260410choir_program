@@ -2968,7 +2968,7 @@ var ADMIN_RESET_REDIRECT_KEY='choir_admin_reset_redirect';
 var firebaseAuthLoadPromise=null;
 var firebaseAuthPersistencePromise=null;
 var firebaseFunctionsLoadPromise=null;
-var firebaseStorageModulePromise=null;
+var scoreOpenLinkCache={};
 var firebaseAuthReadyPromise=null;
 var firebaseAuthReady=false;
 var secureElevatedSession=false;
@@ -6476,21 +6476,6 @@ function openMatchedSongForScore(id){
   if(song)return openDetail(song.id);
   showToast('연결된 곡 상세정보를 찾을 수 없습니다');
 }
-function ensureFirebaseStorageModule(){
-  if(!firebaseStorageModulePromise){
-    firebaseStorageModulePromise=import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
-  }
-  return firebaseStorageModulePromise;
-}
-function getProtectedScoreBlob(path){
-  return Promise.all([ensureFirebaseAuth(),ensureFirebaseStorageModule()]).then(function(values){
-    var auth=values[0], module=values[1];
-    if(!auth.currentUser)throw new Error('score_auth_required');
-    var compatRef=storage.ref().child(path);
-    if(!compatRef._delegate)throw new Error('storage_reference_unavailable');
-    return module.getBlob(compatRef._delegate,35*1024*1024);
-  });
-}
 function scoreOpenFileName(score){
   var name=String(score&&score.currentFileName||'').trim();
   if(name&&/%[0-9A-Fa-f]{2}/.test(name)){
@@ -6502,33 +6487,20 @@ function scoreOpenFileName(score){
   }
   return scoreSafeFileName(name);
 }
-function keepScoreWindowFileName(win,fileName){
-  if(!win||win.closed)return;
-  var attempts=0;
-  function applyName(){
-    attempts++;
-    try{
-      if(!win||win.closed)return;
-      win.document.title=fileName;
-    }catch(e){return;}
-    if(attempts<16)setTimeout(applyName,250);
-  }
-  applyName();
+function getScoreOpenLink(score){
+  var cacheKey=score.id+'|'+score.currentFilePath;
+  var cached=scoreOpenLinkCache[cacheKey];
+  if(cached&&cached.url&&Number(cached.expiresAt||0)>Date.now()+15000)return Promise.resolve(cached);
+  return callSecureFunction('scoreFileAccess',{scoreId:score.id}).then(function(result){
+    if(!result||!result.url)throw new Error('score_link_unavailable');
+    scoreOpenLinkCache[cacheKey]=result;
+    return result;
+  });
 }
-function openScoreBlob(score,win){
-  return getProtectedScoreBlob(score.currentFilePath).then(function(blob){
-    if(!blob.type)blob=new Blob([blob],{type:'application/pdf'});
-    var fileName=scoreOpenFileName(score);
-    var namedBlob=blob;
-    try{namedBlob=new File([blob],fileName,{type:'application/pdf',lastModified:Date.now()})}catch(e){}
-    var objectUrl=URL.createObjectURL(namedBlob);
-    if(win&&!win.closed){
-      try{win.document.title=fileName}catch(e){}
-      win.location.replace(objectUrl);
-      keepScoreWindowFileName(win,fileName);
-    }
-    else window.location.href=objectUrl;
-    setTimeout(function(){URL.revokeObjectURL(objectUrl);},5*60*1000);
+function openProtectedScore(score,win){
+  return getScoreOpenLink(score).then(function(result){
+    if(win&&!win.closed)win.location.replace(result.url);
+    else window.location.href=result.url;
   });
 }
 function openScoreFileById(id){
@@ -6554,12 +6526,12 @@ function openScoreFileById(id){
   if(win&&!win.closed){try{win.document.title=scoreOpenFileName(score)}catch(e){}}
   if(score.currentFilePath){
     showToast('악보를 불러오는 중...');
-    openScoreBlob(score,win).then(function(){
+    openProtectedScore(score,win).then(function(){
       if(markScoreRead(score))refreshScoreUnreadViews();
     }).catch(function(e){
       console.error(e);
       if(win&&!win.closed)win.close();
-      showToast(e&&e.code==='storage/unauthorized'?'이 악보를 볼 권한이 없습니다':'악보를 불러오지 못했습니다');
+      showToast(securityErrorMessage(e,'악보를 불러오지 못했습니다'));
     });
     return;
   }

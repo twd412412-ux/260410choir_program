@@ -1153,6 +1153,74 @@ async function secureScoreFiles(request) {
   return {files: files.length, protectedRows};
 }
 
+function normalizeScoreKind(value) {
+  const kind = cleanString(value, 30).toLowerCase();
+  return ["orchestra", "orch", "instrument", "part"].includes(kind) ? "orchestra" : "singer";
+}
+
+function scoreAccessModes(request) {
+  if (isAdminRequest(request) || hasPermission(request, "score.manage")) return ["singer", "orchestra"];
+  const token = request.auth && request.auth.token ? request.auth.token : {};
+  const scope = ALLOWED_SCORE_SCOPES.has(token.scoreAccessScope) ? token.scoreAccessScope : "default";
+  if (scope === "all") return ["singer", "orchestra"];
+  if (scope === "singer" || scope === "orchestra") return [scope];
+  if (scope === "none") return [];
+  const part = cleanString(token.choirPart, 30);
+  if (part === "지휘") return ["singer", "orchestra"];
+  if (part === "관현악") return ["orchestra"];
+  return token.account === true ? ["singer"] : [];
+}
+
+function safeScoreFileName(value, score) {
+  let name = cleanString(value, 240).replace(/[\\/\u0000-\u001f\u007f]/g, "_");
+  if (!name) name = cleanString(score && (score.title || score.songName), 160) || "score";
+  if (!/\.pdf$/i.test(name)) name += ".pdf";
+  return name;
+}
+
+function scoreContentDisposition(value) {
+  const fileName = safeScoreFileName(value);
+  let fallback = fileName.normalize ? fileName.normalize("NFKD") : fileName;
+  fallback = fallback.replace(/[^\x20-\x7e]/g, "_").replace(/[;"\\]/g, "_");
+  if (!/[A-Za-z0-9]/.test(fallback)) fallback = "score.pdf";
+  const encoded = encodeURIComponent(fileName).replace(/['()*]/g, (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase());
+  return `inline; filename="${fallback}"; filename*=UTF-8''${encoded}`;
+}
+
+async function openScoreFile(request) {
+  requireAuth(request);
+  const scoreId = cleanString(request.data && request.data.scoreId, 180);
+  if (!isValidDocumentId(scoreId)) throw new HttpsError("invalid-argument", "악보를 확인해주세요.");
+
+  const scoreSnap = await db.collection("settings").doc("scores").get();
+  const sourceItems = scoreSnap.exists ? (scoreSnap.data() || {}).items || {} : {};
+  const score = Array.isArray(sourceItems)
+    ? sourceItems.find((item) => item && cleanString(item.id, 180) === scoreId)
+    : sourceItems[scoreId];
+  if (!score) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
+
+  const canManage = isAdminRequest(request) || hasPermission(request, "score.manage");
+  const kind = normalizeScoreKind(score.scoreKind || score.kind);
+  if (!canManage && (score.public === false || !scoreAccessModes(request).includes(kind))) {
+    throw new HttpsError("permission-denied", "이 악보를 볼 권한이 없습니다.");
+  }
+
+  const filePath = cleanString(score.currentFilePath || score.filePath, 1500);
+  if (!filePath || !filePath.startsWith("scores/") || filePath.includes("..")) {
+    throw new HttpsError("not-found", "저장된 악보 파일을 찾을 수 없습니다.");
+  }
+  const fileName = safeScoreFileName(score.currentFileName || score.fileName, score);
+  const expiresAt = Date.now() + 5 * 60 * 1000;
+  const [url] = await getStorage().bucket().file(filePath).getSignedUrl({
+    version: "v4",
+    action: "read",
+    expires: expiresAt,
+    responseDisposition: scoreContentDisposition(fileName),
+    responseType: "application/pdf",
+  });
+  return {url, fileName, expiresAt};
+}
+
 function songIndexShardId(songId) {
   const digest = crypto.createHash("sha256").update(String(songId)).digest();
   return "shard_" + String(digest.readUInt16BE(0) % SONG_INDEX_SHARDS).padStart(2, "0");
@@ -1207,6 +1275,8 @@ exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [
   if (action === "delete") return adminDeleteAccount(request);
   throw new HttpsError("invalid-argument", "지원하지 않는 계정 관리 요청입니다.");
 });
+
+exports.scoreFileAccess = onCall(async (request) => openScoreFile(request));
 
 exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
