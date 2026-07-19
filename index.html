@@ -466,16 +466,24 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .detail-row{display:flex;padding:10px 0;border-bottom:1px solid var(--bd);font-size:14px}
 .detail-label{width:80px;font-weight:700;color:var(--ts);flex-shrink:0}
 .detail-value{flex:1;color:var(--tx)}
-.schedule-calendar-actions{display:flex;justify-content:flex-end;margin:0 0 10px}
+.schedule-calendar-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .schedule-calendar-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #CAD5B5;border-radius:9px;background:#EEF4E4;color:#3F4B2F;padding:9px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .schedule-calendar-btn:hover{background:#E2ECD5;color:#2F3B24}
 .schedule-calendar-btn:active{transform:scale(.98)}
+.schedule-edit-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--p);border-radius:9px;background:var(--p);color:#fff;padding:9px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.schedule-edit-btn:hover{background:var(--pd);border-color:var(--pd)}
+.schedule-edit-btn:active{transform:scale(.98)}
 .cal-selected-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .cal-selected-head h3{margin:0;font-size:15px;font-weight:700}
 .calendar-event-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;cursor:default}
 .calendar-event-card:active{transform:none}
 .calendar-event-main{width:100%;min-width:0;border:0;background:transparent;color:inherit;padding:0;text-align:left;font-family:inherit;line-height:inherit;cursor:pointer}
-.calendar-event-card .schedule-calendar-btn{align-self:start;flex:0 0 auto;padding:7px 9px;font-size:11.5px;white-space:nowrap}
+.calendar-event-actions{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.calendar-event-card .schedule-calendar-btn,.calendar-event-card .schedule-edit-btn{align-self:stretch;flex:0 0 auto;padding:7px 9px;font-size:11.5px;white-space:nowrap}
+.schedule-editor-modal .modal-content{max-height:92vh}
+#modalScheduleEditor #subSchedule{display:block!important}
+#modalScheduleEditor #subSchedule>h3,#modalScheduleEditor #subSchedule>h4,#modalScheduleEditor #schList{display:none!important}
+#modalScheduleEditor #schSaveBtn{margin-bottom:0!important}
 .form-group{margin-bottom:12px;min-width:0;max-width:100%;box-sizing:border-box}
 .form-label{display:block;font-size:13px;font-weight:700;color:var(--ts);margin-bottom:4px}
 .form-input,.form-sel{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block;padding:10px 12px;border:2px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--tx);outline:none}
@@ -2704,6 +2712,13 @@ body{font-weight:500}
     <div id="schDetailBody"></div>
   </div>
 </div>
+<!-- MODAL: 일정 바로 수정 -->
+<div class="modal-overlay schedule-editor-modal" id="modalScheduleEditor">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">일정 수정</span><button class="modal-close" onclick="closeModal('modalScheduleEditor')">✕</button></div>
+    <div id="scheduleEditorHost"></div>
+  </div>
+</div>
 <!-- MODAL: 업데이트 안내 -->
 <div class="modal-overlay modal-center feature-update-modal" id="modalFeatureUpdate">
   <div class="modal-content">
@@ -3066,6 +3081,7 @@ var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleDetailId='';
+var scheduleDirectEditActive=false, scheduleDirectEditReturnDate='', scheduleEditorAnchor=null;
 var APP_RELEASE_VERSION='v26.07.19';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -3507,6 +3523,7 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalScheduleEditor')restoreScheduleEditorMount();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
@@ -3705,8 +3722,8 @@ function canManageSchedules(){
 }
 function canEditScheduleItem(schedule){
   if(adminRole==='admin')return true;
-  if(!canManageSchedules())return false;
   if(hasPermission('schedule.editAny'))return true;
+  if(!canManageSchedules())return false;
   return !!isOwnCreatedItem(schedule);
 }
 function canDeleteScheduleItem(schedule){
@@ -10578,11 +10595,11 @@ function toggleScheduleBriefing(){
 }
 
 function addSchedule(){
-  if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
+  var editingSchedule=null;
   if(scheduleEditId){
-    var editingSchedule=allSchedules.find(function(s){return s.id===scheduleEditId});
+    editingSchedule=allSchedules.find(function(s){return s.id===scheduleEditId});
     if(!canEditScheduleItem(editingSchedule))return showToast('일정 수정 권한이 없습니다');
-  }
+  }else if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
   var date=document.getElementById('schDate').value;
   var endDate=(document.getElementById('schEndDate')||{}).value||date;
   var title=document.getElementById('schTitle').value.trim();
@@ -10592,6 +10609,8 @@ function addSchedule(){
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
+  var directEdit=scheduleDirectEditActive;
+  var directReturnDate=scheduleDirectEditReturnDate;
   var scheduleData={date:date,endDate:endDate,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
   var write=scheduleEditId
     ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
@@ -10608,7 +10627,12 @@ function addSchedule(){
     writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}`);
     resetScheduleForm(getTodayInputDate());
     loadSchAdmin();
-    if(currentTab==='calendar')renderCal();
+    if(currentTab==='calendar'){
+      renderCal();
+      if(directReturnDate)showCalDay(directReturnDate,calDateKeyDay(directReturnDate));
+    }
+    if(directEdit)closeModal('modalScheduleEditor');
+    showToast(result.updated?'일정 수정 완료':'일정 추가 완료');
   });
 }
 function loadSchAdmin(){
@@ -10625,8 +10649,8 @@ function loadSchAdmin(){
     return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(scheduleDateRangeLabel(s))+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
   }).join('');
 }
-function editSchedule(id){
-  if(!canManageSchedules())return showToast('일정 관리 권한이 필요합니다');
+function editSchedule(id,options){
+  options=options||{};
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   if(!canEditScheduleItem(s))return showToast('일정 수정 권한이 없습니다');
   scheduleEditId=id;
@@ -10646,8 +10670,44 @@ function editSchedule(id){
   selColor=s.color||COLORS[0];
   document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
   var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 수정 저장';
-  document.getElementById('schTitle').scrollIntoView({block:'center',behavior:'smooth'});
+  if(options.scroll!==false)document.getElementById('schTitle').scrollIntoView({block:'center',behavior:'smooth'});
   showToast('수정할 내용을 확인한 뒤 저장해주세요');
+}
+
+function restoreScheduleEditorMount(){
+  var sub=document.getElementById('subSchedule');
+  if(sub&&scheduleEditorAnchor&&scheduleEditorAnchor.parentNode){
+    scheduleEditorAnchor.parentNode.insertBefore(sub,scheduleEditorAnchor.nextSibling);
+    var scheduleTab=document.querySelector('[data-at="schedule"].on');
+    sub.classList.toggle('hidden',!(currentTab==='admin'&&scheduleTab));
+  }
+  scheduleDirectEditActive=false;
+  scheduleDirectEditReturnDate='';
+  if(scheduleEditId)resetScheduleForm(getTodayInputDate());
+}
+
+function openScheduleEditorFromCalendar(id){
+  var s=allSchedules.find(function(x){return x.id===id});
+  if(!s)return showToast('일정을 찾을 수 없습니다');
+  if(!canEditScheduleItem(s))return showToast('일정 수정 권한이 없습니다');
+  var sub=document.getElementById('subSchedule');
+  var host=document.getElementById('scheduleEditorHost');
+  if(!sub||!host)return showToast('일정 수정 화면을 열 수 없습니다');
+  if(!scheduleEditorAnchor){
+    scheduleEditorAnchor=document.createComment('schedule-editor-origin');
+    sub.parentNode.insertBefore(scheduleEditorAnchor,sub);
+  }
+  closeModal('modalSchDetail');
+  host.appendChild(sub);
+  sub.classList.remove('hidden');
+  scheduleDirectEditActive=true;
+  scheduleDirectEditReturnDate=selectedCalDate||s.date;
+  openModal('modalScheduleEditor');
+  editSchedule(id,{scroll:false});
+  setTimeout(function(){
+    var content=document.querySelector('#modalScheduleEditor .modal-content');
+    if(content)content.scrollTop=0;
+  },0);
 }
 
   
@@ -10820,7 +10880,12 @@ function showCalDay(ds,day){
   var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
   var body='';
-  if(evts.length>0)body+=evts.map(function(e){return '<div class="song-card calendar-event-card" style="border-left-color:'+safeColor(e.color)+'"><button type="button" class="calendar-event-main" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><span class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</span><span class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</span>'+(e.songs?'<span style="display:block;font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</span>':'')+(e.memo?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</span>':'')+(e.useBriefing&&e.program?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</span>':'')+'</button><button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(e.id)+'\')" aria-label="'+escAttr(e.title)+' 일정만 캘린더에 추가">📅 캘린더 추가</button></div>'}).join('');
+  if(evts.length>0)body+=evts.map(function(e){
+    var id=escAttr(e.id);
+    var editBtn=canEditScheduleItem(e)?'<button type="button" class="schedule-edit-btn" onclick="openScheduleEditorFromCalendar(\''+id+'\')">수정</button>':'';
+    var actions='<div class="calendar-event-actions">'+editBtn+'<button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+id+'\')" aria-label="'+escHtml(e.title)+' 일정만 캘린더에 추가">📅 캘린더 추가</button></div>';
+    return '<div class="song-card calendar-event-card" style="border-left-color:'+safeColor(e.color)+'"><button type="button" class="calendar-event-main" onclick="openSchDetail(\''+id+'\')"><span class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</span><span class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</span>'+(e.songs?'<span style="display:block;font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</span>':'')+(e.memo?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</span>':'')+(e.useBriefing&&e.program?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</span>':'')+'</button>'+actions+'</div>';
+  }).join('');
   if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
   if(!body)body='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
   document.getElementById('calEvtList').innerHTML=body;
@@ -10946,7 +11011,8 @@ function openSchDetail(id){
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   scheduleDetailId=id;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
-  var body='<div class="schedule-calendar-actions"><button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(s.id)+'\')">📅 내 캘린더에 추가</button></div>';
+  var editBtn=canEditScheduleItem(s)?'<button type="button" class="schedule-edit-btn" onclick="openScheduleEditorFromCalendar(\''+escAttr(s.id)+'\')">수정</button>':'';
+  var body='<div class="schedule-calendar-actions">'+editBtn+'<button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(s.id)+'\')">📅 내 캘린더에 추가</button></div>';
   body+=[['날짜',scheduleDateRangeLabel(s)],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
   if(s.useBriefing){
     body+='<div style="margin-top:14px;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">';
