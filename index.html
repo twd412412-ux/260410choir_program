@@ -6444,11 +6444,42 @@ function getProtectedScoreBlob(path){
     return module.getBlob(compatRef._delegate,35*1024*1024);
   });
 }
+function scoreOpenFileName(score){
+  var name=String(score&&score.currentFileName||'').trim();
+  if(name&&/%[0-9A-Fa-f]{2}/.test(name)){
+    try{name=decodeURIComponent(name)}catch(e){}
+  }
+  if(!name){
+    var part=normalizeScoreKind(score&&score.scoreKind)==='orchestra'?'_'+scorePartDisplayLabel(score):'';
+    name=(score&&score.title||'악보')+part+'.pdf';
+  }
+  return scoreSafeFileName(name);
+}
+function keepScoreWindowFileName(win,fileName){
+  if(!win||win.closed)return;
+  var attempts=0;
+  function applyName(){
+    attempts++;
+    try{
+      if(!win||win.closed)return;
+      win.document.title=fileName;
+    }catch(e){return;}
+    if(attempts<16)setTimeout(applyName,250);
+  }
+  applyName();
+}
 function openScoreBlob(score,win){
   return getProtectedScoreBlob(score.currentFilePath).then(function(blob){
     if(!blob.type)blob=new Blob([blob],{type:'application/pdf'});
-    var objectUrl=URL.createObjectURL(blob);
-    if(win&&!win.closed)win.location.replace(objectUrl);
+    var fileName=scoreOpenFileName(score);
+    var namedBlob=blob;
+    try{namedBlob=new File([blob],fileName,{type:'application/pdf',lastModified:Date.now()})}catch(e){}
+    var objectUrl=URL.createObjectURL(namedBlob);
+    if(win&&!win.closed){
+      try{win.document.title=fileName}catch(e){}
+      win.location.replace(objectUrl);
+      keepScoreWindowFileName(win,fileName);
+    }
     else window.location.href=objectUrl;
     setTimeout(function(){URL.revokeObjectURL(objectUrl);},5*60*1000);
   });
@@ -6468,6 +6499,7 @@ function openScoreFileById(id){
   var message='악보를 볼까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 악보 파일을 불러옵니다.';
   if(!confirm(message))return;
   var win=window.open('about:blank','_blank');
+  if(win&&!win.closed){try{win.document.title=scoreOpenFileName(score)}catch(e){}}
   if(score.currentFilePath){
     showToast('악보를 불러오는 중...');
     openScoreBlob(score,win).then(function(){
@@ -6836,6 +6868,14 @@ function scoreSafeFileName(name){
   if(!/\.pdf$/i.test(base))base+='.pdf';
   return base;
 }
+function scoreContentDisposition(name){
+  var safe=scoreSafeFileName(name).replace(/["\\\r\n]/g,'_');
+  var fallback=safe.normalize?safe.normalize('NFKD'):safe;
+  fallback=fallback.replace(/[^\x20-\x7E]/g,'_').replace(/[;"\\]/g,'_');
+  if(!fallback||!/[A-Za-z0-9]/.test(fallback))fallback='score.pdf';
+  var encoded=encodeURIComponent(safe).replace(/['()*]/g,function(ch){return '%'+ch.charCodeAt(0).toString(16).toUpperCase()});
+  return 'inline; filename="'+fallback+'"; filename*=UTF-8\'\''+encoded;
+}
 function upsertScoreLocal(score){
   allScores=allScores.filter(function(s){return s.id!==score.id});
   allScores.push(score);
@@ -6960,7 +7000,7 @@ function saveScoreUpload(){
     var file=target.file;
     var safeName=scoreSafeFileName(file.name);
     var filePath='scores/'+target.id+'/'+safeName;
-    return storage.ref().child(filePath).put(file,{contentType:'application/pdf'}).then(function(snapshot){
+    return storage.ref().child(filePath).put(file,{contentType:'application/pdf',contentDisposition:scoreContentDisposition(file.name)}).then(function(snapshot){
       return buildScoreData(target.id,target.previous,{path:filePath,name:file.name,size:file.size},target.instrument);
     });
   }
