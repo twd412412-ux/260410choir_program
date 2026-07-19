@@ -423,6 +423,9 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .schedule-calendar-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #CAD5B5;border-radius:9px;background:#EEF4E4;color:#3F4B2F;padding:9px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .schedule-calendar-btn:hover{background:#E2ECD5;color:#2F3B24}
 .schedule-calendar-btn:active{transform:scale(.98)}
+.cal-selected-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.cal-selected-head h3{margin:0;font-size:15px;font-weight:700}
+.cal-selected-head .schedule-calendar-btn{flex:0 0 auto;padding:7px 10px;font-size:11.5px;white-space:nowrap}
 .form-group{margin-bottom:12px;min-width:0;max-width:100%;box-sizing:border-box}
 .form-label{display:block;font-size:13px;font-weight:700;color:var(--ts);margin-bottom:4px}
 .form-input,.form-sel{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block;padding:10px 12px;border:2px solid var(--bd);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--tx);outline:none}
@@ -430,6 +433,14 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 input.form-input[type="date"],input.form-input[type="time"],input.form-input[type="month"]{width:100%;max-width:100%;min-width:0;min-inline-size:0;box-sizing:border-box;padding-left:10px;padding-right:10px;line-height:1.2;text-align:left;overflow:hidden}
 input.form-input[type="date"]::-webkit-date-and-time-value,input.form-input[type="time"]::-webkit-date-and-time-value,input.form-input[type="month"]::-webkit-date-and-time-value{text-align:left;min-width:0;margin:0}
 input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-input[type="time"]::-webkit-calendar-picker-indicator,input.form-input[type="month"]::-webkit-calendar-picker-indicator{margin-left:2px;padding:0}
+.dark input[type="date"],.dark input[type="time"],.dark input[type="month"],.dark input[type="datetime-local"]{background-color:#181D17;border-color:#465044;color:#F4F0E8!important;-webkit-text-fill-color:#F4F0E8!important;color-scheme:dark}
+.dark input[type="date"]::-webkit-date-and-time-value,.dark input[type="time"]::-webkit-date-and-time-value,.dark input[type="month"]::-webkit-date-and-time-value,.dark input[type="datetime-local"]::-webkit-date-and-time-value{color:#F4F0E8!important;-webkit-text-fill-color:#F4F0E8!important}
+.dark input[type="date"]::-webkit-datetime-edit,.dark input[type="time"]::-webkit-datetime-edit,.dark input[type="month"]::-webkit-datetime-edit,.dark input[type="datetime-local"]::-webkit-datetime-edit{color:#F4F0E8!important;-webkit-text-fill-color:#F4F0E8!important}
+.dark .search-box,.dark .form-input,.dark .form-sel,.dark .filter-select,.dark .cal-view-select{background:#181D17;border-color:#465044;color:#F4F0E8;-webkit-text-fill-color:#F4F0E8}
+.dark .search-box::placeholder,.dark .form-input::placeholder{color:#AAB3A4;-webkit-text-fill-color:#AAB3A4;opacity:1}
+.dark .form-sel option,.dark .filter-select option,.dark .cal-view-select option{background:#181D17;color:#F4F0E8}
+.dark .date-display,.dark .schedule-picker-display{background:#181D17;border-color:#465044;color:#F4F0E8;-webkit-text-fill-color:#F4F0E8}
+.dark .date-display.empty,.dark .schedule-picker-display.empty{color:#AAB3A4;-webkit-text-fill-color:#AAB3A4}
 .btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
 .btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--pd)}
 .btn-d{background:var(--dg);color:#fff}
@@ -1861,7 +1872,7 @@ body{font-weight:500}
   <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="default">기본 · 점+밴드</option><option value="stack">스택형</option></select></div>
   <div class="quick-manage-row hidden" id="calendarQuickActions" style="padding:0 16px 10px;margin-top:0"><button type="button" class="quick-manage-btn primary" id="calendarQuickScheduleBtn" onclick="openQuickAddSchedule()">+ 일정 추가</button><button type="button" class="quick-manage-btn" id="calendarQuickSongBtn" onclick="openQuickAddSong(getQuickCreateDate())">+ 곡 추가</button></div>
   <div class="cal-grid" id="calGrid"></div>
-  <div style="padding:12px 16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:8px" id="calEvtTitle">일정</h3><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
+  <div style="padding:12px 16px"><div class="cal-selected-head"><h3 id="calEvtTitle">일정</h3><button type="button" class="schedule-calendar-btn hidden" id="calDateCalendarBtn" onclick="downloadSelectedDateCalendar()">📅 캘린더 추가</button></div><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
 </div>
 
 <!-- PAGE: 아카이브 -->
@@ -2582,8 +2593,8 @@ body{font-weight:500}
       <details class="feature-update-item feature-calendar" ontoggle="handleFeatureUpdateToggle(this)">
         <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b><span>앱 일정을 휴대폰 캘린더에 간편하게 저장합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정 상세 열기</b><span>홈의 이번 주 일정이나 일정 탭에서 선택하세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>내 캘린더에 추가 선택</b><span>일정 상세 화면 상단에서 누르세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>일정 탭에서 날짜 선택</b><span>캘린더에서 원하는 날짜를 누르세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>캘린더 추가 선택</b><span>선택한 날짜 오른쪽의 버튼을 누르세요.</span></div></div>
           <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>캘린더에 저장</b><span>열린 휴대폰 캘린더에서 추가 또는 저장을 완료하세요.</span></div></div>
         </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭 열기</button></div>
       </details>
@@ -9867,35 +9878,31 @@ function scheduleCalendarDescription(schedule,isTimed){
   if(schedule.useBriefing&&schedule.briefingMemo)rows.push('추가 안내:\n'+schedule.briefingMemo);
   return rows.join('\n\n');
 }
-function buildScheduleCalendarIcs(schedule,stamp){
+function scheduleCalendarIsTimed(schedule){
+  var start=scheduleStartDate(schedule);
+  return /^\d{2}:\d{2}$/.test(String(schedule&&schedule.time||''))&&start===scheduleEndDate(schedule);
+}
+function scheduleCalendarTimezoneLines(){
+  return [
+    'BEGIN:VTIMEZONE',
+    'TZID:Asia/Seoul',
+    'X-LIC-LOCATION:Asia/Seoul',
+    'BEGIN:STANDARD',
+    'TZOFFSETFROM:+0900',
+    'TZOFFSETTO:+0900',
+    'TZNAME:KST',
+    'DTSTART:19700101T000000',
+    'END:STANDARD',
+    'END:VTIMEZONE'
+  ];
+}
+function scheduleCalendarEventLines(schedule,stamp){
   var start=scheduleStartDate(schedule);
   var end=scheduleEndDate(schedule);
   if(!schedule||!start||!schedule.title)throw new Error('calendar_schedule_invalid');
-  var hasTime=/^\d{2}:\d{2}$/.test(String(schedule.time||''));
-  var isTimed=hasTime&&start===end;
+  var isTimed=scheduleCalendarIsTimed(schedule);
   var uidSource=String(schedule.id||start+'-'+schedule.title).replace(/[^A-Za-z0-9_-]/g,'').slice(0,80)||calendarDateCompact(start);
-  var lines=[
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Gwangju Church Choir//Choir App//KO',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH'
-  ];
-  if(isTimed){
-    lines=lines.concat([
-      'BEGIN:VTIMEZONE',
-      'TZID:Asia/Seoul',
-      'X-LIC-LOCATION:Asia/Seoul',
-      'BEGIN:STANDARD',
-      'TZOFFSETFROM:+0900',
-      'TZOFFSETTO:+0900',
-      'TZNAME:KST',
-      'DTSTART:19700101T000000',
-      'END:STANDARD',
-      'END:VTIMEZONE'
-    ]);
-  }
-  lines.push('BEGIN:VEVENT');
+  var lines=['BEGIN:VEVENT'];
   lines.push('UID:choir-schedule-'+uidSource+'@choir-project-f3b67');
   lines.push('DTSTAMP:'+calendarIcsUtcStamp(stamp));
   if(schedule.updatedAt)lines.push('LAST-MODIFIED:'+calendarIcsUtcStamp(schedule.updatedAt));
@@ -9913,8 +9920,27 @@ function buildScheduleCalendarIcs(schedule,stamp){
   lines.push('STATUS:CONFIRMED');
   lines.push('TRANSP:OPAQUE');
   lines.push('END:VEVENT');
+  return lines;
+}
+function buildSchedulesCalendarIcs(schedules,stamp){
+  var items=(Array.isArray(schedules)?schedules:[]).filter(function(schedule){
+    return !!(schedule&&scheduleStartDate(schedule)&&schedule.title);
+  });
+  if(!items.length)throw new Error('calendar_schedules_invalid');
+  var lines=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Gwangju Church Choir//Choir App//KO',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+  if(items.some(scheduleCalendarIsTimed))lines=lines.concat(scheduleCalendarTimezoneLines());
+  items.forEach(function(schedule){lines=lines.concat(scheduleCalendarEventLines(schedule,stamp))});
   lines.push('END:VCALENDAR');
   return lines.map(calendarIcsFoldLine).join('\r\n')+'\r\n';
+}
+function buildScheduleCalendarIcs(schedule,stamp){
+  return buildSchedulesCalendarIcs([schedule],stamp);
 }
 function scheduleCalendarFilename(schedule){
   var title=String(schedule&&schedule.title||'찬양대 일정')
@@ -9924,22 +9950,52 @@ function scheduleCalendarFilename(schedule){
     .slice(0,60)||'찬양대 일정';
   return (scheduleStartDate(schedule)||'일정')+'_'+title+'.ics';
 }
+function downloadCalendarFile(content,filename,message){
+  var blob=new Blob([content],{type:'text/calendar;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var link=document.createElement('a');
+  link.href=url;
+  link.download=filename;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},30000);
+  showToast(message||'캘린더 파일을 만들었습니다');
+}
 function downloadScheduleCalendar(id){
   var schedule=allSchedules.find(function(s){return s.id===id});
   if(!schedule)return showToast('일정을 찾을 수 없습니다');
   try{
-    var content=buildScheduleCalendarIcs(schedule,new Date());
-    var blob=new Blob([content],{type:'text/calendar;charset=utf-8'});
-    var url=URL.createObjectURL(blob);
-    var link=document.createElement('a');
-    link.href=url;
-    link.download=scheduleCalendarFilename(schedule);
-    link.style.display='none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(function(){URL.revokeObjectURL(url)},30000);
-    showToast(scheduleStartDate(schedule)!==scheduleEndDate(schedule)?'기간 일정을 캘린더 파일로 만들었습니다':'캘린더 파일을 만들었습니다');
+    downloadCalendarFile(
+      buildScheduleCalendarIcs(schedule,new Date()),
+      scheduleCalendarFilename(schedule),
+      scheduleStartDate(schedule)!==scheduleEndDate(schedule)?'기간 일정을 캘린더 파일로 만들었습니다':'캘린더 파일을 만들었습니다'
+    );
+  }catch(e){
+    console.error(e);
+    showToast('캘린더 파일을 만들지 못했습니다');
+  }
+}
+function schedulesOnCalendarDate(dateKey){
+  return allSchedules.filter(function(schedule){return scheduleOccursOnDate(schedule,dateKey)}).sort(function(a,b){
+    return scheduleSortValue(a).localeCompare(scheduleSortValue(b))||String(a.title||'').localeCompare(String(b.title||''),'ko');
+  });
+}
+function selectedDateCalendarFilename(dateKey,schedules){
+  var suffix=schedules.length>1?'_'+schedules.length+'개':'';
+  return (normalizeDateKey(dateKey)||'일정')+'_찬양대_일정'+suffix+'.ics';
+}
+function downloadSelectedDateCalendar(){
+  var dateKey=normalizeDateKey(selectedCalDate);
+  var schedules=dateKey?schedulesOnCalendarDate(dateKey):[];
+  if(!schedules.length)return showToast('이 날짜에 추가할 일정이 없습니다');
+  try{
+    downloadCalendarFile(
+      buildSchedulesCalendarIcs(schedules,new Date()),
+      selectedDateCalendarFilename(dateKey,schedules),
+      schedules.length>1?'이 날짜 일정 '+schedules.length+'개를 캘린더 파일로 만들었습니다':'캘린더 파일을 만들었습니다'
+    );
   }catch(e){
     console.error(e);
     showToast('캘린더 파일을 만들지 못했습니다');
@@ -10183,6 +10239,8 @@ function renderCalStackMonth(fd,ld,todayStr){
 
 function renderCal(){
   selectedCalDate='';
+  var calendarBtn=document.getElementById('calDateCalendarBtn');
+  if(calendarBtn)calendarBtn.classList.add('hidden');
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
   var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
   syncQuickCreateActions();
@@ -10233,9 +10291,14 @@ function renderCal(){
 
 function showCalDay(ds,day){
   selectedCalDate=ds;
-  var evts=allSchedules.filter(function(s){return scheduleOccursOnDate(s,ds)});
+  var evts=schedulesOnCalendarDate(ds);
   var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
+  var calendarBtn=document.getElementById('calDateCalendarBtn');
+  if(calendarBtn){
+    calendarBtn.classList.toggle('hidden',!evts.length);
+    calendarBtn.setAttribute('aria-label',evts.length>1?'이 날짜 일정 '+evts.length+'개를 캘린더에 추가':'이 날짜 일정을 캘린더에 추가');
+  }
   var body='';
   if(evts.length>0)body+=evts.map(function(e){return '<div class="song-card" style="border-left-color:'+safeColor(e.color)+'" onclick="openSchDetail(\''+escAttr(e.id)+'\')"><div class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</div><div class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</div>'+(e.songs?'<div style="font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</div>':'')+(e.memo?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</div>':'')+(e.useBriefing&&e.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div>'}).join('');
   if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
@@ -10363,8 +10426,7 @@ function openSchDetail(id){
   var s=allSchedules.find(function(x){return x.id===id});if(!s)return;
   scheduleDetailId=id;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
-  var body='<div class="schedule-calendar-actions"><button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(s.id)+'\')">📅 내 캘린더에 추가</button></div>';
-  body+=[['날짜',scheduleDateRangeLabel(s)],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
+  var body=[['날짜',scheduleDateRangeLabel(s)],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
   if(s.useBriefing){
     body+='<div style="margin-top:14px;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">';
     body+='<div style="font-size:15px;font-weight:700;margin-bottom:10px">📋 프로그램 브리핑</div>';
@@ -13677,7 +13739,7 @@ function showGuide(force){
     {icon:'🎵',title:'곡 검색',desc:'곡명, 단원, 반주자로 검색하고\n연도/분류/요일로 좁혀볼 수 있습니다.'},
     {icon:'⭐',title:'즐겨찾기',desc:'자주 보는 곡은 별표를 눌러\n즐겨찾기 탭에서 바로 확인하세요.'},
     {icon:'📄',title:'최신 악보',desc:'로그인 후 악보 탭에서 최신 파일을 확인하세요.\nNEW는 악보를 실제로 열면 사라집니다.'},
-    {icon:'📅',title:'일정과 내 캘린더',desc:'일정을 열어 날짜와 장소를 확인하고\n내 캘린더에 추가할 수 있습니다.'},
+    {icon:'📅',title:'일정과 내 캘린더',desc:'일정 탭에서 날짜를 선택하고\n캘린더 추가로 바로 저장할 수 있습니다.'},
     {icon:'🎚️',title:'자리배치 확인',desc:'공개된 찬양의밤 배치가 있으면\n홈에서 바로 열고 이름으로 찾을 수 있습니다.'},
     {icon:'👤',title:'로그인과 프로필',desc:'이름과 PIN으로 로그인하면\n즐겨찾기 동기화와 프로필 사진 등록을 사용할 수 있습니다.'},
     {icon:'↻',title:'앱 업데이트',desc:'기능이 바뀌었는데 화면이 그대로면\n홈 하단 앱 업데이트를 눌러 최신 화면을 불러오세요.'}
