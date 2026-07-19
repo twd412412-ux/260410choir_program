@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#F2E9D8">
 <meta name="apple-mobile-web-app-title" content="찬양대">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="choir-build-sha" content="__CHOIR_DEPLOY_SHA__">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/hymn-dove-book.png">
 <link rel="apple-touch-icon" href="assets/hymn-dove-book.png">
@@ -1566,7 +1567,9 @@ body{font-weight:500}
 .dark .home-feature-update-copy b{color:#FFFCF5}
 .dark .home-feature-update-link{color:#F2D59C}
 .home-update-btn.install{background:#EEF2E6;color:#4E5A35;border-color:#C9D4BA}
+.home-update-btn.pending{background:#52613B;color:#fff;border-color:#52613B;box-shadow:0 0 0 3px rgba(82,97,59,.14)}
 .home-update-btn:hover{background:#F8F2E8;color:#191A15}
+.home-update-btn.pending:hover{background:#465431;color:#fff}
 .home-update-btn:active{transform:scale(.98)}
 .feature-update-modal .modal-content{max-width:440px;max-height:82vh}
 .feature-update-kicker{font-size:11px;font-weight:900;color:#8A6A25;margin-bottom:6px}
@@ -1822,7 +1825,7 @@ body{font-weight:500}
     <div class="home-update-wrap">
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
-      <button class="home-update-btn" type="button" onclick="reloadAppVersion()"><span>↻</span><span>앱 업데이트</span></button>
+      <button class="home-update-btn" id="homeAppUpdateBtn" type="button" onclick="reloadAppVersion()"><span>↻</span><span data-app-update-label>앱 업데이트</span></button>
     </div>
     <div class="home-credit">Engineered by JY</div>
   </div>
@@ -2878,8 +2881,9 @@ var forceFreshDataOnInit=(function(){
   try{
     var url=new URL(window.location.href);
     var force=url.searchParams.has('appUpdate');
-    if(force){
+    if(force||url.searchParams.has('appBuild')){
       url.searchParams.delete('appUpdate');
+      url.searchParams.delete('appBuild');
       window.history.replaceState({},'',url.toString());
     }
     return force;
@@ -2938,6 +2942,10 @@ var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleDetailId='';
+var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
+var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
+var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
+var appUpdatePendingSha='', appUpdateCheckPromise=null, appUpdateLastCheckedAt=0, appUpdateIntervalId=null;
 
 // ==================== 권한 정의 ====================
 var PERMISSION_GROUPS=[
@@ -3007,13 +3015,100 @@ var SCORE_ACCESS_SCOPE_OPTIONS=[
 // ==================== 토스트 ====================
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
 
+function isValidAppBuildSha(value){return /^[0-9a-f]{40}$/i.test(String(value||''))}
+function setAppUpdateButtonPending(pending){
+  var btn=document.getElementById('homeAppUpdateBtn');
+  if(!btn)return;
+  btn.classList.toggle('pending',!!pending);
+  var label=btn.querySelector('[data-app-update-label]');
+  if(label)label.textContent=pending?'업데이트 준비됨':'앱 업데이트';
+}
+function markAppUpdatePending(sha,notify){
+  var changed=appUpdatePendingSha!==sha;
+  appUpdatePendingSha=sha;
+  setAppUpdateButtonPending(true);
+  if(notify&&changed)showToast('새 버전이 준비됐습니다. 홈에서 자동 적용됩니다');
+}
+function clearAppUpdatePending(){
+  appUpdatePendingSha='';
+  setAppUpdateButtonPending(false);
+}
+function canAutoReloadAppUpdate(){
+  return document.visibilityState!=='hidden'
+    && currentTab==='home'
+    && !document.querySelector('.modal-overlay.active')
+    && !document.body.classList.contains('seating-fullscreen')
+    && !seatingDirty;
+}
+function appUpdateUrl(token,forceDataRefresh){
+  var url=new URL(window.location.href);
+  url.searchParams.set(forceDataRefresh?'appUpdate':'appBuild',String(token||Date.now()));
+  return url.toString();
+}
+function tryApplyPendingAppUpdate(){
+  var target=appUpdatePendingSha;
+  if(!isValidAppBuildSha(target)||!canAutoReloadAppUpdate())return false;
+  try{
+    if(sessionStorage.getItem(APP_UPDATE_RELOAD_KEY)===target){
+      setAppUpdateButtonPending(true);
+      return false;
+    }
+    sessionStorage.setItem(APP_UPDATE_RELOAD_KEY,target);
+  }catch(e){}
+  showToast('새 버전을 자동으로 적용합니다');
+  setTimeout(function(){window.location.replace(appUpdateUrl(target.slice(0,12),false))},120);
+  return true;
+}
+function checkForAppUpdate(force){
+  if(!isValidAppBuildSha(APP_BUILD_SHA)||!/^https?:$/.test(window.location.protocol))return Promise.resolve(null);
+  var now=Date.now();
+  if(!force&&now-appUpdateLastCheckedAt<APP_UPDATE_CHECK_INTERVAL_MS)return Promise.resolve(null);
+  if(appUpdateCheckPromise)return appUpdateCheckPromise;
+  appUpdateLastCheckedAt=now;
+  var infoUrl=new URL('./deploy-info.json',window.location.href);
+  infoUrl.searchParams.set('appCheck',String(now));
+  var request=fetch(infoUrl.toString(),{cache:'no-store',credentials:'same-origin'}).then(function(response){
+    if(!response.ok)throw new Error('app_update_check_failed');
+    return response.json();
+  }).then(function(info){
+    var latest=String(info&&info.sha||'').trim();
+    if(!isValidAppBuildSha(latest))return null;
+    if(latest===APP_BUILD_SHA){
+      clearAppUpdatePending();
+      try{if(sessionStorage.getItem(APP_UPDATE_RELOAD_KEY)===latest)sessionStorage.removeItem(APP_UPDATE_RELOAD_KEY)}catch(e){}
+      return {upToDate:true,sha:latest};
+    }
+    markAppUpdatePending(latest,!canAutoReloadAppUpdate());
+    tryApplyPendingAppUpdate();
+    return {upToDate:false,sha:latest};
+  });
+  appUpdateCheckPromise=request.then(function(result){appUpdateCheckPromise=null;return result},function(){appUpdateCheckPromise=null;return null});
+  return appUpdateCheckPromise;
+}
+function initAutoAppUpdate(){
+  if(!isValidAppBuildSha(APP_BUILD_SHA)||!/^https?:$/.test(window.location.protocol))return;
+  var initialCheck=function(){setTimeout(function(){checkForAppUpdate(false)},1200)};
+  if(document.readyState==='complete')initialCheck();
+  else window.addEventListener('load',initialCheck,{once:true});
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible')setTimeout(function(){checkForAppUpdate(false);tryApplyPendingAppUpdate()},250);
+  });
+  window.addEventListener('pageshow',function(event){
+    if(event.persisted)setTimeout(function(){checkForAppUpdate(false);tryApplyPendingAppUpdate()},250);
+  });
+  window.addEventListener('online',function(){
+    setTimeout(function(){checkForAppUpdate(true)},250);
+  });
+  appUpdateIntervalId=setInterval(function(){
+    if(document.visibilityState==='visible')checkForAppUpdate(false);
+  },APP_UPDATE_CHECK_INTERVAL_MS);
+}
 function reloadAppVersion(){
   if(!confirm('최신 버전을 다시 불러올까요?\n저장하지 않은 내용이 있으면 사라질 수 있습니다.'))return;
   showToast('앱을 다시 불러오는 중...');
   try{
-    var url=new URL(window.location.href);
-    url.searchParams.set('appUpdate',String(Date.now()));
-    window.location.replace(url.toString());
+    sessionStorage.removeItem(APP_UPDATE_RELOAD_KEY);
+    window.location.replace(appUpdateUrl(appUpdatePendingSha?appUpdatePendingSha.slice(0,12):Date.now(),true));
   }catch(e){
     window.location.reload();
   }
@@ -3293,6 +3388,7 @@ function closeModal(id){
   }
   modal.classList.remove('active');
   syncLayoutState();
+  if(currentTab==='home')setTimeout(tryApplyPendingAppUpdate,0);
 }
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal-overlay')&&e.target.classList.contains('active')){
@@ -3705,7 +3801,10 @@ function switchTab(tab){
   document.querySelectorAll('.nav-item,.home-fab').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
   var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(p)p.classList.remove('hidden');
-  if(tab==='home')renderHome();
+  if(tab==='home'){
+    renderHome();
+    setTimeout(tryApplyPendingAppUpdate,0);
+  }
   if(tab==='scores')renderScoresPage();
   if(tab==='favorites')renderFav();
   if(tab==='calendar')renderCal();
@@ -13580,6 +13679,7 @@ function init(){
   buildYearOptions();
   initPhotoViewerTouch();
   syncLayoutState();
+  initAutoAppUpdate();
 }
 init();
 

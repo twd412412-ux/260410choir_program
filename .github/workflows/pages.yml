@@ -28,6 +28,13 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
+      - name: Stamp app build
+        shell: bash
+        run: |
+          grep -q '__CHOIR_DEPLOY_SHA__' index.html
+          sed -i "s/__CHOIR_DEPLOY_SHA__/${GITHUB_SHA}/g" index.html
+          grep -q "name=\"choir-build-sha\" content=\"${GITHUB_SHA}\"" index.html
+
       - name: Write deploy info
         shell: bash
         run: |
@@ -47,10 +54,12 @@ jobs:
       - name: Verify deployed commit
         shell: bash
         run: |
-          url="${{ steps.deployment.outputs.page_url }}deploy-info.json?run=${GITHUB_RUN_ID}"
+          info_url="${{ steps.deployment.outputs.page_url }}deploy-info.json?run=${GITHUB_RUN_ID}"
+          page_url="${{ steps.deployment.outputs.page_url }}?run=${GITHUB_RUN_ID}"
           for i in {1..30}; do
-            body="$(curl -fsSL "$url" || true)"
-            if [[ "$body" == *"$GITHUB_SHA"* ]]; then
+            info="$(curl -fsSL "$info_url" || true)"
+            page="$(curl -fsSL "$page_url" || true)"
+            if [[ "$info" == *"$GITHUB_SHA"* && "$page" == *"name=\"choir-build-sha\" content=\"$GITHUB_SHA\""* ]]; then
               echo "Verified deployed SHA: $GITHUB_SHA"
               exit 0
             fi
