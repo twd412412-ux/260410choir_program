@@ -118,11 +118,20 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-auto-link-btn:disabled{opacity:.55;cursor:not-allowed}
 .account-pin-visible{color:#3F572D;font-weight:950;letter-spacing:0}
 .account-pin-unavailable{color:#A9443B;font-weight:900}
-.account-roster-section{margin:2px 0 18px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.account-roster-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.account-roster-section{margin:2px 0 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.account-roster-summary{list-style:none;cursor:pointer;padding:13px 0}
+.account-roster-summary::-webkit-details-marker{display:none}
+.account-roster-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.account-roster-head-main{min-width:0;display:flex;align-items:center;gap:10px}
+.account-roster-head-copy{min-width:0}
 .account-roster-title{font-size:15px;font-weight:950;color:var(--tx)}
 .account-roster-caption{font-size:11px;color:var(--ts);font-weight:720;line-height:1.4;margin-top:2px}
 .account-roster-total{font-size:12px;color:#4F623A;font-weight:900;white-space:nowrap}
+.account-roster-toggle{display:flex;align-items:center;justify-content:center;width:22px;height:22px;color:var(--ts);font-size:19px;font-weight:600;line-height:1;flex:none}
+.account-roster-toggle::before{content:'+'}
+.account-roster-section[open] .account-roster-toggle::before{content:'\2212'}
+.account-roster-body{padding:0 0 14px}
+.account-roster-search{margin:0 0 10px}
 .account-roster-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:11px}
 .account-roster-stat{min-width:0;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:8px 9px;text-align:left;font-family:inherit;cursor:pointer}
 .account-roster-stat-label{display:block;font-size:10.5px;color:var(--ts);font-weight:800;white-space:nowrap}
@@ -2345,16 +2354,21 @@ body{font-weight:500}
         </div>
       </details>
     </div>
-    <section class="account-roster-section" id="accountRosterSection">
-      <div class="account-roster-head">
-        <div><div class="account-roster-title">실단원 가입 현황</div><div class="account-roster-caption">단원 명부를 기준으로 아직 로그인 계정이 없는 단원을 확인합니다.</div></div>
-        <div class="account-roster-total" id="accountRosterTotal"></div>
+    <details class="account-roster-section" id="accountRosterSection">
+      <summary class="account-roster-summary">
+        <div class="account-roster-head">
+          <div class="account-roster-head-copy"><div class="account-roster-title">실단원 가입 현황</div><div class="account-roster-caption">가입 전 단원과 명부 연결 상태를 확인합니다.</div></div>
+          <div class="account-roster-head-main"><div class="account-roster-total" id="accountRosterTotal"></div><span class="account-roster-toggle" aria-hidden="true"></span></div>
+        </div>
+      </summary>
+      <div class="account-roster-body">
+        <div class="account-roster-search"><input class="form-input" id="accountRosterSearch" placeholder="실단원 이름 또는 파트 검색" oninput="renderAccountRosterOverview()"></div>
+        <div class="account-roster-status" id="accountRosterStatus"></div>
+        <div class="account-roster-part-label">파트별 보기</div>
+        <div class="account-roster-parts" id="accountRosterParts"></div>
+        <div class="account-roster-list" id="accountRosterList"></div>
       </div>
-      <div class="account-roster-status" id="accountRosterStatus"></div>
-      <div class="account-roster-part-label">파트별 보기</div>
-      <div class="account-roster-parts" id="accountRosterParts"></div>
-      <div class="account-roster-list" id="accountRosterList"></div>
-    </section>
+    </details>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
     <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="이름 또는 파트 검색" oninput="renderAccountList()"><button type="button" class="account-auto-link-btn" id="accountAutoLinkBtn" onclick="autoLinkExistingAccounts()">기존 미연결 자동 연결</button></div>
     <div class="account-link-filter-label">계정 연결 상태</div>
@@ -7831,13 +7845,13 @@ function renderAccountRosterOverview(){
     var label=part==='all'?'전체':part;
     return '<button type="button" class="account-roster-part'+(accountRosterPartFilter===part?' active':'')+'" onclick="setAccountRosterPart(\''+escAttr(part)+'\')">'+escHtml(label)+' <span class="count">'+partCounts[part]+'</span></button>';
   }).join('');
-  var q=((document.getElementById('accountListSearch')||{}).value||'').trim().toLowerCase();
+  var q=((document.getElementById('accountRosterSearch')||{}).value||'').trim().toLowerCase();
   var visible=statusRows.filter(function(row){
     if(accountRosterPartFilter!=='all'&&row.part!==accountRosterPartFilter)return false;
     if(!q)return true;
     return accountMemberSearchText(row.member).indexOf(q)>-1;
   });
-  if(totalBox)totalBox.textContent=(visible.length===rows.length?'실단원 '+rows.length+'명':'표시 '+visible.length+'명 · 실단원 '+rows.length+'명');
+  if(totalBox)totalBox.textContent='가입 전 '+counts.unregistered+'명';
   if(visible.length===0){
     listBox.innerHTML='<div class="account-roster-empty">선택한 조건에 해당하는 단원이 없습니다.</div>';
     return;
