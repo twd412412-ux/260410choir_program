@@ -5621,6 +5621,7 @@ var ORCHESTRA_SCORE_INSTRUMENTS=[
   {key:'tuba',label:'튜바'},
   {key:'timpani',label:'팀파니'},
   {key:'bell',label:'벨'},
+  {key:'chimes',label:'차임'},
   {key:'cymbals',label:'심벌즈'},
   {key:'snare',label:'스네어드럼'},
   {key:'percussion',label:'타악기'},
@@ -5692,6 +5693,7 @@ function guessScoreInstrumentFromFileName(name){
   if(/horn|호른/.test(stem)||hasNumberedToken(['hr']))return 'horn';
   if(/tuba|튜바/.test(stem))return 'tuba';
   if(/timpani|팀파니/.test(stem))return 'timpani';
+  if(/chimes?|차임|튜블러[\s._-]*벨|tubular[\s._-]*bells?/.test(stem))return 'chimes';
   if(/cymbal|심벌|심벌즈/.test(stem))return 'cymbals';
   if(/snare|스네어/.test(stem))return 'snare';
   if(/percussion|타악|타악기/.test(stem)||hasNumberedToken(['perc'])||hasToken(['drum']))return 'percussion';
