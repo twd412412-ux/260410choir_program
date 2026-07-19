@@ -1553,15 +1553,17 @@ body{font-weight:500}
 .home-main-sub{font-size:12px;font-weight:650;color:#606554;margin-top:8px}
 .home-hymn-art{width:96px;height:96px;justify-self:end;pointer-events:none}
 .home-hymn-art img{width:100%;height:100%;display:block;object-fit:contain;filter:saturate(.86) sepia(.08);opacity:.9}
-.home-credit{display:flex;align-items:center;justify-content:flex-end;gap:7px;text-align:right;font-size:9px;color:#948D80;opacity:.68;margin:2px 2px 0}
+.home-credit{display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:9px;color:#948D80;opacity:.68;margin:2px 2px 0}
 .home-app-version{font-variant-numeric:tabular-nums}
 .dark .home-credit{color:#B6AFA2;opacity:.72}
-.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;margin:2px 0 12px;padding:14px 14px 14px 10px;border:1px solid #393B35;border-left:6px solid #C9A35F;border-radius:10px;background:#464841;color:#F5F1E8;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box;box-shadow:0 8px 20px rgba(51,47,39,.2)}
+.home-feature-update-notice{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'tag copy stamp';align-items:center;gap:12px;margin:2px 0 12px;padding:14px 14px 14px 10px;border:1px solid #393B35;border-left:6px solid #C9A35F;border-radius:10px;background:#464841;color:#F5F1E8;font-family:inherit;text-align:left;cursor:pointer;box-sizing:border-box;box-shadow:0 8px 20px rgba(51,47,39,.2)}
 .home-feature-update-notice:active{transform:scale(.995)}
-.home-feature-update-tag{display:inline-flex;align-items:center;justify-content:center;border:1px solid #CFAE70;border-radius:5px;background:rgba(255,255,255,.06);color:#F0D39B;padding:5px 7px;font-size:10px;font-weight:950;line-height:1;white-space:nowrap}
-.home-feature-update-copy{min-width:0;font-size:12px;font-weight:780;line-height:1.35}
+.home-feature-update-tag{grid-area:tag;display:inline-flex;align-items:center;justify-content:center;border:1px solid #CFAE70;border-radius:5px;background:rgba(255,255,255,.06);color:#F0D39B;padding:5px 7px;font-size:9px;font-weight:950;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.home-feature-update-copy{grid-area:copy;min-width:0;font-size:12px;font-weight:780;line-height:1.35}
 .home-feature-update-copy b{display:block;font-size:16px;font-weight:950;color:#FFFCF5;line-height:1.3;margin-bottom:4px;word-break:keep-all}
 .home-feature-update-link{display:inline-flex;align-items:center;font-size:12px;font-weight:900;color:#F0D39B;white-space:nowrap}
+.home-feature-update-stamp{grid-area:stamp;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:5px;width:78px;height:34px;border:2px solid #D3AD68;border-radius:4px;color:#E0BD78;font-size:9px;font-weight:950;line-height:1;white-space:nowrap;box-sizing:border-box;transform:rotate(-4deg);opacity:.94;box-shadow:inset 0 0 0 1px rgba(211,173,104,.28);pointer-events:none}
+.home-feature-update-stamp::before{content:'✓';font-size:15px;font-weight:950;line-height:1}
 .home-update-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
 .home-update-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #D8D0BE;background:#FFFDF8;color:#606554;border-radius:999px;padding:9px 14px;font-family:inherit;font-size:12px;font-weight:760;cursor:pointer}
 .home-update-btn.help{background:#F1F5E8;color:#4F5C39;border-color:#CFD9BF}
@@ -1613,8 +1615,9 @@ body{font-weight:500}
 @keyframes featureCalendarFocus{0%,100%{box-shadow:0 0 0 0 rgba(78,116,128,0)}45%{box-shadow:0 0 0 4px rgba(78,116,128,.38),0 7px 18px rgba(47,74,81,.16)}}
 .dark .cal-grid.feature-calendar-focus{animation-name:featureCalendarFocusDark}
 @keyframes featureCalendarFocusDark{0%,100%{box-shadow:0 0 0 0 rgba(155,190,198,0)}45%{box-shadow:0 0 0 4px rgba(155,190,198,.48),0 7px 18px rgba(0,0,0,.28)}}
-@media(max-width:360px){.home-feature-update-notice{gap:9px;padding-left:8px}.feature-update-panel{padding-left:0}}
-@media(max-width:340px){.home-feature-update-copy b{font-size:15px}.home-feature-update-tag{font-size:9px;padding-left:6px;padding-right:6px}}
+@media(max-width:430px){.home-feature-update-notice{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'tag stamp' 'copy stamp';column-gap:9px;row-gap:5px;padding-left:8px}.home-feature-update-tag{justify-self:start;padding:4px 6px}.feature-update-panel{padding-left:0}}
+@media(max-width:360px){.home-feature-update-copy b{font-size:15px}.home-feature-update-stamp{width:72px;height:32px;font-size:8px}.home-feature-update-stamp::before{font-size:14px}}
+@media(max-width:340px){.home-feature-update-copy b{font-size:14px}.home-feature-update-link{font-size:11px}}
 .home-push-card{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:12px 14px;background:#FFFDF8;border:1px solid #D8D0BE;border-radius:12px;box-shadow:0 4px 14px rgba(49,54,35,.045)}
 .home-push-copy{min-width:0;flex:1}
 .home-push-title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:820;color:#25261F}
@@ -1811,8 +1814,9 @@ body{font-weight:500}
   <div class="home-wrap">
     <div class="home-hero home-date-hero" id="homeDateText"></div>
     <button class="home-feature-update-notice" id="homeFeatureUpdateNotice" type="button" onclick="openFeatureUpdateGuide()">
-      <span class="home-feature-update-tag">UPDATE</span>
+      <span class="home-feature-update-tag" data-app-release-version></span>
       <span class="home-feature-update-copy"><b>이번 업데이트에서 달라진 점</b><span class="home-feature-update-link">추가된 기능 써보기 ›</span></span>
+      <span class="home-feature-update-stamp" aria-hidden="true">UPDATE</span>
     </button>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-push-card hidden" id="homePushCard">
@@ -1829,7 +1833,7 @@ body{font-weight:500}
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" id="homeAppUpdateBtn" type="button" onclick="reloadAppVersion()"><span>↻</span><span data-app-update-label>앱 업데이트</span></button>
     </div>
-    <div class="home-credit"><span class="home-app-version" id="homeAppVersion" hidden></span><span>Engineered by JY</span></div>
+    <div class="home-credit"><span class="home-app-version" id="homeAppVersion" data-app-release-version></span><span>Engineered by JY</span></div>
   </div>
 </div>
 
@@ -2591,7 +2595,7 @@ body{font-weight:500}
 <div class="modal-overlay modal-center feature-update-modal" id="modalFeatureUpdate">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">업데이트 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
-    <div class="feature-update-kicker">2026.07 UPDATE</div>
+    <div class="feature-update-kicker"><span data-app-release-version></span> UPDATE</div>
     <div class="feature-update-title">더 편리해진 기능 3가지</div>
     <div class="feature-update-lead">항목을 누르면 간단한 이용 방법을 확인할 수 있습니다.</div>
     <div class="feature-update-list">
@@ -2944,6 +2948,7 @@ var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleDetailId='';
+var APP_RELEASE_VERSION='v26.07.19';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -3018,12 +3023,10 @@ var SCORE_ACCESS_SCOPE_OPTIONS=[
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
 
 function isValidAppBuildSha(value){return /^[0-9a-f]{40}$/i.test(String(value||''))}
-function renderAppBuildVersion(){
-  var el=document.getElementById('homeAppVersion');
-  if(!el||!isValidAppBuildSha(APP_BUILD_SHA))return;
-  el.textContent='v'+APP_BUILD_SHA.slice(0,7);
-  el.title='앱 버전 '+APP_BUILD_SHA;
-  el.hidden=false;
+function renderAppReleaseVersion(){
+  document.querySelectorAll('[data-app-release-version]').forEach(function(el){el.textContent=APP_RELEASE_VERSION});
+  var footer=document.getElementById('homeAppVersion');
+  if(footer)footer.title='앱 버전 '+APP_RELEASE_VERSION+(isValidAppBuildSha(APP_BUILD_SHA)?' · 빌드 '+APP_BUILD_SHA.slice(0,7):'');
 }
 function setAppUpdateButtonPending(pending){
   var btn=document.getElementById('homeAppUpdateBtn');
@@ -13688,7 +13691,7 @@ function init(){
   buildYearOptions();
   initPhotoViewerTouch();
   syncLayoutState();
-  renderAppBuildVersion();
+  renderAppReleaseVersion();
   initAutoAppUpdate();
 }
 init();
