@@ -118,6 +118,43 @@ body.admin-tab-active .att-save-float{bottom:84px}
 .account-auto-link-btn:disabled{opacity:.55;cursor:not-allowed}
 .account-pin-visible{color:#3F572D;font-weight:950;letter-spacing:0}
 .account-pin-unavailable{color:#A9443B;font-weight:900}
+.account-roster-section{margin:2px 0 18px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.account-roster-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.account-roster-title{font-size:15px;font-weight:950;color:var(--tx)}
+.account-roster-caption{font-size:11px;color:var(--ts);font-weight:720;line-height:1.4;margin-top:2px}
+.account-roster-total{font-size:12px;color:#4F623A;font-weight:900;white-space:nowrap}
+.account-roster-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:11px}
+.account-roster-stat{min-width:0;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:8px 9px;text-align:left;font-family:inherit;cursor:pointer}
+.account-roster-stat-label{display:block;font-size:10.5px;color:var(--ts);font-weight:800;white-space:nowrap}
+.account-roster-stat-value{display:block;font-size:17px;font-weight:950;line-height:1.15;margin-top:2px}
+.account-roster-stat.done .account-roster-stat-value{color:#52683D}
+.account-roster-stat.pending .account-roster-stat-value{color:#A16821}
+.account-roster-stat.review .account-roster-stat-value{color:#A54C42}
+.account-roster-stat.active{border-color:#6F7D4E;background:#EEF2E5;box-shadow:inset 0 0 0 1px #6F7D4E}
+.dark .account-roster-stat.active{background:#2B3527;border-color:#91A474}
+.account-roster-part-label{font-size:10.5px;font-weight:900;color:var(--ts);margin-bottom:2px}
+.account-roster-parts{display:flex;align-items:center;gap:12px;row-gap:2px;flex-wrap:wrap;margin-bottom:9px}
+.account-roster-part{position:relative;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--ts);padding:6px 1px 5px;font-family:inherit;font-size:11.5px;font-weight:850;cursor:pointer;white-space:nowrap}
+.account-roster-part.active{border-bottom-color:#6F7D4E;color:var(--tx)}
+.account-roster-part .count{font-size:10px;color:var(--ts);font-weight:750;margin-left:2px}
+.account-roster-list{display:grid;gap:5px}
+.account-roster-row{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--sf);padding:8px 9px 8px 14px}
+.account-roster-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:#D8D0BE}
+.account-roster-row.part-s1::before{background:#D58BB5}
+.account-roster-row.part-s2::before{background:#71B8C4}
+.account-roster-row.part-t1::before{background:#6F8D52}
+.account-roster-row.part-t2::before{background:#D89A2B}
+.account-roster-row.part-orchestra::before{background:#8393A7}
+.account-roster-row.part-lead::before{background:#9A86B8}
+.account-roster-name{font-size:13px;font-weight:900;color:var(--tx)}
+.account-roster-meta{font-size:10.5px;color:var(--ts);font-weight:720;margin-top:1px;line-height:1.35}
+.account-roster-state{font-size:11px;font-weight:900;white-space:nowrap;color:#52683D}
+.account-roster-state.pending{color:#A16821}
+.account-roster-state.review{color:#A54C42}
+.account-roster-register{border:1px solid #CFC4AE;border-radius:8px;background:#F8F2E8;color:#4F5C35;padding:6px 8px;font-family:inherit;font-size:10.5px;font-weight:900;cursor:pointer;white-space:nowrap}
+.dark .account-roster-register{background:#2A3026;border-color:#46513F;color:var(--tx)}
+.account-roster-empty{padding:12px 4px;text-align:center;color:var(--ts);font-size:12px;font-weight:750}
+.account-link-filter-label{font-size:10.5px;color:var(--ts);font-weight:900;margin:0 0 5px}
 .account-link-summary{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px}
 .account-summary-item{font-family:inherit;font-size:11px;font-weight:900;border:1px solid #DED0B8;background:#F8F2E8;color:#5F512D;border-radius:999px;padding:5px 8px;line-height:1.2}
 button.account-summary-item{cursor:pointer}
@@ -393,7 +430,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .handbook-add-panel[open] summary::after{content:'접기'}
 .handbook-add-body{padding:0 14px 14px}
 .handbook-add-panel:not([open]) .handbook-add-body{display:none}
-@media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}.account-row{grid-template-columns:1fr}.account-actions{justify-content:flex-start}.account-action-btn{min-width:48px}}
+@media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}.account-roster-status{grid-template-columns:repeat(2,minmax(0,1fr))}.account-roster-row{grid-template-columns:minmax(0,1fr) auto}.account-roster-register{grid-column:2}.account-row{grid-template-columns:1fr}.account-actions{justify-content:flex-start}.account-action-btn{min-width:48px}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
@@ -2290,14 +2327,14 @@ body{font-weight:500}
   <div class="admin-sub hidden" id="subMembers">
     <div class="account-create-panel" id="accountCreatePanel">
       <h3 style="font-size:16px;font-weight:850;margin-bottom:12px">👥 계정 등록</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>임원</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" inputmode="numeric" maxlength="4" placeholder="1234"><div class="account-member-count">동명이인은 서로 다른 PIN으로 자동 구분됩니다.</div></div>
       <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.">비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.</div></div>
       <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
       <details class="account-bulk-panel" id="accountBulkPanel">
         <summary>단체 계정등록</summary>
         <div class="account-bulk-body">
-          <div class="form-group"><label class="form-label">기본 파트</label><select class="form-sel" id="accountBulkDefaultPart"><option value="">줄마다 파트 입력</option><option>지휘</option><option>파트장</option><option>총무</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div>
+          <div class="form-group"><label class="form-label">기본 파트</label><select class="form-sel" id="accountBulkDefaultPart"><option value="">줄마다 파트 입력</option><option>지휘</option><option>파트장</option><option>총무</option><option>임원</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div>
           <div class="form-group"><label class="form-label">붙여넣기</label><textarea class="form-input" id="accountBulkText" placeholder="홍길동&#9;1234&#9;S1&#10;김광주, 5678, T2&#10;이찬양 2468 관현악"></textarea></div>
           <div class="account-bulk-help">엑셀에서 복사한 표를 그대로 붙여넣을 수 있습니다. 각 줄은 이름, PIN 4자리, 파트 순서이며 쉼표/탭/공백을 모두 인식합니다. 파트가 빠진 줄은 기본 파트를 사용합니다.</div>
           <div class="account-bulk-result" id="accountBulkResult"></div>
@@ -2308,8 +2345,19 @@ body{font-weight:500}
         </div>
       </details>
     </div>
+    <section class="account-roster-section" id="accountRosterSection">
+      <div class="account-roster-head">
+        <div><div class="account-roster-title">실단원 가입 현황</div><div class="account-roster-caption">단원 명부를 기준으로 아직 로그인 계정이 없는 단원을 확인합니다.</div></div>
+        <div class="account-roster-total" id="accountRosterTotal"></div>
+      </div>
+      <div class="account-roster-status" id="accountRosterStatus"></div>
+      <div class="account-roster-part-label">파트별 보기</div>
+      <div class="account-roster-parts" id="accountRosterParts"></div>
+      <div class="account-roster-list" id="accountRosterList"></div>
+    </section>
     <h4 class="account-list-title">등록된 로그인 계정</h4>
-    <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="계정 이름/파트/연결 검색" oninput="renderAccountList()"><button type="button" class="account-auto-link-btn" id="accountAutoLinkBtn" onclick="autoLinkExistingAccounts()">기존 미연결 자동 연결</button></div>
+    <div class="account-list-tools"><input class="form-input" id="accountListSearch" placeholder="이름 또는 파트 검색" oninput="renderAccountList()"><button type="button" class="account-auto-link-btn" id="accountAutoLinkBtn" onclick="autoLinkExistingAccounts()">기존 미연결 자동 연결</button></div>
+    <div class="account-link-filter-label">계정 연결 상태</div>
     <div class="account-link-summary" id="accountLinkSummary"></div>
     <div id="memberList"></div>
   </div>
@@ -2930,6 +2978,10 @@ var songsLoadPromise=null, schedulesLoadPromise=null;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 var sharedMembersCache={ts:0,rows:null,promise:null};
+var NOTICE_CACHE_TTL_MS=6*60*60*1000;
+var PUBLISHED_SEATING_CACHE_KEY='choir_published_seating';
+var PUBLISHED_SEATING_ACTIVE_TTL_MS=10*60*1000;
+var PUBLISHED_SEATING_EMPTY_TTL_MS=60*60*1000;
 var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='', publicSeatingZoom=1.18;
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
@@ -4854,14 +4906,34 @@ function refreshHomeAccessState(){
   invalidateHomeAttendanceCache();
   requestHomeRender();
 }
-function invalidatePublishedSeatingCache(){
+function invalidatePublishedSeatingCache(clearStored){
   publishedSeatingPlan=null;
   publishedSeatingLoaded=false;
   publishedSeatingPromise=null;
+  if(clearStored){
+    try{localStorage.removeItem(PUBLISHED_SEATING_CACHE_KEY)}catch(e){}
+  }
 }
 function getPublishedSeatingPlan(force){
   if(!force&&publishedSeatingLoaded)return Promise.resolve(publishedSeatingPlan);
   if(!force&&publishedSeatingPromise)return publishedSeatingPromise;
+  if(!force){
+    var cached=loadCacheEntry(PUBLISHED_SEATING_CACHE_KEY,PUBLISHED_SEATING_EMPTY_TTL_MS);
+    if(cached.hit){
+      var cachedHasPlan=!!(cached.data&&cached.data.rows);
+      var cachedTtl=cachedHasPlan?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
+      if(cached.age<cachedTtl){
+        var cachedData=cachedHasPlan?cached.data:null;
+        if(cachedData){
+          cachedData.rows=normalizeSeatingRows(cachedData.rows);
+          cachedData.micSlots=normalizeSeatingMicSlots(cachedData.micSlots||[],publicSeatingMaxSeatCount(cachedData.rows));
+        }
+        publishedSeatingPlan=cachedData;
+        publishedSeatingLoaded=true;
+        return Promise.resolve(publishedSeatingPlan);
+      }
+    }
+  }
   publishedSeatingPromise=db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){
     var data=doc.exists?(doc.data()||{}):null;
     if(data&&data.rows){
@@ -4873,6 +4945,7 @@ function getPublishedSeatingPlan(force){
     }
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
+    saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
     return publishedSeatingPlan;
   }).catch(function(err){
     publishedSeatingPromise=null;
@@ -5433,6 +5506,16 @@ function loadCache(key,maxAge){
     if(c&&c.data&&(Date.now()-c.ts)<maxAge)return c.data;
   }catch(e){}
   return null;
+}
+function loadCacheEntry(key,maxAge){
+  try{
+    var c=JSON.parse(localStorage.getItem(key));
+    var hasData=c&&Object.prototype.hasOwnProperty.call(c,'data');
+    if(hasData&&Number(c.ts)>0&&(Date.now()-Number(c.ts))<maxAge){
+      return {hit:true,data:c.data,ts:Number(c.ts),age:Date.now()-Number(c.ts)};
+    }
+  }catch(e){}
+  return {hit:false,data:null,ts:0,age:0};
 }
 
 // ==================== Firestore: 곡 로드 (get + 캐시) ====================
@@ -6982,7 +7065,7 @@ function deleteScore(id){
 function refreshData(){
   showToast('새로고침 중...');
   invalidateHomeAttendanceCache();
-  invalidatePublishedSeatingCache();
+  invalidatePublishedSeatingCache(true);
   var songRefresh=canViewSongList()
     ? db.collection('songs').get().then(function(snap){
       allSongs=[];
@@ -7013,9 +7096,9 @@ function refreshData(){
       return allSchedules;
     }),
     db.collection('settings').doc('notice').get().then(function(doc){
-      var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
-      if(doc.exists&&doc.data().text){b.classList.remove('hidden');t.textContent=doc.data().text;saveCache('choir_notice',doc.data().text)}
-      else{b.classList.add('hidden');t.textContent='';localStorage.removeItem('choir_notice')}
+      var txt=doc.exists&&doc.data().text?doc.data().text:'';
+      applyNoticeState(txt);
+      saveCache('choir_notice',txt);
     }),
     loadScores(true,canManageScores()),
     getPublishedSeatingPlan(true)
@@ -7599,7 +7682,7 @@ function accountPartClass(part){
   if(part==='T1')return 'part-t1';
   if(part==='T2')return 'part-t2';
   if(part==='관현악')return 'part-orchestra';
-  if(part==='지휘'||part==='파트장'||part==='총무')return 'part-lead';
+  if(part==='지휘'||part==='파트장'||part==='총무'||part==='임원'||part==='반주')return 'part-lead';
   return '';
 }
 
@@ -7648,7 +7731,146 @@ function accountSearchText(m){
   ].join(' ').toLowerCase();
 }
 
+var ACCOUNT_ROSTER_PART_FILTERS=['S1','S2','T1','T2','관현악','기타'];
+var accountRosterStatusFilter='unregistered';
+var accountRosterPartFilter='all';
 var accountLinkFilter='';
+
+function accountRosterPartKey(member){
+  var part=normalizePartName(member&&member.part);
+  return ['S1','S2','T1','T2','관현악'].indexOf(part)>-1?part:'기타';
+}
+
+function buildAccountRosterRows(){
+  var linkedByMemberId={};
+  var accountsByName={};
+  allMembers.forEach(function(account){
+    var memberId=String(account.memberId||'');
+    if(memberId){
+      if(!linkedByMemberId[memberId])linkedByMemberId[memberId]=[];
+      linkedByMemberId[memberId].push(account);
+    }
+    var nameKey=normalizeAccountLinkName(account.name);
+    if(nameKey){
+      if(!accountsByName[nameKey])accountsByName[nameKey]=[];
+      accountsByName[nameKey].push(account);
+    }
+  });
+  return accountLinkMembers.filter(isHandbookRosterMember).map(function(member){
+    var linked=linkedByMemberId[member.id]||[];
+    var sameName=accountsByName[normalizeAccountLinkName(member.name)]||[];
+    var validLinked=linked.filter(function(account){return accountMemberNameMatches(account.name,member);});
+    var status='unregistered';
+    if(linked.length===1&&validLinked.length===1)status='joined';
+    else if(linked.length||sameName.length)status='review';
+    return {
+      member:member,
+      part:accountRosterPartKey(member),
+      status:status,
+      linkedAccounts:linked,
+      sameNameAccounts:sameName
+    };
+  }).sort(function(a,b){
+    return accountPartSortValue(a.part)-accountPartSortValue(b.part)
+      ||String(a.part).localeCompare(String(b.part),'ko')
+      ||String(a.member.name||'').localeCompare(String(b.member.name||''),'ko');
+  });
+}
+
+function setAccountRosterStatus(filter){
+  accountRosterStatusFilter=String(filter||'all');
+  accountRosterPartFilter='all';
+  renderAccountRosterOverview();
+}
+
+function setAccountRosterPart(part){
+  accountRosterPartFilter=String(part||'all');
+  renderAccountRosterOverview();
+}
+
+function renderAccountRosterStat(filter,label,count,cls){
+  return '<button type="button" class="account-roster-stat '+(cls||'')+(accountRosterStatusFilter===filter?' active':'')+'" onclick="setAccountRosterStatus(\''+escAttr(filter)+'\')">'
+    +'<span class="account-roster-stat-label">'+escHtml(label)+'</span><span class="account-roster-stat-value">'+count+'</span></button>';
+}
+
+function accountRosterRowMeta(row){
+  var member=row.member;
+  var part=[normalizePartName(member.part)||'주파트 미지정',normalizePartName(member.subPart)||''].filter(Boolean).join(' · ');
+  if(row.status==='joined')return part+' · 계정 '+(row.linkedAccounts[0].name||member.name);
+  if(row.status==='review'){
+    if(row.linkedAccounts.length)return part+' · 연결된 계정 이름 확인 필요';
+    return part+' · 같은 이름 계정 '+row.sameNameAccounts.length+'개 · 명부 연결 필요';
+  }
+  return part+' · 등록된 로그인 계정 없음';
+}
+
+function renderAccountRosterOverview(){
+  var section=document.getElementById('accountRosterSection');
+  var statusBox=document.getElementById('accountRosterStatus');
+  var partBox=document.getElementById('accountRosterParts');
+  var listBox=document.getElementById('accountRosterList');
+  var totalBox=document.getElementById('accountRosterTotal');
+  if(!section||!statusBox||!partBox||!listBox)return;
+  var canViewRoster=canManageLoginAccounts()||canManageAccountPermissions();
+  section.style.display=canViewRoster?'block':'none';
+  if(!canViewRoster)return;
+  var rows=buildAccountRosterRows();
+  var counts={joined:0,unregistered:0,review:0};
+  rows.forEach(function(row){counts[row.status]++;});
+  statusBox.innerHTML=''
+    +renderAccountRosterStat('all','실단원',rows.length,'')
+    +renderAccountRosterStat('joined','가입 완료',counts.joined,'done')
+    +renderAccountRosterStat('unregistered','가입 전',counts.unregistered,'pending')
+    +renderAccountRosterStat('review','연결 확인',counts.review,'review');
+  var statusRows=accountRosterStatusFilter==='all'?rows:rows.filter(function(row){return row.status===accountRosterStatusFilter;});
+  var partCounts={all:statusRows.length};
+  ACCOUNT_ROSTER_PART_FILTERS.forEach(function(part){partCounts[part]=0;});
+  statusRows.forEach(function(row){partCounts[row.part]=(partCounts[row.part]||0)+1;});
+  var partButtons=['all'].concat(ACCOUNT_ROSTER_PART_FILTERS).filter(function(part){return part==='all'||partCounts[part]>0;});
+  partBox.innerHTML=partButtons.map(function(part){
+    var label=part==='all'?'전체':part;
+    return '<button type="button" class="account-roster-part'+(accountRosterPartFilter===part?' active':'')+'" onclick="setAccountRosterPart(\''+escAttr(part)+'\')">'+escHtml(label)+' <span class="count">'+partCounts[part]+'</span></button>';
+  }).join('');
+  var q=((document.getElementById('accountListSearch')||{}).value||'').trim().toLowerCase();
+  var visible=statusRows.filter(function(row){
+    if(accountRosterPartFilter!=='all'&&row.part!==accountRosterPartFilter)return false;
+    if(!q)return true;
+    return accountMemberSearchText(row.member).indexOf(q)>-1;
+  });
+  if(totalBox)totalBox.textContent=(visible.length===rows.length?'실단원 '+rows.length+'명':'표시 '+visible.length+'명 · 실단원 '+rows.length+'명');
+  if(visible.length===0){
+    listBox.innerHTML='<div class="account-roster-empty">선택한 조건에 해당하는 단원이 없습니다.</div>';
+    return;
+  }
+  listBox.innerHTML=visible.map(function(row){
+    var stateLabel=row.status==='joined'?'가입 완료':row.status==='review'?'연결 확인':'가입 전';
+    var stateClass=row.status==='joined'?'':row.status==='review'?' review':' pending';
+    var action=row.status==='unregistered'&&canManageLoginAccounts()
+      ?'<button type="button" class="account-roster-register" onclick="prepareAccountForRosterMember(\''+escAttr(row.member.id)+'\')">등록 준비</button>':'';
+    return '<div class="account-roster-row '+accountPartClass(row.member.part)+'"><div><div class="account-roster-name">'+escHtml(row.member.name||'이름 없음')+'</div><div class="account-roster-meta">'+escHtml(accountRosterRowMeta(row))+'</div></div><div class="account-roster-state'+stateClass+'">'+stateLabel+'</div>'+action+'</div>';
+  }).join('');
+}
+
+function prepareAccountForRosterMember(memberId){
+  if(!canManageLoginAccounts())return showToast('계정 등록 및 수정 권한이 없습니다');
+  var member=accountLinkMemberMap[String(memberId||'')];
+  if(!member||!isHandbookRosterMember(member))return showToast('실단원 명부를 찾을 수 없습니다');
+  var nameInput=document.getElementById('memName');
+  var partSelect=document.getElementById('memPart');
+  var searchInput=document.getElementById('memMemberSearch');
+  if(nameInput)nameInput.value=member.name||'';
+  if(partSelect){
+    var part=normalizePartName(member.part);
+    var hasOption=Array.prototype.some.call(partSelect.options,function(option){return option.value===part;});
+    partSelect.value=hasOption?part:'';
+  }
+  if(searchInput)searchInput.value=member.name||'';
+  populateAccountMemberSelect('memMemberId',member.id,member.name||'');
+  var panel=document.getElementById('accountCreatePanel');
+  if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(function(){var pin=document.getElementById('memPin');if(pin)pin.focus();},320);
+  showToast(member.name+'님 계정 정보를 위에 준비했습니다');
+}
 
 function filteredSortedAccounts(){
   var q=(document.getElementById('accountListSearch')||{}).value||'';
@@ -7702,6 +7924,7 @@ function renderAccountLinkSummary(list){
 function renderAccountList(){
   var c=document.getElementById('memberList');
   if(!c)return;
+  renderAccountRosterOverview();
   var summaryBox=document.getElementById('accountLinkSummary');
   if(allMembers.length===0){
     if(summaryBox)summaryBox.innerHTML='';
@@ -7843,7 +8066,7 @@ function revealAccountPins(){
   });
 }
 
-var ACCOUNT_BULK_PARTS=['지휘','파트장','총무','S1','S2','T1','T2','반주','관현악'];
+var ACCOUNT_BULK_PARTS=['지휘','파트장','총무','임원','S1','S2','T1','T2','반주','관현악'];
 
 function normalizeAccountBulkPart(part){
   var raw=String(part||'').trim();
@@ -9815,33 +10038,39 @@ function saveChongmuPassword(){
 }
 
 // ==================== 공지사항 (get + 캐시) ====================
-function initNotice(){
-  var cached=loadCache('choir_notice',600000);
+function applyNoticeState(text){
+  var txt=String(text||'');
   var b=document.getElementById('noticeBanner'),t=document.getElementById('noticeText');
-  if(cached){b.classList.remove('hidden');t.textContent=cached}
-
-  db.collection('settings').doc('notice').get().then(function(doc){
-    var cn=document.getElementById('curNotice'),ni=document.getElementById('noticeInput');
-    if(doc.exists&&doc.data().text){
-      var txt=doc.data().text;
-      b.classList.remove('hidden');t.textContent=txt;
-      saveCache('choir_notice',txt);
-      if(cn)cn.textContent=txt;if(ni&&document.activeElement!==ni)ni.value=txt;
-    }else{
-      b.classList.add('hidden');t.textContent='';
-      localStorage.removeItem('choir_notice');
-      if(cn)cn.textContent='없음';
-    }
-  }).catch(function(){});
+  var cn=document.getElementById('curNotice'),ni=document.getElementById('noticeInput');
+  if(txt){
+    if(b)b.classList.remove('hidden');
+    if(t)t.textContent=txt;
+  }else{
+    if(b)b.classList.add('hidden');
+    if(t)t.textContent='';
+  }
+  if(cn)cn.textContent=txt||'없음';
+  if(ni&&document.activeElement!==ni)ni.value=txt;
+}
+function initNotice(force){
+  var cached=force?{hit:false}:loadCacheEntry('choir_notice',NOTICE_CACHE_TTL_MS);
+  if(cached.hit){
+    applyNoticeState(cached.data);
+    return Promise.resolve(String(cached.data||''));
+  }
+  return db.collection('settings').doc('notice').get().then(function(doc){
+    var txt=doc.exists&&doc.data().text?doc.data().text:'';
+    applyNoticeState(txt);
+    saveCache('choir_notice',txt);
+    return txt;
+  }).catch(function(){return ''});
 }
 function saveNotice(){
   if(!canManageNotice())return showToast('공지 관리 권한이 없습니다');
   var t=document.getElementById('noticeInput').value.trim();if(!t)return showToast('공지 내용을 입력해주세요');
   db.collection('settings').doc('notice').set({text:t,updatedAt:new Date().toISOString()}).then(function(){
     saveCache('choir_notice',t);
-    document.getElementById('noticeBanner').classList.remove('hidden');
-    document.getElementById('noticeText').textContent=t;
-    var cn=document.getElementById('curNotice');if(cn)cn.textContent=t;
+    applyNoticeState(t);
     writeLog('공지 저장','"'+t.substring(0,30)+'"');showToast('공지 저장 완료');
   });
 }
@@ -9849,11 +10078,8 @@ function delNotice(){
   if(!canManageNotice())return showToast('공지 관리 권한이 없습니다');
   if(!confirm('공지를 삭제하시겠습니까?'))return;
   db.collection('settings').doc('notice').delete().then(function(){
-    localStorage.removeItem('choir_notice');
-    document.getElementById('noticeBanner').classList.add('hidden');
-    document.getElementById('noticeText').textContent='';
-    document.getElementById('noticeInput').value='';
-    var cn=document.getElementById('curNotice');if(cn)cn.textContent='없음';
+    saveCache('choir_notice','');
+    applyNoticeState('');
     writeLog('공지 삭제','공지사항 삭제됨');showToast('공지 삭제 완료');
   });
 }
@@ -12580,6 +12806,7 @@ function publishSeatingPlan(previewData){
     publishedSeatingPlan=cloneSeatingValue(data);
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
+    saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
     seatingPublishPreviewData=null;
     publicSeatingSearch='';
     writeLog('찬양의밤 자리배치 공개',data.date+' '+data.program+' 배치 공개');
@@ -12598,6 +12825,7 @@ function unpublishSeatingPlan(){
     publishedSeatingPlan=null;
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
+    saveCache(PUBLISHED_SEATING_CACHE_KEY,null);
     publicSeatingSearch='';
     closeModal('modalPublicSeating');
     writeLog('찬양의밤 자리배치 공개 취소','단원 홈 자리배치 공개 취소');
@@ -13676,13 +13904,15 @@ document.getElementById('searchInput').addEventListener('input',function(){clear
 
 // ==================== 초기화 ====================
 function init(){
+  var forceInitialData=forceFreshDataOnInit;
   initDark();
   restoreUser();
   initCal();
   initSongs();
   initAdminSettings();
-  initNotice();
-  initSchedules(forceFreshDataOnInit);
+  initNotice(forceInitialData);
+  initSchedules(forceInitialData);
+  if(forceInitialData)invalidatePublishedSeatingCache(true);
   if(currentTab==='home')renderHome();
   scheduleScoresLoad(600);
   handleAdminResetRedirectResult();
