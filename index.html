@@ -6527,6 +6527,11 @@ function openScoreFileById(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score||(!score.currentFilePath&&!score.currentFileUrl))return showToast('열 수 있는 악보가 없습니다');
   if(!canOpenScoreItem(score))return showToast('이 악보를 볼 권한이 없습니다');
+  var browserIssue=androidInstallBrowserIssue();
+  if(browserIssue&&confirm('현재 '+browserIssue+'에서는 악보가 열리지 않을 수 있습니다.\n\n확인: Chrome으로 열기\n취소: 현재 브라우저에서 계속 시도')){
+    openInChromeForInstall();
+    return;
+  }
   var details=normalizeScoreKind(score.scoreKind)==='orchestra'
     ? [scorePartDisplayLabel(score),scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ')
     : [scoreKindLabel(score.scoreKind),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
@@ -14128,7 +14133,7 @@ window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   deferredPrompt=e;
   updateInstallButtonVisibility();
-  setTimeout(function(){showInstallBanner('prompt',false);},300);
+  setTimeout(function(){showInstallBanner(androidInstallBrowserIssue()?'chrome':'prompt',chromeInstallEntryRequested());},300);
 });
 window.addEventListener('appinstalled',function(){
   deferredPrompt=null;
@@ -14147,40 +14152,84 @@ function isIOSDevice(){
 function isAndroidDevice(){
   return /Android/i.test(navigator.userAgent||'');
 }
+function androidInstallBrowserIssue(){
+  if(!isAndroidDevice())return '';
+  var ua=String(navigator.userAgent||'');
+  var ref=String(document.referrer||'');
+  if(/KAKAOTALK/i.test(ua)||/com\.kakao\.talk/i.test(ref))return '카카오톡 내부 브라우저';
+  if(/NAVER/i.test(ua)||/com\.naver/i.test(ref))return '네이버 앱 브라우저';
+  if(/DaumApps|Instagram|FBAN|FBAV|Line\//i.test(ua))return '앱 내부 브라우저';
+  if(!/SamsungBrowser/i.test(ua)&&(/;\s*wv\)/i.test(ua)||/\bwv\b/i.test(ua)||/Version\/4\.0.*Chrome\/.*Mobile Safari/i.test(ua)))return '앱 내부 브라우저';
+  return '';
+}
+function chromeInstallEntryRequested(){
+  try{return new URLSearchParams(location.search).get('install')==='chrome';}catch(e){return false;}
+}
+function chromeInstallTargetUrl(){
+  var target=new URL(location.href);
+  target.searchParams.set('install','chrome');
+  target.hash='';
+  return target;
+}
+function chromeInstallIntentUrl(){
+  var target=chromeInstallTargetUrl();
+  return 'intent://'+target.host+target.pathname+target.search+'#Intent;scheme='+target.protocol.replace(':','')+';package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(target.href)+';end';
+}
+function openInChromeForInstall(){
+  if(!isAndroidDevice())return showInstallHelp();
+  window.location.href=chromeInstallIntentUrl();
+}
 function updateInstallButtonVisibility(){
   var btn=document.getElementById('homeInstallBtn');
-  if(btn)btn.classList.toggle('hidden',isStandaloneApp());
+  if(!btn)return;
+  var browserIssue=androidInstallBrowserIssue();
+  btn.classList.toggle('hidden',isStandaloneApp()&&!browserIssue);
+  var label=btn.querySelector('span:last-child');
+  if(label)label.textContent=browserIssue?'Chrome에서 다시 열기':'홈 화면에 추가';
 }
 function initInstallUi(){
   updateInstallButtonVisibility();
-  if(isStandaloneApp())return;
+  var browserIssue=androidInstallBrowserIssue();
+  if(isStandaloneApp()&&!browserIssue)return;
   setTimeout(function(){
-    if(deferredPrompt)showInstallBanner('prompt',false);
+    if(browserIssue)showInstallBanner('chrome',false);
+    else if(deferredPrompt)showInstallBanner('prompt',chromeInstallEntryRequested());
     else if(isIOSDevice())showInstallBanner('ios',false);
+    else if(chromeInstallEntryRequested())showInstallBanner('manual',true);
   },1400);
 }
 function showInstallBanner(mode,force){
-  if(isStandaloneApp())return;
+  var browserIssue=androidInstallBrowserIssue();
+  if(isStandaloneApp()&&!browserIssue)return;
   if(!force&&localStorage.getItem('choir_install_dismissed'))return;
   var old=document.getElementById('installBanner');
   if(old)old.remove();
+  if(browserIssue)mode='chrome';
   mode=mode||((deferredPrompt&&isAndroidDevice())?'prompt':(isIOSDevice()?'ios':'manual'));
   var desc='홈 화면에 추가하면 앱처럼 바로 열 수 있습니다.';
   var btnText='설치';
   var btnAction='installApp()';
+  var actionHtml='';
   if(mode==='ios'){
     desc='iPhone/iPad는 Safari 공유 버튼에서 홈 화면에 추가합니다.';
     btnText='방법 보기';
     btnAction='showInstallHelp()';
+  }else if(mode==='chrome'){
+    desc=(browserIssue||'현재 브라우저')+'에서 설치하면 악보가 열리지 않을 수 있습니다. Chrome에서 열어 설치해주세요.';
+    btnText='Chrome으로 열기';
   }else if(mode==='manual'&&!deferredPrompt){
     desc='브라우저 메뉴에서 홈 화면에 추가하거나 앱 설치를 선택하세요.';
     btnText='방법 보기';
     btnAction='showInstallHelp()';
   }
+  var actionStyle='display:inline-flex;align-items:center;justify-content:center;background:var(--p);color:#fff;border:none;padding:8px 14px;border-radius:9px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;text-decoration:none';
+  actionHtml=mode==='chrome'
+    ? '<a href="'+escAttr(chromeInstallIntentUrl())+'" style="'+actionStyle+'">'+btnText+'</a>'
+    : '<button onclick="'+btnAction+'" style="'+actionStyle+'">'+btnText+'</button>';
   var b=document.createElement('div');
   b.id='installBanner';
   b.style.cssText='position:fixed;bottom:70px;left:12px;right:12px;background:var(--sf);border:2px solid var(--p);border-radius:16px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:150;display:flex;align-items:center;gap:12px';
-  b.innerHTML='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;color:var(--tx)">📱 홈 화면에 추가</div><div style="font-size:12px;color:var(--ts);margin-top:2px;line-height:1.35">'+desc+'</div></div><button onclick="'+btnAction+'" style="background:var(--p);color:#fff;border:none;padding:8px 14px;border-radius:9px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap">'+btnText+'</button><button onclick="dismissInstall(true)" aria-label="설치 안내 닫기" style="background:none;border:none;font-size:18px;color:var(--ts);cursor:pointer">×</button>';
+  b.innerHTML='<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;color:var(--tx)">📱 '+(mode==='chrome'?'안전한 앱 설치':'홈 화면에 추가')+'</div><div style="font-size:12px;color:var(--ts);margin-top:2px;line-height:1.35">'+desc+'</div></div>'+actionHtml+'<button onclick="dismissInstall(true)" aria-label="설치 안내 닫기" style="background:none;border:none;font-size:18px;color:var(--ts);cursor:pointer">×</button>';
   document.body.appendChild(b);
 }
 function installApp(){
@@ -14198,6 +14247,10 @@ function installApp(){
 }
 function openInstallGuide(){
   localStorage.removeItem('choir_install_dismissed');
+  if(androidInstallBrowserIssue()){
+    openInChromeForInstall();
+    return;
+  }
   if(deferredPrompt){installApp();return;}
   showInstallBanner(isIOSDevice()?'ios':'manual',true);
   showInstallHelp();
