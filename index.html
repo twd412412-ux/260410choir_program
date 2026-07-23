@@ -569,7 +569,13 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .issue-admin-fab::before{content:'';width:18px;height:14px;border:2px solid currentColor;border-radius:5px;box-sizing:border-box}
 .issue-admin-fab::after{content:'';position:absolute;width:5px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(-5px,8px) skewY(-28deg)}
 .issue-admin-count{position:absolute;right:-3px;top:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#C94F55;color:#fff;border:2px solid var(--sf);font-size:9px;font-weight:950;display:flex;align-items:center;justify-content:center}
-.home-support-link{width:100%;border:0;background:transparent;color:var(--ts);font-family:inherit;font-size:11px;font-weight:800;padding:13px 8px 5px;cursor:pointer}
+.home-support-footer{margin:14px 4px 0;padding:12px 0 1px;border-top:1px solid var(--line);text-align:center}
+.home-support-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;color:var(--ts);font-family:inherit;font-size:11.5px;font-weight:700;padding:6px 8px;cursor:pointer}
+.home-support-link b{color:var(--pd);font-weight:900}
+.home-support-link:active{opacity:.65}
+.home-support-icon{position:relative;width:14px;height:11px;border:1.5px solid currentColor;border-radius:4px;box-sizing:border-box;flex:0 0 auto}
+.home-support-icon::after{content:'';position:absolute;left:2px;bottom:-3px;width:4px;height:4px;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:skewY(-30deg);background:var(--bg)}
+.dark .home-support-icon::after{background:var(--bg)}
 .issue-report-note{font-size:11px;color:var(--ts);line-height:1.5;margin:-2px 0 10px}
 .issue-report-count{font-size:10.5px;color:var(--ts);text-align:right;margin-top:5px}
 .issue-inbox-list{display:grid;gap:8px;max-height:min(65vh,560px);overflow:auto}
@@ -1957,6 +1963,9 @@ body{font-weight:500}
       <button class="home-update-btn help" type="button" onclick="openHomeGuide()"><span>?</span><span>처음 사용하는 방법</span></button>
       <button class="home-update-btn install" id="homeInstallBtn" type="button" onclick="openInstallGuide()"><span>▣</span><span>홈 화면에 추가</span></button>
       <button class="home-update-btn" id="homeAppUpdateBtn" type="button" onclick="reloadAppVersion()"><span>↻</span><span data-app-update-label>앱 업데이트</span></button>
+    </div>
+    <div class="home-support-footer hidden" id="homeIssueReportEntry">
+      <button class="home-support-link" type="button" onclick="openIssueReport()"><span class="home-support-icon" aria-hidden="true"></span><span>앱 사용 중 문제가 있었나요?</span><b>신고하기</b></button>
     </div>
     <div class="home-credit"><span class="home-app-version" id="homeAppVersion" data-app-release-version></span><span>Engineered by JY</span></div>
   </div>
@@ -5003,6 +5012,8 @@ function loadIssueReportCount(force){
 }
 function syncIssueReportFab(){
   renderIssueAdminFab();
+  var entry=document.getElementById('homeIssueReportEntry');
+  if(entry)entry.classList.toggle('hidden',!isMemberLoggedIn());
   if(adminRole==='admin'&&!issueReportCountLoaded)loadIssueReportCount(false);
 }
 function openIssueInbox(){
@@ -5890,8 +5901,7 @@ function renderHome(){
       +publicSeatingSection
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
       +adminToolsSection
-      +attendanceSection
-      +(isMemberLoggedIn()?'<button type="button" class="home-support-link" onclick="openIssueReport()">앱 사용 중 문제가 있었나요? 신고하기</button>':'');
+      +attendanceSection;
   }
 
   var songCache=canShowHomeSongs?(allSongs.length>0?allSongs:loadCache('choir_songs',600000)):null;
