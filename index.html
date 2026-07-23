@@ -1925,9 +1925,20 @@ body{font-weight:500}
 .rehearsal-picker-row{width:100%;display:grid;grid-template-columns:90px minmax(0,1fr) 22px;gap:12px;align-items:center;border:0;border-bottom:1px solid #353A30;background:transparent;color:#F6F1E6;padding:15px 2px;font-family:inherit;text-align:left;cursor:pointer}
 .rehearsal-picker-date{color:#C8A963;font-size:12px;font-weight:850}
 .rehearsal-picker-main{min-width:0}
-.rehearsal-picker-title{font-size:15px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rehearsal-picker-meta{margin-top:4px;color:#AAB19F;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-picker-title{display:block;font-size:15px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-picker-meta{display:block;margin-top:4px;color:#AAB19F;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rehearsal-picker-arrow{color:#7E8677;font-size:20px;text-align:center}
+.rehearsal-past{margin-top:22px;border-top:1px solid #353A30}
+.rehearsal-past-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;color:#C9CEC3;padding:15px 2px;font-family:inherit;font-size:13px;font-weight:850;text-align:left;cursor:pointer}
+.rehearsal-past-toggle span:last-child{color:#7E8677;font-size:18px;transition:transform .18s ease}
+.rehearsal-past-toggle.open span:last-child{transform:rotate(180deg)}
+.rehearsal-past-panel{padding:1px 0 8px}
+.rehearsal-past-form{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:7px;margin-bottom:8px}
+.rehearsal-past-input{min-width:0;height:42px;border:1px solid #454B3F;border-radius:7px;outline:0;background:#141713;color:#F6F1E6;padding:0 12px;font-family:inherit;font-size:13px}
+.rehearsal-past-input::placeholder{color:#777F72}
+.rehearsal-past-submit{height:42px;border:1px solid #68745C;border-radius:7px;background:#6F7D4E;color:#fff;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.rehearsal-past-status{padding:15px 2px;color:#8F9788;font-size:12px;text-align:center}
+.rehearsal-past-results{border-top:1px solid #30352D}
 .rehearsal-stage{height:100%;display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,.8fr);min-height:0}
 .rehearsal-current{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:32px 42px;border-right:1px solid #353A30;background:#171A15}
 .rehearsal-current-label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#C8A963;font-size:12px;font-weight:900}
@@ -1957,6 +1968,7 @@ body{font-weight:500}
 .rehearsal-order-row.done span:last-child{color:#747C70;text-decoration:line-through}
 .rehearsal-order-row.on span:first-child{color:#C8A963}
 .rehearsal-order-row.on span:last-child{color:#FFF8E8;font-weight:900;text-decoration:none}
+.rehearsal-order-section{padding:13px 0 5px;border-bottom:1px solid #30352D;color:#C8A963;font-size:10px;font-weight:900}
 .rehearsal-controls{height:72px;flex:0 0 72px;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #353A30;background:#1D211B}
 .rehearsal-control{border:0;background:transparent;color:#F6F1E6;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer}
 .rehearsal-control+.rehearsal-control{border-left:1px solid #353A30}
@@ -3398,6 +3410,7 @@ var appNotificationStateKey='', appNotificationMarkerChecked=false, appNotificat
 var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
+var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
 var APP_RELEASE_VERSION='v26.07.23';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -6788,18 +6801,42 @@ function openGlobalSearchResult(type,id){
 function rehearsalStateKey(scheduleId){
   return 'choir_rehearsal_cue_v1_'+encodeURIComponent(rehearsalOwnerId||currentActorId()||'local')+'_'+encodeURIComponent(scheduleId||'');
 }
+function rehearsalCleanLine(line){
+  return String(line||'').replace(/^\s*(?:\d{1,2}\s*[.)]|[①②③④⑤⑥⑦⑧⑨⑩]|[-•·])\s*/,'').trim();
+}
+function rehearsalSectionTitle(line){
+  var text=String(line||'').trim();
+  var wrappers={'[':']','(':')','{':'}','〈':'〉','《':'》'};
+  var closer=wrappers[text.charAt(0)];
+  if(closer&&text.charAt(text.length-1)===closer)text=text.slice(1,-1).trim();
+  if(/^(?:첫째|둘째|셋째|넷째|다섯째|여섯째|일곱째|마지막)\s*날/i.test(text))return text;
+  if(/^(?:제?\s*\d{1,2}\s*일(?:차)?|day\s*\d{1,2})(?:\s|[:：\-–—·~(\[]|$)/i.test(text))return text;
+  return '';
+}
 function rehearsalItemsFromSchedule(schedule){
   var source=String(schedule&&schedule.program||'').trim()||String(schedule&&schedule.songs||'').trim();
   var lines=source?source.split(/\r?\n/):[];
   if(lines.length===1&&/[;,，]/.test(lines[0]))lines=lines[0].split(/[;,，]+/);
-  var items=lines.map(function(line){
-    return String(line||'').replace(/^\s*(?:\d{1,2}\s*[.)]|[①②③④⑤⑥⑦⑧⑨⑩]|[-•·])\s*/,'').trim();
-  }).filter(Boolean).slice(0,60);
-  if(!items.length&&schedule&&schedule.title)items=[schedule.title];
+  var items=[], section='';
+  lines.forEach(function(line){
+    var raw=String(line||'').trim();
+    if(!raw||items.length>=60)return;
+    var sectionTitle=rehearsalSectionTitle(raw);
+    if(sectionTitle){section=sectionTitle;return;}
+    var title=rehearsalCleanLine(raw);
+    if(title)items.push({title:title,section:section});
+  });
+  if(!items.length&&schedule&&schedule.title)items=[{title:String(schedule.title),section:''}];
   return items;
 }
+function rehearsalItemTitle(item){
+  return typeof item==='string'?item:String(item&&item.title||'');
+}
+function rehearsalItemSection(item){
+  return typeof item==='string'?'':String(item&&item.section||'');
+}
 function rehearsalItemSignature(items){
-  return (items||[]).join('\u241E');
+  return (items||[]).map(function(item){return rehearsalItemSection(item)+'\u241F'+rehearsalItemTitle(item);}).join('\u241E');
 }
 function loadRehearsalState(scheduleId,items){
   var saved={};
@@ -6824,14 +6861,126 @@ function saveRehearsalState(){
 function getRehearsalSchedule(){
   return allSchedules.find(function(schedule){return schedule.id===rehearsalScheduleId})||null;
 }
+function mergeRehearsalSchedules(rows){
+  (rows||[]).forEach(function(row){
+    var idx=allSchedules.findIndex(function(item){return item.id===row.id;});
+    if(idx>-1)allSchedules[idx]=row;
+    else allSchedules.push(row);
+  });
+}
+function loadRehearsalUpcomingSchedules(){
+  if(rehearsalUpcomingLoaded)return Promise.resolve([]);
+  if(rehearsalUpcomingPromise)return rehearsalUpcomingPromise;
+  var today=getTodayInputDate();
+  rehearsalUpcomingPromise=db.collection('schedules')
+    .where('date','>=',today)
+    .orderBy('date','asc')
+    .limit(18)
+    .get()
+    .then(function(snap){
+      var rows=[];
+      snap.forEach(function(doc){rows.push(scheduleRowFromDoc(doc));});
+      mergeRehearsalSchedules(rows);
+      rehearsalUpcomingLoaded=true;
+      rehearsalUpcomingPromise=null;
+      return rows;
+    })
+    .catch(function(error){
+      console.error(error);
+      rehearsalUpcomingPromise=null;
+      return [];
+    });
+  return rehearsalUpcomingPromise;
+}
+function loadRehearsalPastSchedules(){
+  if(rehearsalPastLoaded)return Promise.resolve(rehearsalPastSchedules);
+  if(rehearsalPastPromise)return rehearsalPastPromise;
+  var today=getTodayInputDate();
+  rehearsalPastPromise=db.collection('schedules')
+    .where('date','<',today)
+    .orderBy('date','desc')
+    .limit(200)
+    .get()
+    .then(function(snap){
+      var rows=[];
+      snap.forEach(function(doc){
+        var row=scheduleRowFromDoc(doc);
+        if(scheduleEndDate(row)<today)rows.push(row);
+      });
+      rehearsalPastSchedules=rows;
+      mergeRehearsalSchedules(rows);
+      rehearsalPastLoaded=true;
+      rehearsalPastPromise=null;
+      return rows;
+    })
+    .catch(function(error){
+      console.error(error);
+      rehearsalPastSearchError='지난 일정을 불러오지 못했습니다.';
+      rehearsalPastPromise=null;
+      return [];
+    });
+  return rehearsalPastPromise;
+}
 function rehearsalCandidateSchedules(){
-  var today=globalSearchTimestamp(getTodayInputDate());
-  return allSchedules.slice().sort(function(a,b){
-    var av=globalSearchTimestamp(scheduleStartDate(a)), bv=globalSearchTimestamp(scheduleStartDate(b));
-    var af=av>=today, bf=bv>=today;
-    if(af!==bf)return af?-1:1;
-    return af?(av-bv):(bv-av);
+  var today=getTodayInputDate();
+  return allSchedules.filter(function(schedule){
+    return scheduleStartDate(schedule)&&scheduleEndDate(schedule)>=today;
+  }).sort(function(a,b){
+    return scheduleStartDate(a).localeCompare(scheduleStartDate(b))||String(a.time||'').localeCompare(String(b.time||''))||String(a.title||'').localeCompare(String(b.title||''),'ko');
   }).slice(0,18);
+}
+function rehearsalPastMatches(schedule,query){
+  var haystack=globalSearchText([
+    schedule&&schedule.title,
+    schedule&&schedule.program,
+    schedule&&schedule.songs,
+    schedule&&schedule.location,
+    schedule&&schedule.memo,
+    scheduleDateRangeLabel(schedule)
+  ].join(' '));
+  return globalSearchText(query).split(' ').filter(Boolean).every(function(token){
+    return haystack.indexOf(token)>-1||globalSearchCompact(haystack).indexOf(globalSearchCompact(token))>-1;
+  });
+}
+function rehearsalPastSearchMarkup(){
+  var toggle='<button class="rehearsal-past-toggle '+(rehearsalPastSearchOpen?'open':'')+'" type="button" aria-expanded="'+(rehearsalPastSearchOpen?'true':'false')+'" onclick="toggleRehearsalPastSearch()"><span>지난 일정 찾기</span><span aria-hidden="true">⌄</span></button>';
+  if(!rehearsalPastSearchOpen)return '<div class="rehearsal-past">'+toggle+'</div>';
+  var form='<form class="rehearsal-past-form" onsubmit="return searchRehearsalPastSchedules(event)"><input class="rehearsal-past-input" id="rehearsalPastSearchInput" type="search" value="'+escAttr(rehearsalPastSearchQuery)+'" placeholder="일정 제목 또는 곡명" autocomplete="off" oninput="rehearsalPastSearchQuery=this.value"><button class="rehearsal-past-submit" type="submit">찾기</button></form>';
+  var content='';
+  if(rehearsalPastSearchLoading)content='<div class="rehearsal-past-status">지난 일정 찾는 중...</div>';
+  else if(rehearsalPastSearchError)content='<div class="rehearsal-past-status">'+escHtml(rehearsalPastSearchError)+'</div>';
+  else if(!rehearsalPastSearchQuery.trim())content='<div class="rehearsal-past-status">일정 제목이나 곡명을 입력하세요.</div>';
+  else if(rehearsalPastLoaded){
+    var rows=rehearsalPastSchedules.filter(function(schedule){return rehearsalPastMatches(schedule,rehearsalPastSearchQuery);}).slice(0,30);
+    content=rows.length?'<div class="rehearsal-past-results">'+rows.map(function(schedule){
+      var itemCount=rehearsalItemsFromSchedule(schedule).length;
+      var meta=[schedule.time,schedule.location,itemCount?itemCount+'개 순서':''].filter(Boolean).join(' · ');
+      return '<button class="rehearsal-picker-row" type="button" onclick="startRehearsalCue(\''+escAttr(schedule.id)+'\')"><span class="rehearsal-picker-date">'+escHtml(scheduleDateRangeLabel(schedule))+'</span><span class="rehearsal-picker-main"><span class="rehearsal-picker-title">'+escHtml(schedule.title||'일정')+'</span><span class="rehearsal-picker-meta">'+escHtml(meta||'세부 정보 없음')+'</span></span><span class="rehearsal-picker-arrow">›</span></button>';
+    }).join('')+'</div>':'<div class="rehearsal-past-status">일치하는 지난 일정이 없습니다.</div>';
+  }
+  return '<div class="rehearsal-past">'+toggle+'<div class="rehearsal-past-panel">'+form+content+'</div></div>';
+}
+function toggleRehearsalPastSearch(){
+  rehearsalPastSearchOpen=!rehearsalPastSearchOpen;
+  renderRehearsalSchedulePicker();
+  if(rehearsalPastSearchOpen)setTimeout(function(){
+    var input=document.getElementById('rehearsalPastSearchInput');
+    if(input)input.focus();
+  },0);
+}
+function searchRehearsalPastSchedules(event){
+  if(event)event.preventDefault();
+  var input=document.getElementById('rehearsalPastSearchInput');
+  rehearsalPastSearchQuery=String(input&&input.value||rehearsalPastSearchQuery||'').trim();
+  if(!rehearsalPastSearchQuery){showToast('검색어를 입력해주세요');return false;}
+  rehearsalPastSearchLoading=true;
+  rehearsalPastSearchError='';
+  renderRehearsalSchedulePicker();
+  loadRehearsalPastSchedules().then(function(){
+    rehearsalPastSearchLoading=false;
+    if(document.getElementById('modalRehearsalCue').classList.contains('active'))renderRehearsalSchedulePicker();
+  });
+  return false;
 }
 function renderRehearsalSchedulePicker(){
   var body=document.getElementById('rehearsalCueBody');
@@ -6845,16 +6994,12 @@ function renderRehearsalSchedulePicker(){
   if(title)title.textContent='리허설 큐시트';
   if(progress)progress.style.width='0';
   var rows=rehearsalCandidateSchedules();
-  if(!rows.length){
-    body.innerHTML='<div class="rehearsal-empty"><div><b>등록된 일정이 없습니다</b><span>일정을 등록한 뒤 큐시트를 열어주세요.</span></div></div>';
-    return;
-  }
-  body.innerHTML='<div class="rehearsal-picker"><div class="rehearsal-picker-head"><h2>진행할 일정</h2><p>프로그램 브리핑 또는 연습곡 순서로 시작합니다.</p></div><div class="rehearsal-picker-list">'
-    +rows.map(function(schedule){
+  var list=rows.length?'<div class="rehearsal-picker-list">'+rows.map(function(schedule){
       var itemCount=rehearsalItemsFromSchedule(schedule).length;
       var meta=[schedule.time,schedule.location,itemCount?itemCount+'개 순서':''].filter(Boolean).join(' · ');
       return '<button class="rehearsal-picker-row" type="button" onclick="startRehearsalCue(\''+escAttr(schedule.id)+'\')"><span class="rehearsal-picker-date">'+escHtml(scheduleDateRangeLabel(schedule))+'</span><span class="rehearsal-picker-main"><span class="rehearsal-picker-title">'+escHtml(schedule.title||'일정')+'</span><span class="rehearsal-picker-meta">'+escHtml(meta||'세부 정보 없음')+'</span></span><span class="rehearsal-picker-arrow">›</span></button>';
-    }).join('')+'</div></div>';
+    }).join('')+'</div>':'<div class="rehearsal-past-status">예정된 일정이 없습니다.</div>';
+  body.innerHTML='<div class="rehearsal-picker"><div class="rehearsal-picker-head"><h2>진행할 일정</h2><p>프로그램 브리핑 또는 연습곡 순서로 시작합니다.</p></div>'+list+rehearsalPastSearchMarkup()+'</div>';
 }
 function showRehearsalSchedulePicker(){
   pauseRehearsalTimer();
@@ -6876,12 +7021,12 @@ function openRehearsalCue(scheduleId){
   }
   rehearsalScheduleId='';
   rehearsalItems=[];
-  var body=document.getElementById('rehearsalCueBody');
-  if(body)body.innerHTML='<div class="global-search-load" style="color:#AAB19F"><div><div class="spinner"></div>일정 불러오는 중...</div></div>';
-  var now=new Date();
-  var start=homeInputDate(new Date(now.getFullYear(),now.getMonth(),1));
-  var end=homeInputDate(new Date(now.getFullYear(),now.getMonth()+2,0));
-  ensureScheduleRange(start,end,false).then(function(){
+  renderRehearsalSchedulePicker();
+  var currentMonth=scheduleMonthKey(getTodayInputDate());
+  Promise.all([
+    scheduleLoadedMonths[currentMonth]?Promise.resolve([]):loadScheduleMonth(currentMonth,false),
+    loadRehearsalUpcomingSchedules()
+  ]).then(function(){
     if(document.getElementById('modalRehearsalCue').classList.contains('active'))renderRehearsalSchedulePicker();
   });
 }
@@ -6912,10 +7057,19 @@ function renderRehearsalCue(){
   var progress=document.getElementById('rehearsalProgressBar');
   if(!schedule||!body||!rehearsalItems.length)return renderRehearsalSchedulePicker();
   rehearsalIndex=Math.max(0,Math.min(rehearsalItems.length-1,rehearsalIndex));
-  var current=rehearsalItems[rehearsalIndex];
-  var next=rehearsalItems[rehearsalIndex+1]||'마지막 순서입니다';
-  var context=[scheduleDateRangeLabel(schedule),schedule.time,schedule.location,schedule.dress?('단복 '+schedule.dress):''].filter(Boolean);
+  var currentItem=rehearsalItems[rehearsalIndex];
+  var nextItem=rehearsalItems[rehearsalIndex+1]||null;
+  var current=rehearsalItemTitle(currentItem);
+  var next=nextItem?rehearsalItemTitle(nextItem):'마지막 순서입니다';
+  var context=[rehearsalItemSection(currentItem),scheduleDateRangeLabel(schedule),schedule.time,schedule.location,schedule.dress?('단복 '+schedule.dress):''].filter(Boolean);
   var note=String(rehearsalNotes[rehearsalIndex]||'');
+  var orderHtml='', lastSection=null;
+  rehearsalItems.forEach(function(item,index){
+    var section=rehearsalItemSection(item);
+    if(section&&section!==lastSection)orderHtml+='<div class="rehearsal-order-section">'+escHtml(section)+'</div>';
+    lastSection=section;
+    orderHtml+='<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span>'+String(index+1).padStart(2,'0')+'</span><span>'+escHtml(rehearsalItemTitle(item))+'</span></button>';
+  });
   if(title)title.textContent=schedule.title||'리허설 큐시트';
   if(scheduleBtn)scheduleBtn.classList.remove('hidden');
   if(progress)progress.style.width=Math.round((rehearsalIndex+1)/rehearsalItems.length*100)+'%';
@@ -6923,7 +7077,7 @@ function renderRehearsalCue(){
     +'<main class="rehearsal-current"><div class="rehearsal-current-label"><span>현재 순서</span><span>'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div><div class="rehearsal-next"><span class="rehearsal-next-label">다음</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div></main>'
     +'<aside class="rehearsal-side"><div class="rehearsal-timer"><div class="rehearsal-timer-label">진행 시간</div><div class="rehearsal-timer-value" id="rehearsalTimerValue">'+rehearsalTimerText(rehearsalTimerSeconds)+'</div><div class="rehearsal-timer-actions"><button class="rehearsal-timer-toggle '+(rehearsalTimerRunning?'running':'')+'" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">'+(rehearsalTimerRunning?'일시정지':'타이머 시작')+'</button><button class="rehearsal-timer-reset" type="button" title="타이머 초기화" aria-label="타이머 초기화" onclick="resetRehearsalTimer()">↻</button></div></div>'
     +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div>'
-    +'<div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+rehearsalItems.map(function(item,index){return '<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span>'+String(index+1).padStart(2,'0')+'</span><span>'+escHtml(item)+'</span></button>';}).join('')+'</div></aside>'
+    +'<div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+orderHtml+'</div></aside>'
     +'</div>';
   if(controls)controls.classList.remove('hidden');
   var prev=document.getElementById('rehearsalPrevBtn');
@@ -12185,6 +12339,13 @@ function initSchedules(force){
     scheduleMonthIds=Object.create(null);
     scheduleAdminWindowLoaded=false;
     scheduleAdminWindowPromise=null;
+    rehearsalUpcomingLoaded=false;
+    rehearsalUpcomingPromise=null;
+    rehearsalPastSchedules=[];
+    rehearsalPastLoaded=false;
+    rehearsalPastPromise=null;
+    rehearsalPastSearchLoading=false;
+    rehearsalPastSearchError='';
     allSchedules=[];
   }
   var today=getTodayInputDate();
@@ -12245,6 +12406,9 @@ function addSchedule(){
     var idx=allSchedules.findIndex(function(x){return x.id===result.id});
     if(idx>-1)allSchedules[idx]=Object.assign({},allSchedules[idx],scheduleData,{id:result.id});
     else allSchedules.push(row);
+    rehearsalUpcomingLoaded=false;
+    rehearsalPastSchedules=[];
+    rehearsalPastLoaded=false;
     saveLoadedScheduleMonthCaches();
     var logTime = scheduleData.time ? ` 🕐 ${scheduleData.time}` : '';
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
@@ -12377,6 +12541,9 @@ function delSchedule(id,title){
   if(!confirm('"'+title+'" 삭제하시겠습니까?'))return;
   db.collection('schedules').doc(id).delete().then(function(){
     allSchedules=allSchedules.filter(function(s){return s.id!==id});
+    rehearsalUpcomingLoaded=false;
+    rehearsalPastSchedules=[];
+    rehearsalPastLoaded=false;
     saveLoadedScheduleMonthCaches();
     writeLog('일정 삭제','"'+title+'" 삭제됨');showToast('일정 삭제 완료');loadSchAdmin();
     if(currentTab==='calendar')renderCal();
