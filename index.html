@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/hymn-dove-book.png">
 <link rel="apple-touch-icon" href="assets/hymn-dove-book.png">
+<link rel="preload" href="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" as="script">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1904,7 +1905,7 @@ body{font-weight:500}
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-push-card hidden" id="homePushCard">
       <div class="home-push-copy"><div class="home-push-title"><span>🔔</span><span>변경 알림</span></div><div class="home-push-state" id="homePushState">악보 · 일정</div></div>
-      <div class="home-push-actions" id="homePushEnableWrap"><button class="home-push-enable" id="homePushEnableBtn" type="button" onclick="enablePushNotifications()">알림 켜기</button></div>
+      <div class="home-push-actions" id="homePushEnableWrap"><button class="home-push-enable" id="homePushEnableBtn" type="button" onclick="enablePushNotifications()">이 기기 알림 켜기</button></div>
       <div class="home-push-actions hidden" id="homePushTopics">
         <label class="push-topic"><span>악보</span><input id="pushTopicScores" type="checkbox" onchange="updatePushTopic('scores',this.checked)"><span class="push-switch" aria-hidden="true"></span></label>
         <label class="push-topic"><span>일정</span><input id="pushTopicSchedules" type="checkbox" onchange="updatePushTopic('schedules',this.checked)"><span class="push-switch" aria-hidden="true"></span></label>
@@ -2988,7 +2989,9 @@ var songRecommendCache=[];
 var WEB_PUSH_PUBLIC_KEY='BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY';
 var PUSH_STATE_PREFIX='choir_push_state_v1_';
 var PUSH_OWNER_KEY='choir_push_owner_v1';
+var LAST_LOGIN_HINT_KEY='choir_last_login_v1';
 var pushUiBusy=false;
+var pushStateRecovery={uid:'',done:false,promise:null};
 var pushInitialTarget=(function(){
   try{
     var target=new URL(window.location.href).searchParams.get('push')||'';
@@ -3007,6 +3010,7 @@ var firebaseFunctionsLoadPromise=null;
 var scoreOpenLinkCache={};
 var firebaseAuthReadyPromise=null;
 var firebaseAuthReady=false;
+var firebaseAuthChecking=false;
 var secureElevatedSession=false;
 var recoveryFirebaseApp=null;
 var adminResetVerified=false;
@@ -3082,7 +3086,7 @@ var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleDetailId='';
 var scheduleDirectEditActive=false, scheduleDirectEditReturnDate='', scheduleEditorAnchor=null;
-var APP_RELEASE_VERSION='v26.07.19';
+var APP_RELEASE_VERSION='v26.07.23';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -3290,11 +3294,22 @@ function savePushState(user,state){
   if(!key)return;
   localStorage.setItem(key,JSON.stringify(state));
   localStorage.setItem(PUSH_OWNER_KEY,user.id);
+  var recovery=pushRecoveryForUser(user);
+  recovery.done=true;
 }
 function clearPushState(user){
   var key=pushStateKey(user);
   if(key)localStorage.removeItem(key);
   if(user&&localStorage.getItem(PUSH_OWNER_KEY)===user.id)localStorage.removeItem(PUSH_OWNER_KEY);
+  if(user&&user.id){
+    var recovery=pushRecoveryForUser(user);
+    recovery.done=true;
+  }
+}
+function pushRecoveryForUser(user){
+  var uid=user&&user.id?String(user.id):'';
+  if(pushStateRecovery.uid!==uid)pushStateRecovery={uid:uid,done:false,promise:null};
+  return pushStateRecovery;
 }
 function pushBase64Url(buffer){
   if(!buffer)return '';
@@ -3327,6 +3342,32 @@ function pushDocumentId(endpoint){
 function currentPushSubscription(){
   if(!pushFeatureSupported())return Promise.resolve(null);
   return navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription();});
+}
+function restorePushStateFromServer(user){
+  if(!user||!user.id||!pushFeatureSupported()||Notification.permission!=='granted')return Promise.resolve(false);
+  var recovery=pushRecoveryForUser(user);
+  if(recovery.done)return Promise.resolve(false);
+  if(recovery.promise)return recovery.promise;
+  recovery.promise=currentPushSubscription().then(function(subscription){
+    if(!subscription)return false;
+    return pushDocumentId(subscription.endpoint).then(function(id){
+      return db.collection('pushSubscriptions').doc(id).get().then(function(doc){
+        if(!doc.exists)return false;
+        var data=doc.data()||{};
+        var storedEndpoint=data.subscription&&data.subscription.endpoint||'';
+        if(data.uid!==user.id||storedEndpoint!==subscription.endpoint)return false;
+        savePushState(user,{id:id,uid:user.id,topics:pushTopicsFromState(data),endpoint:subscription.endpoint});
+        return true;
+      });
+    });
+  }).catch(function(error){
+    console.warn('push_state_restore_failed',error);
+    return false;
+  }).then(function(restored){
+    recovery.done=true;
+    return restored;
+  }).finally(function(){recovery.promise=null});
+  return recovery.promise;
 }
 function pushTopicsFromState(state){
   var topics=state&&state.topics||{};
@@ -3377,6 +3418,17 @@ function renderPushSettings(){
     enableBtn.textContent='설정 확인';enableBtn.onclick=showPushPermissionHelp;enableBtn.disabled=false;
     return;
   }
+  if(!localState&&Notification.permission==='granted'){
+    var recovery=pushRecoveryForUser(currentUser);
+    if(!recovery.done){
+      stateEl.textContent='이 기기 알림 확인 중...';
+      enableWrap.classList.add('hidden');topicsWrap.classList.add('hidden');
+      restorePushStateFromServer(currentUser).then(function(){
+        if(currentUser&&String(currentUser.id)===recovery.uid)renderPushSettings();
+      });
+      return;
+    }
+  }
   if(localState&&Notification.permission==='granted'){
     var topics=pushTopicsFromState(localState);
     document.getElementById('pushTopicScores').checked=topics.scores;
@@ -3385,9 +3437,9 @@ function renderPushSettings(){
     enableWrap.classList.add('hidden');topicsWrap.classList.remove('hidden');
     return;
   }
-  stateEl.textContent='악보 · 일정';
+  stateEl.textContent='이 기기에서 악보 · 일정 받기';
   enableWrap.classList.remove('hidden');topicsWrap.classList.add('hidden');
-  enableBtn.textContent='알림 켜기';enableBtn.onclick=enablePushNotifications;enableBtn.disabled=pushUiBusy;
+  enableBtn.textContent='이 기기 알림 켜기';enableBtn.onclick=enablePushNotifications;enableBtn.disabled=pushUiBusy;
 }
 function showPushPermissionHelp(){
   if(isIOSDevice())alert('iPhone/iPad 알림 설정\n\n설정 앱 → 알림 → 찬양대에서 알림 허용을 켜주세요.');
@@ -4574,6 +4626,7 @@ function applySecureAuthState(firebaseUser,claims,profile){
   if(claims.account===true){
     currentUser=secureProfileFromClaims(firebaseUser.uid,claims,profile);
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    saveLastLoginHint(currentUser);
     if(Array.isArray(currentUser.favorites)){
       favorites=currentUser.favorites;
       localStorage.setItem('choir_fav',JSON.stringify(favorites));
@@ -4684,15 +4737,41 @@ function checkAdminPw(){
 }
 
 // ==================== 사용자 ====================
-function openUserModal(){
+function loadLastLoginHint(){
+  try{
+    var hint=JSON.parse(localStorage.getItem(LAST_LOGIN_HINT_KEY)||'null');
+    return hint&&hint.name?hint:null;
+  }catch(e){return null;}
+}
+function saveLastLoginHint(user){
+  if(!user||!user.name)return;
+  try{
+    localStorage.setItem(LAST_LOGIN_HINT_KEY,JSON.stringify({id:user.id||'',name:user.name,part:accountPartDisplayLabel(user)||''}));
+  }catch(e){}
+}
+function renderUserModalBody(){
   var b=document.getElementById('userModalBody');
-  if(isMemberLoggedIn()){
+  if(!b)return;
+  if(firebaseAuthChecking){
+    b.innerHTML='<div style="padding:30px 12px;text-align:center"><div class="spinner" style="margin:0 auto 14px"></div><div style="font-size:15px;font-weight:850">자동 로그인 확인 중</div><div style="font-size:12px;color:var(--ts);margin-top:6px">잠시만 기다려주세요.</div></div>';
+  }else if(isMemberLoggedIn()){
     renderCurrentUserProfile(null,'loading');
     loadCurrentUserLinkedMember();
   }else{
-    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">단원 계정으로 로그인하면 곡목록, 악보, 즐겨찾기 동기화를 이용할 수 있습니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 곡목록과 악보는 로그인 후 이용합니다.</p>';
+    var hint=loadLastLoginHint();
+    var name=hint&&hint.name?hint.name:'';
+    b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">단원 계정으로 로그인하면 곡목록, 악보, 즐겨찾기 동기화를 이용할 수 있습니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" autocomplete="username" value="'+escHtml(name)+'" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 곡목록과 악보는 로그인 후 이용합니다.</p>';
   }
+}
+function openUserModal(){
+  renderUserModalBody();
   openModal('modalUser');
+  if(!firebaseAuthChecking&&!isMemberLoggedIn())setTimeout(function(){
+    var name=document.getElementById('userNameInput');
+    var pin=document.getElementById('userPinInput');
+    var target=name&&name.value?pin:name;
+    if(target)target.focus();
+  },120);
 }
 
 function renderCurrentUserProfile(member,state){
@@ -4867,20 +4946,35 @@ function logoutUser(){
 }
 function updateUserBar(){
   var bar=document.getElementById('userBar');
-  if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')'}
+  var logout=bar&&bar.querySelector('button');
+  if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')';if(logout)logout.classList.remove('hidden')}
   else{bar.classList.add('hidden')}
   syncAccessShell();
   renderPushSettings();
+  var userModal=document.getElementById('modalUser');
+  var manualLoginButton=document.querySelector('#userModalBody button[onclick="loginUser()"]');
+  if(userModal&&userModal.classList.contains('active')&&!(currentUser&&manualLoginButton))renderUserModalBody();
   setTimeout(routePushTarget,0);
+}
+function showCachedUserChecking(user){
+  var bar=document.getElementById('userBar');
+  if(!bar||!user)return;
+  bar.classList.remove('hidden');
+  document.getElementById('userBarName').textContent=user.name+' · 자동 로그인 확인 중';
+  var logout=bar.querySelector('button');
+  if(logout)logout.classList.add('hidden');
 }
 function restoreUser() {
   if(firebaseAuthReadyPromise)return firebaseAuthReadyPromise;
+  firebaseAuthChecking=true;
   var hadCachedUser=false;
   try{
     var saved=JSON.parse(localStorage.getItem('choir_user')||'null');
     if(saved&&saved.id&&saved.name){
       currentUser=saved;
       hadCachedUser=true;
+      saveLastLoginHint(saved);
+      showCachedUserChecking(saved);
     }
   }catch(e){localStorage.removeItem('choir_user');}
   firebaseAuthReadyPromise=ensureFirebaseAuth().then(function(auth){
@@ -4888,6 +4982,7 @@ function restoreUser() {
       var unsubscribe=auth.onAuthStateChanged(function(firebaseUser){
         unsubscribe();
         if(!firebaseUser){
+          firebaseAuthChecking=false;
           currentUser=null;
           adminRole=null;
           secureElevatedSession=false;
@@ -4907,12 +5002,14 @@ function restoreUser() {
           if(claims.account!==true&&claims.admin!==true&&claims.legacyRole!=='chongmu'){
             return auth.signOut().then(function(){throw new Error('unsupported_auth_session')});
           }
+          firebaseAuthChecking=false;
           applySecureAuthState(firebaseUser,claims,null);
           refreshAfterSecureAuth(forceFreshDataOnInit);
           forceFreshDataOnInit=false;
           resolve(currentUser);
         }).catch(function(e){
           console.error(e);
+          firebaseAuthChecking=false;
           currentUser=null;
           adminRole=null;
           firebaseAuthReady=true;
@@ -4923,6 +5020,7 @@ function restoreUser() {
         });
       },function(e){
         console.error(e);
+        firebaseAuthChecking=false;
         firebaseAuthReady=true;
         currentUser=null;
         adminRole=null;
@@ -4931,6 +5029,16 @@ function restoreUser() {
         resolve(null);
       });
     });
+  }).catch(function(e){
+    console.error(e);
+    firebaseAuthChecking=false;
+    firebaseAuthReady=true;
+    currentUser=null;
+    adminRole=null;
+    localStorage.removeItem('choir_user');
+    updateUserBar();
+    syncAccessShell();
+    return null;
   });
   return firebaseAuthReadyPromise;
 }
