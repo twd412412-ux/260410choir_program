@@ -1818,6 +1818,144 @@ body{font-weight:500}
 .home-part-session.none{color:#8D4B45}
 .home-part-session.done .pct{color:#4E5A35}
 .home-part-session.none .pct{color:#B9655F}
+.home-global-search{width:100%;min-height:48px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;margin:0 0 12px;padding:9px 12px;border:1px solid #D8D0BE;border-radius:10px;background:#FFFDF8;color:#191A15;font-family:inherit;text-align:left;cursor:pointer;box-shadow:0 3px 12px rgba(49,54,35,.04)}
+.home-global-search:active{transform:scale(.995)}
+.home-global-search-icon,.global-search-input-icon{position:relative;width:17px;height:17px;border:2px solid #6F7D4E;border-radius:50%;box-sizing:border-box;justify-self:center}
+.home-global-search-icon::after,.global-search-input-icon::after{content:'';position:absolute;width:7px;height:2px;right:-5px;bottom:-2px;border-radius:2px;background:#6F7D4E;transform:rotate(45deg);transform-origin:left center}
+.home-global-search-copy{min-width:0;display:flex;align-items:baseline;gap:8px}
+.home-global-search-copy b{font-size:13px;font-weight:850;white-space:nowrap}
+.home-global-search-copy span{min-width:0;color:#777163;font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-global-search-arrow{color:#9A8D7B;font-size:18px;font-weight:500}
+.dark .home-global-search{background:#22271F;border-color:#465044;color:#F4F0E8}
+.dark .home-global-search-copy span{color:#AAB3A4}
+.global-search-modal{align-items:center;padding:12px}
+.global-search-sheet{width:min(540px,100%);height:min(760px,88dvh);max-height:88dvh;padding:0!important;overflow:hidden!important;border-radius:18px!important;display:flex;flex-direction:column;background:var(--sf)}
+.global-search-head{padding:14px 14px 10px;border-bottom:1px solid var(--bd);background:var(--sf)}
+.global-search-input-wrap{display:grid;grid-template-columns:24px minmax(0,1fr) 36px;align-items:center;gap:8px;min-height:48px;border:1.5px solid #BFC9AF;border-radius:12px;background:var(--bg);padding:0 5px 0 13px}
+.global-search-input-icon{width:16px;height:16px;justify-self:start}
+.global-search-input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--tx);font-family:inherit;font-size:16px;font-weight:720;padding:12px 0}
+.global-search-input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.global-search-input::placeholder{color:#8D8A7D;opacity:1}
+.global-search-close{width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--ts);font-family:inherit;font-size:22px;line-height:1;cursor:pointer}
+.global-search-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 9px;border-bottom:1px solid var(--bd);background:var(--sf);scrollbar-width:none}
+.global-search-tabs::-webkit-scrollbar{display:none}
+.global-search-tab{flex:0 0 auto;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--ts);padding:6px 7px 7px;font-family:inherit;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
+.global-search-tab.on{border-bottom-color:#6F7D4E;color:#354B36}
+.global-search-results{flex:1;min-height:0;overflow-y:auto;padding:4px 14px 18px;background:var(--sf);overscroll-behavior:contain}
+.global-search-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 2px 7px;color:var(--ts);font-size:11px;font-weight:850}
+.global-search-section-title span:last-child{font-variant-numeric:tabular-nums;color:#948D80}
+.global-search-row{width:100%;display:grid;grid-template-columns:36px minmax(0,1fr) 18px;align-items:center;gap:10px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--tx);padding:11px 2px;font-family:inherit;text-align:left;cursor:pointer}
+.global-search-row:last-child{border-bottom:0}
+.global-search-row:active{background:var(--bg)}
+.global-search-type{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px;font-weight:900;line-height:1}
+.global-search-type.song{background:#EAEFDF;color:#4E5A35}
+.global-search-type.score{background:#F7E9EA;color:#934B51}
+.global-search-type.schedule{background:#E8F1F3;color:#436A74}
+.global-search-type.archive{background:#FAEFD9;color:#8A6125}
+.global-search-type.member{background:#EEEAE2;color:#625D53}
+.global-search-row-copy{min-width:0}
+.global-search-row-title{display:block;font-size:14px;font-weight:850;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.global-search-row-meta{display:block;margin-top:3px;color:var(--ts);font-size:11px;font-weight:630;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.global-search-row-arrow{color:#A39B8E;font-size:18px;text-align:center}
+.global-search-empty{display:grid;place-items:center;min-height:250px;padding:30px 18px;text-align:center;color:var(--ts)}
+.global-search-empty-mark{width:48px;height:48px;display:grid;place-items:center;margin:0 auto 12px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);font-size:21px}
+.global-search-empty b{display:block;color:var(--tx);font-size:15px;margin-bottom:5px}
+.global-search-empty span{display:block;font-size:12px;line-height:1.5}
+.global-search-load{display:flex;align-items:center;justify-content:center;min-height:220px;color:var(--ts);font-size:12px;font-weight:700}
+.dark .global-search-input-wrap{background:#181D17;border-color:#52604B}
+.dark .global-search-input{color:#F4F0E8;-webkit-text-fill-color:#F4F0E8}
+.dark .global-search-input::placeholder{color:#9EA89A;-webkit-text-fill-color:#9EA89A}
+.dark .global-search-tab.on{color:#DDE8D4;border-bottom-color:#A8B991}
+.dark .global-search-row:active{background:#22271F}
+.dark .global-search-type.song{background:#2D382A;color:#DDE8D4}
+.dark .global-search-type.score{background:#3A292B;color:#F0C6C9}
+.dark .global-search-type.schedule{background:#26383D;color:#C8E1E6}
+.dark .global-search-type.archive{background:#3B3120;color:#F1CE88}
+.dark .global-search-type.member{background:#34322D;color:#DDD7CC}
+.rehearsal-cue-modal{z-index:2600;align-items:stretch;background:#10130F;padding:0}
+.rehearsal-shell{width:100%;height:100dvh;min-height:100vh;display:flex;flex-direction:column;background:#171A15;color:#F6F1E6;overflow:hidden}
+.rehearsal-topbar{height:70px;flex:0 0 70px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 18px;border-bottom:1px solid #353A30;background:#1D211B}
+.rehearsal-brand{min-width:0}
+.rehearsal-kicker{color:#C8A963;font-size:10px;font-weight:900;letter-spacing:0}
+.rehearsal-title{margin-top:4px;font-size:17px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-top-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.rehearsal-icon-btn{width:38px;height:38px;display:grid;place-items:center;border:1px solid #454B3F;border-radius:7px;background:#252A22;color:#F6F1E6;font-family:inherit;font-size:18px;cursor:pointer}
+.rehearsal-icon-btn.text{width:auto;padding:0 10px;font-size:11px;font-weight:850}
+.rehearsal-progress{height:4px;flex:0 0 4px;background:#2B3028;overflow:hidden}
+.rehearsal-progress span{display:block;height:100%;background:#C8A963;transition:width .2s ease}
+.rehearsal-body{flex:1;min-height:0;overflow:hidden}
+.rehearsal-picker{height:100%;max-width:820px;margin:0 auto;padding:24px 18px 34px;overflow-y:auto}
+.rehearsal-picker-head{margin-bottom:18px}
+.rehearsal-picker-head h2{font-size:25px;font-weight:900;margin:0 0 5px}
+.rehearsal-picker-head p{margin:0;color:#AAB19F;font-size:12px}
+.rehearsal-picker-list{border-top:1px solid #353A30}
+.rehearsal-picker-row{width:100%;display:grid;grid-template-columns:90px minmax(0,1fr) 22px;gap:12px;align-items:center;border:0;border-bottom:1px solid #353A30;background:transparent;color:#F6F1E6;padding:15px 2px;font-family:inherit;text-align:left;cursor:pointer}
+.rehearsal-picker-date{color:#C8A963;font-size:12px;font-weight:850}
+.rehearsal-picker-main{min-width:0}
+.rehearsal-picker-title{font-size:15px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-picker-meta{margin-top:4px;color:#AAB19F;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-picker-arrow{color:#7E8677;font-size:20px;text-align:center}
+.rehearsal-stage{height:100%;display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,.8fr);min-height:0}
+.rehearsal-current{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:32px 42px;border-right:1px solid #353A30;background:#171A15}
+.rehearsal-current-label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#C8A963;font-size:12px;font-weight:900}
+.rehearsal-current-label span:last-child{color:#8F9788;font-variant-numeric:tabular-nums}
+.rehearsal-current-title{margin:22px 0 28px;font-size:40px;font-weight:900;line-height:1.22;letter-spacing:0;word-break:keep-all;overflow-wrap:anywhere}
+.rehearsal-next{display:grid;grid-template-columns:50px minmax(0,1fr);gap:12px;align-items:start;padding-top:18px;border-top:1px solid #353A30}
+.rehearsal-next-label{color:#8F9788;font-size:11px;font-weight:850}
+.rehearsal-next-title{color:#D5D9CF;font-size:17px;font-weight:780;line-height:1.4;word-break:keep-all}
+.rehearsal-context{display:flex;gap:7px;flex-wrap:wrap;margin-top:24px}
+.rehearsal-context span{border-left:2px solid #6F7D4E;padding:3px 8px;color:#AEB5A7;font-size:11px;font-weight:680}
+.rehearsal-side{min-height:0;display:flex;flex-direction:column;background:#1D211B}
+.rehearsal-timer{padding:22px 20px 17px;border-bottom:1px solid #353A30}
+.rehearsal-timer-label{color:#8F9788;font-size:10px;font-weight:850}
+.rehearsal-timer-value{margin-top:3px;color:#F6F1E6;font-size:38px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1.15}
+.rehearsal-timer-actions{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:7px;margin-top:12px}
+.rehearsal-timer-toggle,.rehearsal-timer-reset{height:40px;border:1px solid #68745C;border-radius:7px;background:#6F7D4E;color:#fff;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.rehearsal-timer-reset{background:#252A22;border-color:#454B3F;color:#C8CDC2;font-size:16px}
+.rehearsal-timer-toggle.running{background:#B9655F;border-color:#B9655F}
+.rehearsal-note{padding:17px 20px;border-bottom:1px solid #353A30}
+.rehearsal-note label{display:block;margin-bottom:7px;color:#C8A963;font-size:10px;font-weight:900}
+.rehearsal-note textarea{width:100%;height:82px;resize:none;border:1px solid #454B3F;border-radius:7px;outline:0;background:#141713;color:#F6F1E6;padding:10px;font-family:inherit;font-size:13px;line-height:1.45;box-sizing:border-box}
+.rehearsal-order{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 18px}
+.rehearsal-order-label{position:sticky;top:0;padding:9px 0 7px;background:#1D211B;color:#8F9788;font-size:10px;font-weight:900;z-index:1}
+.rehearsal-order-row{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center;border:0;border-bottom:1px solid #30352D;background:transparent;color:#AEB5A7;padding:9px 0;font-family:inherit;text-align:left;cursor:pointer}
+.rehearsal-order-row span:first-child{font-size:10px;font-weight:850;color:#737B6E;font-variant-numeric:tabular-nums}
+.rehearsal-order-row span:last-child{font-size:12px;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-order-row.done span:last-child{color:#747C70;text-decoration:line-through}
+.rehearsal-order-row.on span:first-child{color:#C8A963}
+.rehearsal-order-row.on span:last-child{color:#FFF8E8;font-weight:900;text-decoration:none}
+.rehearsal-controls{height:72px;flex:0 0 72px;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #353A30;background:#1D211B}
+.rehearsal-control{border:0;background:transparent;color:#F6F1E6;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer}
+.rehearsal-control+.rehearsal-control{border-left:1px solid #353A30}
+.rehearsal-control.next{background:#C8A963;color:#1E211B}
+.rehearsal-control:disabled{color:#596055;background:#20241E;cursor:not-allowed}
+.rehearsal-empty{display:grid;place-items:center;min-height:300px;padding:28px;text-align:center;color:#AAB19F}
+.rehearsal-empty b{display:block;color:#F6F1E6;font-size:17px;margin-bottom:6px}
+@media(max-width:760px){
+  .global-search-modal{align-items:flex-end;padding:0}
+  .global-search-sheet{width:100%;height:86dvh;max-height:86dvh;border-radius:18px 18px 0 0!important}
+  .rehearsal-topbar{height:62px;flex-basis:62px;padding:8px 12px}
+  .rehearsal-title{font-size:15px}
+  .rehearsal-icon-btn{width:36px;height:36px}
+  .rehearsal-stage{display:flex;flex-direction:column;overflow-y:auto}
+  .rehearsal-current{flex:0 0 auto;min-height:330px;padding:26px 20px;border-right:0;border-bottom:1px solid #353A30}
+  .rehearsal-current-title{font-size:30px;margin:18px 0 24px}
+  .rehearsal-next{grid-template-columns:44px minmax(0,1fr)}
+  .rehearsal-next-title{font-size:15px}
+  .rehearsal-side{flex:0 0 auto;overflow:visible}
+  .rehearsal-timer{padding:16px 18px}
+  .rehearsal-timer-value{font-size:32px}
+  .rehearsal-note{padding:14px 18px}
+  .rehearsal-order{max-height:220px;padding:6px 18px 16px}
+  .rehearsal-controls{height:64px;flex-basis:64px}
+}
+@media(max-width:360px){
+  .home-global-search-copy span{display:none}
+  .global-search-tabs{padding-left:10px;padding-right:10px}
+  .global-search-results{padding-left:10px;padding-right:10px}
+  .rehearsal-current{min-height:300px;padding:22px 16px}
+  .rehearsal-current-title{font-size:27px}
+}
 .home-seating-card{cursor:pointer}
 .home-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .home-seating-pill{font-size:11px;font-weight:750;background:#EAEFDF;color:#4E5A35;border:1px solid #C8D0B9;border-radius:999px;padding:4px 8px}
@@ -1948,6 +2086,11 @@ body{font-weight:500}
       <span class="home-feature-update-tag" data-app-release-version></span>
       <span class="home-feature-update-copy"><b>이번 업데이트에서 달라진 점</b><span class="home-feature-update-link">추가된 기능 써보기 ›</span></span>
       <span class="home-feature-update-stamp" aria-hidden="true">UPDATE</span>
+    </button>
+    <button class="home-global-search hidden" id="homeGlobalSearch" type="button" onclick="openGlobalSearch()">
+      <span class="home-global-search-icon" aria-hidden="true"></span>
+      <span class="home-global-search-copy"><b>통합 검색</b><span>곡 · 악보 · 일정 · 사진</span></span>
+      <span class="home-global-search-arrow" aria-hidden="true">›</span>
     </button>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
     <div class="home-push-card hidden" id="homePushCard">
@@ -2668,6 +2811,48 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 통합 검색 -->
+<div class="modal-overlay global-search-modal" id="modalGlobalSearch" role="dialog" aria-modal="true" aria-label="통합 검색">
+  <div class="modal-content global-search-sheet">
+    <div class="global-search-head">
+      <div class="global-search-input-wrap">
+        <span class="global-search-input-icon" aria-hidden="true"></span>
+        <input class="global-search-input" id="globalSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="곡, 악보, 일정, 사진 검색" oninput="queueGlobalSearchRender()" onkeydown="handleGlobalSearchKey(event)">
+        <button class="global-search-close" type="button" title="닫기" aria-label="검색 닫기" onclick="closeModal('modalGlobalSearch')">×</button>
+      </div>
+    </div>
+    <div class="global-search-tabs" id="globalSearchTabs">
+      <button class="global-search-tab on" type="button" data-search-tab="all" onclick="setGlobalSearchTab('all')">전체</button>
+      <button class="global-search-tab" type="button" data-search-tab="song" onclick="setGlobalSearchTab('song')">곡</button>
+      <button class="global-search-tab" type="button" data-search-tab="score" onclick="setGlobalSearchTab('score')">악보</button>
+      <button class="global-search-tab" type="button" data-search-tab="schedule" onclick="setGlobalSearchTab('schedule')">일정</button>
+      <button class="global-search-tab" type="button" data-search-tab="archive" onclick="setGlobalSearchTab('archive')">사진</button>
+      <button class="global-search-tab hidden" id="globalSearchMemberTab" type="button" data-search-tab="member" onclick="setGlobalSearchTab('member')">단원</button>
+    </div>
+    <div class="global-search-results" id="globalSearchResults"></div>
+  </div>
+</div>
+
+<!-- MODAL: 리허설 큐시트 -->
+<div class="modal-overlay rehearsal-cue-modal" id="modalRehearsalCue" role="dialog" aria-modal="true" aria-label="리허설 큐시트">
+  <div class="rehearsal-shell" id="rehearsalCueShell">
+    <div class="rehearsal-topbar">
+      <div class="rehearsal-brand"><div class="rehearsal-kicker">REHEARSAL CUE</div><div class="rehearsal-title" id="rehearsalCueTitle">리허설 큐시트</div></div>
+      <div class="rehearsal-top-actions">
+        <button class="rehearsal-icon-btn text hidden" id="rehearsalScheduleBtn" type="button" onclick="showRehearsalSchedulePicker()">일정</button>
+        <button class="rehearsal-icon-btn" id="rehearsalFullscreenBtn" type="button" title="전체 화면" aria-label="전체 화면" onclick="toggleRehearsalFullscreen()">⛶</button>
+        <button class="rehearsal-icon-btn" type="button" title="닫기" aria-label="큐시트 닫기" onclick="closeModal('modalRehearsalCue')">×</button>
+      </div>
+    </div>
+    <div class="rehearsal-progress"><span id="rehearsalProgressBar" style="width:0"></span></div>
+    <div class="rehearsal-body" id="rehearsalCueBody"></div>
+    <div class="rehearsal-controls hidden" id="rehearsalCueControls">
+      <button class="rehearsal-control" id="rehearsalPrevBtn" type="button" onclick="moveRehearsalCue(-1)">‹ 이전 순서</button>
+      <button class="rehearsal-control next" id="rehearsalNextBtn" type="button" onclick="moveRehearsalCue(1)">다음 순서 ›</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 앱 문제 신고 -->
 <div class="modal-overlay modal-center" id="modalIssueReport">
   <div class="modal-content">
@@ -3159,6 +3344,8 @@ var scheduleEditId='';
 var scheduleDetailId='';
 var scheduleDirectEditActive=false, scheduleDirectEditReturnDate='', scheduleEditorAnchor=null;
 var issueReports=[], issueReportsLoaded=false, issueReportsPromise=null, issueReportOpenCount=0, issueReportCountLoaded=false;
+var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
+var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var APP_RELEASE_VERSION='v26.07.23';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -3649,6 +3836,7 @@ function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
   if(id==='modalScheduleEditor')restoreScheduleEditorMount();
+  if(id==='modalRehearsalCue')teardownRehearsalCue();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
@@ -3813,6 +4001,12 @@ function canManageScores(){
 }
 function isMemberLoggedIn(){
   return !!(firebaseAuthReady&&currentUser&&currentUser.id&&currentUser.name);
+}
+function canUseGlobalSearch(){
+  return isMemberLoggedIn()||adminRole==='admin'||adminRole==='chongmu';
+}
+function canUseRehearsalCue(){
+  return adminRole==='admin'||(isMemberLoggedIn()&&isUserConductor(currentUser));
 }
 function canViewScores(){
   return adminRole==='admin'||canManageScores()||getScoreAccessModes().length>0;
@@ -4014,10 +4208,14 @@ function syncAccessShell(){
   var navArchive=document.getElementById('navArchive');
   var navScores=document.getElementById('navScores');
   var btnLock=document.getElementById('btnLock');
+  var homeGlobalSearch=document.getElementById('homeGlobalSearch');
   if(navAdmin)navAdmin.classList.toggle('hidden',!canOpenAdminArea());
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
   if(navScores)navScores.classList.toggle('hidden',!canViewScores());
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
+  if(homeGlobalSearch)homeGlobalSearch.classList.toggle('hidden',!canUseGlobalSearch());
+  if(!canUseGlobalSearch()&&document.getElementById('modalGlobalSearch').classList.contains('active'))closeModal('modalGlobalSearch');
+  if(!canUseRehearsalCue()&&document.getElementById('modalRehearsalCue').classList.contains('active'))closeModal('modalRehearsalCue');
   if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
   syncIssueReportFab();
@@ -5814,6 +6012,9 @@ function renderHome(){
     if(canUseMemberHandbook()){
       shortcuts+='<button class="home-shortcut-btn" onclick="openHomeMemberSearch()"><span><span>🔎</span><span>단원 검색</span></span><span class="home-chevron">›</span></button>';
     }
+    if(canUseRehearsalCue()){
+      shortcuts+='<button class="home-shortcut-btn" onclick="openRehearsalCue()"><span><span>▶</span><span>리허설 큐시트</span></span><span class="home-chevron">›</span></button>';
+    }
     var pianistHtml=canSeeHomePianistAssignments()
       ? '<div class="home-subsection-title">반주자 최근 배정</div>'+homePianistRows(hymnSongs,state&&state.songsPending)
       : '';
@@ -5988,6 +6189,563 @@ function openHomeMemberSearch(){
     }
   },220);
 }
+
+// ==================== 통합 빠른 검색 ====================
+function globalSearchText(value){
+  var text=String(value||'');
+  try{text=text.normalize('NFKC')}catch(e){}
+  return text.toLowerCase().replace(/\s+/g,' ').trim();
+}
+function globalSearchCompact(value){
+  return globalSearchText(value).replace(/\s+/g,'');
+}
+function globalSearchTimestamp(value){
+  var time=Date.parse(value||'');
+  return isNaN(time)?0:time;
+}
+function globalSearchItem(type,id,title,meta,haystack,sortValue){
+  return {type:type,id:String(id||''),title:String(title||''),meta:String(meta||''),haystack:globalSearchText(haystack||''),sortValue:Number(sortValue||0)};
+}
+function globalSearchPhotoRows(){
+  var rows=globalSearchArchiveRows.slice();
+  archiveItems.forEach(function(item){
+    if(!rows.some(function(row){return row.id===item.id;}))rows.push(item);
+  });
+  return rows;
+}
+function globalSearchSourceRows(type){
+  var rows=[];
+  if(type==='song'&&canViewSongList()){
+    allSongs.forEach(function(song){
+      var date=songDateLabel(song);
+      var meta=[date,song.category,song.subCategory].filter(Boolean).join(' · ');
+      rows.push(globalSearchItem('song',song.id,song.songName||'곡명 없음',meta,[song.songName,song.members,song.pianist,song.category,song.subCategory,song.location,date].join(' '),songDateValue(song)));
+    });
+  }else if(type==='score'&&canViewScores()){
+    allScores.filter(canViewScoreItem).forEach(function(score){
+      var kind=normalizeScoreKind(score.scoreKind);
+      var part=kind==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(kind);
+      var updated=scoreUpdatedText(score);
+      var meta=[part,score.currentLabel,updated?('업데이트 '+updated):''].filter(Boolean).join(' · ');
+      rows.push(globalSearchItem('score',score.id,score.title||'악보',meta,[score.title,score.linkedSongName,score.currentLabel,score.currentFileName,part].join(' '),globalSearchTimestamp(score.currentUploadedAt||score.updatedAt||score.createdAt)));
+    });
+  }else if(type==='schedule'){
+    allSchedules.forEach(function(schedule){
+      var date=scheduleDateRangeLabel(schedule);
+      var meta=[date,schedule.time,schedule.location].filter(Boolean).join(' · ');
+      rows.push(globalSearchItem('schedule',schedule.id,schedule.title||'일정',meta,[schedule.title,schedule.location,schedule.songs,schedule.memo,schedule.program,schedule.dress,schedule.briefingMemo,date].join(' '),globalSearchTimestamp(scheduleStartDate(schedule))));
+    });
+  }else if(type==='archive'&&hasArchiveView()){
+    globalSearchPhotoRows().forEach(function(item){
+      var meta=[item.date,item.part,item.albumTitle].filter(Boolean).join(' · ');
+      rows.push(globalSearchItem('archive',item.id,item.title||'사진',meta,[item.title,item.description,item.part,item.albumTitle,item.date].join(' '),globalSearchTimestamp(item.uploadedAt||item.date)));
+    });
+  }else if(type==='member'&&canUseMemberHandbook()){
+    globalSearchMemberRows.forEach(function(member){
+      var part=normalizePartName(member.part)||'-';
+      var sub=normalizePartName(member.subPart);
+      var meta=part+(sub?' · '+handbookRoleLabel(sub):'');
+      rows.push(globalSearchItem('member',member.id,member.name||'이름 없음',meta,[member.name,part,sub,member.group,member.district,member.area].join(' '),0));
+    });
+  }
+  return rows;
+}
+function globalSearchMatch(item,query){
+  if(!query)return true;
+  var haystack=item.haystack;
+  var compact=globalSearchCompact(haystack);
+  return globalSearchText(query).split(' ').filter(Boolean).every(function(token){
+    return haystack.indexOf(token)>-1||compact.indexOf(globalSearchCompact(token))>-1;
+  });
+}
+function globalSearchRank(item,query){
+  var title=globalSearchText(item.title);
+  var compactTitle=globalSearchCompact(item.title);
+  var q=globalSearchText(query);
+  var compactQ=globalSearchCompact(query);
+  if(title===q||compactTitle===compactQ)return 0;
+  if(title.indexOf(q)===0||compactTitle.indexOf(compactQ)===0)return 1;
+  if(title.indexOf(q)>-1||compactTitle.indexOf(compactQ)>-1)return 2;
+  return 3;
+}
+function sortGlobalSearchRows(rows,query,type){
+  return rows.slice().sort(function(a,b){
+    if(query){
+      var rankDiff=globalSearchRank(a,query)-globalSearchRank(b,query);
+      if(rankDiff)return rankDiff;
+    }
+    if(type==='schedule'&&!query){
+      var today=globalSearchTimestamp(getTodayInputDate());
+      var af=a.sortValue>=today, bf=b.sortValue>=today;
+      if(af!==bf)return af?-1:1;
+      if(af)return a.sortValue-b.sortValue;
+    }
+    if(type==='member')return a.title.localeCompare(b.title,'ko');
+    return b.sortValue-a.sortValue||a.title.localeCompare(b.title,'ko');
+  });
+}
+function globalSearchTypeInfo(type){
+  return {
+    song:{label:'곡',icon:'♪'},
+    score:{label:'악보',icon:'악'},
+    schedule:{label:'일정',icon:'일'},
+    archive:{label:'사진',icon:'사'},
+    member:{label:'단원',icon:'인'}
+  }[type]||{label:'검색',icon:'·'};
+}
+function renderGlobalSearchGroup(type,rows,label,total){
+  if(!rows.length)return '';
+  var info=globalSearchTypeInfo(type);
+  total=Number(total||rows.length);
+  var countText=total>rows.length?rows.length+' / '+total:String(total);
+  return '<div class="global-search-section-title"><span>'+escHtml(label||info.label)+'</span><span>'+countText+'</span></div>'
+    +rows.map(function(item){
+      return '<button class="global-search-row" type="button" data-global-result="'+escAttr(item.type)+'" data-global-id="'+escAttr(item.id)+'" onclick="openGlobalSearchResult(\''+escAttr(item.type)+'\',\''+escAttr(item.id)+'\')">'
+        +'<span class="global-search-type '+escAttr(item.type)+'">'+escHtml(info.icon)+'</span>'
+        +'<span class="global-search-row-copy"><span class="global-search-row-title">'+escHtml(item.title)+'</span><span class="global-search-row-meta">'+escHtml(item.meta||info.label)+'</span></span>'
+        +'<span class="global-search-row-arrow" aria-hidden="true">›</span>'
+        +'</button>';
+    }).join('');
+}
+function globalSearchEmpty(title,description,mark){
+  return '<div class="global-search-empty"><div><div class="global-search-empty-mark">'+escHtml(mark||'⌕')+'</div><b>'+escHtml(title)+'</b><span>'+escHtml(description||'')+'</span></div></div>';
+}
+function globalSearchTabAllowed(type){
+  if(type==='song')return canViewSongList();
+  if(type==='score')return canViewScores();
+  if(type==='archive')return hasArchiveView();
+  if(type==='member')return canUseMemberHandbook();
+  return true;
+}
+function syncGlobalSearchTabs(){
+  var memberTab=document.getElementById('globalSearchMemberTab');
+  if(memberTab)memberTab.classList.toggle('hidden',!canUseMemberHandbook());
+  if(!globalSearchTabAllowed(globalSearchTab))globalSearchTab='all';
+  document.querySelectorAll('[data-search-tab]').forEach(function(tab){
+    var key=tab.dataset.searchTab;
+    tab.classList.toggle('hidden',!globalSearchTabAllowed(key));
+    tab.classList.toggle('on',key===globalSearchTab);
+  });
+}
+function renderGlobalSearch(){
+  var results=document.getElementById('globalSearchResults');
+  var input=document.getElementById('globalSearchInput');
+  if(!results)return;
+  syncGlobalSearchTabs();
+  var query=globalSearchText(input?input.value:'');
+  if(globalSearchTab==='archive'&&globalSearchArchiveLoading&&!globalSearchPhotoRows().length){
+    results.innerHTML='<div class="global-search-load"><div><div class="spinner"></div>사진 목록 불러오는 중...</div></div>';
+    return;
+  }
+  if(globalSearchTab==='member'&&globalSearchMemberLoading&&!globalSearchMemberRows.length){
+    results.innerHTML='<div class="global-search-load"><div><div class="spinner"></div>단원 명부 불러오는 중...</div></div>';
+    return;
+  }
+  var types=globalSearchTab==='all'?['song','score','schedule','archive','member']:[globalSearchTab];
+  types=types.filter(globalSearchTabAllowed);
+  var html='';
+  if(!query&&globalSearchTab==='all'){
+    var schedules=sortGlobalSearchRows(globalSearchSourceRows('schedule'),'','schedule').filter(function(item){
+      return item.sortValue>=globalSearchTimestamp(getTodayInputDate());
+    }).slice(0,4);
+    var scores=sortGlobalSearchRows(globalSearchSourceRows('score'),'','score').slice(0,4);
+    html+=renderGlobalSearchGroup('schedule',schedules,'다가오는 일정');
+    html+=renderGlobalSearchGroup('score',scores,'최근 악보');
+    if(!html)html=globalSearchEmpty('찾을 내용을 입력해주세요','곡명이나 일정 제목으로 바로 찾을 수 있습니다.','⌕');
+    results.innerHTML=html;
+    return;
+  }
+  types.forEach(function(type){
+    var rows=sortGlobalSearchRows(globalSearchSourceRows(type).filter(function(item){return globalSearchMatch(item,query);}),query,type);
+    var limit=globalSearchTab==='all'?8:40;
+    html+=renderGlobalSearchGroup(type,rows.slice(0,limit),'',rows.length);
+  });
+  if(!html){
+    var label=globalSearchTypeInfo(globalSearchTab).label;
+    html=globalSearchEmpty(query?'검색 결과가 없습니다':label+'을 검색해보세요',query?'다른 검색어로 다시 찾아보세요.':'이름이나 제목을 입력하세요.',query?'0':'⌕');
+  }
+  results.innerHTML=html;
+}
+function queueGlobalSearchRender(){
+  clearTimeout(globalSearchRenderTimer);
+  globalSearchRenderTimer=setTimeout(renderGlobalSearch,80);
+}
+function ensureGlobalSearchArchiveRows(){
+  if(globalSearchArchiveRows.length)return Promise.resolve(globalSearchArchiveRows);
+  if(archiveSelectedAlbumId==='all'&&archiveItems.length)return Promise.resolve(archiveItems);
+  if(globalSearchArchivePromise)return globalSearchArchivePromise;
+  globalSearchArchiveLoading=true;
+  renderGlobalSearch();
+  globalSearchArchivePromise=db.collection('mediaArchive').orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE).get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){
+      var d=doc.data()||{};
+      rows.push({id:doc.id,title:d.title||'제목 없음',description:d.description||'',date:d.date||'',part:d.part||'기타',type:d.type||'image',url:d.url||'',uploadedAt:d.uploadedAt||'',albumId:d.albumId||'',albumTitle:d.albumTitle||'',path:d.path||'',reactions:d.reactions||{}});
+    });
+    globalSearchArchiveRows=rows;
+    return rows;
+  }).catch(function(error){
+    console.error(error);
+    showToast('사진 검색 목록을 불러오지 못했습니다');
+    return [];
+  }).finally(function(){
+    globalSearchArchiveLoading=false;
+    globalSearchArchivePromise=null;
+    if(globalSearchTab==='archive')renderGlobalSearch();
+  });
+  return globalSearchArchivePromise;
+}
+function ensureGlobalSearchMemberRows(){
+  if(globalSearchMemberRows.length)return Promise.resolve(globalSearchMemberRows);
+  if(sharedMembersCache.rows&&sharedMembersCache.rows.length){
+    globalSearchMemberRows=sharedMembersCache.rows.slice();
+    return Promise.resolve(globalSearchMemberRows);
+  }
+  if(globalSearchMemberPromise)return globalSearchMemberPromise;
+  globalSearchMemberLoading=true;
+  renderGlobalSearch();
+  globalSearchMemberPromise=loadSharedMembers(false).then(function(rows){
+    globalSearchMemberRows=rows.slice();
+    return globalSearchMemberRows;
+  }).catch(function(error){
+    console.error(error);
+    showToast('단원 검색 목록을 불러오지 못했습니다');
+    return [];
+  }).finally(function(){
+    globalSearchMemberLoading=false;
+    globalSearchMemberPromise=null;
+    if(globalSearchTab==='member')renderGlobalSearch();
+  });
+  return globalSearchMemberPromise;
+}
+function setGlobalSearchTab(tab){
+  if(!globalSearchTabAllowed(tab))return;
+  globalSearchTab=tab;
+  syncGlobalSearchTabs();
+  renderGlobalSearch();
+  if(tab==='archive')ensureGlobalSearchArchiveRows();
+  if(tab==='member')ensureGlobalSearchMemberRows();
+}
+function openGlobalSearch(){
+  if(!canUseGlobalSearch()){
+    showToast('로그인 후 통합 검색을 이용할 수 있습니다');
+    openUserModal();
+    return;
+  }
+  globalSearchTab='all';
+  var input=document.getElementById('globalSearchInput');
+  if(input)input.value='';
+  openModal('modalGlobalSearch');
+  renderGlobalSearch();
+  setTimeout(function(){if(input)input.focus();},120);
+  var pending=[];
+  if(canViewSongList()&&!songsLoaded)pending.push(initSongs(false));
+  if(canViewScores()&&!scoresLoaded)pending.push(loadScores(false,false));
+  if(!scheduleLoadedMonths[scheduleMonthKey(getTodayInputDate())])pending.push(loadScheduleMonth(scheduleMonthKey(getTodayInputDate()),false));
+  if(pending.length)Promise.all(pending).then(function(){
+    if(document.getElementById('modalGlobalSearch').classList.contains('active'))renderGlobalSearch();
+  });
+}
+function handleGlobalSearchKey(event){
+  if(event.key==='Escape'){
+    event.preventDefault();
+    closeModal('modalGlobalSearch');
+    return;
+  }
+  if(event.key==='ArrowDown'){
+    var first=document.querySelector('#globalSearchResults .global-search-row');
+    if(first){event.preventDefault();first.focus();}
+    return;
+  }
+  if(event.key==='Enter'){
+    var only=document.querySelectorAll('#globalSearchResults .global-search-row');
+    if(only.length===1){event.preventDefault();only[0].click();}
+  }
+}
+function openGlobalSearchResult(type,id){
+  if(type==='song'){
+    closeModal('modalGlobalSearch');
+    openDetail(id);
+    return;
+  }
+  if(type==='score'){
+    var score=allScores.find(function(item){return item.id===id});
+    if(!score)return showToast('악보를 찾을 수 없습니다');
+    closeModal('modalGlobalSearch');
+    var song=findSongForScore(score);
+    if(song)return openDetail(song.id);
+    switchTab('scores');
+    setScoreViewMode(normalizeScoreKind(score.scoreKind));
+    var scoreInput=document.getElementById('scoreSearchInput');
+    if(scoreInput)scoreInput.value=score.title||'';
+    renderScoresPage();
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+  if(type==='schedule'){
+    closeModal('modalGlobalSearch');
+    openSchDetail(id);
+    return;
+  }
+  if(type==='archive'){
+    var photo=globalSearchPhotoRows().find(function(item){return item.id===id});
+    if(!photo||!photo.url)return showToast('사진을 찾을 수 없습니다');
+    closeModal('modalGlobalSearch');
+    openPhotoViewer(photo.url);
+    return;
+  }
+  if(type==='member'){
+    var member=globalSearchMemberRows.find(function(item){return item.id===id});
+    if(!member)return showToast('단원을 찾을 수 없습니다');
+    closeModal('modalGlobalSearch');
+    switchTab('admin');
+    switchAdminTab('memberHandbook');
+    selectedHbPart='all';
+    setTimeout(function(){
+      var memberInput=document.getElementById('handbookSearch');
+      if(memberInput){memberInput.value=member.name||'';filterHandbook();memberInput.scrollIntoView({block:'start',behavior:'smooth'});}
+    },220);
+  }
+}
+
+// ==================== 관리자 · 지휘 리허설 큐시트 ====================
+function rehearsalStateKey(scheduleId){
+  return 'choir_rehearsal_cue_v1_'+encodeURIComponent(rehearsalOwnerId||currentActorId()||'local')+'_'+encodeURIComponent(scheduleId||'');
+}
+function rehearsalItemsFromSchedule(schedule){
+  var source=String(schedule&&schedule.program||'').trim()||String(schedule&&schedule.songs||'').trim();
+  var lines=source?source.split(/\r?\n/):[];
+  if(lines.length===1&&/[;,，]/.test(lines[0]))lines=lines[0].split(/[;,，]+/);
+  var items=lines.map(function(line){
+    return String(line||'').replace(/^\s*(?:\d{1,2}\s*[.)]|[①②③④⑤⑥⑦⑧⑨⑩]|[-•·])\s*/,'').trim();
+  }).filter(Boolean).slice(0,60);
+  if(!items.length&&schedule&&schedule.title)items=[schedule.title];
+  return items;
+}
+function rehearsalItemSignature(items){
+  return (items||[]).join('\u241E');
+}
+function loadRehearsalState(scheduleId,items){
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(rehearsalStateKey(scheduleId))||'{}')||{}}catch(e){saved={}}
+  var same=saved.signature===rehearsalItemSignature(items);
+  rehearsalIndex=same?Math.max(0,Math.min(items.length-1,Number(saved.index||0))):0;
+  rehearsalNotes=same&&saved.notes&&Object.prototype.toString.call(saved.notes)==='[object Object]'?saved.notes:{};
+  rehearsalTimerSeconds=same?Math.max(0,Number(saved.timerSeconds||0)):0;
+}
+function saveRehearsalState(){
+  if(!rehearsalScheduleId)return;
+  try{
+    localStorage.setItem(rehearsalStateKey(rehearsalScheduleId),JSON.stringify({
+      signature:rehearsalItemSignature(rehearsalItems),
+      index:rehearsalIndex,
+      notes:rehearsalNotes,
+      timerSeconds:rehearsalTimerSeconds,
+      savedAt:new Date().toISOString()
+    }));
+  }catch(e){}
+}
+function getRehearsalSchedule(){
+  return allSchedules.find(function(schedule){return schedule.id===rehearsalScheduleId})||null;
+}
+function rehearsalCandidateSchedules(){
+  var today=globalSearchTimestamp(getTodayInputDate());
+  return allSchedules.slice().sort(function(a,b){
+    var av=globalSearchTimestamp(scheduleStartDate(a)), bv=globalSearchTimestamp(scheduleStartDate(b));
+    var af=av>=today, bf=bv>=today;
+    if(af!==bf)return af?-1:1;
+    return af?(av-bv):(bv-av);
+  }).slice(0,18);
+}
+function renderRehearsalSchedulePicker(){
+  var body=document.getElementById('rehearsalCueBody');
+  var controls=document.getElementById('rehearsalCueControls');
+  var scheduleBtn=document.getElementById('rehearsalScheduleBtn');
+  var title=document.getElementById('rehearsalCueTitle');
+  var progress=document.getElementById('rehearsalProgressBar');
+  if(!body)return;
+  if(controls)controls.classList.add('hidden');
+  if(scheduleBtn)scheduleBtn.classList.add('hidden');
+  if(title)title.textContent='리허설 큐시트';
+  if(progress)progress.style.width='0';
+  var rows=rehearsalCandidateSchedules();
+  if(!rows.length){
+    body.innerHTML='<div class="rehearsal-empty"><div><b>등록된 일정이 없습니다</b><span>일정을 등록한 뒤 큐시트를 열어주세요.</span></div></div>';
+    return;
+  }
+  body.innerHTML='<div class="rehearsal-picker"><div class="rehearsal-picker-head"><h2>진행할 일정</h2><p>프로그램 브리핑 또는 연습곡 순서로 시작합니다.</p></div><div class="rehearsal-picker-list">'
+    +rows.map(function(schedule){
+      var itemCount=rehearsalItemsFromSchedule(schedule).length;
+      var meta=[schedule.time,schedule.location,itemCount?itemCount+'개 순서':''].filter(Boolean).join(' · ');
+      return '<button class="rehearsal-picker-row" type="button" onclick="startRehearsalCue(\''+escAttr(schedule.id)+'\')"><span class="rehearsal-picker-date">'+escHtml(scheduleDateRangeLabel(schedule))+'</span><span class="rehearsal-picker-main"><span class="rehearsal-picker-title">'+escHtml(schedule.title||'일정')+'</span><span class="rehearsal-picker-meta">'+escHtml(meta||'세부 정보 없음')+'</span></span><span class="rehearsal-picker-arrow">›</span></button>';
+    }).join('')+'</div></div>';
+}
+function showRehearsalSchedulePicker(){
+  pauseRehearsalTimer();
+  rehearsalScheduleId='';
+  rehearsalItems=[];
+  renderRehearsalSchedulePicker();
+}
+function openRehearsalCue(scheduleId){
+  if(!canUseRehearsalCue()){
+    showToast('리허설 큐시트는 관리자와 지휘자만 이용할 수 있습니다');
+    return;
+  }
+  var fullscreenBtn=document.getElementById('rehearsalFullscreenBtn');
+  if(fullscreenBtn)fullscreenBtn.classList.toggle('hidden',!document.documentElement.requestFullscreen);
+  openModal('modalRehearsalCue');
+  if(scheduleId&&allSchedules.some(function(schedule){return schedule.id===scheduleId;})){
+    startRehearsalCue(scheduleId);
+    return;
+  }
+  rehearsalScheduleId='';
+  rehearsalItems=[];
+  var body=document.getElementById('rehearsalCueBody');
+  if(body)body.innerHTML='<div class="global-search-load" style="color:#AAB19F"><div><div class="spinner"></div>일정 불러오는 중...</div></div>';
+  var now=new Date();
+  var start=homeInputDate(new Date(now.getFullYear(),now.getMonth(),1));
+  var end=homeInputDate(new Date(now.getFullYear(),now.getMonth()+2,0));
+  ensureScheduleRange(start,end,false).then(function(){
+    if(document.getElementById('modalRehearsalCue').classList.contains('active'))renderRehearsalSchedulePicker();
+  });
+}
+function startRehearsalCue(scheduleId){
+  if(!canUseRehearsalCue())return;
+  var schedule=allSchedules.find(function(item){return item.id===scheduleId});
+  if(!schedule)return showToast('일정을 찾을 수 없습니다');
+  pauseRehearsalTimer();
+  rehearsalOwnerId=currentActorId()||'local';
+  rehearsalScheduleId=schedule.id;
+  rehearsalItems=rehearsalItemsFromSchedule(schedule);
+  loadRehearsalState(schedule.id,rehearsalItems);
+  renderRehearsalCue();
+}
+function rehearsalTimerText(seconds){
+  seconds=Math.max(0,Number(seconds||0));
+  var hours=Math.floor(seconds/3600);
+  var minutes=Math.floor((seconds%3600)/60);
+  var secs=seconds%60;
+  return (hours?String(hours).padStart(2,'0')+':':'')+String(minutes).padStart(2,'0')+':'+String(secs).padStart(2,'0');
+}
+function renderRehearsalCue(){
+  var schedule=getRehearsalSchedule();
+  var body=document.getElementById('rehearsalCueBody');
+  var controls=document.getElementById('rehearsalCueControls');
+  var scheduleBtn=document.getElementById('rehearsalScheduleBtn');
+  var title=document.getElementById('rehearsalCueTitle');
+  var progress=document.getElementById('rehearsalProgressBar');
+  if(!schedule||!body||!rehearsalItems.length)return renderRehearsalSchedulePicker();
+  rehearsalIndex=Math.max(0,Math.min(rehearsalItems.length-1,rehearsalIndex));
+  var current=rehearsalItems[rehearsalIndex];
+  var next=rehearsalItems[rehearsalIndex+1]||'마지막 순서입니다';
+  var context=[scheduleDateRangeLabel(schedule),schedule.time,schedule.location,schedule.dress?('단복 '+schedule.dress):''].filter(Boolean);
+  var note=String(rehearsalNotes[rehearsalIndex]||'');
+  if(title)title.textContent=schedule.title||'리허설 큐시트';
+  if(scheduleBtn)scheduleBtn.classList.remove('hidden');
+  if(progress)progress.style.width=Math.round((rehearsalIndex+1)/rehearsalItems.length*100)+'%';
+  body.innerHTML='<div class="rehearsal-stage">'
+    +'<main class="rehearsal-current"><div class="rehearsal-current-label"><span>현재 순서</span><span>'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div><div class="rehearsal-next"><span class="rehearsal-next-label">다음</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div></main>'
+    +'<aside class="rehearsal-side"><div class="rehearsal-timer"><div class="rehearsal-timer-label">진행 시간</div><div class="rehearsal-timer-value" id="rehearsalTimerValue">'+rehearsalTimerText(rehearsalTimerSeconds)+'</div><div class="rehearsal-timer-actions"><button class="rehearsal-timer-toggle '+(rehearsalTimerRunning?'running':'')+'" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">'+(rehearsalTimerRunning?'일시정지':'타이머 시작')+'</button><button class="rehearsal-timer-reset" type="button" title="타이머 초기화" aria-label="타이머 초기화" onclick="resetRehearsalTimer()">↻</button></div></div>'
+    +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div>'
+    +'<div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+rehearsalItems.map(function(item,index){return '<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span>'+String(index+1).padStart(2,'0')+'</span><span>'+escHtml(item)+'</span></button>';}).join('')+'</div></aside>'
+    +'</div>';
+  if(controls)controls.classList.remove('hidden');
+  var prev=document.getElementById('rehearsalPrevBtn');
+  var nextBtn=document.getElementById('rehearsalNextBtn');
+  if(prev)prev.disabled=rehearsalIndex===0;
+  if(nextBtn)nextBtn.disabled=rehearsalIndex===rehearsalItems.length-1;
+}
+function selectRehearsalCue(index){
+  index=Number(index);
+  if(index<0||index>=rehearsalItems.length)return;
+  rehearsalIndex=index;
+  saveRehearsalState();
+  renderRehearsalCue();
+}
+function moveRehearsalCue(direction){
+  selectRehearsalCue(rehearsalIndex+Number(direction||0));
+}
+function updateRehearsalNote(value){
+  rehearsalNotes[rehearsalIndex]=String(value||'').slice(0,500);
+  saveRehearsalState();
+}
+function refreshRehearsalTimerUi(){
+  var value=document.getElementById('rehearsalTimerValue');
+  var button=document.getElementById('rehearsalTimerToggle');
+  if(value)value.textContent=rehearsalTimerText(rehearsalTimerSeconds);
+  if(button){
+    button.textContent=rehearsalTimerRunning?'일시정지':'타이머 시작';
+    button.classList.toggle('running',rehearsalTimerRunning);
+  }
+}
+function requestRehearsalWakeLock(){
+  if(!rehearsalTimerRunning||!navigator.wakeLock||!navigator.wakeLock.request)return;
+  navigator.wakeLock.request('screen').then(function(lock){
+    rehearsalWakeLock=lock;
+    lock.addEventListener('release',function(){if(rehearsalWakeLock===lock)rehearsalWakeLock=null;});
+  }).catch(function(){});
+}
+function releaseRehearsalWakeLock(){
+  if(!rehearsalWakeLock)return;
+  var lock=rehearsalWakeLock;
+  rehearsalWakeLock=null;
+  try{lock.release()}catch(e){}
+}
+function toggleRehearsalTimer(){
+  if(rehearsalTimerRunning){
+    pauseRehearsalTimer();
+    return;
+  }
+  rehearsalTimerRunning=true;
+  clearInterval(rehearsalTimerId);
+  rehearsalTimerId=setInterval(function(){
+    rehearsalTimerSeconds++;
+    refreshRehearsalTimerUi();
+  },1000);
+  requestRehearsalWakeLock();
+  refreshRehearsalTimerUi();
+}
+function pauseRehearsalTimer(){
+  if(rehearsalTimerId)clearInterval(rehearsalTimerId);
+  rehearsalTimerId=null;
+  rehearsalTimerRunning=false;
+  releaseRehearsalWakeLock();
+  saveRehearsalState();
+  refreshRehearsalTimerUi();
+}
+function resetRehearsalTimer(){
+  if(rehearsalTimerSeconds&&!confirm('진행 타이머를 00:00으로 초기화할까요?'))return;
+  rehearsalTimerSeconds=0;
+  saveRehearsalState();
+  refreshRehearsalTimerUi();
+}
+function toggleRehearsalFullscreen(){
+  var shell=document.getElementById('rehearsalCueShell');
+  if(!shell)return;
+  if(document.fullscreenElement){
+    if(document.exitFullscreen)document.exitFullscreen().catch(function(){});
+    return;
+  }
+  if(shell.requestFullscreen)shell.requestFullscreen().catch(function(){});
+}
+function teardownRehearsalCue(){
+  pauseRehearsalTimer();
+  rehearsalOwnerId='';
+  if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(function(){});
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&rehearsalTimerRunning)requestRehearsalWakeLock();
+});
+document.addEventListener('keydown',function(event){
+  var modal=document.getElementById('modalRehearsalCue');
+  if(!modal||!modal.classList.contains('active'))return;
+  var tag=(event.target&&event.target.tagName||'').toLowerCase();
+  if(event.key==='Escape'){event.preventDefault();closeModal('modalRehearsalCue');return;}
+  if(tag==='input'||tag==='textarea'||tag==='select')return;
+  if(event.key==='ArrowLeft'){event.preventDefault();moveRehearsalCue(-1);}
+  else if(event.key==='ArrowRight'){event.preventDefault();moveRehearsalCue(1);}
+  else if(event.key===' '){event.preventDefault();toggleRehearsalTimer();}
+});
 
 // ==================== 캐시 유틸 ====================
 function saveCache(key,data){
@@ -11647,7 +12405,8 @@ function openSchDetail(id){
   scheduleDetailId=id;
   document.getElementById('schDetailTitle').textContent='📅 '+s.title;
   var editBtn=canEditScheduleItem(s)?'<button type="button" class="schedule-edit-btn" onclick="openScheduleEditorFromCalendar(\''+escAttr(s.id)+'\')">수정</button>':'';
-  var body='<div class="schedule-calendar-actions">'+editBtn+'<button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(s.id)+'\')">📅 내 캘린더에 추가</button></div>';
+  var rehearsalBtn=canUseRehearsalCue()?'<button type="button" class="schedule-edit-btn" onclick="openRehearsalCue(\''+escAttr(s.id)+'\')">▶ 리허설 큐시트</button>':'';
+  var body='<div class="schedule-calendar-actions">'+rehearsalBtn+editBtn+'<button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+escAttr(s.id)+'\')">📅 내 캘린더에 추가</button></div>';
   body+=[['날짜',scheduleDateRangeLabel(s)],['시간',s.time||'-'],['장소',s.location||'-'],['연습곡',s.songs||'-'],['메모',s.memo||'-']].map(function(r){return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-value">'+escHtml(r[1])+'</span></div>'}).join('');
   if(s.useBriefing){
     body+='<div style="margin-top:14px;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">';
