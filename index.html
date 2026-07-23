@@ -1968,10 +1968,10 @@ body{font-weight:500}
   <div style="padding:12px 16px"><div class="cal-selected-head"><h3 id="calEvtTitle">일정</h3></div><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
 </div>
 
-<!-- PAGE: 아카이브 -->
+<!-- PAGE: 사진첩 -->
 <div id="pageArchive" class="hidden">
   <div class="archive-top">
-    <h2 style="font-size:18px;font-weight:700">🗂️ 파트 아카이브</h2>
+    <h2 style="font-size:18px;font-weight:700">🗂️ 파트 사진첩</h2>
     <p>파트별 연습 사진을 모아두는 공간입니다. 평소의 사소한 사진 한 장 한 장이 쌓여 찬양의밤 등 이벤트 영상 제작에 큰 도움이 됩니다.</p>
   </div>
   <div class="archive-upload-card hidden" id="archiveUploadCard">
@@ -2011,7 +2011,7 @@ body{font-weight:500}
     </div>
   </div>
 
-  <div class="result-count" id="archiveCount">아카이브 0개</div>
+  <div class="result-count" id="archiveCount">사진첩 0개</div>
   <div class="card-list" id="archiveList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
 </div>
 
@@ -2480,7 +2480,7 @@ body{font-weight:500}
         <option value="member">명부</option>
         <option value="account">계정/권한</option>
         <option value="seating">자리배치</option>
-        <option value="archive">아카이브</option>
+        <option value="archive">사진첩</option>
         <option value="system">시스템/기타</option>
       </select>
       <input class="form-input" id="logSearch" placeholder="내용/작성자 검색" oninput="renderLogCards(cachedLogRows,cachedLogRows.length)">
@@ -2756,10 +2756,10 @@ body{font-weight:500}
     <div class="feature-update-actions"><button type="button" class="btn btn-p" onclick="closeModal('modalFeatureUpdate')">확인</button></div>
   </div>
 </div>
-<!-- MODAL: 아카이브 수정 -->
+<!-- MODAL: 사진첩 수정 -->
 <div class="modal-overlay modal-center" id="modalArchiveEdit">
   <div class="modal-content">
-    <div class="modal-header"><span class="modal-title">🗂️ 아카이브 수정</span><button class="modal-close" onclick="closeModal('modalArchiveEdit')">✕</button></div>
+    <div class="modal-header"><span class="modal-title">🗂️ 사진첩 수정</span><button class="modal-close" onclick="closeModal('modalArchiveEdit')">✕</button></div>
     <input type="hidden" id="archiveEditId">
     <div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="archiveEditPart"><option>전체</option><option>특송</option><option>청년</option><option>봉사회</option><option>어머니회</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>관현악</option><option>지휘</option><option>반주</option><option>임원</option><option>준단원</option><option>신입단원</option></select></div>
     <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="archiveEditDate" type="date"></div>
@@ -2769,7 +2769,7 @@ body{font-weight:500}
     <button class="btn btn-p btn-bl" onclick="saveArchiveEdit()">저장</button>
   </div>
 </div>
-<!-- MODAL: 아카이브 앨범 -->
+<!-- MODAL: 사진첩 앨범 -->
 <div class="modal-overlay modal-center" id="modalArchiveAlbum">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title" id="archiveAlbumModalTitle">📁 앨범 만들기</span><button class="modal-close" onclick="closeModal('modalArchiveAlbum')">✕</button></div>
@@ -2782,7 +2782,7 @@ body{font-weight:500}
     </div>
   </div>
 </div>
-<!-- MODAL: 아카이브 앨범 연결 -->
+<!-- MODAL: 사진첩 앨범 연결 -->
 <div class="modal-overlay modal-center" id="modalArchiveMove">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">📁 앨범에 넣기</span><button class="modal-close" onclick="closeModal('modalArchiveMove')">✕</button></div>
@@ -2953,7 +2953,7 @@ body{font-weight:500}
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
     <div class="nav-item" data-t="favorites" onclick="switchTab('favorites')"><span class="nav-icon">⭐</span>즐찾</div>
-    <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>아카이브</div>
+    <div class="nav-item hidden" data-t="archive" id="navArchive" onclick="switchTab('archive')"><span class="nav-icon">🗂️</span>사진첩</div>
   </div>
   <button class="home-fab active" data-t="home" type="button" onclick="switchTab('home')"><span class="home-fab-icon">🏠</span><span class="home-fab-label">홈</span></button>
   <div class="nav-side nav-right">
@@ -3117,8 +3117,8 @@ var PERMISSION_GROUPS=[
     {key:'account.manage',label:'계정 등록 및 수정',desc:'로그인 계정 생성, 이름/파트 수정'},
     {key:'account.pin',label:'PIN 변경',desc:'로그인 PIN 변경과 초기화'}
   ]},
-  {title:'아카이브',items:[
-    {key:'archive.upload',label:'사진 업로드',desc:'아카이브 사진 추가'},
+  {title:'사진첩',items:[
+    {key:'archive.upload',label:'사진 업로드',desc:'사진첩에 사진 추가'},
     {key:'archive.manageMine',label:'내 자료 수정',desc:'내가 올린 사진 수정/삭제'},
     {key:'archive.organize',label:'폴더 정리',desc:'앨범 만들기/수정, 사진 이동'}
   ]},
@@ -8759,7 +8759,7 @@ function accountFeatureLabels(perms){
   if(perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1)labels.push('출결');
   if(perms.indexOf('member.view')>-1||perms.indexOf('member.history')>-1||perms.indexOf('member.manage')>-1||perms.indexOf('member.delete')>-1)labels.push('명부');
   if(perms.indexOf('account.manage')>-1||perms.indexOf('account.pin')>-1)labels.push('계정');
-  if(perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1||perms.indexOf('archive.organize')>-1)labels.push('아카이브');
+  if(perms.indexOf('archive.upload')>-1||perms.indexOf('archive.manageMine')>-1||perms.indexOf('archive.organize')>-1)labels.push('사진첩');
   if(perms.indexOf('notice.manage')>-1||perms.indexOf('song.recommend')>-1||perms.indexOf('seating.manage')>-1)labels.push('도구');
   return labels;
 }
@@ -11135,7 +11135,7 @@ function openSchDetail(id){
   openModal('modalSchDetail');
 }
 
-// ==================== 파트 아카이브 ====================
+// ==================== 파트 사진첩 ====================
 function archiveAlbumById(id){
   return archiveAlbums.find(function(a){return a.id===id})||null;
 }
@@ -11204,7 +11204,7 @@ function renderArchiveAlbumPanel(errorText){
     box.innerHTML='<div class="archive-album-empty">'+escHtml(errorText)+'</div>';
     return;
   }
-  var html='<div class="archive-album-chip '+(archiveSelectedAlbumId==='all'?'on':'')+'" role="button" tabindex="0" onclick="selectArchiveAlbum(\'all\')"><div class="archive-album-chip-name">전체 사진</div><div class="archive-album-chip-meta">모든 아카이브</div></div>';
+  var html='<div class="archive-album-chip '+(archiveSelectedAlbumId==='all'?'on':'')+'" role="button" tabindex="0" onclick="selectArchiveAlbum(\'all\')"><div class="archive-album-chip-name">전체 사진</div><div class="archive-album-chip-meta">모든 사진</div></div>';
   if(!archiveAlbums.length){
     html+='<div class="archive-album-empty">아직 앨범이 없습니다.</div>';
   }
@@ -11250,7 +11250,7 @@ function saveArchiveAlbum(){
       renderArchiveAlbumPanel();
       syncArchiveAlbumSelects();
       renderArchiveList();
-      writeLog('아카이브 앨범 수정',title);
+      writeLog('사진첩 앨범 수정',title);
       showToast('앨범이 수정되었습니다');
     }).catch(function(e){console.error(e);showToast('앨범 수정 중 오류 발생')});
     return;
@@ -11258,7 +11258,7 @@ function saveArchiveAlbum(){
   db.collection('archiveAlbums').add({title:title,description:description,createdAt:now,createdById:currentActorId(),createdBy:currentActorName(),updatedAt:now,updatedBy:currentActorName()}).then(function(docRef){
     archiveSelectedAlbumId=docRef.id;
     closeModal('modalArchiveAlbum');
-    writeLog('아카이브 앨범 생성',title);
+    writeLog('사진첩 앨범 생성',title);
     return loadArchiveAlbums(true).then(function(){loadArchiveItems(false);});
   }).then(function(){
     showToast('앨범이 만들어졌습니다');
@@ -11291,7 +11291,7 @@ function deleteArchiveAlbum(){
     renderArchiveAlbumPanel();
     syncArchiveAlbumSelects();
     loadArchiveItems(false);
-    writeLog('아카이브 앨범 삭제',album.title);
+    writeLog('사진첩 앨범 삭제',album.title);
     showToast('앨범이 삭제되었습니다');
   }).catch(function(e){console.error(e);showToast('앨범 삭제 중 오류 발생')});
 }
@@ -11323,7 +11323,7 @@ function updateArchiveItemAlbum(id,albumId){
     item.albumTitle=fields.albumTitle;
     closeModal('modalArchiveMove');
     renderArchiveList();
-    writeLog('아카이브 앨범 변경',item.title+' → '+(fields.albumTitle||'앨범 없음'));
+    writeLog('사진첩 앨범 변경',item.title+' → '+(fields.albumTitle||'앨범 없음'));
     showToast(fields.albumTitle?'앨범에 넣었습니다':'앨범에서 뺐습니다');
   }).catch(function(e){console.error(e);showToast('앨범 변경 중 오류 발생')});
 }
@@ -11353,7 +11353,7 @@ function loadArchiveItems(more){
     archiveItems=[];
     archiveLastDoc=null;
     archiveHasMore=true;
-    if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>아카이브 불러오는 중...</div>';
+    if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>사진첩 불러오는 중...</div>';
   }else{
     renderArchiveList();
   }
@@ -11394,8 +11394,8 @@ function loadArchiveItems(more){
   }).catch(function(e){
     console.error(e);
     archiveLoading=false;
-    if(list)list.innerHTML='<div class="archive-empty">아카이브를 불러오지 못했습니다.</div>';
-    showToast('아카이브 불러오기 실패');
+    if(list)list.innerHTML='<div class="archive-empty">사진첩을 불러오지 못했습니다.</div>';
+    showToast('사진첩 불러오기 실패');
   });
 }
 function renderArchiveList(){
@@ -11411,7 +11411,7 @@ function renderArchiveList(){
     return partOk&&typeOk&&albumOk;
   });
   var selectedAlbum=archiveSelectedAlbumId==='all'?null:archiveAlbumById(archiveSelectedAlbumId);
-  count.textContent=(selectedAlbum?selectedAlbum.title:'아카이브')+' · '+items.length+'개 표시';
+  count.textContent=(selectedAlbum?selectedAlbum.title:'사진첩')+' · '+items.length+'개 표시';
   if(items.length===0){
     list.innerHTML='<div class="archive-empty">조건에 맞는 사진이 없습니다.</div>';
     return;
@@ -11638,7 +11638,7 @@ function saveArchiveEdit(){
   db.collection('mediaArchive').doc(id).update({part:part,date:date,title:title,description:description,albumId:albumFields.albumId,albumTitle:albumFields.albumTitle,updatedAt:new Date().toISOString(),updatedBy:currentUser?currentUser.name:(adminRole==='admin'?'관리자':'총무부')}).then(function(){
     item.part=part;item.date=date;item.title=title;item.description=description;item.albumId=albumFields.albumId;item.albumTitle=albumFields.albumTitle;
     closeModal('modalArchiveEdit');renderArchiveList();
-    writeLog('아카이브 수정',title+' ['+part+'] 수정됨');showToast('수정되었습니다');
+    writeLog('사진첩 수정',title+' ['+part+'] 수정됨');showToast('수정되었습니다');
   }).catch(function(e){console.error(e);showToast('수정 중 오류 발생')});
 }
 function deleteArchiveItem(id,title,path){
@@ -11651,7 +11651,7 @@ function deleteArchiveItem(id,title,path){
     }
     archiveItems=archiveItems.filter(function(x){return x.id!==id});
     renderArchiveList();
-    writeLog('아카이브 삭제',title+' 삭제됨');
+    writeLog('사진첩 삭제',title+' 삭제됨');
     showToast('삭제되었습니다');
   }).catch(function(e){
     console.error(e);
@@ -11712,7 +11712,7 @@ function uploadArchiveMedia(){
       if(albumEl)albumEl.value=archiveSelectedAlbumId!=='all'?archiveSelectedAlbumId:'';
       fileEl.value='';
       showToast(fileArr.length+'장 업로드 완료!');
-      writeLog('아카이브 업로드',title+' ['+part+'] '+fileArr.length+'장 업로드');
+      writeLog('사진첩 업로드',title+' ['+part+'] '+fileArr.length+'장 업로드');
       loadArchiveItems();
       return;
     }
@@ -13484,7 +13484,7 @@ function logEntryIcon(action){
   if(action.indexOf('공지')>-1)return '📢';
   if(action.indexOf('일정')>-1)return '📅';
   if(action.indexOf('출석')>-1||action.indexOf('출결')>-1)return '📋';
-  if(action.indexOf('아카이브')>-1)return '🗂️';
+  if(action.indexOf('사진첩')>-1||action.indexOf('아카이브')>-1)return '🗂️';
   if(action.indexOf('백업')>-1)return '💾';
   if(action.indexOf('보고서')>-1)return '🖨️';
   return '📝';
@@ -13502,7 +13502,7 @@ function logEntryType(action){
   if(action.indexOf('명부')>-1||action.indexOf('단원 연결')>-1)return 'member';
   if(action.indexOf('계정')>-1||action.indexOf('권한')>-1||action.indexOf('PIN')>-1)return 'account';
   if(action.indexOf('자리배치')>-1)return 'seating';
-  if(action.indexOf('아카이브')>-1)return 'archive';
+  if(action.indexOf('사진첩')>-1||action.indexOf('아카이브')>-1)return 'archive';
   return 'system';
 }
 function logMatchesFilters(d){
