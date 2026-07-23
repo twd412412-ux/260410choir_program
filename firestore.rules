@@ -172,6 +172,11 @@ service cloud.firestore {
       allow delete: if isAccount() && resource.data.uid == request.auth.uid;
     }
 
+    match /appNotifications/{notificationId} {
+      allow read: if isAppUser();
+      allow create, update, delete: if false;
+    }
+
     match /attendance/{attendanceId} {
       allow read: if isAdmin()
         || hasPermission('attendance.view')

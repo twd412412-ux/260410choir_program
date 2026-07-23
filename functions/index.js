@@ -642,8 +642,13 @@ function pushSubscriptionFromData(data) {
   return {endpoint, keys: {auth: authKey, p256dh}};
 }
 
+function eventDocumentId(eventId, suffix) {
+  const source = String(eventId || "") + (suffix ? "|" + String(suffix) : "");
+  return crypto.createHash("sha256").update(source).digest("hex");
+}
+
 async function claimPushEvent(eventId, type) {
-  const id = crypto.createHash("sha256").update(String(eventId || "")).digest("hex");
+  const id = eventDocumentId(eventId, "");
   if (!id) return false;
   try {
     await db.collection("pushDeliveryEvents").doc(id).create({type, createdAt: nowIso()});
@@ -652,6 +657,23 @@ async function claimPushEvent(eventId, type) {
     if (error && (error.code === 6 || error.code === "already-exists")) return false;
     throw error;
   }
+}
+
+async function recordAppNotification(eventId, audience, notification) {
+  const type = notification && notification.type === "schedule" ? "schedule" : "score";
+  const safeAudience = ["all", "singer", "orchestra"].includes(audience) ? audience : "all";
+  const target = notification && notification.target === "calendar" ? "calendar" : "scores";
+  const id = eventDocumentId(eventId, "notice:" + safeAudience);
+  await db.collection("appNotifications").doc(id).set({
+    type,
+    audience: safeAudience,
+    title: cleanString(notification && notification.title, 100),
+    body: cleanString(notification && notification.body, 300),
+    target,
+    sourceId: cleanString(notification && notification.sourceId, 120),
+    createdAt: nowIso(),
+    version: 1,
+  });
 }
 
 async function sendPushTopic(topic, notification) {
@@ -724,6 +746,24 @@ function notificationTitleList(items) {
   return titles.slice(0, 2).join(" · ") + " 외 " + (titles.length - 2) + "곡";
 }
 
+async function recordScoreAppNotifications(eventId, changes) {
+  const groups = {singer: [], orchestra: []};
+  changes.forEach((change) => {
+    groups[normalizeScoreKind(change && change.item && change.item.scoreKind)].push(change);
+  });
+  await Promise.all(Object.keys(groups).map(async (audience) => {
+    const rows = groups[audience];
+    if (!rows.length) return;
+    const onlyNew = rows.every((change) => change.kind === "new");
+    await recordAppNotification(eventId, audience, {
+      type: "score",
+      title: onlyNew ? "새 악보가 등록되었습니다" : "악보가 업데이트되었습니다",
+      body: notificationTitleList(rows.map((change) => change.item)),
+      target: "scores",
+    });
+  }));
+}
+
 function scheduleNoticeFingerprint(data) {
   if (!data) return "";
   return JSON.stringify([
@@ -788,6 +828,9 @@ async function notifyScoreWrite(event) {
   if (!changes.length) return null;
   if (!await claimPushEvent(event.id, "scores")) return null;
   const isOnlyNew = changes.every((change) => change.kind === "new");
+  await recordScoreAppNotifications(event.id, changes).catch((error) => {
+    console.error("score_app_notification_failed", error);
+  });
   const result = await sendPushTopic("scores", {
     title: isOnlyNew ? "새 악보가 등록되었습니다" : "악보가 업데이트되었습니다",
     body: notificationTitleList(changes.map((change) => change.item)),
@@ -813,6 +856,15 @@ async function notifyScheduleWrite(event) {
   const details = [scheduleDateText(item), cleanString(item.title, 80) || "제목 없는 일정"];
   if (afterExists && item.time) details.push(cleanString(item.time, 30));
   if (afterExists && item.location) details.push(cleanString(item.location, 60));
+  await recordAppNotification(event.id, "all", {
+    type: "schedule",
+    title: action,
+    body: details.join(" · "),
+    target: "calendar",
+    sourceId: cleanString(event.params && event.params.scheduleId, 120),
+  }).catch((error) => {
+    console.error("schedule_app_notification_failed", error);
+  });
   const result = await sendPushTopic("schedules", {
     title: action,
     body: details.join(" · "),

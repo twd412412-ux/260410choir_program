@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "appNotifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "audience",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "mediaArchive",
       "queryScope": "COLLECTION",
       "fields": [

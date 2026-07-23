@@ -79,7 +79,6 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
 body.modal-open{overflow:hidden}
 body.modal-open .bottom-nav{display:none!important}
-body.modal-open .issue-admin-fab{display:none!important}
 body.member-add-open .bottom-nav{display:none!important}
 body.admin-tab-active{padding-bottom:92px}
 body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
@@ -565,10 +564,43 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:flex-end;gap:4px;padding:8px 8px calc(env(safe-area-inset-bottom,8px) + 6px);z-index:100;box-shadow:0 -6px 18px rgba(0,0,0,.06);overflow:visible}
-.issue-admin-fab{position:fixed;right:16px;bottom:calc(94px + env(safe-area-inset-bottom,0px));z-index:96;width:48px;height:48px;border:1px solid rgba(69,84,55,.28);border-radius:50%;background:#526E53;color:#fff;box-shadow:0 8px 22px rgba(38,54,39,.24);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.issue-admin-fab::before{content:'';width:18px;height:14px;border:2px solid currentColor;border-radius:5px;box-sizing:border-box}
-.issue-admin-fab::after{content:'';position:absolute;width:5px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(-5px,8px) skewY(-28deg)}
-.issue-admin-count{position:absolute;right:-3px;top:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#C94F55;color:#fff;border:2px solid var(--sf);font-size:9px;font-weight:950;display:flex;align-items:center;justify-content:center}
+.notification-bell-btn{position:relative}
+.notification-bell-icon{font-size:15px;line-height:1;filter:saturate(.76)}
+.notification-bell-dot{position:absolute;right:4px;top:4px;width:8px;height:8px;border:2px solid #F0E7D7;border-radius:50%;background:#C94F55;box-sizing:border-box}
+.dark .notification-bell-dot{border-color:#3A3124}
+.app-notification-modal{align-items:flex-end}
+.app-notification-sheet{width:100%;max-width:500px;max-height:min(78dvh,680px);padding:0!important;overflow:hidden!important;border-radius:18px 18px 0 0!important;display:flex;flex-direction:column;background:var(--sf)}
+.app-notification-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px 13px;border-bottom:1px solid var(--bd)}
+.app-notification-title{font-size:18px;font-weight:920;color:var(--tx)}
+.app-notification-close{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--ts);font-family:inherit;font-size:20px;line-height:1;cursor:pointer}
+.app-notification-list{min-height:180px;overflow-y:auto;overscroll-behavior:contain}
+.app-notification-issue{width:100%;display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;border:0;border-bottom:1px solid var(--bd);background:#FFF8F5;color:var(--tx);padding:12px 18px;font-family:inherit;text-align:left;cursor:pointer}
+.app-notification-issue-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#F6E5E2;color:#A34B50;font-size:15px}
+.app-notification-issue-copy b{display:block;font-size:13px;font-weight:900}
+.app-notification-issue-copy span{display:block;margin-top:2px;color:var(--ts);font-size:10.5px;font-weight:650}
+.app-notification-issue-count{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:7px;background:#B85F5F;color:#fff;font-size:10px;font-weight:950}
+.app-notification-row{position:relative;width:100%;display:grid;grid-template-columns:38px minmax(0,1fr) 18px;align-items:center;gap:10px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--tx);padding:12px 18px;font-family:inherit;text-align:left;cursor:pointer}
+.app-notification-row.unread{background:#F7FAF2}
+.app-notification-row.unread::before{content:'';position:absolute;left:7px;top:18px;width:5px;height:5px;border-radius:50%;background:#B9655F}
+.app-notification-type{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;font-size:14px;font-weight:900}
+.app-notification-type.score{background:#F7E9EA;color:#934B51}
+.app-notification-type.schedule{background:#E8F1F3;color:#436A74}
+.app-notification-copy{min-width:0}
+.app-notification-copy b{display:block;font-size:13px;font-weight:880;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-notification-copy span{display:block;margin-top:3px;color:var(--ts);font-size:10.5px;font-weight:620;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-notification-time{display:block;margin-top:3px;color:#938B7C;font-size:9.5px;font-weight:650}
+.app-notification-arrow{color:#A39B8E;font-size:17px;text-align:center}
+.app-notification-empty{display:grid;place-items:center;min-height:220px;padding:28px;text-align:center;color:var(--ts)}
+.app-notification-empty b{display:block;color:var(--tx);font-size:14px;margin-bottom:5px}
+.app-notification-empty span{font-size:11px;line-height:1.5}
+.app-notification-footer{padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--bd);background:var(--sf)}
+.app-notification-settings{width:100%;border:0;background:transparent;color:var(--pd);padding:8px;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.dark .app-notification-issue{background:#2F2522}
+.dark .app-notification-issue-icon{background:#432C2C;color:#E1A4A7}
+.dark .app-notification-row.unread{background:#222A1F}
+.dark .app-notification-type.score{background:#3A292B;color:#F0C6C9}
+.dark .app-notification-type.schedule{background:#26383D;color:#C8E1E6}
+@media(min-width:500px){.app-notification-modal{align-items:center;padding:16px}.app-notification-sheet{border-radius:18px!important}}
 .home-support-footer{margin:14px 4px 0;padding:12px 0 1px;border-top:1px solid var(--line);text-align:center}
 .home-support-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;color:var(--ts);font-family:inherit;font-size:11.5px;font-weight:700;padding:6px 8px;cursor:pointer}
 .home-support-link b{color:var(--pd);font-weight:900}
@@ -1708,15 +1740,14 @@ body{font-weight:500}
 .home-update-btn:active{transform:scale(.98)}
 .feature-update-modal .modal-content{max-width:440px;max-height:82vh}
 .feature-update-kicker{font-size:11px;font-weight:900;color:#8A6A25;margin-bottom:6px}
-.feature-update-title{font-size:20px;font-weight:900;line-height:1.35;color:var(--tx);word-break:keep-all}
-.feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 12px}
+.feature-update-title{font-size:20px;font-weight:900;line-height:1.35;color:var(--tx);word-break:keep-all;margin-bottom:12px}
 .feature-update-list{border-top:1px solid var(--bd)}
 .feature-update-item{--feature-accent:var(--p);--feature-soft:var(--pl);--feature-on:#fff;border-bottom:1px solid var(--bd)}
-.feature-update-item.feature-search{--feature-accent:#5D7042;--feature-soft:#EDF3E4;margin:8px 0;border:1px solid #C7D2B5;border-radius:10px;background:#F8FAF4;padding:0 10px;box-shadow:0 4px 12px rgba(67,79,47,.06)}
+.feature-update-item.feature-search{--feature-accent:#5D7042;--feature-soft:#EDF3E4}
 .feature-update-item.feature-calendar{--feature-accent:#4E7480;--feature-soft:#E8F1F3}
 .feature-update-item.feature-score{--feature-accent:#A65359;--feature-soft:#F7E9EA}
 .feature-update-item.feature-alert{--feature-accent:#A36F28;--feature-soft:#FAEFD9}
-.dark .feature-update-item.feature-search{--feature-accent:#B7C99A;--feature-soft:#2D382A;--feature-on:#1C2419;border-color:#52604B;background:#22271F}
+.dark .feature-update-item.feature-search{--feature-accent:#B7C99A;--feature-soft:#2D382A;--feature-on:#1C2419}
 .dark .feature-update-item.feature-calendar{--feature-accent:#9BBEC6;--feature-soft:#26383D;--feature-on:#172024}
 .dark .feature-update-item.feature-score{--feature-accent:#DFA4A8;--feature-soft:#3A292B;--feature-on:#291719}
 .dark .feature-update-item.feature-alert{--feature-accent:#E0BB74;--feature-soft:#3B3120;--feature-on:#281E0F}
@@ -1737,13 +1768,8 @@ body{font-weight:500}
 .feature-update-chevron::before{content:'+'}
 .feature-update-item[open] .feature-update-chevron::before{content:'−'}
 .feature-update-item[open] .feature-update-summary-copy b{color:var(--feature-accent)}
-.feature-update-panel{padding:0 0 14px 48px}
-.feature-update-steps{border-top:1px solid var(--bd)}
-.feature-update-step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;padding:9px 0;border-bottom:1px solid var(--bd)}
-.feature-update-step:last-child{border-bottom:0}
-.feature-update-step-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--feature-accent);color:var(--feature-on);font-size:11px;font-weight:900}
-.feature-update-step b{display:block;font-size:13px;font-weight:900;color:var(--tx);line-height:1.35}
-.feature-update-step>div>span{display:block;font-size:11px;color:var(--ts);line-height:1.45;margin-top:2px}
+.feature-update-panel{padding:0 0 13px 48px}
+.feature-update-panel-copy{margin:0;color:var(--ts);font-size:11.5px;font-weight:650;line-height:1.5;word-break:keep-all}
 .feature-update-panel-action{display:inline-flex;align-items:center;justify-content:center;margin-top:9px;border:1px solid var(--feature-accent);border-radius:9px;background:var(--feature-accent);color:var(--feature-on);padding:8px 10px;font-family:inherit;font-size:11px;font-weight:850;cursor:pointer}
 .feature-update-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
 .home-push-card.feature-update-focus{animation:featureUpdateFocus .72s ease 2}
@@ -2071,6 +2097,12 @@ body{font-weight:500}
   body.print-report-mode #reportCanvas{display:block!important;background:#fff!important;border:0!important;border-radius:0!important;padding:0!important;min-height:0!important}
 }
 @media(max-width:390px){
+  .header{padding-left:10px;padding-right:10px;gap:6px}
+  .header-actions{gap:4px}
+  .icon-btn{width:31px;height:31px;border-radius:10px;font-size:14px}
+  .header-title{font-size:16px}
+  .notification-bell-icon{font-size:14px}
+  .notification-bell-dot{right:3px;top:3px}
   .home-push-card{align-items:flex-start;flex-wrap:wrap}
   .home-push-copy{flex-basis:100%}
   .home-push-actions{width:100%;justify-content:flex-start}
@@ -2089,9 +2121,10 @@ body{font-weight:500}
 <div class="header">
   <div class="header-title">광주교회 찬양대</div>
   <div class="header-actions">
-    <button class="icon-btn" onclick="openUserModal()">👤</button>
-    <button class="icon-btn" id="btnDark" onclick="toggleDark()">🌙</button>
-    <button class="icon-btn" id="btnLock" onclick="openAdminLogin()">🔒</button>
+    <button class="icon-btn notification-bell-btn hidden" id="notificationBellBtn" type="button" title="새 소식" aria-label="새 소식" onclick="openAppNotificationCenter()"><span class="notification-bell-icon" aria-hidden="true">🔔</span><span class="notification-bell-dot hidden" id="notificationBellDot" aria-hidden="true"></span></button>
+    <button class="icon-btn" type="button" title="내 정보" aria-label="내 정보" onclick="openUserModal()">👤</button>
+    <button class="icon-btn" id="btnDark" type="button" title="화면 모드" aria-label="화면 모드" onclick="toggleDark()">🌙</button>
+    <button class="icon-btn" id="btnLock" type="button" title="관리" aria-label="관리" onclick="openAdminLogin()">🔒</button>
   </div>
 </div>
 
@@ -2860,6 +2893,20 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 새 소식 -->
+<div class="modal-overlay app-notification-modal" id="modalAppNotifications" role="dialog" aria-modal="true" aria-label="새 소식">
+  <div class="modal-content app-notification-sheet">
+    <div class="app-notification-head">
+      <span class="app-notification-title">새 소식</span>
+      <button class="app-notification-close" type="button" title="닫기" aria-label="새 소식 닫기" onclick="closeModal('modalAppNotifications')">×</button>
+    </div>
+    <div class="app-notification-list" id="appNotificationList"><div class="app-notification-empty">최근 소식을 확인할 수 있습니다.</div></div>
+    <div class="app-notification-footer">
+      <button class="app-notification-settings" type="button" onclick="openPushSettingsFromNotificationCenter()">기기 알림 설정</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 리허설 큐시트 -->
 <div class="modal-overlay rehearsal-cue-modal" id="modalRehearsalCue" role="dialog" aria-modal="true" aria-label="리허설 큐시트">
   <div class="rehearsal-shell" id="rehearsalCueShell">
@@ -3006,40 +3053,23 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">업데이트 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
     <div class="feature-update-kicker"><span data-app-release-version></span> UPDATE</div>
-    <div class="feature-update-title">더 편리해진 기능 4가지</div>
-    <div class="feature-update-lead">찬양대 여러분께 새로 준비한 기능을 짧게 확인해보세요.</div>
+    <div class="feature-update-title">이번에 달라진 점</div>
     <div class="feature-update-list">
-      <details class="feature-update-item feature-search" data-feature-primary ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon"><span class="feature-update-search-icon"></span></span><span class="feature-update-summary-copy"><b>찬양대 통합 검색 <em class="feature-new-badge">새 기능</em></b><span>필요한 곡·악보·일정·사진을 바로 찾아보세요.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
-        <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>홈 검색창 누르기</b><span>로그인 후 홈 상단의 통합 검색창을 누르세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>찾을 내용 입력</b><span>곡명, 악보 파일명이나 일정 제목 일부만 입력해도 됩니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>종류별로 빠르게 좁히기</b><span>곡·악보·일정·사진 탭으로 원하는 결과만 확인하세요.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openSearchFromFeatureGuide()">통합 검색 사용하기</button></div>
+      <details class="feature-update-item feature-search">
+        <summary onclick="toggleFeatureUpdateItem(event,this.parentElement)"><span class="feature-update-summary-icon"><span class="feature-update-search-icon"></span></span><span class="feature-update-summary-copy"><b>찬양대 통합 검색 <em class="feature-new-badge">새 기능</em></b></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><p class="feature-update-panel-copy">곡·악보·일정·사진을 한곳에서 빠르게 찾습니다.</p><button type="button" class="feature-update-panel-action" onclick="openSearchFromFeatureGuide()">통합 검색 사용하기</button></div>
       </details>
-      <details class="feature-update-item feature-calendar" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b><span>앱 일정을 휴대폰 캘린더에 간편하게 저장합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
-        <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>추가할 일정 찾기</b><span>일정 탭에서 원하는 날짜를 누르세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>일정별 캘린더 추가</b><span>저장할 일정 카드 오른쪽의 버튼을 누르세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>캘린더에 저장</b><span>열린 휴대폰 캘린더에서 추가 또는 저장을 완료하세요.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭 열기</button></div>
+      <details class="feature-update-item feature-calendar">
+        <summary onclick="toggleFeatureUpdateItem(event,this.parentElement)"><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><p class="feature-update-panel-copy">원하는 일정을 휴대폰 캘린더에 바로 저장합니다.</p><button type="button" class="feature-update-panel-action" onclick="openCalendarFromFeatureGuide()">일정 탭 열기</button></div>
       </details>
-      <details class="feature-update-item feature-score" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>최신 악보 확인</b><span>등록되거나 교체된 파일을 NEW로 구분합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
-        <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>NEW 표시 확인</b><span>홈과 악보 탭에서 아직 열지 않은 파일을 확인하세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>악보 열기</b><span>파일을 정상적으로 불러오면 NEW 표시가 사라집니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>교체된 파일 확인</b><span>수정본이 올라오면 NEW가 다시 표시됩니다.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭 열기</button></div>
+      <details class="feature-update-item feature-score">
+        <summary onclick="toggleFeatureUpdateItem(event,this.parentElement)"><span class="feature-update-summary-icon"><span class="score-new-badge">NEW</span></span><span class="feature-update-summary-copy"><b>최신 악보 확인</b></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><p class="feature-update-panel-copy">처음 보거나 교체된 악보는 NEW로 표시됩니다.</p><button type="button" class="feature-update-panel-action" onclick="openScoresFromFeatureGuide()">악보 탭 열기</button></div>
       </details>
-      <details class="feature-update-item feature-alert" ontoggle="handleFeatureUpdateToggle(this)">
-        <summary><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>악보·일정 알림 <em class="feature-recommend-badge">강추</em></b><span>원하는 변경 소식만 선택해 받습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
-        <div class="feature-update-panel"><div class="feature-update-steps">
-          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>단원 로그인</b><span>로그인 후 홈에서 알림을 설정할 수 있습니다.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>알림 허용</b><span>아이폰은 홈 화면에 추가한 뒤 기기 알림을 허용하세요.</span></div></div>
-          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>받을 항목 선택</b><span>악보와 일정 중 필요한 알림만 켜세요.</span></div></div>
-        </div><button type="button" class="feature-update-panel-action" onclick="openPushSettingsFromFeatureGuide()">알림 설정으로 이동</button></div>
+      <details class="feature-update-item feature-alert">
+        <summary onclick="toggleFeatureUpdateItem(event,this.parentElement)"><span class="feature-update-summary-icon">🔔</span><span class="feature-update-summary-copy"><b>새 소식·변경 알림 <em class="feature-recommend-badge">강추</em></b></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><p class="feature-update-panel-copy">앱에서 최근 소식을 보고, 필요한 기기 알림도 설정합니다.</p><button type="button" class="feature-update-panel-action" onclick="openNotificationsFromFeatureGuide()">새 소식 보기</button></div>
       </details>
     </div>
     <div class="feature-update-actions"><button type="button" class="btn btn-p" onclick="closeModal('modalFeatureUpdate')">확인</button></div>
@@ -3238,7 +3268,6 @@ body{font-weight:500}
 </div>
 <!-- BOTTOM NAV -->
 
-<button type="button" class="issue-admin-fab hidden" id="issueAdminFab" title="문제 신고함" aria-label="문제 신고함" onclick="openIssueInbox()"><span class="issue-admin-count hidden" id="issueAdminCount">0</span></button>
 <div class="bottom-nav">
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
@@ -3379,6 +3408,12 @@ var scheduleEditId='';
 var scheduleDetailId='';
 var scheduleDirectEditActive=false, scheduleDirectEditReturnDate='', scheduleEditorAnchor=null;
 var issueReports=[], issueReportsLoaded=false, issueReportsPromise=null, issueReportOpenCount=0, issueReportCountLoaded=false;
+var APP_NOTIFICATION_COLLECTION='appNotifications';
+var APP_NOTIFICATION_LIMIT=20;
+var APP_NOTIFICATION_SEEN_PREFIX='choir_app_notice_seen_v1_';
+var appNotifications=[], appNotificationsLoaded=false, appNotificationsPromise=null, appNotificationLoadError='';
+var appNotificationStateKey='', appNotificationMarkerChecked=false, appNotificationMarkerPromise=null;
+var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var APP_RELEASE_VERSION='v26.07.23';
@@ -4253,7 +4288,7 @@ function syncAccessShell(){
   if(!canUseRehearsalCue()&&document.getElementById('modalRehearsalCue').classList.contains('active'))closeModal('modalRehearsalCue');
   if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
-  syncIssueReportFab();
+  syncAppNotificationAccess();
   enforceCurrentTabAccess();
 }
 
@@ -5220,34 +5255,227 @@ function submitIssueReport(){
     if(btn){btn.disabled=false;btn.textContent='보내기';}
   });
 }
-function renderIssueAdminFab(){
-  var fab=document.getElementById('issueAdminFab');
-  var badge=document.getElementById('issueAdminCount');
-  var admin=adminRole==='admin';
-  if(fab)fab.classList.toggle('hidden',!admin);
-  if(badge){
-    badge.textContent=issueReportOpenCount>=50?'50+':String(issueReportOpenCount||0);
-    badge.classList.toggle('hidden',!admin||!issueReportOpenCount);
+function canUseAppNotificationCenter(){
+  return isMemberLoggedIn()||adminRole==='admin'||adminRole==='chongmu';
+}
+function appNotificationAudiences(){
+  var allowed=['all'].concat(getScoreAccessModes());
+  return allowed.filter(function(value,index){
+    return ['all','singer','orchestra'].indexOf(value)!==-1&&allowed.indexOf(value)===index;
+  });
+}
+function appNotificationOwnerKey(){
+  if(!canUseAppNotificationCenter())return '';
+  if(currentUser&&currentUser.id)return String(currentUser.id);
+  try{
+    var authUser=firebase.auth().currentUser;
+    if(authUser&&authUser.uid)return String(authUser.uid);
+  }catch(e){}
+  return adminRole||'';
+}
+function currentAppNotificationStateKey(){
+  var owner=appNotificationOwnerKey();
+  if(!owner)return '';
+  return owner+'|'+appNotificationAudiences().slice().sort().join(',');
+}
+function appNotificationSeenStorageKey(){
+  return APP_NOTIFICATION_SEEN_PREFIX+encodeURIComponent(appNotificationStateKey||currentAppNotificationStateKey());
+}
+function readAppNotificationSeenAt(){
+  try{return localStorage.getItem(appNotificationSeenStorageKey())||''}catch(e){return ''}
+}
+function saveAppNotificationSeenAt(value){
+  if(!value)return;
+  try{localStorage.setItem(appNotificationSeenStorageKey(),String(value))}catch(e){}
+}
+function ensureAppNotificationState(){
+  var nextKey=currentAppNotificationStateKey();
+  if(nextKey===appNotificationStateKey)return nextKey;
+  appNotificationStateKey=nextKey;
+  appNotifications=[];
+  appNotificationsLoaded=false;
+  appNotificationsPromise=null;
+  appNotificationLoadError='';
+  appNotificationMarkerChecked=false;
+  appNotificationMarkerPromise=null;
+  appNotificationHasNew=false;
+  appNotificationPreviousSeenAt=nextKey?readAppNotificationSeenAt():'';
+  return nextKey;
+}
+function appNotificationQuery(limit){
+  return db.collection(APP_NOTIFICATION_COLLECTION)
+    .where('audience','in',appNotificationAudiences())
+    .orderBy('createdAt','desc')
+    .limit(limit);
+}
+function renderAppNotificationBell(){
+  var button=document.getElementById('notificationBellBtn');
+  var dot=document.getElementById('notificationBellDot');
+  var allowed=canUseAppNotificationCenter();
+  if(button)button.classList.toggle('hidden',!allowed);
+  if(dot)dot.classList.toggle('hidden',!allowed||!(appNotificationHasNew||(adminRole==='admin'&&issueReportOpenCount>0)));
+}
+function checkAppNotificationMarker(){
+  var requestKey=ensureAppNotificationState();
+  if(!requestKey||appNotificationMarkerChecked||appNotificationMarkerPromise)return appNotificationMarkerPromise||Promise.resolve();
+  appNotificationMarkerChecked=true;
+  appNotificationMarkerPromise=appNotificationQuery(1).get().then(function(snap){
+    if(appNotificationStateKey!==requestKey)return;
+    var latest='';
+    snap.forEach(function(doc){if(!latest)latest=String((doc.data()||{}).createdAt||'')});
+    appNotificationHasNew=!!latest&&latest>readAppNotificationSeenAt();
+    renderAppNotificationBell();
+  }).catch(function(e){
+    console.warn('app_notification_marker_failed',e);
+  }).finally(function(){
+    if(appNotificationStateKey===requestKey)appNotificationMarkerPromise=null;
+  });
+  return appNotificationMarkerPromise;
+}
+function formatAppNotificationTime(value){
+  var date=new Date(value);
+  if(!value||isNaN(date.getTime()))return '';
+  var now=new Date();
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  var day=new Date(date.getFullYear(),date.getMonth(),date.getDate()).getTime();
+  var time=String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+  if(day===today)return '오늘 '+time;
+  if(day===today-86400000)return '어제 '+time;
+  if(date.getFullYear()===now.getFullYear())return (date.getMonth()+1)+'월 '+date.getDate()+'일';
+  return date.getFullYear()+'. '+(date.getMonth()+1)+'. '+date.getDate()+'.';
+}
+function renderAppNotificationCenter(){
+  var box=document.getElementById('appNotificationList');
+  if(!box)return;
+  var html='';
+  if(adminRole==='admin'){
+    var issueCount=issueReportOpenCount>=50?'50+':String(issueReportOpenCount||0);
+    html+='<button type="button" class="app-notification-issue" onclick="openIssueInboxFromNotifications()">'
+      +'<span class="app-notification-issue-icon" aria-hidden="true">!</span>'
+      +'<span class="app-notification-issue-copy"><b>문제 신고함</b><span>접수된 신고를 확인합니다.</span></span>'
+      +'<span class="app-notification-issue-count '+(issueReportOpenCount?'':'hidden')+'">'+issueCount+'</span></button>';
   }
+  if(appNotificationsPromise&&!appNotificationsLoaded){
+    box.innerHTML=html+'<div class="loading"><div class="spinner"></div>새 소식 불러오는 중...</div>';
+    return;
+  }
+  if(appNotificationLoadError&&!appNotificationsLoaded){
+    box.innerHTML=html+'<div class="app-notification-empty"><span>'+escHtml(appNotificationLoadError)+'</span></div>';
+    return;
+  }
+  if(!appNotifications.length){
+    box.innerHTML=html+'<div class="app-notification-empty"><span>아직 새 소식이 없습니다.</span></div>';
+    return;
+  }
+  html+=appNotifications.map(function(item){
+    var isSchedule=item.type==='schedule';
+    var unread=!!item.createdAt&&(!appNotificationPreviousSeenAt||String(item.createdAt)>appNotificationPreviousSeenAt);
+    return '<button type="button" class="app-notification-row '+(unread?'unread':'')+'" onclick="openAppNotificationItem(\''+escAttr(item.id)+'\')">'
+      +'<span class="app-notification-type '+(isSchedule?'schedule':'score')+'" aria-hidden="true">'+(isSchedule?'📅':'♪')+'</span>'
+      +'<span class="app-notification-copy"><b>'+escHtml(item.title||(isSchedule?'일정 소식':'악보 소식'))+'</b>'
+      +'<span>'+escHtml(item.body||'')+'</span><span class="app-notification-time">'+escHtml(formatAppNotificationTime(item.createdAt))+'</span></span>'
+      +'<span class="app-notification-arrow" aria-hidden="true">›</span></button>';
+  }).join('');
+  box.innerHTML=html;
+}
+function loadAppNotifications(force){
+  var requestKey=ensureAppNotificationState();
+  if(!requestKey)return Promise.resolve([]);
+  if(appNotificationsLoaded&&!force){renderAppNotificationCenter();return Promise.resolve(appNotifications);}
+  if(appNotificationsPromise)return appNotificationsPromise;
+  appNotificationPreviousSeenAt=readAppNotificationSeenAt();
+  appNotificationLoadError='';
+  appNotificationsPromise=appNotificationQuery(APP_NOTIFICATION_LIMIT).get().then(function(snap){
+    if(appNotificationStateKey!==requestKey)return [];
+    var rows=[];
+    snap.forEach(function(doc){rows.push(Object.assign({id:doc.id},doc.data()||{}))});
+    appNotifications=rows;
+    appNotificationsLoaded=true;
+    appNotificationsPromise=null;
+    appNotificationHasNew=false;
+    renderAppNotificationCenter();
+    if(rows.length&&rows[0].createdAt)saveAppNotificationSeenAt(rows[0].createdAt);
+    renderAppNotificationBell();
+    return rows;
+  }).catch(function(e){
+    console.error(e);
+    if(appNotificationStateKey===requestKey){
+      appNotificationsPromise=null;
+      appNotificationLoadError='새 소식을 불러오지 못했습니다.';
+      renderAppNotificationCenter();
+    }
+    return [];
+  });
+  renderAppNotificationCenter();
+  return appNotificationsPromise;
+}
+function syncAppNotificationAccess(){
+  var allowed=canUseAppNotificationCenter();
+  if(adminRole!=='admin'&&(issueReportCountLoaded||issueReportsLoaded)){
+    issueReports=[];
+    issueReportsLoaded=false;
+    issueReportsPromise=null;
+    issueReportOpenCount=0;
+    issueReportCountLoaded=false;
+  }
+  ensureAppNotificationState();
+  renderAppNotificationBell();
+  var entry=document.getElementById('homeIssueReportEntry');
+  if(entry)entry.classList.toggle('hidden',!isMemberLoggedIn());
+  if(!allowed){
+    var modal=document.getElementById('modalAppNotifications');
+    if(modal&&modal.classList.contains('active'))closeModal('modalAppNotifications');
+    return;
+  }
+  if(adminRole==='admin'&&!issueReportCountLoaded)loadIssueReportCount(false);
+  checkAppNotificationMarker();
+}
+function openAppNotificationCenter(){
+  if(!canUseAppNotificationCenter()){
+    showToast('단원 로그인 후 새 소식을 볼 수 있습니다');
+    openUserModal();
+    return;
+  }
+  ensureAppNotificationState();
+  appNotificationPreviousSeenAt=readAppNotificationSeenAt();
+  openModal('modalAppNotifications');
+  renderAppNotificationCenter();
+  if(adminRole==='admin')loadIssueReportCount(false).then(renderAppNotificationCenter);
+  loadAppNotifications(true);
+}
+function openAppNotificationItem(id){
+  var item=appNotifications.find(function(row){return row.id===id;});
+  if(!item)return;
+  closeModal('modalAppNotifications');
+  if(item.target==='calendar'||item.type==='schedule'){
+    switchTab('calendar');
+    return;
+  }
+  if(!canViewScores())return showToast('악보 조회 권한이 없습니다');
+  switchTab('scores');
+}
+function openIssueInboxFromNotifications(){
+  closeModal('modalAppNotifications');
+  setTimeout(openIssueInbox,0);
+}
+function openPushSettingsFromNotificationCenter(){
+  closeModal('modalAppNotifications');
+  openPushSettingsFromFeatureGuide();
 }
 function loadIssueReportCount(force){
   if(adminRole!=='admin')return Promise.resolve(0);
   if(issueReportCountLoaded&&!force)return Promise.resolve(issueReportOpenCount);
   return db.collection('issueReports').where('status','==','open').limit(50).get().then(function(snap){
+    if(adminRole!=='admin')return 0;
     issueReportOpenCount=snap.size;
     issueReportCountLoaded=true;
-    renderIssueAdminFab();
+    renderAppNotificationBell();
+    renderAppNotificationCenter();
     return issueReportOpenCount;
   }).catch(function(e){
     console.error(e);
     return issueReportOpenCount;
   });
-}
-function syncIssueReportFab(){
-  renderIssueAdminFab();
-  var entry=document.getElementById('homeIssueReportEntry');
-  if(entry)entry.classList.toggle('hidden',!isMemberLoggedIn());
-  if(adminRole==='admin'&&!issueReportCountLoaded)loadIssueReportCount(false);
 }
 function openIssueInbox(){
   if(adminRole!=='admin')return showToast('관리자만 볼 수 있습니다');
@@ -5261,13 +5489,15 @@ function loadIssueReports(force){
   var box=document.getElementById('issueInboxList');
   if(box)box.innerHTML='<div class="loading"><div class="spinner"></div>신고 불러오는 중...</div>';
   issueReportsPromise=db.collection('issueReports').orderBy('createdAt','desc').limit(100).get().then(function(snap){
+    if(adminRole!=='admin'){issueReportsPromise=null;return [];}
     issueReports=[];
     snap.forEach(function(doc){issueReports.push(Object.assign({id:doc.id},doc.data()||{}));});
     issueReportsLoaded=true;
     issueReportsPromise=null;
     issueReportOpenCount=issueReports.filter(function(row){return row.status!=='resolved';}).length;
     issueReportCountLoaded=true;
-    renderIssueAdminFab();
+    renderAppNotificationBell();
+    renderAppNotificationCenter();
     renderIssueInbox();
     return issueReports;
   }).catch(function(e){
@@ -5310,7 +5540,8 @@ function setIssueReportStatus(id,status){
     row.status=status;
     row.resolvedAt=status==='resolved'?now:'';
     issueReportOpenCount=issueReports.filter(function(item){return item.status!=='resolved';}).length;
-    renderIssueAdminFab();
+    renderAppNotificationBell();
+    renderAppNotificationCenter();
     renderIssueInbox();
   }).catch(function(e){console.error(e);showToast('처리 상태를 바꾸지 못했습니다');});
 }
@@ -5319,7 +5550,8 @@ function deleteIssueReport(id){
   db.collection('issueReports').doc(id).delete().then(function(){
     issueReports=issueReports.filter(function(row){return row.id!==id;});
     issueReportOpenCount=issueReports.filter(function(row){return row.status!=='resolved';}).length;
-    renderIssueAdminFab();
+    renderAppNotificationBell();
+    renderAppNotificationCenter();
     renderIssueInbox();
   }).catch(function(e){console.error(e);showToast('신고를 삭제하지 못했습니다');});
 }
@@ -15818,16 +16050,15 @@ function dismissInstall(saveChoice){
 initInstallUi();
 
 // ==================== 가이드 슬라이드 ====================
-function handleFeatureUpdateToggle(item){
-  if(!item||!item.open)return;
-  document.querySelectorAll('#modalFeatureUpdate .feature-update-item[open]').forEach(function(other){
-    if(other!==item)other.open=false;
-  });
+function toggleFeatureUpdateItem(event,item){
+  if(event)event.preventDefault();
+  if(!item)return;
+  var shouldOpen=!item.open;
+  document.querySelectorAll('#modalFeatureUpdate .feature-update-item').forEach(function(other){other.open=false;});
+  item.open=shouldOpen;
 }
 function openFeatureUpdateGuide(){
   document.querySelectorAll('#modalFeatureUpdate .feature-update-item').forEach(function(item){item.open=false;});
-  var primary=document.querySelector('#modalFeatureUpdate [data-feature-primary]');
-  if(primary)primary.open=true;
   openModal('modalFeatureUpdate');
 }
 function openSearchFromFeatureGuide(){
@@ -15850,6 +16081,10 @@ function openCalendarFromFeatureGuide(){
 function openScoresFromFeatureGuide(){
   closeModal('modalFeatureUpdate');
   switchTab('scores');
+}
+function openNotificationsFromFeatureGuide(){
+  closeModal('modalFeatureUpdate');
+  setTimeout(openAppNotificationCenter,0);
 }
 function openPushSettingsFromFeatureGuide(){
   closeModal('modalFeatureUpdate');
