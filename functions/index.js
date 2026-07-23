@@ -506,6 +506,7 @@ async function loginLegacyRole(request) {
   const role = cleanString(request.data && request.data.role, 20);
   const password = cleanString(request.data && request.data.password, 100);
   if (!password || !["admin", "chongmu"].includes(role)) throw new HttpsError("invalid-argument", "로그인 정보를 확인해주세요.");
+  if (role === "admin" && !/^\d{4}$/.test(password)) throw new HttpsError("invalid-argument", "관리자 비밀번호는 숫자 4자리입니다.");
   const rateKeys = [rateKey("legacy", role), rateKey("ip", requestIp(request))];
   await assertRateAllowed(rateKeys);
   const stored = await legacySecret(role);
@@ -559,7 +560,9 @@ async function resetLegacyPassword(request) {
   requireAuth(request);
   const role = cleanString(request.data && request.data.role, 20);
   const password = cleanString(request.data && request.data.password, 100);
-  if (!["admin", "chongmu"].includes(role) || password.length < 4) throw new HttpsError("invalid-argument", "비밀번호는 4자리 이상이어야 합니다.");
+  if (!["admin", "chongmu"].includes(role)) throw new HttpsError("invalid-argument", "비밀번호 종류를 확인해주세요.");
+  if (role === "admin" && !/^\d{4}$/.test(password)) throw new HttpsError("invalid-argument", "관리자 비밀번호는 숫자 4자리여야 합니다.");
+  if (role === "chongmu" && password.length < 4) throw new HttpsError("invalid-argument", "비밀번호는 4자리 이상이어야 합니다.");
   if (role === "admin") {
     if (!isAdminRequest(request) && !isRecoveryRequest(request)) throw new HttpsError("permission-denied", "관리자 또는 복구 계정 인증이 필요합니다.");
   } else {
