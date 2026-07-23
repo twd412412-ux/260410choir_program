@@ -79,6 +79,7 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
 body.modal-open{overflow:hidden}
 body.modal-open .bottom-nav{display:none!important}
+body.modal-open .issue-admin-fab{display:none!important}
 body.member-add-open .bottom-nav{display:none!important}
 body.admin-tab-active{padding-bottom:92px}
 body.admin-tab-active #pageAdmin .admin-sub{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
@@ -564,6 +565,24 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .log-time{font-size:11px;color:var(--ts)}
 .log-action{font-weight:600;margin-top:2px}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--bd);display:flex;align-items:flex-end;gap:4px;padding:8px 8px calc(env(safe-area-inset-bottom,8px) + 6px);z-index:100;box-shadow:0 -6px 18px rgba(0,0,0,.06);overflow:visible}
+.issue-admin-fab{position:fixed;right:16px;bottom:calc(94px + env(safe-area-inset-bottom,0px));z-index:96;width:48px;height:48px;border:1px solid rgba(69,84,55,.28);border-radius:50%;background:#526E53;color:#fff;box-shadow:0 8px 22px rgba(38,54,39,.24);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.issue-admin-fab::before{content:'';width:18px;height:14px;border:2px solid currentColor;border-radius:5px;box-sizing:border-box}
+.issue-admin-fab::after{content:'';position:absolute;width:5px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(-5px,8px) skewY(-28deg)}
+.issue-admin-count{position:absolute;right:-3px;top:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#C94F55;color:#fff;border:2px solid var(--sf);font-size:9px;font-weight:950;display:flex;align-items:center;justify-content:center}
+.home-support-link{width:100%;border:0;background:transparent;color:var(--ts);font-family:inherit;font-size:11px;font-weight:800;padding:13px 8px 5px;cursor:pointer}
+.issue-report-note{font-size:11px;color:var(--ts);line-height:1.5;margin:-2px 0 10px}
+.issue-report-count{font-size:10.5px;color:var(--ts);text-align:right;margin-top:5px}
+.issue-inbox-list{display:grid;gap:8px;max-height:min(65vh,560px);overflow:auto}
+.issue-inbox-card{border:1px solid var(--bd);border-radius:10px;background:var(--sf);padding:11px}
+.issue-inbox-card.resolved{opacity:.58}
+.issue-inbox-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.issue-inbox-name{font-size:12px;font-weight:950;color:var(--tx)}
+.issue-inbox-meta{font-size:10px;color:var(--ts);margin-top:3px}
+.issue-inbox-status{font-size:9.5px;font-weight:900;padding:3px 6px;border-radius:6px;background:#F7E8E8;color:#A7474D;white-space:nowrap}
+.issue-inbox-card.resolved .issue-inbox-status{background:var(--pl);color:var(--pd)}
+.issue-inbox-message{font-size:12px;color:var(--tx);line-height:1.5;white-space:pre-wrap;margin-top:9px}
+.issue-inbox-context{font-size:9.5px;color:var(--ts);line-height:1.45;margin-top:8px;overflow-wrap:anywhere}
+.issue-inbox-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:9px}
 .nav-side{display:flex;align-items:flex-end;flex:1;min-width:0;gap:4px}
 .nav-left{padding-right:38px}
 .nav-right{padding-left:38px}
@@ -696,6 +715,9 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-part-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .score-part-btn{border:1px solid #CAD5B5;background:#F4F8EC;color:#3F4B2F;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .score-part-btn:hover{background:#E7EFD8}
+.score-part-btn.mine{border-color:#6F826E;background:#E8F0E3;color:#2F4732;box-shadow:inset 3px 0 0 #6F826E}
+.score-my-part-dot,.score-my-part-badge{display:inline-flex;align-items:center;margin-left:6px;color:#557056;font-size:9px;font-weight:950;white-space:nowrap}
+.score-my-part-badge{padding:2px 5px;border-radius:6px;background:#E5EEDF;vertical-align:middle}
 .score-part-admin-list{display:grid;gap:5px;margin-top:10px}
 .score-part-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;border-top:1px solid var(--bd);padding-top:6px}
 .score-part-row:first-child{border-top:0;padding-top:0}
@@ -768,6 +790,11 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-upload-review-input{width:100%;min-width:0;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:7px 8px;font-family:inherit;font-size:11px;font-weight:800;box-sizing:border-box}
 .score-upload-review-row.duplicate .score-upload-review-input{border-color:#D9B56F;background:#FFF9EC}
 .score-upload-review-row.unresolved .score-upload-review-input{border-color:#DB999D;background:#FFF5F5}
+.score-upload-review-row.upload-done .score-upload-review-state{color:#3F6B48}
+.score-upload-review-row.upload-error .score-upload-review-state{color:#A33F45}
+.score-upload-review-row.upload-error .score-upload-review-size{color:#A33F45;font-weight:800}
+.score-upload-progress{height:3px;background:var(--bd);border-radius:999px;overflow:hidden;margin-top:5px}
+.score-upload-progress span{display:block;height:100%;border-radius:inherit;background:#6F826E;transition:width .12s linear}
 .dark .score-upload-review-row.duplicate .score-upload-review-input,.dark .score-upload-review-row.unresolved .score-upload-review-input{background:var(--sf)}
 .score-upload-review-missing{font-size:11px;color:var(--ts);line-height:1.45;word-break:keep-all}
 .score-upload-review-missing b{color:#956015}
@@ -809,6 +836,20 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-link-actions{display:flex;gap:6px;flex-wrap:wrap}
 .score-song-link{margin-top:12px;border-top:1px solid var(--bd);padding-top:12px}
 .score-song-link-title{font-size:13px;font-weight:850;margin-bottom:6px}
+.my-score-part-settings{margin-top:12px;border:1px solid var(--bd);border-radius:12px;background:var(--sf);text-align:left;overflow:hidden}
+.my-score-part-settings summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;cursor:pointer}
+.my-score-part-settings summary::-webkit-details-marker{display:none}
+.my-score-part-settings summary>span:first-child{display:grid;gap:3px;min-width:0}
+.my-score-part-settings summary b{font-size:13px;color:var(--tx)}
+.my-score-part-settings summary small{font-size:10.5px;color:var(--ts);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.my-score-part-arrow{font-size:20px;color:var(--ts);transform:rotate(90deg);transition:transform .16s}
+.my-score-part-settings[open] .my-score-part-arrow{transform:rotate(-90deg)}
+.my-score-part-body{border-top:1px solid var(--bd);padding:11px 12px}
+.my-score-part-body>p{font-size:11px;color:var(--ts);line-height:1.5;margin:0 0 9px}
+.my-score-part-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.my-score-part-option{display:flex;align-items:center;gap:6px;min-width:0;border:1px solid var(--bd);border-radius:8px;padding:7px 8px;font-size:11px;font-weight:800;color:var(--tx)}
+.my-score-part-option input{flex:0 0 auto}
+.my-score-part-option span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .archive-social{margin-top:9px;padding-top:8px;border-top:1px solid rgba(216,208,190,.72);display:grid;gap:4px;position:relative}
 .archive-social-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .archive-ig-actions{display:flex;align-items:center;gap:8px;min-width:0}
@@ -2125,7 +2166,7 @@ body{font-weight:500}
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" multiple style="padding:8px" onchange="handleScoreFilesChanged()"></div>
         <section class="score-upload-review hidden" id="scoreUploadReview" aria-live="polite">
           <div class="score-upload-review-head">
-            <div><div class="score-upload-review-title">업로드 전 파트보 검수</div><div class="score-upload-review-desc">파일별 파트를 확인하고 잘못 인식된 항목은 직접 고쳐주세요.</div></div>
+            <div><div class="score-upload-review-title">파트보 업로드 작업표</div><div class="score-upload-review-desc">파일별 파트를 확인한 뒤 업로드 상태를 한눈에 볼 수 있습니다.</div></div>
             <div class="score-upload-review-count" id="scoreUploadReviewCount"></div>
           </div>
           <div class="score-upload-review-stats" id="scoreUploadReviewStats"></div>
@@ -2138,13 +2179,13 @@ body{font-weight:500}
           </details>
           <div class="score-upload-review-actions">
             <div class="score-upload-review-ready" id="scoreUploadReviewReady">파일별 파트를 확인해주세요.</div>
-            <button type="button" class="score-upload-review-confirm" id="scoreUploadReviewConfirm" onclick="confirmScoreUploadReview()">검수 완료</button>
+            <button type="button" class="score-upload-review-confirm" id="scoreUploadReviewConfirm" onclick="confirmScoreUploadReview()">파일 확인 완료</button>
           </div>
           <datalist id="scoreUploadInstrumentOptions"></datalist>
         </section>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
-        <div class="score-form-note">싱어 악보는 기존 방식 그대로 등록됩니다. 관현악 PDF를 여러 개 선택하면 업로드 전 검수표에서 파일별 인식 파트와 미인식·중복·누락 가능 항목을 확인한 뒤 등록합니다.</div>
+        <div class="score-form-note">관현악 PDF를 여러 개 선택하면 작업표에서 파일별 파트와 진행 상태를 확인할 수 있습니다. 실패한 파일만 다시 시도할 수 있습니다.</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-p" id="scoreSaveBtn" style="flex:1" onclick="saveScoreUpload()">악보 등록</button>
           <button class="btn" style="background:var(--pl);color:var(--pd)" onclick="resetScoreForm()">초기화</button>
@@ -2618,6 +2659,25 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 앱 문제 신고 -->
+<div class="modal-overlay modal-center" id="modalIssueReport">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">앱 문제 신고</span><button class="modal-close" onclick="closeModal('modalIssueReport')">✕</button></div>
+    <div class="issue-report-note">불편했던 화면과 상황을 적어주세요. 앱 버전과 사용 기기 정보는 자동으로 함께 전달됩니다.</div>
+    <div class="form-group" style="margin-bottom:0"><label class="form-label">어떤 문제가 있었나요?</label><textarea class="form-input" id="issueReportMessage" rows="6" maxlength="1200" placeholder="예: 일정 탭에서 7월 20일을 눌렀는데 일정이 보이지 않아요." oninput="updateIssueReportCount()"></textarea></div>
+    <div class="issue-report-count" id="issueReportCharCount">0 / 1200</div>
+    <button class="btn btn-p btn-bl" id="issueReportSubmitBtn" style="margin-top:12px" onclick="submitIssueReport()">보내기</button>
+  </div>
+</div>
+
+<!-- MODAL: 관리자 문제 신고함 -->
+<div class="modal-overlay modal-center" id="modalIssueInbox">
+  <div class="modal-content" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title">문제 신고함</span><button class="modal-close" onclick="closeModal('modalIssueInbox')">✕</button></div>
+    <div id="issueInboxList" class="issue-inbox-list"><div class="loading"><div class="spinner"></div>신고 불러오는 중...</div></div>
+  </div>
+</div>
+
 <!-- MODAL: 악보 선택 -->
 <div class="modal-overlay modal-center" id="modalScorePicker">
   <div class="modal-content">
@@ -2949,6 +3009,7 @@ body{font-weight:500}
 </div>
 <!-- BOTTOM NAV -->
 
+<button type="button" class="issue-admin-fab hidden" id="issueAdminFab" title="문제 신고함" aria-label="문제 신고함" onclick="openIssueInbox()"><span class="issue-admin-count hidden" id="issueAdminCount">0</span></button>
 <div class="bottom-nav">
   <div class="nav-side nav-left">
     <div class="nav-item" data-t="songs" onclick="switchTab('songs')"><span class="nav-icon">🎵</span>곡목록</div>
@@ -3029,6 +3090,7 @@ var forceFreshDataOnInit=(function(){
   }catch(e){return false;}
 })();
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
+var scheduleLoadedMonths=Object.create(null), scheduleMonthPromises=Object.create(null), scheduleMonthIds=Object.create(null), scheduleAdminWindowLoaded=false, scheduleAdminWindowPromise=null;
 var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
 var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
@@ -3036,6 +3098,7 @@ var calViewMode=localStorage.getItem('choir_cal_view')==='default'?'default':'st
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
 var ARCHIVE_PAGE_SIZE=30;
+var archiveMyReactions=Object.create(null), archiveMyReactionsUid='', archiveMyReactionsLoaded=false, archiveMyReactionsPromise=null;
 var archiveAlbums=[];
 var archiveAlbumsLoaded=false;
 var archiveAlbumsLoading=false;
@@ -3086,6 +3149,7 @@ var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleDetailId='';
 var scheduleDirectEditActive=false, scheduleDirectEditReturnDate='', scheduleEditorAnchor=null;
+var issueReports=[], issueReportsLoaded=false, issueReportsPromise=null, issueReportOpenCount=0, issueReportCountLoaded=false;
 var APP_RELEASE_VERSION='v26.07.23';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -3855,10 +3919,10 @@ function canMoveArchiveItemAlbum(item){
   return canOrganizeArchive()||canManageArchiveItem(item);
 }
 function canViewArchiveReactionUsers(){
-  return adminRole==='admin'&&!currentUser;
+  return adminRole==='admin';
 }
 function canViewArchiveUploader(){
-  return adminRole==='admin'&&!currentUser;
+  return adminRole==='admin';
 }
 function scopeFromAccountPart(part){
   part=normalizePartName(part);
@@ -3947,6 +4011,7 @@ function syncAccessShell(){
   if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
   if(!canViewScores())clearScoreAccessCache();
   syncQuickCreateActions();
+  syncIssueReportFab();
   enforceCurrentTabAccess();
 }
 
@@ -4370,7 +4435,11 @@ function setScoreCurrentFileNote(score){
     return;
   }
   note.classList.remove('hidden','empty');
-  note.innerHTML='현재 파일명<br><b>'+escHtml(score.currentFileName)+'</b>';
+  var version='v'+Math.max(1,Number(score.versionNumber||1));
+  var previous=score.previousFileName&&score.previousFileName!==score.currentFileName
+    ? '<br><span style="font-size:10.5px;color:var(--ts)">이전 파일: '+escHtml(score.previousFileName)+'</span>'
+    : '';
+  note.innerHTML='<span class="score-version-badge">'+version+'</span> 현재 파일<br><b>'+escHtml(score.currentFileName)+'</b>'+previous;
 }
 
 function openQuickScoreManage(songName,songId){
@@ -4484,6 +4553,9 @@ function authGateway(action,data,app){
 }
 function accountAdminCall(action,data){
   return callSecureFunction('accountAdmin',Object.assign({action:action},data||{}));
+}
+function scoreAdminCall(action,data){
+  return callSecureFunction('scoreAdmin',Object.assign({action:action},data||{}));
 }
 function securityErrorMessage(error,fallback){
   var code=String(error&&error.code||'').replace(/^functions\//,'');
@@ -4613,6 +4685,7 @@ function secureProfileFromClaims(uid,claims,profile){
     permissions:normalizePermissionArray(profile.permissions||claims.permissions),
     attendanceScope:normalizeAttendanceScopeArray(profile.attendanceScope||claims.attendanceScope||[]),
     scoreAccessScope:normalizeScoreAccessScope(profile.scoreAccessScope||claims.scoreAccessScope),
+    scorePartPreferences:uniqueArray(profile.scorePartPreferences||claims.scorePartPreferences||cached.scorePartPreferences||[]).slice(0,8),
     linkedPart:normalizePartName(profile.linkedPart||cached.linkedPart),
     linkedSubPart:normalizePartName(profile.linkedSubPart||cached.linkedSubPart),
     linkedMemberStatus:profile.linkedMemberStatus||cached.linkedMemberStatus||'',
@@ -4638,6 +4711,7 @@ function applySecureAuthState(firebaseUser,claims,profile){
   if(secureElevatedSession&&claims.admin===true)adminRole='admin';
   else if(secureElevatedSession&&claims.legacyRole==='chongmu')adminRole='chongmu';
   else adminRole=getSessionRoleForUser(currentUser)||null;
+  if(archiveMyReactionsUid!==(currentUser&&currentUser.id?currentUser.id:''))resetArchiveReactionSession();
   updateUserBar();
   syncAccessShell();
 }
@@ -4774,6 +4848,62 @@ function openUserModal(){
   },120);
 }
 
+function canConfigureMyScoreParts(){
+  return !!(currentUser&&getScoreAccessModes(currentUser).indexOf('orchestra')!==-1);
+}
+function renderMyScorePartSettings(){
+  if(!canConfigureMyScoreParts())return '';
+  var selected=scorePartPreferences(currentUser);
+  var selectedMap={};
+  selected.forEach(function(value){selectedMap[normalizeScoreInstrument(value)]=true;});
+  var presets=ORCHESTRA_SCORE_INSTRUMENTS.filter(function(item){
+    return item.key!=='auto'&&item.key!=='etc';
+  });
+  var custom=selected.filter(function(value){
+    return !presets.some(function(item){return item.key===normalizeScoreInstrument(value);});
+  });
+  var summary=selected.length?selected.map(scoreInstrumentLabel).join(', '):'아직 선택하지 않음';
+  return '<details class="my-score-part-settings">'
+    +'<summary><span><b>내 관현악 파트</b><small id="myScorePartSummary">'+escHtml(summary)+'</small></span><span class="my-score-part-arrow">›</span></summary>'
+    +'<div class="my-score-part-body"><p>선택한 파트보를 목록 맨 앞에 표시합니다. 플루트처럼 둘 이상의 파트보를 보는 경우 여러 개를 선택하세요.</p>'
+    +'<div class="my-score-part-options">'+presets.map(function(item){
+      return '<label class="my-score-part-option"><input type="checkbox" value="'+escAttr(item.key)+'" '+(selectedMap[item.key]?'checked':'')+'><span>'+escHtml(item.label)+'</span></label>';
+    }).join('')+'</div>'
+    +'<div class="form-group" style="margin:10px 0 0"><label class="form-label">목록에 없는 파트</label><input class="form-input" id="myScorePartCustom" value="'+escAttr(custom.join(', '))+'" placeholder="예: 베이스클라리넷, 플루트 4"></div>'
+    +'<button type="button" class="btn btn-p btn-bl" id="myScorePartSaveBtn" onclick="saveMyScoreParts()">내 파트 저장</button>'
+    +'</div></details>';
+}
+function saveMyScoreParts(){
+  if(!currentUser)return showToast('로그인 후 설정할 수 있습니다');
+  var values=[];
+  document.querySelectorAll('.my-score-part-option input:checked').forEach(function(input){
+    values.push(input.value);
+  });
+  var custom=document.getElementById('myScorePartCustom');
+  String(custom&&custom.value||'').split(/[,，、;\n]+/).forEach(function(value){
+    value=String(value||'').trim();
+    if(value)values.push(value);
+  });
+  values=uniqueArray(values).slice(0,8);
+  var btn=document.getElementById('myScorePartSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  accountAdminCall('setOwnScoreParts',{scorePartPreferences:values}).then(function(result){
+    var account=result&&result.account?result.account:null;
+    currentUser.scorePartPreferences=scorePartPreferences(account||{scorePartPreferences:values});
+    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    var summary=document.getElementById('myScorePartSummary');
+    if(summary)summary.textContent=currentUser.scorePartPreferences.length?currentUser.scorePartPreferences.map(scoreInstrumentLabel).join(', '):'아직 선택하지 않음';
+  }).then(function(){
+    if(currentTab==='scores')renderScoresPage();
+    showToast('내 관현악 파트를 저장했습니다');
+  }).catch(function(e){
+    console.error(e);
+    showToast(securityErrorMessage(e,'내 파트를 저장하지 못했습니다'));
+  }).finally(function(){
+    if(btn){btn.disabled=false;btn.textContent='내 파트 저장';}
+  });
+}
+
 function renderCurrentUserProfile(member,state){
   var b=document.getElementById('userModalBody');
   if(!b||!currentUser)return;
@@ -4798,7 +4928,156 @@ function renderCurrentUserProfile(member,state){
       +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
   }
-  b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(accountPartDisplayLabel(currentUser))+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+  b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(accountPartDisplayLabel(currentUser))+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+renderMyScorePartSettings()+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+}
+
+function updateIssueReportCount(){
+  var input=document.getElementById('issueReportMessage');
+  var count=document.getElementById('issueReportCharCount');
+  if(count)count.textContent=String(input&&input.value||'').length+' / 1200';
+}
+function openIssueReport(){
+  if(!isMemberLoggedIn()){
+    showToast('단원 로그인 후 신고할 수 있습니다');
+    return openUserModal();
+  }
+  var input=document.getElementById('issueReportMessage');
+  if(input)input.value='';
+  updateIssueReportCount();
+  openModal('modalIssueReport');
+  setTimeout(function(){if(input)input.focus();},120);
+}
+function submitIssueReport(){
+  if(!isMemberLoggedIn())return showToast('단원 로그인 후 신고할 수 있습니다');
+  var input=document.getElementById('issueReportMessage');
+  var message=String(input&&input.value||'').trim();
+  if(message.length<5)return showToast('문제 상황을 조금 더 자세히 적어주세요');
+  var btn=document.getElementById('issueReportSubmitBtn');
+  if(btn){btn.disabled=true;btn.textContent='보내는 중...';}
+  var viewport=Math.round(window.innerWidth||0)+'x'+Math.round(window.innerHeight||0);
+  db.collection('issueReports').add({
+    uid:currentUser.id,
+    accountName:currentUser.name||'',
+    part:accountPartDisplayLabel(currentUser)||currentUser.part||'',
+    message:message,
+    tab:currentTab||'',
+    appVersion:APP_RELEASE_VERSION,
+    buildSha:APP_BUILD_SHA||'',
+    userAgent:String(navigator.userAgent||'').slice(0,500),
+    viewport:viewport,
+    createdAt:new Date().toISOString(),
+    status:'open'
+  }).then(function(){
+    closeModal('modalIssueReport');
+    if(input)input.value='';
+    showToast('문제 신고를 보냈습니다');
+  }).catch(function(e){
+    console.error(e);
+    showToast('문제 신고를 보내지 못했습니다');
+  }).finally(function(){
+    if(btn){btn.disabled=false;btn.textContent='보내기';}
+  });
+}
+function renderIssueAdminFab(){
+  var fab=document.getElementById('issueAdminFab');
+  var badge=document.getElementById('issueAdminCount');
+  var admin=adminRole==='admin';
+  if(fab)fab.classList.toggle('hidden',!admin);
+  if(badge){
+    badge.textContent=issueReportOpenCount>=50?'50+':String(issueReportOpenCount||0);
+    badge.classList.toggle('hidden',!admin||!issueReportOpenCount);
+  }
+}
+function loadIssueReportCount(force){
+  if(adminRole!=='admin')return Promise.resolve(0);
+  if(issueReportCountLoaded&&!force)return Promise.resolve(issueReportOpenCount);
+  return db.collection('issueReports').where('status','==','open').limit(50).get().then(function(snap){
+    issueReportOpenCount=snap.size;
+    issueReportCountLoaded=true;
+    renderIssueAdminFab();
+    return issueReportOpenCount;
+  }).catch(function(e){
+    console.error(e);
+    return issueReportOpenCount;
+  });
+}
+function syncIssueReportFab(){
+  renderIssueAdminFab();
+  if(adminRole==='admin'&&!issueReportCountLoaded)loadIssueReportCount(false);
+}
+function openIssueInbox(){
+  if(adminRole!=='admin')return showToast('관리자만 볼 수 있습니다');
+  openModal('modalIssueInbox');
+  loadIssueReports(true);
+}
+function loadIssueReports(force){
+  if(adminRole!=='admin')return Promise.resolve([]);
+  if(issueReportsLoaded&&!force){renderIssueInbox();return Promise.resolve(issueReports);}
+  if(issueReportsPromise&&!force)return issueReportsPromise;
+  var box=document.getElementById('issueInboxList');
+  if(box)box.innerHTML='<div class="loading"><div class="spinner"></div>신고 불러오는 중...</div>';
+  issueReportsPromise=db.collection('issueReports').orderBy('createdAt','desc').limit(100).get().then(function(snap){
+    issueReports=[];
+    snap.forEach(function(doc){issueReports.push(Object.assign({id:doc.id},doc.data()||{}));});
+    issueReportsLoaded=true;
+    issueReportsPromise=null;
+    issueReportOpenCount=issueReports.filter(function(row){return row.status!=='resolved';}).length;
+    issueReportCountLoaded=true;
+    renderIssueAdminFab();
+    renderIssueInbox();
+    return issueReports;
+  }).catch(function(e){
+    console.error(e);
+    issueReportsPromise=null;
+    if(box)box.innerHTML='<div class="archive-empty">신고를 불러오지 못했습니다.</div>';
+    return issueReports;
+  });
+  return issueReportsPromise;
+}
+function renderIssueInbox(){
+  var box=document.getElementById('issueInboxList');
+  if(!box)return;
+  if(!issueReports.length){
+    box.innerHTML='<div class="archive-empty">접수된 문제 신고가 없습니다.</div>';
+    return;
+  }
+  box.innerHTML='<button type="button" class="score-light-btn" onclick="loadIssueReports(true)">새로고침</button>'+issueReports.map(function(row){
+    var resolved=row.status==='resolved';
+    var context=[row.appVersion,row.tab?'화면 '+row.tab:'',row.viewport,row.createdAt?String(row.createdAt).replace('T',' ').slice(0,16):''].filter(Boolean).join(' · ');
+    return '<div class="issue-inbox-card '+(resolved?'resolved':'')+'">'
+      +'<div class="issue-inbox-head"><div><div class="issue-inbox-name">'+escHtml(row.accountName||'이름 없음')+' · '+escHtml(row.part||'-')+'</div><div class="issue-inbox-meta">'+escHtml(row.createdAt?String(row.createdAt).replace('T',' ').slice(0,16):'')+'</div></div><span class="issue-inbox-status">'+(resolved?'처리 완료':'확인 필요')+'</span></div>'
+      +'<div class="issue-inbox-message">'+escHtml(row.message||'')+'</div>'
+      +'<div class="issue-inbox-context">'+escHtml(context)+(row.userAgent?'<br>'+escHtml(row.userAgent):'')+'</div>'
+      +'<div class="issue-inbox-actions"><button type="button" class="score-light-btn" onclick="setIssueReportStatus(\''+escAttr(row.id)+'\',\''+(resolved?'open':'resolved')+'\')">'+(resolved?'다시 열기':'처리 완료')+'</button><button type="button" class="score-danger-btn" onclick="deleteIssueReport(\''+escAttr(row.id)+'\')">삭제</button></div>'
+      +'</div>';
+  }).join('');
+}
+function setIssueReportStatus(id,status){
+  if(adminRole!=='admin')return;
+  var row=issueReports.find(function(item){return item.id===id;});
+  if(!row)return;
+  var now=new Date().toISOString();
+  db.collection('issueReports').doc(id).update({
+    status:status,
+    resolvedAt:status==='resolved'?now:'',
+    resolvedBy:status==='resolved'?currentActorName():'',
+    updatedAt:now
+  }).then(function(){
+    row.status=status;
+    row.resolvedAt=status==='resolved'?now:'';
+    issueReportOpenCount=issueReports.filter(function(item){return item.status!=='resolved';}).length;
+    renderIssueAdminFab();
+    renderIssueInbox();
+  }).catch(function(e){console.error(e);showToast('처리 상태를 바꾸지 못했습니다');});
+}
+function deleteIssueReport(id){
+  if(adminRole!=='admin'||!confirm('이 문제 신고를 삭제할까요?'))return;
+  db.collection('issueReports').doc(id).delete().then(function(){
+    issueReports=issueReports.filter(function(row){return row.id!==id;});
+    issueReportOpenCount=issueReports.filter(function(row){return row.status!=='resolved';}).length;
+    renderIssueAdminFab();
+    renderIssueInbox();
+  }).catch(function(e){console.error(e);showToast('신고를 삭제하지 못했습니다');});
 }
 
 function loadCurrentUserLinkedMember(){
@@ -4925,6 +5204,7 @@ function logoutUser(){
     if(currentTab==='admin'||currentTab==='stats')switchTab('home');
   }
   currentUser=null;
+  resetArchiveReactionSession();
   secureElevatedSession=false;
   localStorage.removeItem('choir_user');
   if(!canViewScores())clearScoreAccessCache();
@@ -5052,7 +5332,19 @@ function syncFav(){
 function homeDateStr(d){return (d.getMonth()+1)+'/'+d.getDate();}
 function homeInputDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function homeDowName(d){return ['주일','월','화','수','목','금','토'][d.getDay()];}
-function escAttr(v){return String(v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function escAttr(v){
+  return String(v||'')
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/\r/g,'\\r')
+    .replace(/\n/g,'\\n')
+    .replace(/\u2028/g,'\\u2028')
+    .replace(/\u2029/g,'\\u2029')
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
 function normalizePartName(part){
   var v=String(part||'').trim();
   var up=v.toUpperCase();
@@ -5598,11 +5890,12 @@ function renderHome(){
       +publicSeatingSection
       +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
       +adminToolsSection
-      +attendanceSection;
+      +attendanceSection
+      +(isMemberLoggedIn()?'<button type="button" class="home-support-link" onclick="openIssueReport()">앱 사용 중 문제가 있었나요? 신고하기</button>':'');
   }
 
   var songCache=canShowHomeSongs?(allSongs.length>0?allSongs:loadCache('choir_songs',600000)):null;
-  var scheduleCache=allSchedules.length>0?allSchedules:loadCache('choir_schedules',600000);
+  var scheduleCache=allSchedules.length>0?allSchedules:null;
   var canLoadHomeScores=canViewScores();
   var scoreCache=canLoadHomeScores&&!scoresLoaded?loadCache(SCORE_CACHE_KEY,600000):null;
   if(canLoadHomeScores&&!scoresLoaded&&Array.isArray(scoreCache)&&scoreCache.length){
@@ -5636,17 +5929,7 @@ function renderHome(){
         allSongs=rows;songsLoaded=true;saveCache('choir_songs',allSongs);
         return rows;
       });
-  var schedulePromise=allSchedules.length>0
-    ? Promise.resolve(allSchedules.filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)}))
-    : schedulesLoadPromise
-      ? schedulesLoadPromise.then(function(rows){return rows.filter(function(s){return scheduleOverlapsRange(s,weekStartStr,weekEndStr)})})
-    : db.collection('schedules').where('date','>=',weekStartStr).where('date','<=',weekEndStr).get().then(function(snap){
-        var rows=[];
-        snap.forEach(function(doc){var d=doc.data();rows.push({id:doc.id,date:d.date,endDate:d.endDate||d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||''})});
-        schedulesLoaded=true;
-        rows.forEach(function(sch){if(!allSchedules.some(function(x){return x.id===sch.id}))allSchedules.push(sch)});
-        return rows;
-      });
+  var schedulePromise=ensureScheduleRange(weekStartStr,weekEndStr,false);
   var publicSeatingPromise=getPublishedSeatingPlan(false).catch(function(e){
     console.error(e);
     return null;
@@ -5825,6 +6108,7 @@ var DEFAULT_ORCHESTRA_REVIEW_PARTS=['fullscore','synthscore','flute','oboe','cla
 var scoreUploadReviewRows=[];
 var scoreUploadReviewConfirmed=false;
 var scoreUploadExpectedParts=null;
+var scoreUploadPendingResults=Object.create(null);
 function normalizeScoreKind(kind){
   kind=String(kind||'').trim().toLowerCase();
   if(kind==='orchestra'||kind==='orch'||kind==='instrument'||kind==='part')return 'orchestra';
@@ -5989,7 +6273,7 @@ function syncScoreUploadReviewRows(files){
     var old=previous[fileKey];
     if(old)return Object.assign({},old,{fileKey:fileKey,fileName:file.name||('파트보 '+(index+1)),fileSize:Number(file.size||0)});
     var guessed=guessScoreInstrumentFromFileName(file.name||'');
-    return {fileKey:fileKey,fileName:file.name||('파트보 '+(index+1)),fileSize:Number(file.size||0),value:scoreInstrumentLabel(guessed),guessedInstrument:guessed,touched:false};
+    return {fileKey:fileKey,fileName:file.name||('파트보 '+(index+1)),fileSize:Number(file.size||0),value:scoreInstrumentLabel(guessed),guessedInstrument:guessed,touched:false,status:'ready',progress:0,error:''};
   });
   scoreUploadReviewConfirmed=false;
   return true;
@@ -6025,7 +6309,8 @@ function syncScoreSaveButton(){
   var editId=((document.getElementById('scoreEditId')||{}).value||'').trim();
   var reviewActive=isScoreUploadReviewActive();
   btn.disabled=reviewActive&&!scoreUploadReviewConfirmed;
-  btn.textContent=editId?'수정 저장':(reviewActive?(scoreUploadReviewConfirmed?('파트보 '+scoreUploadReviewRows.length+'개 등록'):'먼저 검수 완료'):'악보 등록');
+  var hasFailed=scoreUploadReviewRows.some(function(row){return row.status==='error';});
+  btn.textContent=editId?'수정 저장':(reviewActive?(scoreUploadReviewConfirmed?(hasFailed?'실패 파일 다시 시도':('파트보 '+scoreUploadReviewRows.length+'개 등록')):'먼저 파일 확인'):'악보 등록');
 }
 function renderScoreUploadReview(){
   var box=document.getElementById('scoreUploadReview');
@@ -6059,11 +6344,18 @@ function renderScoreUploadReview(){
   if(list)list.innerHTML=scoreUploadReviewRows.map(function(row,index){
     var item=analysis.items[index];
     var duplicate=!!duplicateMap[item.instrument];
+    var uploadState=row.status||'ready';
     var rowClass=(item.unresolved?' unresolved':'')+(duplicate?' duplicate':'');
-    var state=item.unresolved?'미인식':(duplicate?'중복':'확인');
+    var state=uploadState==='uploading'?(Math.max(0,Math.min(100,Number(row.progress||0)))+'%')
+      :uploadState==='done'?'완료'
+      :uploadState==='error'?'실패'
+      :item.unresolved?'미인식':(duplicate?'중복':'확인');
+    if(uploadState==='error')rowClass+=' upload-error';
+    if(uploadState==='done')rowClass+=' upload-done';
+    if(uploadState==='uploading')rowClass+=' uploading';
     return '<div class="score-upload-review-row'+rowClass+'" data-score-review-index="'+index+'">'
       +'<div class="score-upload-review-state">'+state+'</div>'
-      +'<div class="score-upload-review-file"><div class="score-upload-review-name" title="'+escAttr(row.fileName)+'">'+escHtml(row.fileName)+'</div><div class="score-upload-review-size">'+scoreUploadReviewFileSize(row.fileSize)+'</div></div>'
+      +'<div class="score-upload-review-file"><div class="score-upload-review-name" title="'+escAttr(row.fileName)+'">'+escHtml(row.fileName)+'</div><div class="score-upload-review-size">'+(row.error?escHtml(row.error):scoreUploadReviewFileSize(row.fileSize))+'</div>'+(uploadState==='uploading'?'<div class="score-upload-progress"><span style="width:'+Math.max(0,Math.min(100,Number(row.progress||0)))+'%"></span></div>':'')+'</div>'
       +'<input class="score-upload-review-input" list="scoreUploadInstrumentOptions" value="'+escAttr(row.value)+'" aria-label="'+escAttr(row.fileName)+' 파트" onchange="updateScoreUploadReviewPart('+index+',this.value)">'
       +'</div>';
   }).join('');
@@ -6084,15 +6376,22 @@ function renderScoreUploadReview(){
   var ready=document.getElementById('scoreUploadReviewReady');
   if(ready){
     ready.classList.toggle('done',scoreUploadReviewConfirmed);
-    ready.textContent=scoreUploadReviewConfirmed?'검수 완료 · 등록할 준비가 되었습니다.':(analysis.unresolved.length?'미인식 파일의 파트를 먼저 지정해주세요.':'중복·누락 가능 항목까지 확인해주세요.');
+    ready.textContent=scoreUploadReviewConfirmed?'파일 확인 완료 · 업로드할 준비가 되었습니다.':(analysis.unresolved.length?'미인식 파일의 파트를 먼저 지정해주세요.':'중복·누락 가능 항목까지 확인해주세요.');
   }
   var confirmBtn=document.getElementById('scoreUploadReviewConfirm');
-  if(confirmBtn){confirmBtn.classList.toggle('done',scoreUploadReviewConfirmed);confirmBtn.textContent=scoreUploadReviewConfirmed?'검수 완료':'검수 완료';}
+  if(confirmBtn){confirmBtn.classList.toggle('done',scoreUploadReviewConfirmed);confirmBtn.textContent=scoreUploadReviewConfirmed?'확인 완료':'파일 확인 완료';}
   syncScoreSaveButton();
 }
 function updateScoreUploadReviewPart(index,value){
   var row=scoreUploadReviewRows[index];
   if(!row)return;
+  if(row.targetId&&String(row.value||'').trim()!==String(value||'').trim()){
+    cleanupPendingScoreUploads();
+    scoreUploadPendingResults=Object.create(null);
+    scoreUploadReviewRows.forEach(function(item){
+      item.status='ready';item.progress=0;item.error='';item.targetId='';item.previousId='';
+    });
+  }
   row.value=String(value||'').trim();
   row.touched=true;
   scoreUploadReviewConfirmed=false;
@@ -6108,11 +6407,14 @@ function confirmScoreUploadReview(){
   }
   scoreUploadReviewConfirmed=true;
   renderScoreUploadReview();
-  showToast('파트보 검수를 완료했습니다. 이제 등록할 수 있습니다');
+  showToast('파일별 파트 확인이 끝났습니다');
 }
 function handleScoreFilesChanged(){
+  cleanupPendingScoreUploads();
+  var file=document.getElementById('scoreFile');if(file)delete file.dataset.targetScoreId;
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
+  scoreUploadPendingResults=Object.create(null);
   renderScoreUploadReview();
 }
 function scoreUploadReviewedInstruments(files){
@@ -6143,6 +6445,40 @@ function isUserOrchestra(user){
 }
 function isUserConductor(user){
   return isUserPart(user,'지휘');
+}
+function scorePartPreferences(user){
+  user=user||currentUser||{};
+  return uniqueArray(Array.isArray(user.scorePartPreferences)?user.scorePartPreferences:[]).slice(0,8);
+}
+function scoreInstrumentFamily(value){
+  var key=normalizeScoreInstrument(value);
+  if(['flute','flute12','flute3'].indexOf(key)!==-1)return 'flute';
+  if(['violin','violin1','violin2'].indexOf(key)!==-1)return 'violin';
+  return key;
+}
+function scorePreferenceRank(score,user){
+  if(normalizeScoreKind(score&&score.scoreKind)!=='orchestra')return 2;
+  var scoreKey=normalizeScoreInstrument(score.instrument||score.instrumentLabel);
+  var scoreLabelKey=scoreSearchKey(score.instrumentLabel||scoreInstrumentLabel(scoreKey));
+  var scoreFileKey=scoreSearchKey(score.currentFileName||'');
+  var prefs=scorePartPreferences(user);
+  var familyMatch=false;
+  for(var i=0;i<prefs.length;i++){
+    var pref=normalizeScoreInstrument(prefs[i]);
+    var prefKey=scoreSearchKey(prefs[i]);
+    if((pref&&pref===scoreKey)||(prefKey&&prefKey===scoreLabelKey))return 0;
+    if(pref&&scoreInstrumentFamily(pref)===scoreInstrumentFamily(scoreKey))familyMatch=true;
+    if(prefKey&&scoreFileKey.indexOf(prefKey)!==-1)familyMatch=true;
+  }
+  return familyMatch?1:2;
+}
+function isMyScorePart(score){
+  return scorePreferenceRank(score,currentUser)<2;
+}
+function sortScorePartsForCurrentUser(rows){
+  return sortScoreParts(rows).sort(function(a,b){
+    return scorePreferenceRank(a,currentUser)-scorePreferenceRank(b,currentUser);
+  });
 }
 function getScoreAccessModes(user){
   user=user||currentUser;
@@ -6253,6 +6589,8 @@ function scoreRowFromSettingsItem(id,d){
     currentFileSize:Number(d.currentFileSize||d.fileSize||0),
     currentUploadedAt:d.currentUploadedAt||d.fileUploadedAt||'',
     currentLabel:d.currentLabel||d.versionLabel||'',
+    versionNumber:Math.max(1,Number(d.versionNumber||1)),
+    previousFileName:d.previousFileName||'',
     linkedSongId:d.linkedSongId||linkedSongIds[0]||'',
     linkedSongIds:linkedSongIds,
     linkedSongName:d.linkedSongName||'',
@@ -6282,6 +6620,8 @@ function scoreStorageItem(score){
     currentFileSize:Number(score.currentFileSize||0),
     currentUploadedAt:score.currentUploadedAt||'',
     currentLabel:score.currentLabel||'',
+    versionNumber:Math.max(1,Number(score.versionNumber||1)),
+    previousFileName:score.previousFileName||'',
     linkedSongId:score.linkedSongId||((score.linkedSongIds&&score.linkedSongIds[0])||''),
     linkedSongIds:normalizeScoreLinkedSongIds(score.linkedSongIds||[]),
     linkedSongName:score.linkedSongName||'',
@@ -6401,7 +6741,7 @@ function scoreUpdatedText(score){
 }
 function scoreVersionToken(score){
   if(!score)return '';
-  return String(score.currentUploadedAt||score.currentFilePath||score.currentFileUrl||score.updatedAt||score.createdAt||'');
+  return [Math.max(1,Number(score.versionNumber||1)),score.currentUploadedAt||'',score.currentFilePath||score.currentFileUrl||''].join('|');
 }
 function scoreSeenStorageKey(){
   var identity=currentUser&&currentUser.id?String(currentUser.id):(adminRole==='admin'?'admin':'');
@@ -6528,7 +6868,8 @@ function refreshScoreUnreadViews(){
 }
 function renderScoreVersionBadge(score){
   var date=scoreUpdatedText(score);
-  return date?'<span class="score-version-badge">업데이트 '+date+'</span>':'';
+  var version='v'+Math.max(1,Number(score&&score.versionNumber||1));
+  return '<span class="score-version-badge">'+version+(date?' · '+date:'')+'</span>';
 }
 function findScoresForSong(song, includePrivate){
   if(!song)return [];
@@ -6555,7 +6896,7 @@ function getPublicScoreForSong(song){
   return rows.length?rows[0]:null;
 }
 function findVisibleScoresForSong(song){
-  return sortScoreParts(findScoresForSong(song,false).filter(canViewScoreItem));
+  return sortScorePartsForCurrentUser(findScoresForSong(song,false).filter(canViewScoreItem));
 }
 function getActiveModeScoresForSong(song){
   return findVisibleScoresForSong(song).filter(scoreMatchesActiveMode);
@@ -6748,7 +7089,7 @@ function openScorePickerForSong(songId, activeOnly){
   openModal('modalScorePicker');
 }
 function renderScorePickerRows(rows){
-  rows=sortScoreParts(rows).filter(canOpenScoreItem);
+  rows=sortScorePartsForCurrentUser(rows).filter(canOpenScoreItem);
   if(!rows.length)return '<div class="score-empty">볼 수 있는 악보가 없습니다.</div>';
   var html='', lastKind='';
   rows.forEach(function(score){
@@ -6759,9 +7100,10 @@ function renderScorePickerRows(rows){
       lastKind=kind;
     }
     var part=kind==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(kind);
+    var myPart=kind==='orchestra'&&isMyScorePart(score);
     var meta=[part,score.currentLabel||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
     html+='<div class="score-picker-card">'
-      +'<div><div class="score-picker-title">'+escHtml(kind==='orchestra'?part:(score.title||'악보'))+renderScoreNewBadge(score,'group')+'</div><div class="score-picker-meta">'+escHtml(kind==='orchestra'?(score.title||'악보')+' · '+meta:meta)+'</div></div>'
+      +'<div><div class="score-picker-title">'+escHtml(kind==='orchestra'?part:(score.title||'악보'))+(myPart?'<span class="score-my-part-badge">내 파트</span>':'')+renderScoreNewBadge(score,'group')+'</div><div class="score-picker-meta">'+escHtml(kind==='orchestra'?(score.title||'악보')+' · '+meta:meta)+'</div></div>'
       +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">보기</button>'
       +'</div>';
   });
@@ -6870,22 +7212,12 @@ function saveScorePartEdit(){
   if(duplicate&&!confirm('같은 곡에 '+label+' 파트가 이미 있습니다.\n그래도 이 파트로 변경할까요?'))return;
   var now=new Date().toISOString();
   var actorId=currentActorId(), actorName=currentActorName();
-  var base='items.'+score.id+'.';
-  var updates={updatedAt:now,updatedById:actorId,updatedByName:actorName};
-  updates[base+'instrument']=instrument;
-  updates[base+'instrumentLabel']=label;
-  updates[base+'updatedAt']=now;
-  updates[base+'updatedById']=actorId;
-  updates[base+'updatedByName']=actorName;
+  var update=Object.assign({},score,{instrument:instrument,instrumentLabel:label,updatedAt:now,updatedById:actorId,updatedByName:actorName});
   var btn=document.getElementById('scorePartEditSaveBtn');
   if(btn){btn.disabled=true;btn.textContent='저장 중...';}
-  return scoreSettingsRef().update(updates).then(function(){
-    score.instrument=instrument;
-    score.instrumentLabel=label;
-    score.updatedAt=now;
-    score.updatedById=actorId;
-    score.updatedByName=actorName;
-    upsertScoreLocal(score);
+  return scoreAdminCall('upsert',{items:[scoreStorageItem(update)]}).then(function(result){
+    var saved=result.items&&result.items[0]?scoreRowFromSettingsItem(result.items[0].id,result.items[0]):update;
+    upsertScoreLocal(saved);
     closeModal('modalScorePartEdit');
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
@@ -6894,7 +7226,7 @@ function saveScorePartEdit(){
     showToast(label+' 파트로 변경했습니다');
   }).catch(function(e){
     console.error(e);
-    showToast('파트 변경 중 오류가 발생했습니다');
+    showToast(securityErrorMessage(e,'파트 변경 중 오류가 발생했습니다'));
   }).finally(function(){
     if(btn){btn.disabled=false;btn.textContent='파트 저장';}
   });
@@ -6924,7 +7256,7 @@ function renderScoreFolderList(rows, adminMode){
   return scoreFolderGroups(rows).map(function(group){return renderScoreFolderCard(group,adminMode);}).join('');
 }
 function renderScoreFolderCard(group, adminMode){
-  var scores=sortScoreParts(group.scores||[]);
+  var scores=adminMode?sortScoreParts(group.scores||[]):sortScorePartsForCurrentUser(group.scores||[]);
   var unreadBadge=adminMode?'':renderScoreRowsNewBadge(scores,'group');
   var updated=scoreGroupUpdatedText(scores);
   var meta=['관현악 파트보 '+scores.length+'개',updated?'업데이트 '+updated:''].filter(Boolean).join(' · ');
@@ -6946,7 +7278,8 @@ function renderScoreFolderCard(group, adminMode){
         +'</div>';
       }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
-        return '<button class="score-part-btn" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+'</button>';
+        var mine=isMyScorePart(score);
+        return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</button>';
       }).join('')+'</div>';
   return '<div class="score-folder-card">'
     +'<div class="score-folder-head"><div><div class="score-folder-title">'+escHtml(group.title||'곡명 없음')+unreadBadge+'</div><div class="score-folder-meta">'+escHtml(meta)+'</div></div><div class="score-folder-count">'+scores.length+'개</div></div>'
@@ -7125,12 +7458,22 @@ function setScoreFormKind(kind){
   if(file)file.multiple=kind==='orchestra';
   renderScoreUploadReview();
 }
-function resetScoreForm(){
+function cleanupPendingScoreUploads(){
+  var paths=Object.keys(scoreUploadPendingResults).map(function(key){
+    return scoreUploadPendingResults[key]&&scoreUploadPendingResults[key].path||'';
+  }).filter(Boolean);
+  if(paths.length&&canManageScores()){
+    scoreAdminCall('cleanupUploads',{paths:paths}).catch(function(e){console.warn('score_upload_cleanup_failed',e)});
+  }
+}
+function resetScoreForm(saved){
+  if(!saved)cleanupPendingScoreUploads();
   scoreCandidateSelectedIds=[];
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
+  scoreUploadPendingResults=Object.create(null);
   ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-  var file=document.getElementById('scoreFile');if(file)file.value='';
+  var file=document.getElementById('scoreFile');if(file){file.value='';delete file.dataset.targetScoreId;}
   setScoreFormKind('singer');
   setScoreInstrumentSelection('');
   setScoreCurrentFileNote(null);
@@ -7162,13 +7505,23 @@ function upsertScoreLocal(score){
   if(canManageScores())scoresLoadedPrivate=true;
   savePublicScoreCache();
 }
-function deleteScoreStoragePath(path){
-  if(!path||String(path).indexOf('scores/')!==0)return Promise.resolve(false);
-  return storage.ref().child(path).delete().then(function(){return true;}).catch(function(e){
-    if(e&&e.code==='storage/object-not-found')return false;
-    console.warn(e);
-    return false;
-  });
+function setScoreUploadRowState(index,status,progress,error){
+  var row=scoreUploadReviewRows[index];
+  if(!row)return;
+  var changed=row.status!==status;
+  row.status=status||'ready';
+  row.progress=Math.max(0,Math.min(100,Number(progress||0)));
+  row.error=error||'';
+  if(changed||status==='done'||status==='error'){
+    renderScoreUploadReview();
+    return;
+  }
+  var el=document.querySelector('[data-score-review-index="'+index+'"]');
+  if(!el)return;
+  var state=el.querySelector('.score-upload-review-state');
+  var bar=el.querySelector('.score-upload-progress span');
+  if(state)state.textContent=row.progress+'%';
+  if(bar)bar.style.width=row.progress+'%';
 }
 function saveScoreUpload(){
   if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
@@ -7198,7 +7551,7 @@ function saveScoreUpload(){
   if(!title)return showToast('곡명을 입력해주세요');
   if(editId&&!previous)return showToast('수정할 악보를 찾을 수 없습니다');
   if(previous&&!canEditScoreItem(previous))return showToast('악보 수정 권한이 없습니다');
-  if(reviewActive&&!scoreUploadReviewConfirmed)return showToast('먼저 파트보 검수를 완료해주세요');
+  if(reviewActive&&!scoreUploadReviewConfirmed)return showToast('먼저 파일별 파트를 확인해주세요');
   if(!reviewActive&&scoreKind==='orchestra'&&(document.getElementById('scoreInstrument')||{}).value==='__custom__'&&!selectedInstrument)return showToast('직접 입력할 관현악 파트명을 입력해주세요');
   if(editId&&files.length>1)return showToast('기존 악보 수정 시 PDF는 1개만 선택해주세요');
   if(scoreKind!=='orchestra'&&files.length>1)return showToast('여러 PDF 등록은 관현악 파트보에서만 사용할 수 있습니다');
@@ -7210,7 +7563,8 @@ function saveScoreUpload(){
     if(files[vf].type&&files[vf].type!=='application/pdf'&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
     if(!files[vf].type&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
   }
-  var scoreId=editId||createScoreId();
+  var scoreId=editId||(fileEl&&fileEl.dataset.targetScoreId)||createScoreId();
+  if(!editId&&fileEl)fileEl.dataset.targetScoreId=scoreId;
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
@@ -7261,6 +7615,8 @@ function saveScoreUpload(){
       currentFileSize:nextFileSize,
       currentUploadedAt:replacingFile?now:((previousScore&&previousScore.currentUploadedAt)||''),
       currentLabel:label,
+      versionNumber:Math.max(1,Number(previousScore&&previousScore.versionNumber||1)),
+      previousFileName:(previousScore&&previousScore.previousFileName)||'',
       linkedSongId:linkedSongId,
       linkedSongIds:linkedSongIds,
       linkedSongName:linkedSongName,
@@ -7273,52 +7629,89 @@ function saveScoreUpload(){
     data.createdByName=(previousScore&&previousScore.createdByName)||actorName;
     return data;
   }
-  function uploadFileIfNeeded(target){
+  function uploadFileIfNeeded(target,targetIndex){
     if(!target.file)return Promise.resolve(buildScoreData(target.id,target.previous,null,target.instrument));
     var file=target.file;
     var safeName=scoreSafeFileName(file.name);
-    var filePath='scores/'+target.id+'/'+safeName;
-    return storage.ref().child(filePath).put(file,{contentType:'application/pdf',contentDisposition:scoreContentDisposition(file.name)}).then(function(snapshot){
-      return buildScoreData(target.id,target.previous,{path:filePath,name:file.name,size:file.size},target.instrument);
+    var pendingKey=target.id+'|'+scoreUploadReviewFileKey(file,targetIndex);
+    var pending=scoreUploadPendingResults[pendingKey];
+    if(pending){
+      if(reviewActive)setScoreUploadRowState(targetIndex,'done',100,'');
+      return Promise.resolve(buildScoreData(target.id,target.previous,pending,target.instrument));
+    }
+    var unique=Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);
+    var filePath='scores/'+target.id+'/uploads/'+unique+'/'+safeName;
+    if(reviewActive)setScoreUploadRowState(targetIndex,'uploading',0,'');
+    var task=storage.ref().child(filePath).put(file,{contentType:'application/pdf',contentDisposition:scoreContentDisposition(file.name)});
+    return new Promise(function(resolve,reject){
+      task.on('state_changed',function(snapshot){
+        if(reviewActive&&snapshot.totalBytes){
+          setScoreUploadRowState(targetIndex,'uploading',Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100),'');
+        }
+      },function(error){
+        if(reviewActive)setScoreUploadRowState(targetIndex,'error',0,'업로드 실패 · 다시 시도 가능');
+        reject(error);
+      },function(){
+        var info={path:filePath,name:file.name,size:file.size};
+        scoreUploadPendingResults[pendingKey]=info;
+        if(reviewActive)setScoreUploadRowState(targetIndex,'done',100,'');
+        resolve(buildScoreData(target.id,target.previous,info,target.instrument));
+      });
     });
   }
   var usedReplacementIds={};
   var targets=files.length
     ? files.map(function(f,idx){
         var instrument=reviewedInstruments[idx]||instrumentForName(f.name,previous);
-        var replace=editId?previous:replacementScoreForInstrument(instrument,usedReplacementIds);
+        var reviewRow=reviewActive?scoreUploadReviewRows[idx]:null;
+        var rememberedPrevious=reviewRow&&reviewRow.previousId?allScores.find(function(score){return score.id===reviewRow.previousId;}):null;
+        var replace=editId?previous:(rememberedPrevious||replacementScoreForInstrument(instrument,usedReplacementIds));
         if(replace)usedReplacementIds[replace.id]=true;
-        return {id:replace?replace.id:createScoreId(),previous:replace||null,file:f,instrument:instrument};
+        var targetId=(reviewRow&&reviewRow.targetId)||(replace?replace.id:(files.length===1?scoreId:createScoreId()));
+        if(reviewRow){reviewRow.targetId=targetId;reviewRow.previousId=replace?replace.id:'';}
+        return {id:targetId,previous:replace||null,file:f,instrument:instrument};
       })
     : [{id:scoreId,previous:previous,file:null,instrument:instrumentForName('',previous)}];
 
-  return Promise.all(targets.map(uploadFileIfNeeded)).then(function(items){
-    var scores=items.map(function(data){return scoreRowFromSettingsItem(data.id,data);});
-    scores.forEach(upsertScoreLocal);
-    return scoreSettingsRef().set({
-      items:scoreItemsFromRows(allScores),
-      updatedAt:now,
-      updatedById:actorId,
-      updatedByName:actorName
-    }).then(function(){return scores;});
-  }).then(function(scores){
-    var oldPaths=[];
-    targets.forEach(function(target,idx){
-      var savedScore=scores[idx];
-      if(target.previous&&target.previous.currentFilePath&&savedScore&&target.previous.currentFilePath!==savedScore.currentFilePath)oldPaths.push(target.previous.currentFilePath);
+  function uploadTargetsWithLimit(){
+    var results=new Array(targets.length), errors=[], cursor=0;
+    function worker(){
+      var index=cursor++;
+      if(index>=targets.length)return Promise.resolve();
+      return uploadFileIfNeeded(targets[index],index).then(function(item){
+        results[index]=item;
+      }).catch(function(error){
+        errors.push(error);
+      }).then(worker);
+    }
+    var workers=[];
+    for(var i=0;i<Math.min(4,targets.length);i++)workers.push(worker());
+    return Promise.all(workers).then(function(){
+      if(errors.length)throw errors[0];
+      return results;
     });
+  }
+
+  return uploadTargetsWithLimit().then(function(items){
+    if(btn)btn.textContent='목록에 반영 중...';
+    return scoreAdminCall('upsert',{items:items.map(scoreStorageItem)});
+  }).then(function(result){
+    var scores=(result.items||[]).map(function(data){return scoreRowFromSettingsItem(data.id,data);});
+    scores.forEach(upsertScoreLocal);
+    return scores;
+  }).then(function(scores){
     var logAction=previous?(replacingFile?'악보 교체':'악보 수정'):(scores.length>1?'관현악 파트보 등록':'악보 등록');
     writeLog(logAction,'📄 ['+title+'] '+(isPublic?'공개':'비공개')+' 저장'+(scores.length>1?'\n파트보 '+scores.length+'개':'')+(linkedSongIds.length?'\n연결 곡 '+linkedSongIds.length+'개':''));
-    resetScoreForm();
+    resetScoreForm(true);
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
-    showToast(previous?(replacingFile?'악보가 교체되었습니다':'악보 정보가 저장되었습니다'):(scores.length>1?'관현악 파트보가 등록되었습니다':'악보가 등록되었습니다'));
-    return Promise.all(oldPaths.map(deleteScoreStoragePath));
+    showToast(previous?(replacingFile?'새 버전으로 교체했습니다':'악보 정보를 저장했습니다'):(scores.length>1?'관현악 파트보를 등록했습니다':'악보를 등록했습니다'));
   }).catch(function(e){
     console.error(e);
-    if(e&&e.code==='storage/unauthorized')showToast('Storage 업로드 권한이 없습니다. PDF URL로 등록해주세요.');
-    else showToast('악보 저장 중 오류가 발생했습니다');
+    if(e&&e.code==='storage/unauthorized')showToast('악보 업로드 권한이 없습니다');
+    else if(reviewActive&&scoreUploadReviewRows.some(function(row){return row.status==='error';}))showToast('실패한 파일을 확인한 뒤 다시 시도해주세요');
+    else showToast(securityErrorMessage(e,'악보 저장 중 오류가 발생했습니다'));
   }).finally(function(){
     if(btn){
       delete btn.dataset.busy;
@@ -7330,7 +7723,9 @@ function editScoreUpload(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score)return;
   if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
-  var file=document.getElementById('scoreFile');if(file)file.value='';
+  cleanupPendingScoreUploads();
+  scoreUploadPendingResults=Object.create(null);
+  var file=document.getElementById('scoreFile');if(file){file.value='';delete file.dataset.targetScoreId;}
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
   document.getElementById('scoreEditId').value=score.id;
@@ -7361,18 +7756,17 @@ function toggleScorePublic(id){
   if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
   var next=!score.public;
   var now=new Date().toISOString();
-  score.public=next;
-  score.updatedAt=now;
-  score.updatedById=currentActorId();
-  score.updatedByName=currentActorName();
-  scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()}).then(function(){
+  var update=Object.assign({},score,{public:next,updatedAt:now,updatedById:currentActorId(),updatedByName:currentActorName()});
+  scoreAdminCall('upsert',{items:[scoreStorageItem(update)]}).then(function(result){
+    var saved=result.items&&result.items[0]?scoreRowFromSettingsItem(result.items[0].id,result.items[0]):update;
+    upsertScoreLocal(saved);
     savePublicScoreCache();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
     writeLog('악보 공개 설정','📄 ['+score.title+'] '+(next?'공개':'비공개'));
     showToast(next?'단원에게 공개되었습니다':'비공개로 변경되었습니다');
-  }).catch(function(e){console.error(e);showToast('공개 설정 변경 실패')});
+  }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'공개 설정 변경 실패'))});
 }
 function deleteScore(id){
   if(!canDeleteScores())return showToast('악보 삭제는 관리자만 가능합니다');
@@ -7380,17 +7774,15 @@ function deleteScore(id){
   if(!score)return;
   if(!confirm('이 악보를 삭제할까요? 단원 화면에서도 사라지고 Storage 파일도 삭제됩니다.'))return;
   showToast('악보 삭제 중...');
-  deleteScoreStoragePath(score.currentFilePath).then(function(){
+  scoreAdminCall('delete',{scoreId:id}).then(function(){
     allScores=allScores.filter(function(s){return s.id!==id});
-    return scoreSettingsRef().set({items:scoreItemsFromRows(allScores),updatedAt:new Date().toISOString(),updatedById:currentActorId(),updatedByName:currentActorName()});
-  }).then(function(){
     savePublicScoreCache();
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
     writeLog('악보 삭제','📄 ['+score.title+'] 삭제');
     showToast('악보가 삭제되었습니다');
-  }).catch(function(e){console.error(e);showToast('악보 삭제 중 오류가 발생했습니다')});
+  }).catch(function(e){console.error(e);showToast(securityErrorMessage(e,'악보 삭제 중 오류가 발생했습니다'))});
 }
 
 // ==================== 데이터 새로고침 ====================
@@ -7419,14 +7811,7 @@ function refreshData(){
     });
   Promise.all([
     songRefresh,
-    db.collection('schedules').get().then(function(snap){
-      allSchedules=[];
-      snap.forEach(function(doc){allSchedules.push(scheduleRowFromDoc(doc))});
-      schedulesLoaded=true;
-      saveCache('choir_schedules',allSchedules);
-      if(currentTab==='calendar')renderCal();
-      return allSchedules;
-    }),
+    initSchedules(true),
     db.collection('settings').doc('notice').get().then(function(doc){
       var txt=doc.exists&&doc.data().text?doc.data().text:'';
       applyNoticeState(txt);
@@ -10665,31 +11050,119 @@ function syncScheduleDisplays(){
   setScheduleDisplay('schEndDateDisplay',scheduleDateDisplay(end&&end.value),'날짜 선택');
   setScheduleDisplay('schTimeDisplay',scheduleTimeDisplay(time&&time.value),'시간 선택');
 }
+function scheduleMonthKey(value){
+  var match=String(value||'').match(/^(\d{4})-(\d{2})/);
+  return match?match[1]+'-'+match[2]:'';
+}
+function scheduleMonthKeysForRange(start,end){
+  var startKey=scheduleMonthKey(start);
+  var endKey=scheduleMonthKey(end)||startKey;
+  if(!startKey)return [];
+  if(endKey<startKey)endKey=startKey;
+  var sy=Number(startKey.slice(0,4)), sm=Number(startKey.slice(5,7));
+  var ey=Number(endKey.slice(0,4)), em=Number(endKey.slice(5,7));
+  var keys=[];
+  for(var count=0;count<60&&(sy<ey||(sy===ey&&sm<=em));count++){
+    keys.push(sy+'-'+String(sm).padStart(2,'0'));
+    sm++;
+    if(sm>12){sm=1;sy++;}
+  }
+  return keys;
+}
+function scheduleMonthCacheKey(key){
+  return 'choir_schedules_month_'+key;
+}
+function scheduleRowMonthKeys(schedule){
+  var stored=Array.isArray(schedule&&schedule.monthKeys)?schedule.monthKeys.filter(Boolean):[];
+  return stored.length?stored:scheduleMonthKeysForRange(schedule&&schedule.date,schedule&&schedule.endDate);
+}
+function mergeScheduleMonthRows(key,rows){
+  var oldIds=scheduleMonthIds[key]||{};
+  allSchedules=allSchedules.filter(function(row){return !oldIds[row.id];});
+  var ids={};
+  (rows||[]).forEach(function(row){
+    ids[row.id]=true;
+    var idx=allSchedules.findIndex(function(item){return item.id===row.id;});
+    if(idx>-1)allSchedules[idx]=row;
+    else allSchedules.push(row);
+  });
+  scheduleMonthIds[key]=ids;
+  scheduleLoadedMonths[key]=true;
+}
+function saveLoadedScheduleMonthCaches(){
+  Object.keys(scheduleLoadedMonths).forEach(function(key){
+    if(!scheduleLoadedMonths[key])return;
+    var rows=allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;});
+    var ids={};rows.forEach(function(row){ids[row.id]=true;});
+    scheduleMonthIds[key]=ids;
+    saveCache(scheduleMonthCacheKey(key),rows);
+  });
+}
+function loadScheduleMonth(key,force){
+  key=scheduleMonthKey(key);
+  if(!key)return Promise.resolve([]);
+  if(!force&&scheduleLoadedMonths[key]){
+    return Promise.resolve(allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;}));
+  }
+  if(!force&&scheduleMonthPromises[key])return scheduleMonthPromises[key];
+  var cached=force?null:loadCache(scheduleMonthCacheKey(key),600000);
+  if(Array.isArray(cached)){
+    mergeScheduleMonthRows(key,cached);
+    schedulesLoaded=true;
+    return Promise.resolve(cached);
+  }
+  scheduleMonthPromises[key]=db.collection('schedules').where('monthKeys','array-contains',key).limit(200).get().then(function(snap){
+    var rows=[];
+    snap.forEach(function(doc){rows.push(scheduleRowFromDoc(doc));});
+    mergeScheduleMonthRows(key,rows);
+    saveCache(scheduleMonthCacheKey(key),rows);
+    schedulesLoaded=true;
+    delete scheduleMonthPromises[key];
+    return rows;
+  }).catch(function(e){
+    console.error(e);
+    scheduleLoadedMonths[key]=true;
+    delete scheduleMonthPromises[key];
+    return allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;});
+  });
+  return scheduleMonthPromises[key];
+}
+function ensureScheduleRange(start,end,force){
+  var keys=scheduleMonthKeysForRange(start,end);
+  return Promise.all(keys.map(function(key){return loadScheduleMonth(key,force);})).then(function(){
+    return allSchedules.filter(function(row){return scheduleOverlapsRange(row,start,end);});
+  });
+}
 function initSchedules(force){
   force=!!force;
-  var cached=force?null:loadCache('choir_schedules',600000);
-  if(Array.isArray(cached)){
-    allSchedules=cached;
-    schedulesLoaded=true;
-    if(currentTab==='calendar')renderCal();
-    requestHomeRender();
-    schedulesLoadPromise=Promise.resolve(allSchedules);
-    return schedulesLoadPromise;
-  }
-
-  schedulesLoadPromise=db.collection('schedules').get().then(function(snap){
+  if(force){
+    scheduleLoadedMonths=Object.create(null);
+    scheduleMonthPromises=Object.create(null);
+    scheduleMonthIds=Object.create(null);
+    scheduleAdminWindowLoaded=false;
+    scheduleAdminWindowPromise=null;
     allSchedules=[];
-    snap.forEach(function(doc){allSchedules.push(scheduleRowFromDoc(doc))});
+  }
+  var today=getTodayInputDate();
+  var now=new Date();
+  var weekStart=new Date(now);
+  weekStart.setDate(now.getDate()-now.getDay());
+  var weekEnd=new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate()+6);
+  schedulesLoadPromise=ensureScheduleRange(homeInputDate(weekStart),homeInputDate(weekEnd),force).then(function(){
     schedulesLoaded=true;
-    saveCache('choir_schedules',allSchedules);
     if(currentTab==='calendar')renderCal();
     requestHomeRender();
     return allSchedules;
-  }).catch(function(){return allSchedules;});
+  });
+  if(scheduleMonthKey(today)!==scheduleMonthKey(homeInputDate(weekStart))){
+    schedulesLoadPromise=Promise.all([schedulesLoadPromise,loadScheduleMonth(scheduleMonthKey(today),force)]).then(function(){return allSchedules;});
+  }
+  return schedulesLoadPromise;
 }
 function scheduleRowFromDoc(doc){
   var d=doc.data()||{};
-  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
+  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,program:d.program||'',dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -10719,7 +11192,7 @@ function addSchedule(){
   var actorId=currentActorId();
   var directEdit=scheduleDirectEditActive;
   var directReturnDate=scheduleDirectEditReturnDate;
-  var scheduleData={date:date,endDate:endDate,title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
+  var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,program:useBriefing?document.getElementById('schProgram').value.trim():'',dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
   var write=scheduleEditId
     ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
     : db.collection('schedules').add(Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName})).then(function(docRef){return {id:docRef.id,updated:false};});
@@ -10728,7 +11201,7 @@ function addSchedule(){
     var idx=allSchedules.findIndex(function(x){return x.id===result.id});
     if(idx>-1)allSchedules[idx]=Object.assign({},allSchedules[idx],scheduleData,{id:result.id});
     else allSchedules.push(row);
-    saveCache('choir_schedules',allSchedules);
+    saveLoadedScheduleMonthCaches();
     var logTime = scheduleData.time ? ` 🕐 ${scheduleData.time}` : '';
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
@@ -10743,9 +11216,44 @@ function addSchedule(){
     showToast(result.updated?'일정 수정 완료':'일정 추가 완료');
   });
 }
-function loadSchAdmin(){
+function loadScheduleAdminWindow(force){
+  if(!canManageSchedules())return Promise.resolve([]);
+  if(scheduleAdminWindowLoaded&&!force)return Promise.resolve(allSchedules);
+  if(scheduleAdminWindowPromise&&!force)return scheduleAdminWindowPromise;
+  var now=new Date();
+  var from=new Date(now.getFullYear(),now.getMonth()-6,1);
+  var to=new Date(now.getFullYear(),now.getMonth()+19,0);
+  var fromKey=homeInputDate(from), toKey=homeInputDate(to);
+  scheduleAdminWindowPromise=db.collection('schedules')
+    .where('date','>=',fromKey)
+    .where('date','<=',toKey)
+    .orderBy('date','asc')
+    .limit(250)
+    .get().then(function(snap){
+      snap.forEach(function(doc){
+        var row=scheduleRowFromDoc(doc);
+        var idx=allSchedules.findIndex(function(item){return item.id===row.id;});
+        if(idx>-1)allSchedules[idx]=row;
+        else allSchedules.push(row);
+      });
+      scheduleAdminWindowLoaded=true;
+      scheduleAdminWindowPromise=null;
+      return allSchedules;
+    }).catch(function(e){
+      console.error(e);
+      scheduleAdminWindowPromise=null;
+      return allSchedules;
+    });
+  return scheduleAdminWindowPromise;
+}
+function loadSchAdmin(skipLoad){
   if(!canManageSchedules())return;
   var c=document.getElementById('schList');if(!c)return;
+  if(!skipLoad&&!scheduleAdminWindowLoaded){
+    c.innerHTML='<div class="loading"><div class="spinner"></div>일정 목록 불러오는 중...</div>';
+    loadScheduleAdminWindow(false).then(function(){loadSchAdmin(true);});
+    return;
+  }
   var sorted=allSchedules.slice().sort(function(a,b){return scheduleSortValue(b).localeCompare(scheduleSortValue(a))});
   if(sorted.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts)">등록된 일정이 없습니다</div>';return}
   var today=new Date().toISOString().split('T')[0];
@@ -10825,7 +11333,7 @@ function delSchedule(id,title){
   if(!confirm('"'+title+'" 삭제하시겠습니까?'))return;
   db.collection('schedules').doc(id).delete().then(function(){
     allSchedules=allSchedules.filter(function(s){return s.id!==id});
-    saveCache('choir_schedules',allSchedules);
+    saveLoadedScheduleMonthCaches();
     writeLog('일정 삭제','"'+title+'" 삭제됨');showToast('일정 삭제 완료');loadSchAdmin();
     if(currentTab==='calendar')renderCal();
   });
@@ -10938,6 +11446,15 @@ function renderCal(){
   var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
   syncQuickCreateActions();
   var g=document.getElementById('calGrid');
+  var targetMonth=calYear+'-'+String(calMonth+1).padStart(2,'0');
+  if(!scheduleLoadedMonths[targetMonth]){
+    g.classList.toggle('stack-mode',calViewMode==='stack');
+    g.innerHTML='<div class="loading" style="grid-column:1/-1;padding:36px 12px"><div class="spinner"></div>이 달의 일정 불러오는 중...</div>';
+    loadScheduleMonth(targetMonth,false).then(function(){
+      if(targetMonth===calYear+'-'+String(calMonth+1).padStart(2,'0'))renderCal();
+    });
+    return;
+  }
   g.classList.toggle('stack-mode',calViewMode==='stack');
   var hds=['일','월','화','수','목','금','토'];
   var h=hds.map(function(x,i){return '<div class="cal-hdr'+(i===0?' weekend sunday':i===6?' weekend saturday':'')+'">'+x+'</div>'}).join('');
@@ -11333,6 +11850,40 @@ function saveArchiveMove(){
 function removeArchiveFromAlbum(){
   updateArchiveItemAlbum(document.getElementById('archiveMoveItemId').value,'');
 }
+function resetArchiveReactionSession(){
+  archiveMyReactions=Object.create(null);
+  archiveMyReactionsUid=currentUser&&currentUser.id?currentUser.id:'';
+  archiveMyReactionsLoaded=false;
+  archiveMyReactionsPromise=null;
+}
+function loadArchiveMyReactions(force){
+  var uid=currentUser&&currentUser.id?currentUser.id:'';
+  if(!uid){
+    resetArchiveReactionSession();
+    archiveMyReactionsLoaded=true;
+    return Promise.resolve(archiveMyReactions);
+  }
+  if(archiveMyReactionsUid!==uid)resetArchiveReactionSession();
+  if(archiveMyReactionsLoaded&&!force)return Promise.resolve(archiveMyReactions);
+  if(archiveMyReactionsPromise&&!force)return archiveMyReactionsPromise;
+  archiveMyReactionsPromise=db.collection('archiveReactions').where('uid','==',uid).limit(500).get().then(function(snap){
+    var next=Object.create(null);
+    snap.forEach(function(doc){
+      var d=doc.data()||{};
+      if(d.archiveId)next[d.archiveId]=archiveReactionEntryType(d);
+    });
+    archiveMyReactions=next;
+    archiveMyReactionsLoaded=true;
+    archiveMyReactionsPromise=null;
+    if(currentTab==='archive')renderArchiveList();
+    return archiveMyReactions;
+  }).catch(function(e){
+    console.error(e);
+    archiveMyReactionsPromise=null;
+    return archiveMyReactions;
+  });
+  return archiveMyReactionsPromise;
+}
 function renderArchivePage(){
   var uploadCard=document.getElementById('archiveUploadCard');
   if(uploadCard)uploadCard.classList.toggle('hidden',!canUploadArchive());
@@ -11340,6 +11891,7 @@ function renderArchivePage(){
   if(document.getElementById('archiveDate') && !document.getElementById('archiveDate').value){
     document.getElementById('archiveDate').value=new Date().toISOString().split('T')[0];
   }
+  loadArchiveMyReactions(false);
   if(archiveItems.length===0)loadArchiveItems();
   else renderArchiveList();
 }
@@ -11347,7 +11899,6 @@ function loadArchiveItems(more){
   var list=document.getElementById('archiveList');
   if(archiveLoading)return;
   var albumMode=archiveSelectedAlbumId&&archiveSelectedAlbumId!=='all';
-  if(albumMode&&more)return;
   archiveLoading=true;
   if(!more){
     archiveItems=[];
@@ -11359,7 +11910,8 @@ function loadArchiveItems(more){
   }
   var query=db.collection('mediaArchive');
   if(albumMode){
-    query=query.where('albumId','==',archiveSelectedAlbumId);
+    query=query.where('albumId','==',archiveSelectedAlbumId).orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE);
+    if(more&&archiveLastDoc)query=query.startAfter(archiveLastDoc);
   }else{
     query=query.orderBy('uploadedAt','desc').limit(ARCHIVE_PAGE_SIZE);
     if(more&&archiveLastDoc)query=query.startAfter(archiveLastDoc);
@@ -11377,18 +11929,15 @@ function loadArchiveItems(more){
         url:d.url||'',
         uploadedAt:d.uploadedAt||'',
         uploadedById:d.uploadedById||'',
-        uploadedBy:d.uploadedBy||'',
-        uploadedByPart:d.uploadedByPart||'',
         albumId:d.albumId||'',
         albumTitle:d.albumTitle||'',
         path:d.path||'',
-        reactions:d.reactions||{},
-        reactionUsers:d.reactionUsers||{}
+        reactions:d.reactions||{}
       });
     });
     archiveItems.sort(function(a,b){return String(b.uploadedAt||'').localeCompare(String(a.uploadedAt||''));});
-    archiveLastDoc=(!albumMode&&snap.docs.length)?snap.docs[snap.docs.length-1]:archiveLastDoc;
-    archiveHasMore=albumMode?false:(snap.docs.length===ARCHIVE_PAGE_SIZE);
+    archiveLastDoc=snap.docs.length?snap.docs[snap.docs.length-1]:archiveLastDoc;
+    archiveHasMore=snap.docs.length===ARCHIVE_PAGE_SIZE;
     archiveLoading=false;
     renderArchiveList();
   }).catch(function(e){
@@ -11430,7 +11979,6 @@ function renderArchiveList(){
     if(viewMode==='grid3'){desc=''}
     else if(item.description){desc='<div class="archive-desc">'+escHtml(item.description)+'</div>'}
     else{desc='<div class="archive-desc" style="color:var(--ts)">설명 없음</div>'}
-    var uploader=canViewArchiveUploader()&&item.uploadedBy?(' · 업로드 '+escHtml(item.uploadedBy)):'';
     var typeBadge=item.type==='video'?'<span class="archive-type-badge">영상</span>':'';
     var albumForItem=item.albumId?archiveAlbumById(item.albumId):null;
     var albumTitle=(albumForItem&&albumForItem.title)||item.albumTitle||'';
@@ -11441,11 +11989,12 @@ function renderArchiveList(){
     var safeTitle=escAttr(item.title);
     var safePath=escAttr(item.path);
     var actions=[];
+    if(canViewArchiveUploader())actions.push('<button class="archive-card-action" onclick="event.stopPropagation();showArchiveUploadInfo(\''+safeId+'\')">업로드 정보</button>');
     if(canMoveAlbum)actions.push('<button class="archive-card-action" onclick="event.stopPropagation();openArchiveMove(\''+safeId+'\')">📁 앨범</button>');
     if(canManage)actions.push('<button class="archive-card-action" onclick="event.stopPropagation();openArchiveEdit(\''+safeId+'\')">수정</button>');
     if(canManage)actions.push('<button class="archive-card-action danger" onclick="event.stopPropagation();deleteArchiveItem(\''+safeId+'\',\''+safeTitle+'\',\''+safePath+'\')">삭제</button>');
     var actionBtns=actions.length?'<div class="archive-admin-actions">'+actions.join('')+'</div>':'';
-    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span>'+typeBadge+albumBadge+'</div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+uploader+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
+    return '<div class="archive-card">'+preview+'<div class="archive-body"><div class="archive-title-row"><div class="archive-title">'+escHtml(item.title)+'</div><span class="meta-tag">'+escHtml(item.part)+'</span>'+typeBadge+albumBadge+'</div><div class="archive-meta-line">'+escHtml(item.date||'날짜 미입력')+'</div>'+desc+renderArchiveReactions(item)+actionBtns+'</div></div>';
   }).join('')+renderArchiveMoreButton();
 }
 function renderArchiveMoreButton(){
@@ -11474,17 +12023,20 @@ function archiveReactionEntryType(entry){
 function archiveReactionCounts(users){
   var counts={};
   Object.keys(users||{}).forEach(function(uid){
-    var type=archiveReactionEntryType(users[uid]);
-    if(archiveReactionInfo(type))counts[type]=(counts[type]||0)+1;
+    var value=users[uid];
+    if(archiveReactionInfo(uid)&&typeof value==='number')counts[uid]=Math.max(0,Number(value||0));
+    else{
+      var type=archiveReactionEntryType(value);
+      if(archiveReactionInfo(type))counts[type]=(counts[type]||0)+1;
+    }
   });
   return counts;
 }
 function renderArchiveReactions(item){
-  var users=item.reactionUsers||{};
-  var counts=archiveReactionCounts(users);
-  var selected=archiveReactionEntryType(users[archiveReactionUserKey()]);
+  var counts=archiveReactionCounts(item.reactions||{});
+  var selected=archiveMyReactions[item.id]||'';
   var selectedInfo=archiveReactionInfo(selected);
-  var total=Object.keys(users).length;
+  var total=Object.keys(counts).reduce(function(sum,key){return sum+Number(counts[key]||0);},0);
   var topReactions=ARCHIVE_REACTIONS
     .map(function(r){return {emoji:r.emoji,count:counts[r.key]||0};})
     .filter(function(r){return r.count>0;})
@@ -11519,21 +12071,21 @@ function toggleArchiveReaction(id,type){
   if(!item)return showToast('자료를 찾을 수 없습니다');
   var userKey=archiveReactionUserKey();
   var userLabel=archiveReactionUserLabel();
-  var ref=db.collection('mediaArchive').doc(id);
-  db.runTransaction(function(tx){
-    return tx.get(ref).then(function(docSnap){
-      if(!docSnap.exists)throw new Error('not_found');
-      var data=docSnap.data()||{};
-      var users=Object.assign({},data.reactionUsers||{});
-      var prev=archiveReactionEntryType(users[userKey]);
-      if(prev===type)delete users[userKey];
-      else users[userKey]={type:type,name:currentUser.name,part:currentUser.part||'',label:userLabel,updatedAt:new Date().toISOString()};
-      tx.update(ref,{reactionUsers:users,reactions:archiveReactionCounts(users),reactionUpdatedAt:new Date().toISOString()});
-      return users;
-    });
-  }).then(function(users){
-    item.reactionUsers=users;
-    item.reactions=archiveReactionCounts(users);
+  var previous=archiveMyReactions[id]||'';
+  var ref=db.collection('archiveReactions').doc(id+'_'+userKey);
+  var write=previous===type
+    ? ref.delete()
+    : ref.set({archiveId:id,uid:userKey,type:type,name:currentUser.name,part:currentUser.part||'',label:userLabel,updatedAt:new Date().toISOString()});
+  write.then(function(){
+    var counts=archiveReactionCounts(item.reactions||{});
+    if(previous)counts[previous]=Math.max(0,Number(counts[previous]||0)-1);
+    if(previous===type)delete archiveMyReactions[id];
+    else{
+      counts[type]=Number(counts[type]||0)+1;
+      archiveMyReactions[id]=type;
+    }
+    Object.keys(counts).forEach(function(key){if(!counts[key])delete counts[key];});
+    item.reactions=counts;
     updateArchiveReactionView(item);
     showToast('공감이 반영되었습니다');
   }).catch(function(e){
@@ -11550,19 +12102,35 @@ function showArchiveReactionUsers(id){
   var item=archiveItems.find(function(x){return x.id===id});
   if(!item)return showToast('자료를 찾을 수 없습니다');
   if(!canViewArchiveReactionUsers())return showToast('관리자만 볼 수 있습니다');
-  var grouped={};
-  ARCHIVE_REACTIONS.forEach(function(r){grouped[r.key]=[]});
-  Object.keys(item.reactionUsers||{}).forEach(function(uid){
-    var entry=item.reactionUsers[uid]||{};
-    var type=archiveReactionEntryType(entry);
-    if(!grouped[type])return;
-    grouped[type].push((entry.label||entry.name||uid));
+  showToast('공감 명단을 불러오는 중...');
+  db.collection('archiveReactions').where('archiveId','==',id).limit(500).get().then(function(snap){
+    var grouped={};
+    ARCHIVE_REACTIONS.forEach(function(r){grouped[r.key]=[]});
+    snap.forEach(function(doc){
+      var entry=doc.data()||{};
+      var type=archiveReactionEntryType(entry);
+      if(grouped[type])grouped[type].push(entry.label||entry.name||entry.uid||doc.id);
+    });
+    var lines=ARCHIVE_REACTIONS.map(function(r){
+      var names=grouped[r.key]||[];
+      return r.emoji+' '+r.label+': '+(names.length?names.join(', '):'-');
+    });
+    alert(lines.join('\n'));
+  }).catch(function(e){
+    console.error(e);
+    showToast('공감 명단을 불러오지 못했습니다');
   });
-  var lines=ARCHIVE_REACTIONS.map(function(r){
-    var names=grouped[r.key]||[];
-    return r.emoji+' '+r.label+': '+(names.length?names.join(', '):'-');
+}
+function showArchiveUploadInfo(id){
+  if(!canViewArchiveUploader())return showToast('관리자만 볼 수 있습니다');
+  db.collection('mediaArchivePrivate').doc(id).get().then(function(doc){
+    if(!doc.exists)return showToast('업로드 정보를 찾을 수 없습니다');
+    var d=doc.data()||{};
+    alert('업로드: '+(d.uploadedBy||'-')+(d.uploadedByPart?' ('+d.uploadedByPart+')':'')+'\n업로드 시각: '+String(d.uploadedAt||'-').replace('T',' ').slice(0,19));
+  }).catch(function(e){
+    console.error(e);
+    showToast('업로드 정보를 불러오지 못했습니다');
   });
-  alert(lines.join('\n'));
 }
 function compressArchiveImage(file){
   return new Promise(function(resolve,reject){
@@ -11646,10 +12214,8 @@ function deleteArchiveItem(id,title,path){
   if(!canManageArchiveItem(item))return showToast('삭제 권한이 없습니다');
   if(!confirm('"'+title+'" 사진을 삭제하시겠습니까?'))return;
   db.collection('mediaArchive').doc(id).delete().then(function(){
-    if(path){
-      storage.ref().child(path).delete().catch(function(){});
-    }
     archiveItems=archiveItems.filter(function(x){return x.id!==id});
+    delete archiveMyReactions[id];
     renderArchiveList();
     writeLog('사진첩 삭제',title+' 삭제됨');
     showToast('삭제되었습니다');
@@ -11725,7 +12291,10 @@ function uploadArchiveMedia(){
       var filePath='archive/'+uploaderId+'/'+part+'/'+Date.now()+'_'+safeName+'.jpg';
       return storage.ref().child(filePath).put(uploadBlob,{contentType:'image/jpeg'}).then(function(snapshot){
         return snapshot.ref.getDownloadURL().then(function(downloadURL){
-          return db.collection('mediaArchive').add({
+          var uploadedAt=new Date().toISOString();
+          var ref=db.collection('mediaArchive').doc();
+          var batch=db.batch();
+          batch.set(ref,{
             title:fileTitle,
             description:description,
             date:date,
@@ -11734,13 +12303,19 @@ function uploadArchiveMedia(){
             url:downloadURL,
             path:filePath,
             fileSize:uploadBlob.size,
-            uploadedAt:new Date().toISOString(),
+            uploadedAt:uploadedAt,
             uploadedById:uploaderId,
+            albumId:albumFields.albumId,
+            albumTitle:albumFields.albumTitle,
+            reactions:{}
+          });
+          batch.set(db.collection('mediaArchivePrivate').doc(ref.id),{
+            ownerId:uploaderId,
             uploadedBy:uploader,
             uploadedByPart:uploaderPart,
-            albumId:albumFields.albumId,
-            albumTitle:albumFields.albumTitle
+            uploadedAt:uploadedAt
           });
+          return batch.commit();
         });
       });
     }).then(function(){
@@ -16317,7 +16892,7 @@ function generateReport() {
       var items = anomalies.map(function(a){
         var color = a.level === 'warn' ? '#A26F42' : '#6E8792';
         var icon = a.level === 'warn' ? '⚠️' : 'ℹ️';
-        return '<li style="margin-bottom:6px; line-height:1.45;"><span style="font-weight:700; color:'+color+'">'+icon+' '+a.title+'</span><br><span style="color:#334155;">'+a.message+'</span></li>';
+        return '<li style="margin-bottom:6px; line-height:1.45;"><span style="font-weight:700; color:'+color+'">'+icon+' '+escHtml(a.title)+'</span><br><span style="color:#334155;">'+escHtml(a.message)+'</span></li>';
       }).join('');
       return '<div style="margin:14px 0 18px; padding:12px 14px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px;">'
         + '<div style="font-size:13px; font-weight:800; color:#92400E; margin-bottom:7px;">🔍 출석 데이터 점검 결과</div>'
@@ -16335,10 +16910,10 @@ function generateReport() {
         var session = d.session || '오전';
         var reason = d.excludeReason || '비고 미입력';
         return '<tr>'
-          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+d.date+'</td>'
-          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+session+'</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+escHtml(d.date)+'</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+escHtml(session)+'</td>'
           + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">출석률 제외</td>'
-          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+reason+' · 체크 '+checked+'명</td>'
+          + '<td style="border:1px solid #CBD5E1; padding:7px 8px;">'+escHtml(reason)+' · 체크 '+checked+'명</td>'
           + '</tr>';
       }).join('');
       return '<div style="margin:14px 0 18px;">'
@@ -16469,10 +17044,10 @@ function generateReport() {
         var catWeight = String(catText).trim() === '주일찬송' ? '800' : '500';
         h += `<tr>
           <td style="border:1px solid #ccc; padding:7px 5px; text-align:center; white-space:nowrap;">${dayStr}</td>
-          <td style="border:1px solid #ccc; padding:7px 8px; font-weight:750; line-height:1.32; word-break:keep-all; overflow-wrap:normal;">${s.songName}</td>
-          <td style="border:1px solid #ccc; padding:7px 5px; text-align:center; font-size:11.5px; font-weight:${catWeight}; line-height:1.25;">${catText}</td>
-          <td style="border:1px solid #ccc; padding:7px 8px; font-size:11.5px; line-height:1.45; word-break:keep-all; overflow-wrap:anywhere;">${s.members || '-'}</td>
-          <td style="border:1px solid #ccc; padding:7px 5px; font-size:10.5px; line-height:1.35; color:#475569; word-break:keep-all; overflow-wrap:anywhere;">${s.pianist||''}<br>${s.location||''}</td>
+          <td style="border:1px solid #ccc; padding:7px 8px; font-weight:750; line-height:1.32; word-break:keep-all; overflow-wrap:normal;">${escHtml(s.songName)}</td>
+          <td style="border:1px solid #ccc; padding:7px 5px; text-align:center; font-size:11.5px; font-weight:${catWeight}; line-height:1.25;">${escHtml(catText)}</td>
+          <td style="border:1px solid #ccc; padding:7px 8px; font-size:11.5px; line-height:1.45; word-break:keep-all; overflow-wrap:anywhere;">${escHtml(s.members || '-')}</td>
+          <td style="border:1px solid #ccc; padding:7px 5px; font-size:10.5px; line-height:1.35; color:#475569; word-break:keep-all; overflow-wrap:anywhere;">${escHtml(s.pianist||'')}<br>${escHtml(s.location||'')}</td>
         </tr>`;
       });
       h += `</table>`;
@@ -16512,7 +17087,7 @@ function generateReport() {
     if(longAbsentees.length > 0) {
       h += `<div style="margin-top:12px; padding:10px; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px;">
         <span style="font-weight:700; color:#DC2626; font-size:13px;">⚠️ 이달의 장기 결석자 (${longAbsentees.length}명) : </span>
-        <span style="font-size:13px; color:#991B1B;">${longAbsentees.map(m => m.name + '(' + m.part + ')').join(', ')}</span>
+        <span style="font-size:13px; color:#991B1B;">${escHtml(longAbsentees.map(m => m.name + '(' + m.part + ')').join(', '))}</span>
         <div style="font-size:11px; color:#DC2626; margin-top:4px;">* 이번 달 오전/오후를 한 번도 출석하지 않은 단원입니다.</div>
       </div>`;
     }
@@ -16544,7 +17119,7 @@ function generateReport() {
     h += `<h3 style="font-size:16px; font-weight:700; border-left:4px solid var(--p); padding-left:8px; margin-top:28px; margin-bottom:12px;">👥 5. 단원 변동 현황</h3>`;
     if(newMembers.length > 0) {
       h += `<ul style="font-size:14px; line-height:1.6; padding-left:20px; margin:0;">
-        <li><strong style="color:#6F826E;">신규 등록 (${newMembers.length}명):</strong> ${newMembers.map(m => m.name + ' (' + m.part + ')').join(', ')}</li>
+        <li><strong style="color:#6F826E;">신규 등록 (${newMembers.length}명):</strong> ${escHtml(newMembers.map(m => m.name + ' (' + m.part + ')').join(', '))}</li>
       </ul>`;
     } else {
       h += `<p style="font-size:13px; color:#666;">이번 달 신규 등록 단원이 없습니다.</p>`;

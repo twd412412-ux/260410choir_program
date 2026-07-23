@@ -37,6 +37,9 @@ const APP_URL = "https://twd412412-ux.github.io/260410choir_program/";
 const ACCOUNT_PIN_CIPHER_VERSION = "aes-256-gcm-v1";
 const ACCOUNT_PIN_DIRECTORY_ID = "account-pin-directory";
 const ALLOWED_SCORE_SCOPES = new Set(["default", "all", "singer", "orchestra", "none"]);
+const ARCHIVE_REACTION_TYPES = new Set([
+  "heart", "grace", "cheer", "thanks", "celebrate", "surprise", "awkward", "tricky",
+]);
 const ALLOWED_PERMISSIONS = new Set([
   "song.manage", "song.editAny", "score.manage", "score.editAny",
   "schedule.manage", "schedule.editAny", "attendance.view", "attendance.check",
@@ -101,6 +104,15 @@ function normalizeAttendanceScope(values) {
   return uniqueAllowed(values, allowed, 16);
 }
 
+function normalizeScorePartPreferences(values) {
+  const out = [];
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const part = cleanString(value, 80).replace(/\s+/g, " ");
+    if (part && !out.includes(part) && out.length < 8) out.push(part);
+  });
+  return out;
+}
+
 function accountClaims(account) {
   const scoreScope = cleanString(account.scoreAccessScope, 20) || "default";
   return {
@@ -129,6 +141,7 @@ function safeProfile(id, account) {
     permissions: accountPermissions(account),
     attendanceScope: normalizeAttendanceScope(account.attendanceScope),
     scoreAccessScope: ALLOWED_SCORE_SCOPES.has(account.scoreAccessScope) ? account.scoreAccessScope : "default",
+    scorePartPreferences: normalizeScorePartPreferences(account.scorePartPreferences),
     favorites: Array.isArray(account.favorites) ? account.favorites.slice(0, 1000) : [],
   };
 }
@@ -576,6 +589,7 @@ function accountCreateData(input, actor) {
     part,
     memberId,
     scoreAccessScope: "default",
+    scorePartPreferences: [],
     favorites: [],
     pinSet: true,
     createdAt: nowIso(),
@@ -695,7 +709,7 @@ function scoreNoticeFingerprint(item) {
     cleanString(item.title, 120), cleanString(item.scoreKind, 30), cleanString(item.instrument, 60),
     cleanString(item.currentFilePath, 1000), cleanString(item.currentFileUrl, 2000),
     cleanString(item.currentFileName, 500), cleanString(item.currentUploadedAt, 100),
-    cleanString(item.currentLabel, 100), cleanString(item.linkedSongId, 100), linkedIds,
+    cleanString(item.currentLabel, 100), Number(item.versionNumber || 1), cleanString(item.linkedSongId, 100), linkedIds,
     cleanString(item.linkedSongName, 120), item.public !== false,
   ]);
 }
@@ -718,6 +732,30 @@ function scheduleNoticeFingerprint(data) {
     cleanString(data.memo, 2000), Boolean(data.useBriefing), cleanString(data.program, 4000),
     cleanString(data.dress, 500), cleanString(data.briefingMemo, 2000),
   ]);
+}
+
+function scheduleMonthKeys(start, end) {
+  const startMatch = cleanString(start, 20).match(/^(\d{4})-(\d{2})/);
+  const endMatch = cleanString(end || start, 20).match(/^(\d{4})-(\d{2})/);
+  if (!startMatch) return [];
+  let year = Number(startMatch[1]);
+  let month = Number(startMatch[2]);
+  let endYear = endMatch ? Number(endMatch[1]) : year;
+  let endMonth = endMatch ? Number(endMatch[2]) : month;
+  if (endYear < year || (endYear === year && endMonth < month)) {
+    endYear = year;
+    endMonth = month;
+  }
+  const keys = [];
+  for (let count = 0; count < 60 && (year < endYear || (year === endYear && month <= endMonth)); count++) {
+    keys.push(`${year}-${String(month).padStart(2, "0")}`);
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+  return keys;
 }
 
 function scheduleDateText(data) {
@@ -913,6 +951,25 @@ async function adminUpdateAccount(request) {
   const next = Object.assign({}, old, update);
   await syncExistingAccountClaims(accountId, next);
   return {account: safeProfile(accountId, next)};
+}
+
+async function setOwnScorePartPreferences(request) {
+  requireAuth(request);
+  if (request.auth.token.account !== true) {
+    throw new HttpsError("permission-denied", "단원 계정으로 로그인해주세요.");
+  }
+  const preferences = normalizeScorePartPreferences(request.data && request.data.scorePartPreferences);
+  const ref = db.collection("accounts").doc(request.auth.uid);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "계정을 찾을 수 없습니다.");
+  const old = snap.data() || {};
+  const update = {
+    scorePartPreferences: preferences,
+    scorePartPreferencesUpdatedAt: nowIso(),
+  };
+  await ref.update(update);
+  const next = Object.assign({}, old, update);
+  return {account: safeProfile(request.auth.uid, next)};
 }
 
 async function adminBulkLinkAccounts(request) {
@@ -1158,6 +1215,236 @@ function normalizeScoreKind(value) {
   return ["orchestra", "orch", "instrument", "part"].includes(kind) ? "orchestra" : "singer";
 }
 
+function normalizeScoreLinkedSongIds(values) {
+  const rows = [];
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const id = cleanString(value, 100);
+    if (id && isValidDocumentId(id) && !rows.includes(id) && rows.length < 80) rows.push(id);
+  });
+  return rows;
+}
+
+function scoreActor(request) {
+  const token = request.auth && request.auth.token ? request.auth.token : {};
+  let id = request.auth ? request.auth.uid : "";
+  if (token.account !== true && token.legacyRole === "chongmu") id = "chongmu";
+  else if (token.account !== true && token.admin === true) id = "admin";
+  return {
+    id,
+    name: cleanString(token.choirName, 60) || (token.admin === true ? "관리자" : "권한자"),
+  };
+}
+
+function validScoreFilePath(scoreId, path) {
+  const value = cleanString(path, 1500);
+  return !value || (
+    value.startsWith(`scores/${scoreId}/`) &&
+    !value.includes("..") &&
+    !value.includes("\\")
+  );
+}
+
+function sanitizeScoreItem(raw, scoreId, existing, actor) {
+  raw = raw && typeof raw === "object" ? raw : {};
+  existing = existing && typeof existing === "object" ? existing : null;
+  const title = cleanString(raw.title || raw.songName, 160);
+  if (!title) throw new HttpsError("invalid-argument", "곡명을 입력해주세요.");
+  const scoreKind = normalizeScoreKind(raw.scoreKind || raw.kind);
+  const instrument = scoreKind === "orchestra"
+    ? cleanString(raw.instrument || raw.instrumentLabel, 80).replace(/\s+/g, " ")
+    : "";
+  const instrumentLabel = scoreKind === "orchestra"
+    ? cleanString(raw.instrumentLabel || instrument, 80).replace(/\s+/g, " ")
+    : "";
+  const currentFilePath = cleanString(raw.currentFilePath || raw.filePath, 1500);
+  const currentFileUrl = currentFilePath ? "" : cleanString(raw.currentFileUrl || raw.fileUrl, 2000);
+  if (!validScoreFilePath(scoreId, currentFilePath)) {
+    throw new HttpsError("invalid-argument", "악보 파일 경로가 올바르지 않습니다.");
+  }
+  if (currentFileUrl && !/^https?:\/\//i.test(currentFileUrl)) {
+    throw new HttpsError("invalid-argument", "외부 PDF 주소를 확인해주세요.");
+  }
+  if (!currentFilePath && !currentFileUrl) {
+    throw new HttpsError("invalid-argument", "PDF 파일 또는 외부 PDF 주소가 필요합니다.");
+  }
+  const linkedSongIds = normalizeScoreLinkedSongIds(raw.linkedSongIds);
+  const linkedSongId = cleanString(raw.linkedSongId, 100);
+  if (linkedSongId && isValidDocumentId(linkedSongId) && !linkedSongIds.includes(linkedSongId)) {
+    linkedSongIds.unshift(linkedSongId);
+  }
+  const fileChanged = Boolean(existing) && (
+    cleanString(existing.currentFilePath || existing.filePath, 1500) !== currentFilePath ||
+    cleanString(existing.currentFileUrl || existing.fileUrl, 2000) !== currentFileUrl ||
+    cleanString(existing.currentFileName || existing.fileName, 500) !== cleanString(raw.currentFileName || raw.fileName, 500)
+  );
+  const previousVersion = Math.max(1, Number(existing && existing.versionNumber || 1));
+  const versionNumber = existing ? (fileChanged ? previousVersion + 1 : previousVersion) : 1;
+  const now = nowIso();
+  const next = {
+    id: scoreId,
+    title,
+    searchKey: cleanString(raw.searchKey, 300),
+    scoreKind,
+    instrument,
+    instrumentLabel,
+    public: raw.public !== false,
+    currentFileUrl,
+    currentFilePath,
+    currentFileName: safeScoreFileName(raw.currentFileName || raw.fileName, {title}),
+    currentFileSize: (() => {
+      const size = Number(raw.currentFileSize || raw.fileSize || 0);
+      return Number.isFinite(size) ? Math.max(0, Math.min(size, 30 * 1024 * 1024)) : 0;
+    })(),
+    currentUploadedAt: fileChanged || !existing
+      ? cleanString(raw.currentUploadedAt, 100) || now
+      : cleanString(existing.currentUploadedAt || existing.fileUploadedAt, 100),
+    currentLabel: cleanString(raw.currentLabel || raw.versionLabel, 100),
+    versionNumber,
+    previousFileName: fileChanged
+      ? cleanString(existing.currentFileName || existing.fileName, 500)
+      : cleanString(existing && existing.previousFileName, 500),
+    linkedSongId: linkedSongIds[0] || "",
+    linkedSongIds,
+    linkedSongName: cleanString(raw.linkedSongName, 160),
+    createdAt: cleanString(existing && existing.createdAt, 100) || now,
+    createdById: cleanString(existing && existing.createdById, 100) || actor.id,
+    createdByName: cleanString(existing && existing.createdByName, 60) || actor.name,
+    updatedAt: now,
+    updatedById: actor.id,
+    updatedByName: actor.name,
+  };
+  return {next, fileChanged};
+}
+
+function canEditStoredScore(request, score) {
+  if (isAdminRequest(request) || hasPermission(request, "score.editAny")) return true;
+  if (!hasPermission(request, "score.manage")) return false;
+  const actor = scoreActor(request);
+  const ownerId = cleanString(score && score.createdById, 100);
+  const ownerName = cleanString(score && score.createdByName, 60);
+  return ownerId === actor.id || (!ownerId && ownerName && ownerName === actor.name);
+}
+
+async function deleteScoreObject(path) {
+  const value = cleanString(path, 1500);
+  if (!value || !value.startsWith("scores/") || value.includes("..")) return false;
+  try {
+    await getStorage().bucket().file(value).delete({ignoreNotFound: true});
+    return true;
+  } catch (error) {
+    console.error("score_file_cleanup_failed", {path: value, code: error && error.code});
+    return false;
+  }
+}
+
+async function cleanupReplacedScoreFiles(rows) {
+  const paths = new Set();
+  rows.forEach((row) => {
+    if (row && row.path) paths.add(row.path);
+    if (row && row.canonicalPath && row.canonicalPath !== row.path) paths.add(row.canonicalPath);
+  });
+  await mapLimit(Array.from(paths), 6, deleteScoreObject);
+}
+
+async function upsertScores(request) {
+  requirePermission(request, "score.manage");
+  const requested = Array.isArray(request.data && request.data.items)
+    ? request.data.items.slice(0, 30)
+    : [];
+  if (!requested.length) throw new HttpsError("invalid-argument", "저장할 악보가 없습니다.");
+  const ids = new Set();
+  requested.forEach((raw) => {
+    const id = cleanString(raw && raw.id, 180);
+    if (!isValidDocumentId(id) || ids.has(id)) {
+      throw new HttpsError("invalid-argument", "악보 식별값을 확인해주세요.");
+    }
+    ids.add(id);
+  });
+  const scoreRef = db.collection("settings").doc("scores");
+  const actor = scoreActor(request);
+  const cleanupRows = [];
+  let savedItems = [];
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(scoreRef);
+    const data = snap.exists ? snap.data() || {} : {};
+    const items = Object.assign({}, scoreItemsById(data));
+    savedItems = requested.map((raw) => {
+      const id = cleanString(raw.id, 180);
+      const existing = items[id] || null;
+      if (existing && !canEditStoredScore(request, existing)) {
+        throw new HttpsError("permission-denied", "다른 사람이 등록한 악보를 수정할 권한이 없습니다.");
+      }
+      const sanitized = sanitizeScoreItem(raw, id, existing, actor);
+      if (existing && sanitized.fileChanged) {
+        const oldPath = cleanString(existing.currentFilePath || existing.filePath, 1500);
+        const oldName = safeScoreFileName(existing.currentFileName || existing.fileName, existing);
+        cleanupRows.push({
+          path: oldPath,
+          canonicalPath: oldPath ? `scores/${id}/${oldName}` : "",
+        });
+      }
+      items[id] = sanitized.next;
+      return sanitized.next;
+    });
+    const estimatedBytes = Buffer.byteLength(JSON.stringify(items), "utf8");
+    if (estimatedBytes > 850000) {
+      throw new HttpsError("resource-exhausted", "악보 목록 용량이 안전 한도에 가까워 저장할 수 없습니다.");
+    }
+    tx.set(scoreRef, {
+      items,
+      updatedAt: nowIso(),
+      updatedById: actor.id,
+      updatedByName: actor.name,
+    }, {merge: true});
+  });
+  await cleanupReplacedScoreFiles(cleanupRows);
+  return {items: savedItems};
+}
+
+async function deleteStoredScore(request) {
+  requireAdmin(request);
+  const scoreId = cleanString(request.data && request.data.scoreId, 180);
+  if (!isValidDocumentId(scoreId)) throw new HttpsError("invalid-argument", "삭제할 악보를 확인해주세요.");
+  const scoreRef = db.collection("settings").doc("scores");
+  let deleted = null;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(scoreRef);
+    if (!snap.exists) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
+    const data = snap.data() || {};
+    const items = Object.assign({}, scoreItemsById(data));
+    deleted = items[scoreId] || null;
+    if (!deleted) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
+    delete items[scoreId];
+    const actor = scoreActor(request);
+    tx.set(scoreRef, {
+      items,
+      updatedAt: nowIso(),
+      updatedById: actor.id,
+      updatedByName: actor.name,
+    }, {merge: true});
+  });
+  await getStorage().bucket().deleteFiles({prefix: `scores/${scoreId}/`}).catch((error) => {
+    console.error("score_folder_cleanup_failed", {scoreId, code: error && error.code});
+  });
+  return {deleted: scoreId};
+}
+
+async function cleanupUnusedScoreUploads(request) {
+  requirePermission(request, "score.manage");
+  const requested = Array.isArray(request.data && request.data.paths) ? request.data.paths.slice(0, 40) : [];
+  const paths = requested.map((value) => cleanString(value, 1500)).filter((value) => (
+    value.startsWith("scores/") && value.includes("/uploads/") && !value.includes("..")
+  ));
+  if (!paths.length) return {deleted: 0};
+  const snap = await db.collection("settings").doc("scores").get();
+  const inUse = new Set(Object.values(scoreItemsById(snap.exists ? snap.data() || {} : {}))
+    .map((item) => cleanString(item && item.currentFilePath, 1500))
+    .filter(Boolean));
+  const unused = paths.filter((path) => !inUse.has(path));
+  const results = await mapLimit(unused, 6, deleteScoreObject);
+  return {deleted: results.filter(Boolean).length};
+}
+
 function scoreAccessModes(request) {
   if (isAdminRequest(request) || hasPermission(request, "score.manage")) return ["singer", "orchestra"];
   const token = request.auth && request.auth.token ? request.auth.token : {};
@@ -1251,7 +1538,7 @@ async function openScoreFile(request) {
   const fileName = safeScoreFileName(score.currentFileName || score.fileName, score);
   const expiresAt = Date.now() + 15 * 60 * 1000;
   const bucket = getStorage().bucket();
-  const file = await canonicalScoreFile(bucket, scoreId, filePath, fileName);
+  const file = bucket.file(filePath);
   const [url] = await file.getSignedUrl({
     version: "v4",
     action: "read",
@@ -1259,17 +1546,6 @@ async function openScoreFile(request) {
     responseDisposition: scoreContentDisposition(fileName),
     responseType: "application/pdf",
   });
-  try {
-    await verifySignedScoreUrl(url);
-  } catch (error) {
-    console.error("score_signed_url_verification_failed", {
-      scoreId,
-      filePath: file.name,
-      code: error && error.code,
-      message: error && error.message,
-    });
-    throw new HttpsError("internal", "악보 파일 주소를 확인하지 못했습니다.");
-  }
   return {url, fileName, expiresAt};
 }
 
@@ -1307,6 +1583,67 @@ async function rebuildSongIndex(request) {
   };
 }
 
+function archiveReactionType(data) {
+  const type = cleanString(data && data.type, 30);
+  return ARCHIVE_REACTION_TYPES.has(type) ? type : "";
+}
+
+async function syncArchiveReaction(event) {
+  const before = event.data && event.data.before.exists ? event.data.before.data() || {} : {};
+  const after = event.data && event.data.after.exists ? event.data.after.data() || {} : {};
+  const archiveId = cleanString(after.archiveId || before.archiveId, 180);
+  if (!isValidDocumentId(archiveId)) return null;
+  const beforeType = archiveReactionType(before);
+  const afterType = archiveReactionType(after);
+  if (beforeType === afterType) return null;
+  const ref = db.collection("mediaArchive").doc(archiveId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    const reactions = Object.assign({}, data.reactions || {});
+    if (beforeType) reactions[beforeType] = Math.max(0, Number(reactions[beforeType] || 0) - 1);
+    if (afterType) reactions[afterType] = Math.max(0, Number(reactions[afterType] || 0) + 1);
+    Object.keys(reactions).forEach((key) => {
+      if (!ARCHIVE_REACTION_TYPES.has(key) || Number(reactions[key] || 0) <= 0) delete reactions[key];
+    });
+    tx.update(ref, {reactions, reactionUpdatedAt: nowIso()});
+  });
+  return null;
+}
+
+async function cleanupDeletedArchive(event) {
+  if (!event.data || event.data.after.exists || !event.data.before.exists) return null;
+  const archiveId = event.params.archiveId;
+  const before = event.data.before.data() || {};
+  await db.collection("mediaArchivePrivate").doc(archiveId).delete().catch(() => {});
+  while (true) {
+    const snap = await db.collection("archiveReactions").where("archiveId", "==", archiveId).limit(400).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    if (snap.size < 400) break;
+  }
+  const path = cleanString(before.path, 1500);
+  if (path && path.startsWith("archive/") && !path.includes("..")) {
+    await getStorage().bucket().file(path).delete({ignoreNotFound: true}).catch((error) => {
+      console.error("archive_file_cleanup_failed", {archiveId, code: error && error.code});
+    });
+  }
+  return null;
+}
+
+async function ensureScheduleMonthIndex(event) {
+  if (!event.data || !event.data.after.exists) return null;
+  const data = event.data.after.data() || {};
+  const expected = scheduleMonthKeys(data.date, data.endDate || data.date);
+  const current = Array.isArray(data.monthKeys) ? data.monthKeys : [];
+  if (JSON.stringify(current) === JSON.stringify(expected)) return null;
+  await event.data.after.ref.update({monthKeys: expected});
+  return null;
+}
+
 exports.authGateway = onCall({secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "loginWithPin") return loginWithPin(request);
@@ -1325,7 +1662,16 @@ exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [
   if (action === "setPin") return adminSetAccountPin(request);
   if (action === "revealPins") return adminRevealAccountPins(request);
   if (action === "delete") return adminDeleteAccount(request);
+  if (action === "setOwnScoreParts") return setOwnScorePartPreferences(request);
   throw new HttpsError("invalid-argument", "지원하지 않는 계정 관리 요청입니다.");
+});
+
+exports.scoreAdmin = onCall({timeoutSeconds: 120, memory: "512MiB"}, async (request) => {
+  const action = cleanString(request.data && request.data.action, 40);
+  if (action === "upsert") return upsertScores(request);
+  if (action === "delete") return deleteStoredScore(request);
+  if (action === "cleanupUploads") return cleanupUnusedScoreUploads(request);
+  throw new HttpsError("invalid-argument", "지원하지 않는 악보 관리 요청입니다.");
 });
 
 exports.scoreFileAccess = onCall(async (request) => {
@@ -1388,3 +1734,18 @@ exports.notifyScheduleUpdates = onDocumentWritten({
   secrets: [WEB_PUSH_PRIVATE_KEY],
   retry: false,
 }, notifyScheduleWrite);
+
+exports.syncArchiveReactionCounts = onDocumentWritten({
+  document: "archiveReactions/{reactionId}",
+  retry: false,
+}, syncArchiveReaction);
+
+exports.cleanupDeletedArchive = onDocumentWritten({
+  document: "mediaArchive/{archiveId}",
+  retry: false,
+}, cleanupDeletedArchive);
+
+exports.ensureScheduleMonthIndex = onDocumentWritten({
+  document: "schedules/{scheduleId}",
+  retry: false,
+}, ensureScheduleMonthIndex);

@@ -37,8 +37,12 @@ service firebase.storage {
     match /profiles/{ownerId}/{imageId} {
       allow read: if isAppUser();
       allow create, update: if validImage()
-        && (isAdmin() || hasPermission('member.manage') || request.auth.uid == ownerId);
-      allow delete: if isAdmin() || hasPermission('member.manage') || request.auth.uid == ownerId;
+        && (isAdmin()
+          || hasPermission('member.manage')
+          || (request.auth.token.account == true && request.auth.uid == ownerId));
+      allow delete: if isAdmin()
+        || hasPermission('member.manage')
+        || (request.auth.token.account == true && request.auth.uid == ownerId);
     }
 
     match /profiles/{legacyImageId} {
@@ -60,12 +64,12 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
-    match /scores/{scoreId}/{fileName} {
-      allow read: if isAppUser();
-      allow create, update: if hasPermission('score.manage')
+    match /scores/{scoreId}/{filePath=**} {
+      allow read: if false;
+      allow create: if hasPermission('score.manage')
         && request.resource.contentType == 'application/pdf'
         && request.resource.size < 30 * 1024 * 1024;
-      allow delete: if isAdmin() || hasPermission('score.manage');
+      allow update, delete: if false;
     }
   }
 }

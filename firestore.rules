@@ -89,7 +89,7 @@ service cloud.firestore {
 
     match /settings/scores {
       allow read: if isAppUser();
-      allow write: if hasPermission('score.manage');
+      allow write: if false;
     }
 
     match /settings/admin {
@@ -190,22 +190,75 @@ service cloud.firestore {
       allow read: if isAppUser();
       allow create: if isAdmin()
         || (hasPermission('archive.upload')
-          && request.resource.data.uploadedById == request.auth.uid);
+          && request.resource.data.uploadedById == request.auth.uid
+          && request.resource.data.keys().hasOnly([
+            'title', 'description', 'date', 'part', 'type', 'url', 'path',
+            'fileSize', 'uploadedAt', 'uploadedById', 'albumId', 'albumTitle',
+            'reactions', 'reactionUpdatedAt', 'updatedAt', 'updatedBy'
+          ]));
       allow update: if isAdmin()
         || (hasPermission('archive.manageMine')
-          && resource.data.uploadedById == request.auth.uid)
+          && resource.data.uploadedById == request.auth.uid
+          && request.resource.data.uploadedById == resource.data.uploadedById
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'description', 'date', 'part', 'albumId', 'albumTitle',
+            'updatedAt', 'updatedBy'
+          ]))
         || (hasPermission('archive.organize')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'albumId', 'albumTitle', 'updatedAt', 'updatedBy'
-          ]))
-        || (isAccount()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'reactionUsers', 'reactions', 'reactionUpdatedAt'
-          ])
-          && request.resource.data.get('reactionUsers', {}).diff(resource.data.get('reactionUsers', {})).affectedKeys().hasOnly([request.auth.uid]));
+          ]));
       allow delete: if isAdmin()
         || (hasPermission('archive.manageMine')
           && resource.data.uploadedById == request.auth.uid);
+    }
+
+    match /mediaArchivePrivate/{archiveId} {
+      allow get, list: if isAdmin()
+        || (isAccount() && resource.data.ownerId == request.auth.uid);
+      allow create: if isAdmin()
+        || (hasPermission('archive.upload')
+          && request.resource.data.ownerId == request.auth.uid);
+      allow update: if isAdmin()
+        || (hasPermission('archive.manageMine')
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.ownerId == resource.data.ownerId);
+      allow delete: if isAdmin()
+        || (hasPermission('archive.manageMine')
+          && resource.data.ownerId == request.auth.uid);
+    }
+
+    match /archiveReactions/{reactionId} {
+      function validOwnReaction(data) {
+        return isAccount()
+          && data.keys().hasOnly([
+            'archiveId', 'uid', 'type', 'name', 'part', 'label', 'updatedAt'
+          ])
+          && data.uid == request.auth.uid
+          && reactionId == data.archiveId + '_' + request.auth.uid
+          && data.archiveId is string
+          && data.archiveId.size() <= 180
+          && data.type in [
+            'heart', 'grace', 'cheer', 'thanks', 'celebrate', 'surprise',
+            'awkward', 'tricky'
+          ]
+          && data.name is string
+          && data.name.size() <= 60
+          && data.part is string
+          && data.part.size() <= 30
+          && data.label is string
+          && data.label.size() <= 120
+          && data.updatedAt is string
+          && data.updatedAt.size() <= 40;
+      }
+
+      allow get, list: if isAdmin()
+        || (isAccount() && resource.data.uid == request.auth.uid);
+      allow create: if validOwnReaction(request.resource.data);
+      allow update: if resource.data.uid == request.auth.uid
+        && request.resource.data.archiveId == resource.data.archiveId
+        && validOwnReaction(request.resource.data);
+      allow delete: if isAccount() && resource.data.uid == request.auth.uid;
     }
 
     match /archiveAlbums/{albumId} {
@@ -219,7 +272,46 @@ service cloud.firestore {
 
     match /scores/{scoreId} {
       allow read: if isAppUser();
-      allow write: if hasPermission('score.manage');
+      allow write: if false;
+    }
+
+    match /issueReports/{reportId} {
+      function validIssueReport(data) {
+        return isAccount()
+          && data.keys().hasOnly([
+            'uid', 'accountName', 'part', 'message', 'tab', 'appVersion',
+            'buildSha', 'userAgent', 'viewport', 'createdAt', 'status'
+          ])
+          && data.uid == request.auth.uid
+          && data.accountName is string
+          && data.accountName.size() <= 60
+          && data.part is string
+          && data.part.size() <= 40
+          && data.message is string
+          && data.message.size() >= 5
+          && data.message.size() <= 1200
+          && data.tab is string
+          && data.tab.size() <= 40
+          && data.appVersion is string
+          && data.appVersion.size() <= 40
+          && data.buildSha is string
+          && data.buildSha.size() <= 80
+          && data.userAgent is string
+          && data.userAgent.size() <= 500
+          && data.viewport is string
+          && data.viewport.size() <= 40
+          && data.createdAt is string
+          && data.createdAt.size() <= 40
+          && data.status == 'open';
+      }
+
+      allow create: if validIssueReport(request.resource.data);
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'resolvedAt', 'resolvedBy', 'updatedAt'
+        ]);
+      allow delete: if isAdmin();
     }
 
     match /authSecrets/{secretId} {
