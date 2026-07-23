@@ -1712,20 +1712,26 @@ body{font-weight:500}
 .feature-update-lead{font-size:13px;color:var(--ts);line-height:1.55;margin:7px 0 12px}
 .feature-update-list{border-top:1px solid var(--bd)}
 .feature-update-item{--feature-accent:var(--p);--feature-soft:var(--pl);--feature-on:#fff;border-bottom:1px solid var(--bd)}
+.feature-update-item.feature-search{--feature-accent:#5D7042;--feature-soft:#EDF3E4;margin:8px 0;border:1px solid #C7D2B5;border-radius:10px;background:#F8FAF4;padding:0 10px;box-shadow:0 4px 12px rgba(67,79,47,.06)}
 .feature-update-item.feature-calendar{--feature-accent:#4E7480;--feature-soft:#E8F1F3}
 .feature-update-item.feature-score{--feature-accent:#A65359;--feature-soft:#F7E9EA}
 .feature-update-item.feature-alert{--feature-accent:#A36F28;--feature-soft:#FAEFD9}
+.dark .feature-update-item.feature-search{--feature-accent:#B7C99A;--feature-soft:#2D382A;--feature-on:#1C2419;border-color:#52604B;background:#22271F}
 .dark .feature-update-item.feature-calendar{--feature-accent:#9BBEC6;--feature-soft:#26383D;--feature-on:#172024}
 .dark .feature-update-item.feature-score{--feature-accent:#DFA4A8;--feature-soft:#3A292B;--feature-on:#291719}
 .dark .feature-update-item.feature-alert{--feature-accent:#E0BB74;--feature-soft:#3B3120;--feature-on:#281E0F}
 .feature-update-item summary{list-style:none;display:grid;grid-template-columns:38px minmax(0,1fr) 24px;align-items:center;gap:10px;padding:12px 0;cursor:pointer}
 .feature-update-item summary::-webkit-details-marker{display:none}
 .feature-update-summary-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--feature-soft);color:var(--feature-accent);font-size:19px;line-height:1}
+.feature-update-search-icon{position:relative;width:16px;height:16px;border:2px solid currentColor;border-radius:50%;box-sizing:border-box}
+.feature-update-search-icon::after{content:'';position:absolute;width:7px;height:2px;right:-5px;bottom:-2px;border-radius:2px;background:currentColor;transform:rotate(45deg);transform-origin:left center}
 .feature-update-summary-icon .score-new-badge{font-size:8px;padding:3px 4px}
 .feature-update-summary-copy{min-width:0}
 .feature-update-summary-copy b{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:900;color:var(--tx);line-height:1.35;word-break:keep-all}
 .feature-update-summary-copy span{display:block;margin-top:2px;font-size:11px;font-weight:650;color:var(--ts);line-height:1.4;word-break:keep-all}
 .feature-recommend-badge{flex:0 0 auto;margin-left:auto;border:1px solid #D8B875;border-radius:999px;background:#F8E9C9;color:#855711;padding:3px 6px;font-size:9px;font-weight:900;font-style:normal;line-height:1;white-space:nowrap}
+.feature-new-badge{flex:0 0 auto;margin-left:auto;border-radius:4px;background:#5D7042;color:#fff;padding:3px 6px;font-size:9px;font-weight:900;font-style:normal;line-height:1;white-space:nowrap}
+.dark .feature-new-badge{background:#B7C99A;color:#1C2419}
 .dark .feature-recommend-badge{border-color:#8B6D35;background:#46371F;color:#F1CE88}
 .feature-update-chevron{display:flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--ts);font-size:20px;font-weight:500;line-height:1}
 .feature-update-chevron::before{content:'+'}
@@ -1818,25 +1824,40 @@ body{font-weight:500}
 .home-part-session.none{color:#8D4B45}
 .home-part-session.done .pct{color:#4E5A35}
 .home-part-session.none .pct{color:#B9655F}
-.home-global-search{width:100%;min-height:48px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;margin:0 0 12px;padding:9px 12px;border:1px solid #D8D0BE;border-radius:10px;background:#FFFDF8;color:#191A15;font-family:inherit;text-align:left;cursor:pointer;box-shadow:0 3px 12px rgba(49,54,35,.04)}
+.home-global-search{width:100%;min-height:70px;display:grid;grid-template-columns:42px minmax(0,1fr) 30px;align-items:center;gap:12px;margin:0 0 14px;padding:11px 12px;border:1.5px solid #B9C6A4;border-radius:12px;background:#F2F6EA;color:#191A15;font-family:inherit;text-align:left;cursor:pointer;box-shadow:0 6px 18px rgba(67,79,47,.11);transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
+.home-global-search:hover{border-color:#8FA071;box-shadow:0 8px 22px rgba(67,79,47,.15)}
+.home-global-search:focus-visible{outline:0;border-color:#6F7D4E;box-shadow:0 0 0 4px rgba(111,125,78,.18),0 8px 22px rgba(67,79,47,.13)}
 .home-global-search:active{transform:scale(.995)}
-.home-global-search-icon,.global-search-input-icon{position:relative;width:17px;height:17px;border:2px solid #6F7D4E;border-radius:50%;box-sizing:border-box;justify-self:center}
+.home-global-search-icon-shell{width:42px;height:42px;display:grid;place-items:center;border-radius:10px;background:#6F7D4E;color:#fff;box-shadow:0 4px 10px rgba(75,89,50,.18)}
+.home-global-search-icon,.global-search-input-icon{position:relative;width:17px;height:17px;border:2px solid currentColor;border-radius:50%;box-sizing:border-box;justify-self:center;color:#6F7D4E}
+.home-global-search-icon{color:#fff}
 .home-global-search-icon::after,.global-search-input-icon::after{content:'';position:absolute;width:7px;height:2px;right:-5px;bottom:-2px;border-radius:2px;background:#6F7D4E;transform:rotate(45deg);transform-origin:left center}
-.home-global-search-copy{min-width:0;display:flex;align-items:baseline;gap:8px}
-.home-global-search-copy b{font-size:13px;font-weight:850;white-space:nowrap}
-.home-global-search-copy span{min-width:0;color:#777163;font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-global-search-arrow{color:#9A8D7B;font-size:18px;font-weight:500}
-.dark .home-global-search{background:#22271F;border-color:#465044;color:#F4F0E8}
-.dark .home-global-search-copy span{color:#AAB3A4}
+.home-global-search-icon::after{background:#fff}
+.home-global-search-copy{min-width:0;display:block}
+.home-global-search-eyebrow{display:block;margin-bottom:2px;color:#5D7042;font-size:9px;font-weight:950;line-height:1.2}
+.home-global-search-copy b{display:block;font-size:16px;font-weight:900;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-global-search-desc{display:block;min-width:0;margin-top:2px;color:#68705D;font-size:11px;font-weight:680;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-global-search-arrow{width:28px;height:28px;display:grid;place-items:center;border:1px solid #C8D2B7;border-radius:8px;background:#FBFCF7;color:#65734E;font-size:18px;font-weight:650}
+.dark .home-global-search{background:#242B20;border-color:#53644A;color:#F4F0E8;box-shadow:0 6px 18px rgba(0,0,0,.24)}
+.dark .home-global-search:hover{border-color:#839574}
+.dark .home-global-search-icon-shell{background:#A8B991;color:#1D251A}
+.dark .home-global-search-icon{color:#1D251A}
+.dark .home-global-search-icon::after{background:#1D251A}
+.dark .home-global-search-eyebrow{color:#B7C99A}
+.dark .home-global-search-desc{color:#AAB3A4}
+.dark .home-global-search-arrow{background:#1B2118;border-color:#53644A;color:#C9D5BC}
 .global-search-modal{align-items:center;padding:12px}
 .global-search-sheet{width:min(540px,100%);height:min(760px,88dvh);max-height:88dvh;padding:0!important;overflow:hidden!important;border-radius:18px!important;display:flex;flex-direction:column;background:var(--sf)}
-.global-search-head{padding:14px 14px 10px;border-bottom:1px solid var(--bd);background:var(--sf)}
-.global-search-input-wrap{display:grid;grid-template-columns:24px minmax(0,1fr) 36px;align-items:center;gap:8px;min-height:48px;border:1.5px solid #BFC9AF;border-radius:12px;background:var(--bg);padding:0 5px 0 13px}
+.global-search-head{padding:14px 14px 12px;border-bottom:1px solid var(--bd);background:var(--sf)}
+.global-search-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:11px}
+.global-search-title-copy b{display:block;color:var(--tx);font-size:18px;font-weight:920;line-height:1.25}
+.global-search-title-copy span{display:block;margin-top:3px;color:var(--ts);font-size:11px;font-weight:650;line-height:1.4}
+.global-search-input-wrap{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;gap:8px;min-height:50px;border:1.5px solid #9EAE84;border-radius:12px;background:var(--bg);padding:0 13px;box-shadow:0 0 0 3px rgba(111,125,78,.07)}
 .global-search-input-icon{width:16px;height:16px;justify-self:start}
 .global-search-input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--tx);font-family:inherit;font-size:16px;font-weight:720;padding:12px 0}
 .global-search-input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
 .global-search-input::placeholder{color:#8D8A7D;opacity:1}
-.global-search-close{width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--ts);font-family:inherit;font-size:22px;line-height:1;cursor:pointer}
+.global-search-close{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--ts);font-family:inherit;font-size:20px;line-height:1;cursor:pointer}
 .global-search-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 9px;border-bottom:1px solid var(--bd);background:var(--sf);scrollbar-width:none}
 .global-search-tabs::-webkit-scrollbar{display:none}
 .global-search-tab{flex:0 0 auto;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--ts);padding:6px 7px 7px;font-family:inherit;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
@@ -1950,7 +1971,10 @@ body{font-weight:500}
   .rehearsal-controls{height:64px;flex-basis:64px}
 }
 @media(max-width:360px){
-  .home-global-search-copy span{display:none}
+  .home-global-search{grid-template-columns:38px minmax(0,1fr) 28px;gap:9px;padding-left:10px}
+  .home-global-search-icon-shell{width:38px;height:38px}
+  .home-global-search-copy b{font-size:15px}
+  .home-global-search-desc{display:none}
   .global-search-tabs{padding-left:10px;padding-right:10px}
   .global-search-results{padding-left:10px;padding-right:10px}
   .rehearsal-current{min-height:300px;padding:22px 16px}
@@ -2088,8 +2112,8 @@ body{font-weight:500}
       <span class="home-feature-update-stamp" aria-hidden="true">UPDATE</span>
     </button>
     <button class="home-global-search hidden" id="homeGlobalSearch" type="button" onclick="openGlobalSearch()">
-      <span class="home-global-search-icon" aria-hidden="true"></span>
-      <span class="home-global-search-copy"><b>통합 검색</b><span>곡 · 악보 · 일정 · 사진</span></span>
+      <span class="home-global-search-icon-shell" aria-hidden="true"><span class="home-global-search-icon"></span></span>
+      <span class="home-global-search-copy"><span class="home-global-search-eyebrow">통합 검색</span><b>무엇을 찾으세요?</b><span class="home-global-search-desc">곡 · 악보 · 일정 · 사진을 한 번에</span></span>
       <span class="home-global-search-arrow" aria-hidden="true">›</span>
     </button>
     <div id="homeContent"><div class="loading"><div class="spinner"></div>홈 정보를 불러오는 중...</div></div>
@@ -2815,10 +2839,13 @@ body{font-weight:500}
 <div class="modal-overlay global-search-modal" id="modalGlobalSearch" role="dialog" aria-modal="true" aria-label="통합 검색">
   <div class="modal-content global-search-sheet">
     <div class="global-search-head">
+      <div class="global-search-title-row">
+        <span class="global-search-title-copy"><b>통합 검색</b><span>필요한 곡과 일정을 한곳에서 빠르게 찾으세요.</span></span>
+        <button class="global-search-close" type="button" title="닫기" aria-label="검색 닫기" onclick="closeModal('modalGlobalSearch')">×</button>
+      </div>
       <div class="global-search-input-wrap">
         <span class="global-search-input-icon" aria-hidden="true"></span>
-        <input class="global-search-input" id="globalSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="곡, 악보, 일정, 사진 검색" oninput="queueGlobalSearchRender()" onkeydown="handleGlobalSearchKey(event)">
-        <button class="global-search-close" type="button" title="닫기" aria-label="검색 닫기" onclick="closeModal('modalGlobalSearch')">×</button>
+        <input class="global-search-input" id="globalSearchInput" type="search" inputmode="search" autocomplete="off" placeholder="곡명, 악보, 일정 또는 사진 검색" oninput="queueGlobalSearchRender()" onkeydown="handleGlobalSearchKey(event)">
       </div>
     </div>
     <div class="global-search-tabs" id="globalSearchTabs">
@@ -2979,9 +3006,17 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">업데이트 안내</span><button class="modal-close" onclick="closeModal('modalFeatureUpdate')">✕</button></div>
     <div class="feature-update-kicker"><span data-app-release-version></span> UPDATE</div>
-    <div class="feature-update-title">더 편리해진 기능 3가지</div>
-    <div class="feature-update-lead">항목을 누르면 간단한 이용 방법을 확인할 수 있습니다.</div>
+    <div class="feature-update-title">더 편리해진 기능 4가지</div>
+    <div class="feature-update-lead">통합 검색부터 필요한 기능만 짧게 확인해보세요.</div>
     <div class="feature-update-list">
+      <details class="feature-update-item feature-search" data-feature-primary ontoggle="handleFeatureUpdateToggle(this)">
+        <summary><span class="feature-update-summary-icon"><span class="feature-update-search-icon"></span></span><span class="feature-update-summary-copy"><b>한 번에 찾는 통합 검색 <em class="feature-new-badge">새 기능</em></b><span>곡·악보·일정·사진을 한곳에서 빠르게 찾습니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
+        <div class="feature-update-panel"><div class="feature-update-steps">
+          <div class="feature-update-step"><span class="feature-update-step-num">1</span><div><b>홈 검색창 누르기</b><span>로그인 후 홈 상단의 통합 검색창을 누르세요.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">2</span><div><b>찾을 내용 입력</b><span>곡명, 악보 파일명이나 일정 제목 일부만 입력해도 됩니다.</span></div></div>
+          <div class="feature-update-step"><span class="feature-update-step-num">3</span><div><b>종류별로 빠르게 좁히기</b><span>곡·악보·일정·사진 탭으로 원하는 결과만 확인하세요.</span></div></div>
+        </div><button type="button" class="feature-update-panel-action" onclick="openSearchFromFeatureGuide()">통합 검색 사용하기</button></div>
+      </details>
       <details class="feature-update-item feature-calendar" ontoggle="handleFeatureUpdateToggle(this)">
         <summary><span class="feature-update-summary-icon">📅</span><span class="feature-update-summary-copy"><b>휴대폰 캘린더 연동</b><span>앱 일정을 휴대폰 캘린더에 간편하게 저장합니다.</span></span><span class="feature-update-chevron" aria-hidden="true"></span></summary>
         <div class="feature-update-panel"><div class="feature-update-steps">
@@ -15791,7 +15826,13 @@ function handleFeatureUpdateToggle(item){
 }
 function openFeatureUpdateGuide(){
   document.querySelectorAll('#modalFeatureUpdate .feature-update-item').forEach(function(item){item.open=false;});
+  var primary=document.querySelector('#modalFeatureUpdate [data-feature-primary]');
+  if(primary)primary.open=true;
   openModal('modalFeatureUpdate');
+}
+function openSearchFromFeatureGuide(){
+  closeModal('modalFeatureUpdate');
+  openGlobalSearch();
 }
 function openCalendarFromFeatureGuide(){
   closeModal('modalFeatureUpdate');
