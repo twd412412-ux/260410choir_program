@@ -8979,10 +8979,10 @@ function renderSingerScoreRow(score){
   var id=escAttr(score.id);
   return '<div class="score-singer-row">'
     +'<button type="button" class="score-singer-main" onclick="openMatchedSongForScore(\''+id+'\')" aria-label="'+escAttr((score.title||'악보')+' 상세 보기')+'">'
-      +'<div class="score-singer-title-line"><div class="score-singer-title">'+escHtml(score.title||'곡명 없음')+'</div>'+renderScoreNewBadge(score)+'</div>'
+      +'<div class="score-singer-title-line"><div class="score-singer-title">'+escHtml(score.title||'곡명 없음')+'</div></div>'
       +'<div class="score-singer-detail"><span class="score-singer-file">'+escHtml(fileParts.join(' · ')||'최신 악보')+'</span><span class="score-singer-version">'+escHtml(version)+'</span></div>'
     +'</button>'
-    +'<button type="button" class="score-action-btn open score-singer-open" onclick="openScoreFileById(\''+id+'\')" aria-label="'+escAttr((score.title||'악보')+' 보기')+'">보기</button>'
+    +'<button type="button" class="score-action-btn open score-singer-open" onclick="openScoreFileById(\''+id+'\')" aria-label="'+escAttr((score.title||'악보')+' 보기')+'">보기'+renderScoreNewBadge(score)+'</button>'
     +'</div>';
 }
 function renderSingerScoreList(rows){
