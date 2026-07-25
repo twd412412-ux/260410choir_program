@@ -748,13 +748,19 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-picker-meta{font-size:11px;color:var(--ts);line-height:1.45;margin-top:3px}
 .score-folder-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:none}
 .score-folder-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
-.score-folder-title{font-size:14px;font-weight:900;line-height:1.35;word-break:keep-all}
+.score-folder-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:14px;font-weight:900;line-height:1.35;word-break:keep-all}
+.score-folder-name{min-width:0}
+.score-folder-badges{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.score-folder-badges .score-new-badge{margin-left:0}
+.score-folder-version{display:inline-flex;align-items:center;border-radius:7px;padding:2px 6px;background:#F7F1E4;color:#7A5A24;font-size:9.5px;font-weight:900;line-height:1.2;white-space:nowrap}
+.score-folder-version.mixed{background:#F3E9D5;color:#805F28}
 .score-folder-meta{font-size:11px;color:var(--ts);margin-top:4px;line-height:1.4}
 .score-folder-count{border-radius:999px;background:var(--pl);color:var(--pd);padding:4px 8px;font-size:11px;font-weight:900;white-space:nowrap}
 .score-part-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.score-part-btn{border:1px solid #CAD5B5;background:#F4F8EC;color:#3F4B2F;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.score-part-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #CAD5B5;background:#F4F8EC;color:#3F4B2F;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .score-part-btn:hover{background:#E7EFD8}
 .score-part-btn.mine{border-color:#6F826E;background:#E8F0E3;color:#2F4732;box-shadow:inset 3px 0 0 #6F826E}
+.score-part-version{color:#85652D;font-size:9px;font-weight:950;white-space:nowrap}
 .score-my-part-dot,.score-my-part-badge{display:inline-flex;align-items:center;margin-left:6px;color:#557056;font-size:9px;font-weight:950;white-space:nowrap}
 .score-my-part-badge{padding:2px 5px;border-radius:6px;background:#E5EEDF;vertical-align:middle}
 .score-part-admin-list{display:grid;gap:5px;margin-top:10px}
@@ -795,6 +801,20 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .dark .score-replace-warning{background:#352C1B;color:#E4C06E}
 .score-replace-preview{margin-top:10px}
 .score-replace-actions{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:8px;margin-top:14px}
+.score-batch-confirm-modal .modal-content{max-width:460px}
+.score-batch-summary{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:2px 0 10px}
+.score-batch-summary span{display:inline-flex;align-items:center;border-radius:7px;padding:4px 8px;background:var(--pl);color:var(--pd);font-size:10.5px;font-weight:900}
+.score-batch-summary span.replace{background:#F7F1E4;color:#765A26}
+.score-batch-list{max-height:min(42dvh,330px);overflow-y:auto;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+.score-batch-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}
+.score-batch-row:last-child{border-bottom:0}
+.score-batch-part{min-width:0;font-size:12px;font-weight:900;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-batch-file{margin-top:2px;color:var(--ts);font-size:9.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-batch-version{font-size:10.5px;font-weight:900;color:var(--pd);white-space:nowrap}
+.score-batch-version.replace{color:#765A26}
+.dark .score-folder-version,.dark .score-part-version,.dark .score-upload-review-version,.dark .score-batch-version.replace{color:#D8C08C}
+.dark .score-folder-version{background:#352F22}
+.dark .score-folder-version.mixed,.dark .score-batch-summary span.replace{background:#3B3020;color:#E0C27F}
 @media(max-width:390px){
   .score-file-selected{grid-template-columns:1fr}
   .score-file-selected-actions{justify-content:flex-start}
@@ -882,6 +902,7 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-upload-review-file{min-width:0}
 .score-upload-review-name{font-size:11.5px;font-weight:850;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .score-upload-review-size{font-size:10px;color:var(--ts);margin-top:2px}
+.score-upload-review-version{font-size:10px;color:#765A26;font-weight:850;margin-top:2px}
 .score-upload-review-input{width:100%;min-width:0;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:7px 8px;font-family:inherit;font-size:11px;font-weight:800;box-sizing:border-box}
 .score-upload-review-row.duplicate .score-upload-review-input{border-color:#D9B56F;background:#FFF9EC}
 .score-upload-review-row.unresolved .score-upload-review-input{border-color:#DB999D;background:#FFF5F5}
@@ -2566,7 +2587,7 @@ body{font-weight:500}
             <button type="button" class="score-kind-tab" data-score-kind="orchestra" onclick="setScoreFormKind('orchestra')">관현악 파트보</button>
           </div>
         </div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜" oninput="scoreCandidateSelectedIds=[];renderScoreSongCandidates()" onfocus="renderScoreSongCandidates()"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" placeholder="예: 하나님의 은혜" oninput="scoreCandidateSelectedIds=[];resetScoreUploadReplacementPlan();renderScoreSongCandidates();renderScoreUploadReview()" onfocus="renderScoreSongCandidates()"></div>
         <div class="score-linked-note empty" id="scoreLinkedSongNote">아직 악보를 연결할 곡이 선택되지 않았습니다.</div>
         <details class="score-link-picker" id="scoreSongCandidateBox">
           <summary><div class="score-link-picker-head"><div class="score-link-picker-title">악보 연결 대상 찾기</div><div class="score-link-count" id="scoreSongCandidateCount">선택 0개</div></div></summary>
@@ -3251,6 +3272,21 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 관현악 파트보 일괄 저장 확인 -->
+<div class="modal-overlay modal-center score-batch-confirm-modal" id="modalScoreBatchConfirm">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">관현악 파트보 저장 확인</span><button class="modal-close" onclick="cancelScoreBatchConfirm()">✕</button></div>
+    <div class="score-replace-intro">파트와 버전을 마지막으로 확인해주세요.</div>
+    <div class="score-batch-summary" id="scoreBatchSummary"></div>
+    <div class="score-batch-list" id="scoreBatchList"></div>
+    <div class="score-replace-warning hidden" id="scoreBatchReplaceWarning">교체 항목의 기존 파일은 저장 완료 후 삭제됩니다.</div>
+    <div class="score-replace-actions">
+      <button type="button" class="btn" style="background:var(--bg);color:var(--ts)" onclick="cancelScoreBatchConfirm()">다시 확인</button>
+      <button type="button" class="btn btn-p" id="scoreBatchConfirmBtn" onclick="confirmScoreBatchUpload()">저장하기</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 공개 자리배치 -->
 <div class="modal-overlay modal-center public-seating-modal" id="modalPublicSeating">
   <div class="modal-content">
@@ -3593,12 +3629,12 @@ var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
 var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false;
 var songRecommendCache=[];
-var scoreReplacementConfirmed=false, scoreLocalPreviewUrl='';
+var scoreReplacementConfirmed=false, scoreBatchReplacementConfirmed=false, scorePendingReplacementInfo=null, scoreLocalPreviewUrl='';
 var WEB_PUSH_PUBLIC_KEY='BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY';
 var PUSH_STATE_PREFIX='choir_push_state_v1_';
 var PUSH_OWNER_KEY='choir_push_owner_v1';
 var LAST_LOGIN_HINT_KEY='choir_last_login_v1';
-var pushUiBusy=false;
+var pushUiBusy=false, pushScoreAccessSyncPromise=null, pushScoreAccessSyncKey='';
 var pushStateRecovery={uid:'',done:false,promise:null};
 var pushInitialTarget=(function(){
   try{
@@ -3982,7 +4018,13 @@ function restorePushStateFromServer(user){
         var data=doc.data()||{};
         var storedEndpoint=data.subscription&&data.subscription.endpoint||'';
         if(data.uid!==user.id||storedEndpoint!==subscription.endpoint)return false;
-        savePushState(user,{id:id,uid:user.id,topics:pushTopicsFromState(data),endpoint:subscription.endpoint});
+        savePushState(user,{
+          id:id,
+          uid:user.id,
+          topics:pushTopicsFromState(data),
+          scoreKinds:normalizePushScoreKinds(data.scoreKinds),
+          endpoint:subscription.endpoint
+        });
         return true;
       });
     });
@@ -3999,15 +4041,58 @@ function pushTopicsFromState(state){
   var topics=state&&state.topics||{};
   return {scores:topics.scores!==false,schedules:topics.schedules!==false};
 }
+function normalizePushScoreKinds(values){
+  var allowed=['singer','orchestra'];
+  return (Array.isArray(values)?values:[]).map(normalizeScoreKind).filter(function(value,index,rows){
+    return allowed.indexOf(value)!==-1&&rows.indexOf(value)===index;
+  }).sort();
+}
+function pushScoreKindsForUser(user){
+  return normalizePushScoreKinds(getScoreAccessModes(user));
+}
+function samePushScoreKinds(left,right){
+  left=normalizePushScoreKinds(left);
+  right=normalizePushScoreKinds(right);
+  return left.length===right.length&&left.every(function(value,index){return value===right[index];});
+}
 function pushDocumentData(user,subscription,topics){
   return {
     uid:user.id,
     accountName:String(user.name||'').slice(0,60),
     topics:{scores:!!topics.scores,schedules:!!topics.schedules},
+    scoreKinds:pushScoreKindsForUser(user),
     subscription:pushSubscriptionPayload(subscription),
     userAgent:String(navigator.userAgent||'').slice(0,500),
     updatedAt:new Date().toISOString()
   };
+}
+function syncPushScoreAccess(user,state){
+  if(!user||!state||!state.id||Notification.permission!=='granted')return Promise.resolve(false);
+  var scoreKinds=pushScoreKindsForUser(user);
+  if(samePushScoreKinds(state.scoreKinds,scoreKinds))return Promise.resolve(false);
+  var syncKey=String(user.id)+'|'+String(state.id)+'|'+scoreKinds.join(',');
+  if(pushScoreAccessSyncPromise&&pushScoreAccessSyncKey===syncKey)return pushScoreAccessSyncPromise;
+  pushScoreAccessSyncKey=syncKey;
+  pushScoreAccessSyncPromise=currentPushSubscription().then(function(subscription){
+    if(!subscription)throw new Error('push_subscription_missing');
+    return db.collection('pushSubscriptions').doc(state.id).set(
+      pushDocumentData(user,subscription,pushTopicsFromState(state)),
+      {merge:true}
+    );
+  }).then(function(){
+    state.scoreKinds=scoreKinds;
+    savePushState(user,state);
+    return true;
+  }).catch(function(error){
+    console.warn('push_score_access_sync_failed',error);
+    return false;
+  }).finally(function(){
+    if(pushScoreAccessSyncKey===syncKey){
+      pushScoreAccessSyncPromise=null;
+      pushScoreAccessSyncKey='';
+    }
+  });
+  return pushScoreAccessSyncPromise;
 }
 function setPushUiBusy(busy){
   pushUiBusy=!!busy;
@@ -4057,6 +4142,7 @@ function renderPushSettings(){
   }
   if(localState&&Notification.permission==='granted'){
     var topics=pushTopicsFromState(localState);
+    syncPushScoreAccess(currentUser,localState);
     document.getElementById('pushTopicScores').checked=topics.scores;
     document.getElementById('pushTopicSchedules').checked=topics.schedules;
     stateEl.textContent=topics.scores||topics.schedules?'켜짐':'알림 항목 선택';
@@ -4099,7 +4185,13 @@ function enablePushNotifications(){
     }).then(function(id){
       var topics=state?pushTopicsFromState(state):{scores:true,schedules:true};
       return db.collection('pushSubscriptions').doc(id).set(pushDocumentData(user,activeSubscription,topics)).then(function(){
-        savePushState(user,{id:id,uid:user.id,topics:topics,endpoint:activeSubscription.endpoint});
+        savePushState(user,{
+          id:id,
+          uid:user.id,
+          topics:topics,
+          scoreKinds:pushScoreKindsForUser(user),
+          endpoint:activeSubscription.endpoint
+        });
         return activeRegistration.showNotification('찬양대 알림이 켜졌습니다',{body:'악보와 일정 변경을 알려드립니다.',icon:'./assets/hymn-dove-book.png',tag:'choir-push-enabled',data:{url:'./'}}).catch(function(){});
       });
     });
@@ -4125,7 +4217,11 @@ function updatePushTopic(topic,enabled){
     if(!subscription)throw new Error('push_subscription_missing');
     return db.collection('pushSubscriptions').doc(state.id).set(pushDocumentData(user,subscription,topics),{merge:true});
   }).then(function(){
-    state.topics=topics;savePushState(user,state);renderPushSettings();showToast((topic==='scores'?'악보':'일정')+' 알림을 '+(enabled?'켰습니다':'껐습니다'));
+    state.topics=topics;
+    state.scoreKinds=pushScoreKindsForUser(user);
+    savePushState(user,state);
+    renderPushSettings();
+    showToast((topic==='scores'?'악보':'일정')+' 알림을 '+(enabled?'켰습니다':'껐습니다'));
   }).catch(function(error){
     console.error(error);renderPushSettings();showToast('알림 설정을 저장하지 못했습니다');
   }).finally(function(){setPushUiBusy(false);renderPushSettings();});
@@ -4971,6 +5067,7 @@ function renderScoreLinkedSongNote(){
 }
 function setScoreLinkedSongs(songIds,songName){
   var ids=normalizeScoreLinkedSongIds(songIds);
+  resetScoreUploadReplacementPlan();
   scoreCandidateSelectedIds=ids.slice();
   var idEl=document.getElementById('scoreLinkedSongId');
   var idsEl=document.getElementById('scoreLinkedSongIds');
@@ -4980,6 +5077,7 @@ function setScoreLinkedSongs(songIds,songName){
   if(nameEl)nameEl.value=songName||'';
   renderScoreLinkedSongNote();
   renderScoreSongCandidates();
+  renderScoreUploadReview();
 }
 function setScoreLinkedSong(songId,songName){
   setScoreLinkedSongs(songId?[songId]:[],songName||'');
@@ -5109,6 +5207,8 @@ function clearScoreSelectedFiles(notify){
   scoreUploadReviewConfirmed=false;
   scoreUploadPendingResults=Object.create(null);
   scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   renderScoreUploadReview();
   renderScoreFileControl();
   if(notify)showToast(scoreFormPreviousScore()?'현재 악보 파일을 유지합니다':'파일 선택을 취소했습니다');
@@ -5133,11 +5233,14 @@ function previewScoreReplacementSource(){
 }
 function handleScoreUrlChanged(){
   scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   renderScoreFileControl();
 }
 function openScoreReplacementConfirm(info){
   info=info||scoreFormReplacementInfo();
   if(!info.previous||!info.replacing)return false;
+  scorePendingReplacementInfo=info;
   var currentVersion=document.getElementById('scoreReplaceCurrentVersion');
   var currentName=document.getElementById('scoreReplaceCurrentName');
   var nextVersion=document.getElementById('scoreReplaceNextVersion');
@@ -5155,16 +5258,53 @@ function openScoreReplacementConfirm(info){
 }
 function cancelScoreReplacementConfirm(){
   scoreReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   closeModal('modalScoreReplaceConfirm');
 }
 function confirmScoreReplacement(){
-  var info=scoreFormReplacementInfo();
+  var info=scorePendingReplacementInfo||scoreFormReplacementInfo();
   if(!info.replacing){
+    scorePendingReplacementInfo=null;
     closeModal('modalScoreReplaceConfirm');
     return showToast('교체할 파일을 다시 선택해주세요');
   }
   scoreReplacementConfirmed=true;
+  scorePendingReplacementInfo=null;
   closeModal('modalScoreReplaceConfirm');
+  return saveScoreUpload();
+}
+function openScoreBatchConfirm(plan){
+  plan=plan||scoreUploadReviewReplacementPlan();
+  if(!plan.length)return false;
+  var replacementCount=plan.filter(function(item){return !!item.previous;}).length;
+  var newCount=plan.length-replacementCount;
+  var summary=document.getElementById('scoreBatchSummary');
+  var list=document.getElementById('scoreBatchList');
+  var warning=document.getElementById('scoreBatchReplaceWarning');
+  var confirmBtn=document.getElementById('scoreBatchConfirmBtn');
+  if(summary)summary.innerHTML=(replacementCount?'<span class="replace">교체 '+replacementCount+'개</span>':'')
+    +(newCount?'<span>신규 '+newCount+'개</span>':'')
+    +'<span>전체 '+plan.length+'개</span>';
+  if(list)list.innerHTML=plan.map(function(item){
+    return '<div class="score-batch-row"><div><div class="score-batch-part">'+escHtml(item.partLabel)+'</div><div class="score-batch-file">'+escHtml(item.fileName)+'</div></div>'
+      +'<div class="score-batch-version '+(item.previous?'replace':'')+'">'+(item.previous?('v'+item.currentVersion+' → v'+item.nextVersion):'신규 v1')+'</div></div>';
+  }).join('');
+  if(warning)warning.classList.toggle('hidden',!replacementCount);
+  if(confirmBtn)confirmBtn.textContent=plan.length+'개 저장';
+  openModal('modalScoreBatchConfirm');
+  return true;
+}
+function cancelScoreBatchConfirm(){
+  scoreBatchReplacementConfirmed=false;
+  closeModal('modalScoreBatchConfirm');
+}
+function confirmScoreBatchUpload(){
+  if(!isScoreUploadReviewActive()){
+    closeModal('modalScoreBatchConfirm');
+    return showToast('저장할 파트보를 다시 확인해주세요');
+  }
+  scoreBatchReplacementConfirmed=true;
+  closeModal('modalScoreBatchConfirm');
   return saveScoreUpload();
 }
 
@@ -8136,6 +8276,20 @@ var scoreUploadReviewRows=[];
 var scoreUploadReviewConfirmed=false;
 var scoreUploadExpectedParts=null;
 var scoreUploadPendingResults=Object.create(null);
+function resetScoreUploadReplacementPlan(){
+  scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
+  var hasPending=Object.keys(scoreUploadPendingResults||{}).length>0
+    ||scoreUploadReviewRows.some(function(row){return !!(row&&row.targetId);});
+  if(hasPending)cleanupPendingScoreUploads();
+  scoreUploadPendingResults=Object.create(null);
+  scoreUploadReviewRows.forEach(function(row){
+    row.targetId='';
+    row.previousId='';
+    if(row.status!=='ready'){row.status='ready';row.progress=0;row.error='';}
+  });
+}
 function normalizeScoreKind(kind){
   kind=String(kind||'').trim().toLowerCase();
   if(kind==='orchestra'||kind==='orch'||kind==='instrument'||kind==='part')return 'orchestra';
@@ -8288,6 +8442,45 @@ function isScoreUploadReviewActive(){
   var editId=((document.getElementById('scoreEditId')||{}).value||'').trim();
   return scoreUploadReviewActiveFor(scoreUploadReviewFiles(),editId);
 }
+function findScoreUploadReplacement(title,scoreKind,instrument,linkedSongIds,usedIds,rememberedId){
+  var titleKey=scoreSearchKey(title);
+  linkedSongIds=normalizeScoreLinkedSongIds(linkedSongIds||[]);
+  usedIds=usedIds||{};
+  function matches(score){
+    if(!score||usedIds[score.id]||!canEditScoreItem(score))return false;
+    if(normalizeScoreKind(score.scoreKind)!==normalizeScoreKind(scoreKind))return false;
+    if(normalizeScoreKind(scoreKind)==='orchestra'&&normalizeScoreInstrument(score.instrument)!==normalizeScoreInstrument(instrument))return false;
+    var scoreIds=normalizeScoreLinkedSongIds(score.linkedSongIds||[]);
+    if(score.linkedSongId&&scoreIds.indexOf(score.linkedSongId)===-1)scoreIds.unshift(score.linkedSongId);
+    if(linkedSongIds.length)return scoreIds.some(function(id){return linkedSongIds.indexOf(id)!==-1;});
+    return !!titleKey&&scoreSearchKey(score.title)===titleKey;
+  }
+  var remembered=rememberedId?allScores.find(function(score){return score.id===rememberedId;}):null;
+  if(matches(remembered))return remembered;
+  return allScores.find(matches)||null;
+}
+function scoreUploadReviewReplacementPlan(){
+  var title=((document.getElementById('scoreTitle')||{}).value||'').trim();
+  var scoreKind=getScoreFormKind();
+  var linkedSongIds=getScoreLinkedSongIds();
+  var usedIds={};
+  return scoreUploadReviewRows.map(function(row,index){
+    var instrument=scoreUploadReviewInstrument(row.value);
+    var previous=findScoreUploadReplacement(title,scoreKind,instrument,linkedSongIds,usedIds,row.previousId||'');
+    if(previous)usedIds[previous.id]=true;
+    var currentVersion=Math.max(1,Number(previous&&previous.versionNumber||1));
+    return {
+      index:index,
+      instrument:instrument,
+      partLabel:scoreInstrumentLabel(instrument)||row.value||('파트보 '+(index+1)),
+      fileName:row.fileName||('파트보 '+(index+1)),
+      previous:previous||null,
+      previousId:previous&&previous.id||'',
+      currentVersion:currentVersion,
+      nextVersion:previous?currentVersion+1:1
+    };
+  });
+}
 function syncScoreUploadReviewRows(files){
   files=files||[];
   var keys=files.map(scoreUploadReviewFileKey);
@@ -8338,11 +8531,18 @@ function syncScoreSaveButton(){
   var replacementInfo=scoreFormReplacementInfo();
   btn.disabled=(reviewActive&&!scoreUploadReviewConfirmed)||replacementInfo.hasConflict;
   var hasFailed=scoreUploadReviewRows.some(function(row){return row.status==='error';});
+  var reviewPlan=reviewActive?scoreUploadReviewReplacementPlan():[];
+  var reviewReplacementCount=reviewPlan.filter(function(item){return !!item.previous;}).length;
+  var reviewNewCount=reviewPlan.length-reviewReplacementCount;
+  var reviewSaveLabel=[
+    reviewReplacementCount?('교체 '+reviewReplacementCount):'',
+    reviewNewCount?('신규 '+reviewNewCount):''
+  ].filter(Boolean).join(' · ');
   btn.textContent=replacementInfo.hasConflict
     ?'PDF 또는 URL 선택'
     :editId
       ?(replacementInfo.replacing?('v'+replacementInfo.nextVersion+'로 교체'):'정보 저장')
-      :(reviewActive?(scoreUploadReviewConfirmed?(hasFailed?'실패 파일 다시 시도':('파트보 '+scoreUploadReviewRows.length+'개 등록')):'먼저 파일 확인'):'악보 등록');
+      :(reviewActive?(scoreUploadReviewConfirmed?(hasFailed?'실패 파일 다시 시도':(reviewSaveLabel||('파트보 '+scoreUploadReviewRows.length+'개 저장'))):'먼저 파일 확인'):'악보 등록');
 }
 function renderScoreUploadReview(){
   var box=document.getElementById('scoreUploadReview');
@@ -8363,6 +8563,9 @@ function renderScoreUploadReview(){
   box.classList.remove('hidden');
   if(instrumentWrap)instrumentWrap.classList.add('hidden');
   var analysis=scoreUploadReviewAnalysis();
+  var replacementPlan=scoreUploadReviewReplacementPlan();
+  var replacementCount=replacementPlan.filter(function(item){return !!item.previous;}).length;
+  var newCount=replacementPlan.length-replacementCount;
   var duplicateMap={};
   analysis.duplicateKeys.forEach(function(key){duplicateMap[key]=true;});
   var count=document.getElementById('scoreUploadReviewCount');
@@ -8371,10 +8574,13 @@ function renderScoreUploadReview(){
   if(stats)stats.innerHTML='<span class="score-upload-review-stat">인식 '+analysis.recognized+'/'+files.length+'</span>'
     +'<span class="score-upload-review-stat '+(analysis.unresolved.length?'danger':'')+'">미인식 '+analysis.unresolved.length+'</span>'
     +'<span class="score-upload-review-stat '+(analysis.duplicateKeys.length?'warn':'')+'">중복 '+analysis.duplicateKeys.length+'종</span>'
-    +'<span class="score-upload-review-stat '+(analysis.missing.length?'warn':'')+'">누락 가능 '+analysis.missing.length+'</span>';
+    +'<span class="score-upload-review-stat '+(analysis.missing.length?'warn':'')+'">누락 가능 '+analysis.missing.length+'</span>'
+    +(replacementCount?'<span class="score-upload-review-stat warn">교체 '+replacementCount+'</span>':'')
+    +(newCount?'<span class="score-upload-review-stat">신규 '+newCount+'</span>':'');
   var list=document.getElementById('scoreUploadReviewList');
   if(list)list.innerHTML=scoreUploadReviewRows.map(function(row,index){
     var item=analysis.items[index];
+    var target=replacementPlan[index]||{};
     var duplicate=!!duplicateMap[item.instrument];
     var uploadState=row.status||'ready';
     var rowClass=(item.unresolved?' unresolved':'')+(duplicate?' duplicate':'');
@@ -8387,7 +8593,7 @@ function renderScoreUploadReview(){
     if(uploadState==='uploading')rowClass+=' uploading';
     return '<div class="score-upload-review-row'+rowClass+'" data-score-review-index="'+index+'">'
       +'<div class="score-upload-review-state">'+state+'</div>'
-      +'<div class="score-upload-review-file"><div class="score-upload-review-name" title="'+escAttr(row.fileName)+'">'+escHtml(row.fileName)+'</div><div class="score-upload-review-size">'+(row.error?escHtml(row.error):scoreUploadReviewFileSize(row.fileSize))+'</div>'+(uploadState==='uploading'?'<div class="score-upload-progress"><span style="width:'+Math.max(0,Math.min(100,Number(row.progress||0)))+'%"></span></div>':'')+'</div>'
+      +'<div class="score-upload-review-file"><div class="score-upload-review-name" title="'+escAttr(row.fileName)+'">'+escHtml(row.fileName)+'</div><div class="score-upload-review-size">'+(row.error?escHtml(row.error):scoreUploadReviewFileSize(row.fileSize))+'</div><div class="score-upload-review-version">'+(target.previous?('교체 v'+target.currentVersion+' → v'+target.nextVersion):'신규 v1')+'</div>'+(uploadState==='uploading'?'<div class="score-upload-progress"><span style="width:'+Math.max(0,Math.min(100,Number(row.progress||0)))+'%"></span></div>':'')+'</div>'
       +'<input class="score-upload-review-input" list="scoreUploadInstrumentOptions" value="'+escAttr(row.value)+'" aria-label="'+escAttr(row.fileName)+' 파트" onchange="updateScoreUploadReviewPart('+index+',this.value)">'
       +'</div>';
   }).join('');
@@ -8427,6 +8633,7 @@ function updateScoreUploadReviewPart(index,value){
   row.value=String(value||'').trim();
   row.touched=true;
   scoreUploadReviewConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
   renderScoreUploadReview();
 }
 function confirmScoreUploadReview(){
@@ -8453,6 +8660,8 @@ function handleScoreFilesChanged(){
   scoreUploadReviewConfirmed=false;
   scoreUploadPendingResults=Object.create(null);
   scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   renderScoreUploadReview();
   renderScoreFileControl();
 }
@@ -9180,7 +9389,7 @@ function openScoreFileById(id){
     return;
   }
   var details=normalizeScoreKind(score.scoreKind)==='orchestra'
-    ? [scorePartDisplayLabel(score),scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ')
+    ? [scorePartDisplayLabel(score),'v'+Math.max(1,Number(score.versionNumber||1)),scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ')
     : [scoreKindLabel(score.scoreKind),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
   var message='악보를 볼까요?\n\n'+(score.title||'악보')+(details?'\n'+details:'')+'\n\n확인을 누르면 악보 파일을 불러옵니다.';
   if(!confirm(message))return;
@@ -9296,7 +9505,7 @@ function renderScorePickerRows(rows){
     }
     var part=kind==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(kind);
     var myPart=kind==='orchestra'&&isMyScorePart(score);
-    var meta=[part,score.currentLabel||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
+    var meta=[part,kind==='orchestra'?('v'+Math.max(1,Number(score.versionNumber||1))):'',score.currentLabel||'',scoreFileSizeText(score.currentFileSize),scoreUpdatedText(score)?'업데이트 '+scoreUpdatedText(score):''].filter(Boolean).join(' · ');
     html+='<div class="score-picker-card">'
       +'<div><div class="score-picker-title">'+escHtml(kind==='orchestra'?part:(score.title||'악보'))+(myPart?'<span class="score-my-part-badge">내 파트</span>':'')+renderScoreNewBadge(score,'group')+'</div><div class="score-picker-meta">'+escHtml(kind==='orchestra'?(score.title||'악보')+' · '+meta:meta)+'</div></div>'
       +'<button class="score-action-btn open" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">보기</button>'
@@ -9447,12 +9656,28 @@ function scoreGroupUpdatedText(scores){
   });
   return latest?latest.slice(0,10).replace(/-/g,'.'):'';
 }
+function scoreGroupVersionInfo(scores){
+  var versions=[];
+  (scores||[]).forEach(function(score){
+    var version=Math.max(1,Number(score&&score.versionNumber||1));
+    if(versions.indexOf(version)===-1)versions.push(version);
+  });
+  versions.sort(function(a,b){return a-b;});
+  if(!versions.length)versions=[1];
+  var mixed=versions.length>1;
+  var label=mixed
+    ?(versions.length===2?('v'+versions[0]+'·v'+versions[1]+' 혼합'):('v'+versions[0]+'–v'+versions[versions.length-1]+' 혼합'))
+    :'v'+versions[0];
+  return {versions:versions,mixed:mixed,label:label};
+}
 function renderScoreFolderList(rows, adminMode){
   return scoreFolderGroups(rows).map(function(group){return renderScoreFolderCard(group,adminMode);}).join('');
 }
 function renderScoreFolderCard(group, adminMode){
   var scores=adminMode?sortScoreParts(group.scores||[]):sortScorePartsForCurrentUser(group.scores||[]);
   var unreadBadge=adminMode?'':renderScoreRowsNewBadge(scores,'group');
+  var versionInfo=scoreGroupVersionInfo(scores);
+  var versionBadge='<span class="score-folder-version '+(versionInfo.mixed?'mixed':'')+'">'+escHtml(versionInfo.label)+'</span>';
   var updated=scoreGroupUpdatedText(scores);
   var meta=['관현악 파트보 '+scores.length+'개',updated?'업데이트 '+updated:''].filter(Boolean).join(' · ');
   var groupAction=adminMode&&canManageScores()?'<div class="score-admin-actions"><button class="score-light-btn" onclick="openQuickScoreManageForGroup(\''+escAttr(group.key)+'\')">＋ 파트보 추가</button></div>':'';
@@ -9460,7 +9685,7 @@ function renderScoreFolderCard(group, adminMode){
     ? '<div class="score-part-admin-list">'+scores.map(function(score){
         var canEdit=canEditScoreItem(score);
         var part=scorePartDisplayLabel(score);
-        var details=[score.currentFileName||'',scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
+        var details=['v'+Math.max(1,Number(score.versionNumber||1)),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
         return '<div class="score-part-row">'
           +'<div class="score-part-main"><div class="score-part-name">'+escHtml(part)+'</div><div class="score-part-meta">'+escHtml(details||'파트보')+'</div></div>'
           +'<div class="score-part-actions">'
@@ -9474,10 +9699,11 @@ function renderScoreFolderCard(group, adminMode){
       }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
         var mine=isMyScorePart(score);
-        return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</button>';
+        var partVersion=versionInfo.mixed?'<span class="score-part-version">v'+Math.max(1,Number(score.versionNumber||1))+'</span>':'';
+        return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+partVersion+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</button>';
       }).join('')+'</div>';
   return '<div class="score-folder-card">'
-    +'<div class="score-folder-head"><div><div class="score-folder-title">'+escHtml(group.title||'곡명 없음')+unreadBadge+'</div><div class="score-folder-meta">'+escHtml(meta)+'</div></div><div class="score-folder-count">'+scores.length+'개</div></div>'
+    +'<div class="score-folder-head"><div><div class="score-folder-title"><span class="score-folder-name">'+escHtml(group.title||'곡명 없음')+'</span><span class="score-folder-badges">'+unreadBadge+versionBadge+'</span></div><div class="score-folder-meta">'+escHtml(meta)+'</div></div><div class="score-folder-count">'+scores.length+'개</div></div>'
     +body
     +'</div>';
 }
@@ -9710,6 +9936,8 @@ function resetScoreForm(saved){
   if(!saved)cleanupPendingScoreUploads();
   revokeScoreLocalPreview();
   scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   scoreCandidateSelectedIds=[];
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
@@ -9807,8 +10035,36 @@ function saveScoreUpload(){
     if(files[vf].type&&files[vf].type!=='application/pdf'&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
     if(!files[vf].type&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
   }
+  var batchPlan=reviewActive?scoreUploadReviewReplacementPlan():[];
+  var singleAutoReplacement=null;
+  if(!editId&&files.length===1){
+    var autoInstrument=scoreKind==='orchestra'
+      ?(selectedInstrument||guessScoreInstrumentFromFileName(files[0].name)||'etc')
+      :'';
+    singleAutoReplacement=findScoreUploadReplacement(title,scoreKind,autoInstrument,linkedSongIds,{},'');
+  }
   if(editId&&replacementInfo.replacing&&!scoreReplacementConfirmed){
     openScoreReplacementConfirm(replacementInfo);
+    return;
+  }
+  if(singleAutoReplacement&&!scoreReplacementConfirmed){
+    var autoCurrentVersion=Math.max(1,Number(singleAutoReplacement.versionNumber||1));
+    openScoreReplacementConfirm({
+      previous:singleAutoReplacement,
+      files:files,
+      url:'',
+      urlChanged:false,
+      replacing:true,
+      currentVersion:autoCurrentVersion,
+      nextVersion:autoCurrentVersion+1,
+      currentName:singleAutoReplacement.currentFileName||'현재 파일',
+      nextName:files[0].name||'새 파일',
+      hasConflict:false
+    });
+    return;
+  }
+  if(reviewActive&&!scoreBatchReplacementConfirmed){
+    openScoreBatchConfirm(batchPlan);
     return;
   }
   var scoreId=editId||(fileEl&&fileEl.dataset.targetScoreId)||createScoreId();
@@ -9827,19 +10083,6 @@ function saveScoreUpload(){
     if(name)return guessScoreInstrumentFromFileName(name);
     if(previousScore&&previousScore.instrument)return normalizeScoreInstrument(previousScore.instrument);
     return 'etc';
-  }
-  function replacementScoreForInstrument(instrument, usedIds){
-    if(editId)return previous;
-    var titleKey=scoreSearchKey(title);
-    return allScores.find(function(score){
-      if(!score||usedIds[score.id]||!canEditScoreItem(score))return false;
-      if(normalizeScoreKind(score.scoreKind)!==scoreKind)return false;
-      if(scoreKind==='orchestra'&&normalizeScoreInstrument(score.instrument)!==instrument)return false;
-      var scoreIds=normalizeScoreLinkedSongIds(score.linkedSongIds||[]);
-      if(score.linkedSongId&&scoreIds.indexOf(score.linkedSongId)===-1)scoreIds.unshift(score.linkedSongId);
-      if(linkedSongIds.length&&scoreIds.some(function(id){return linkedSongIds.indexOf(id)!==-1;}))return true;
-      return !linkedSongIds.length&&scoreSearchKey(score.title)===titleKey;
-    })||null;
   }
   function buildScoreData(targetScoreId, previousScore, fileInfo, targetInstrument){
     fileInfo=fileInfo||{};
@@ -9912,14 +10155,20 @@ function saveScoreUpload(){
     ? files.map(function(f,idx){
         var instrument=reviewedInstruments[idx]||instrumentForName(f.name,previous);
         var reviewRow=reviewActive?scoreUploadReviewRows[idx]:null;
-        var rememberedPrevious=reviewRow&&reviewRow.previousId?allScores.find(function(score){return score.id===reviewRow.previousId;}):null;
-        var replace=editId?previous:(rememberedPrevious||replacementScoreForInstrument(instrument,usedReplacementIds));
+        var planned=reviewActive?batchPlan[idx]:null;
+        var replace=editId
+          ?previous
+          :(planned
+            ?planned.previous
+            :(singleAutoReplacement||findScoreUploadReplacement(title,scoreKind,instrument,linkedSongIds,usedReplacementIds,reviewRow&&reviewRow.previousId||'')));
         if(replace)usedReplacementIds[replace.id]=true;
         var targetId=(reviewRow&&reviewRow.targetId)||(replace?replace.id:(files.length===1?scoreId:createScoreId()));
         if(reviewRow){reviewRow.targetId=targetId;reviewRow.previousId=replace?replace.id:'';}
         return {id:targetId,previous:replace||null,file:f,instrument:instrument};
       })
     : [{id:scoreId,previous:previous,file:null,instrument:instrumentForName('',previous)}];
+  var replacementTargetCount=targets.filter(function(target){return !!target.previous&&!!target.file;}).length;
+  var newTargetCount=targets.length-replacementTargetCount;
 
   function uploadTargetsWithLimit(){
     var results=new Array(targets.length), errors=[], cursor=0;
@@ -9948,13 +10197,27 @@ function saveScoreUpload(){
     scores.forEach(upsertScoreLocal);
     return scores;
   }).then(function(scores){
-    var logAction=previous?(replacingFile?'악보 교체':'악보 수정'):(scores.length>1?'관현악 파트보 등록':'악보 등록');
-    writeLog(logAction,'📄 ['+title+'] '+(isPublic?'공개':'비공개')+' 저장'+(scores.length>1?'\n파트보 '+scores.length+'개':'')+(linkedSongIds.length?'\n연결 곡 '+linkedSongIds.length+'개':''));
+    var logAction=previous
+      ?(replacingFile?'악보 교체':'악보 수정')
+      :(scores.length>1
+        ?(replacementTargetCount?'관현악 파트보 교체':'관현악 파트보 등록')
+        :(replacementTargetCount?'악보 교체':'악보 등록'));
+    writeLog(logAction,'📄 ['+title+'] '+(isPublic?'공개':'비공개')+' 저장'
+      +(scores.length>1?'\n파트보 '+scores.length+'개':'')
+      +(replacementTargetCount?'\n교체 '+replacementTargetCount+'개':'')
+      +(newTargetCount&&scores.length>1?'\n신규 '+newTargetCount+'개':'')
+      +(linkedSongIds.length?'\n연결 곡 '+linkedSongIds.length+'개':''));
     resetScoreForm(true);
     renderScoreManage();
     if(currentTab==='scores')renderScoresPage();
     requestHomeRender();
-    showToast(previous?(replacingFile?'새 버전으로 교체했습니다':'악보 정보를 저장했습니다'):(scores.length>1?'관현악 파트보를 등록했습니다':'악보를 등록했습니다'));
+    showToast(previous
+      ?(replacingFile?'새 버전으로 교체했습니다':'악보 정보를 저장했습니다')
+      :(scores.length>1
+        ?(replacementTargetCount
+          ?(['교체 '+replacementTargetCount+'개',newTargetCount?('신규 '+newTargetCount+'개'):''].filter(Boolean).join(' · ')+'를 저장했습니다')
+          :'관현악 파트보를 등록했습니다')
+        :(replacementTargetCount?'새 버전으로 교체했습니다':'악보를 등록했습니다')));
   }).catch(function(e){
     console.error(e);
     if(e&&e.code==='storage/unauthorized')showToast('악보 업로드 권한이 없습니다');
@@ -9962,6 +10225,8 @@ function saveScoreUpload(){
     else showToast(securityErrorMessage(e,'악보 저장 중 오류가 발생했습니다'));
   }).finally(function(){
     scoreReplacementConfirmed=false;
+    scoreBatchReplacementConfirmed=false;
+    scorePendingReplacementInfo=null;
     if(btn){
       delete btn.dataset.busy;
       syncScoreSaveButton();
@@ -9975,6 +10240,8 @@ function editScoreUpload(id){
   cleanupPendingScoreUploads();
   revokeScoreLocalPreview();
   scoreReplacementConfirmed=false;
+  scoreBatchReplacementConfirmed=false;
+  scorePendingReplacementInfo=null;
   scoreUploadPendingResults=Object.create(null);
   var file=document.getElementById('scoreFile');if(file){file.value='';delete file.dataset.targetScoreId;}
   scoreUploadReviewRows=[];

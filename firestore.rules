@@ -138,7 +138,7 @@ service cloud.firestore {
     match /pushSubscriptions/{subscriptionId} {
       function validSubscription(data) {
         return data.keys().hasOnly([
-            'uid', 'accountName', 'topics', 'subscription', 'userAgent', 'updatedAt'
+            'uid', 'accountName', 'topics', 'scoreKinds', 'subscription', 'userAgent', 'updatedAt'
           ])
           && data.uid == request.auth.uid
           && data.accountName is string
@@ -151,6 +151,10 @@ service cloud.firestore {
           && data.topics.keys().hasOnly(['scores', 'schedules'])
           && data.topics.scores is bool
           && data.topics.schedules is bool
+          && (!data.keys().hasAll(['scoreKinds'])
+            || (data.scoreKinds is list
+              && data.scoreKinds.size() <= 2
+              && data.scoreKinds.hasOnly(['singer', 'orchestra'])))
           && data.subscription is map
           && data.subscription.keys().hasOnly(['endpoint', 'keys'])
           && data.subscription.endpoint is string

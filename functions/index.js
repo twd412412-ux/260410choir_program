@@ -679,9 +679,14 @@ async function recordAppNotification(eventId, audience, notification) {
   });
 }
 
-async function sendPushTopic(topic, notification) {
+async function sendPushTopic(topic, notification, options = {}) {
   webpush.setVapidDetails(WEB_PUSH_SUBJECT, WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY.value());
-  const snap = await db.collection("pushSubscriptions").where("topics." + topic, "==", true).get();
+  let query = db.collection("pushSubscriptions").where("topics." + topic, "==", true);
+  const scoreKind = cleanString(options.scoreKind, 20);
+  if (topic === "scores" && ["singer", "orchestra"].includes(scoreKind)) {
+    query = query.where("scoreKinds", "array-contains", scoreKind);
+  }
+  const snap = await query.get();
   if (snap.empty) return {sent: 0, stale: 0, failed: 0};
   const payload = JSON.stringify(notification);
   let sent = 0;
@@ -704,7 +709,7 @@ async function sendPushTopic(topic, notification) {
         await doc.ref.delete().catch(() => {});
       } else {
         failed++;
-        console.error("push_delivery_failed", {topic, status});
+        console.error("push_delivery_failed", {topic, scoreKind, status});
       }
     }
   });
@@ -830,17 +835,34 @@ async function notifyScoreWrite(event) {
   });
   if (!changes.length) return null;
   if (!await claimPushEvent(event.id, "scores")) return null;
-  const isOnlyNew = changes.every((change) => change.kind === "new");
   await recordScoreAppNotifications(event.id, changes).catch((error) => {
     console.error("score_app_notification_failed", error);
   });
-  const result = await sendPushTopic("scores", {
-    title: isOnlyNew ? "새 악보가 등록되었습니다" : "악보가 업데이트되었습니다",
-    body: notificationTitleList(changes.map((change) => change.item)),
-    url: APP_URL + "?push=scores",
-    tag: "choir-score-updates",
-    icon: APP_URL + "assets/hymn-dove-book.png",
+  const groups = {singer: [], orchestra: []};
+  changes.forEach((change) => {
+    groups[normalizeScoreKind(change && change.item && change.item.scoreKind)].push(change);
   });
+  const deliveries = await Promise.all(Object.keys(groups).map(async (audience) => {
+    const rows = groups[audience];
+    if (!rows.length) return null;
+    const onlyNew = rows.every((change) => change.kind === "new");
+    const kindLabel = audience === "orchestra" ? "관현악" : "싱어";
+    const delivery = await sendPushTopic("scores", {
+      title: onlyNew ? `새 ${kindLabel} 악보가 등록되었습니다` : `${kindLabel} 악보가 업데이트되었습니다`,
+      body: notificationTitleList(rows.map((change) => change.item)),
+      url: APP_URL + "?push=scores",
+      tag: "choir-score-updates-" + audience,
+      icon: APP_URL + "assets/hymn-dove-book.png",
+    }, {scoreKind: audience});
+    return {audience, ...delivery};
+  }));
+  const result = deliveries.filter(Boolean).reduce((summary, delivery) => {
+    summary.sent += delivery.sent;
+    summary.stale += delivery.stale;
+    summary.failed += delivery.failed;
+    summary.audiences.push(delivery);
+    return summary;
+  }, {sent: 0, stale: 0, failed: 0, audiences: []});
   console.log("score_push_complete", result);
   return result;
 }

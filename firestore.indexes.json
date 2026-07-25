@@ -15,6 +15,20 @@
       ]
     },
     {
+      "collectionGroup": "pushSubscriptions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "topics.scores",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scoreKinds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    },
+    {
       "collectionGroup": "mediaArchive",
       "queryScope": "COLLECTION",
       "fields": [
