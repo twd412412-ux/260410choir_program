@@ -1857,6 +1857,7 @@ body{font-weight:500}
 .home-event-order{color:#9A8D7B;font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
 .home-event-row-copy{min-width:0}
 .home-event-row-title{color:#25261F;font-size:13px;font-weight:820;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.home-event-row-meta{margin-top:2px;color:#82796A;font-size:10px;font-weight:700;line-height:1.25}
 .home-event-program-list{max-height:288px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#BCC5AA transparent}
 .home-event-program-list::-webkit-scrollbar{width:5px}
 .home-event-program-list::-webkit-scrollbar-thumb{border-radius:99px;background:#BCC5AA}
@@ -1876,11 +1877,12 @@ body{font-weight:500}
 .home-event-card.feature-event-focus{animation:featureEventFocus .72s ease 2}
 @keyframes featureEventFocus{0%,100%{box-shadow:0 6px 18px rgba(49,54,35,.055)}45%{box-shadow:0 0 0 4px rgba(111,125,78,.28),0 10px 24px rgba(49,54,35,.14)}}
 .dark .home-event-title,.dark .home-event-row-title,.dark .home-event-info-value{color:var(--tx)}
-.dark .home-event-eyebrow,.dark .home-event-date,.dark .home-event-info-label,.dark .home-event-empty{color:var(--ts)}
+.dark .home-event-eyebrow,.dark .home-event-date,.dark .home-event-row-meta,.dark .home-event-info-label,.dark .home-event-empty{color:var(--ts)}
 .dark .home-event-tabs{background:#22271F;border-color:var(--line)}
 .dark .home-event-row,.dark .home-event-info-row,.dark .home-event-more{border-color:var(--line)}
 .dark .home-event-tab.on,.dark .home-event-day.on{color:#B7C99A}
 .dark .home-event-dday{background:#2D382A;border-color:#52634A;color:#B7C99A}
+.dark .home-event-card .home-score-chip{background:#2D382A;border-color:#52634A;color:#B7C99A}
 .dark .program-type-badge.type-all{background:#303A29;color:#C3D2AA}
 .dark .program-type-badge.type-duet{background:#27393D;color:#AFCBD0}
 .dark .program-type-badge.type-solo{background:#403426;color:#E2C294}
@@ -6397,6 +6399,30 @@ function homeEventSections(schedule){
     return true;
   });
 }
+function homeEventMatchedScoreRow(schedule,title,rows){
+  var titleKey=scoreSearchKey(title);
+  if(!titleKey)return null;
+  rows=Array.isArray(rows)?rows:scheduleMatchedScoreRows(schedule);
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i];
+    var names=[row.song&&row.song.songName,row.score&&row.score.title].filter(Boolean);
+    for(var j=0;j<names.length;j++){
+      var key=scoreSearchKey(names[j]);
+      if(key&&(titleKey.indexOf(key)>-1||key.indexOf(titleKey)>-1))return row;
+    }
+  }
+  return null;
+}
+function homeEventScoreAction(row,label){
+  if(!row||!row.score)return '';
+  var action=row.song
+    ? "openScorePickerForSong('"+escAttr(row.song.id)+"',false)"
+    : "openScoreFileById('"+escAttr(row.score.id)+"')";
+  var newBadge=row.song
+    ? renderScoreRowsNewBadge(findVisibleScoresForSong(row.song))
+    : renderScoreNewBadge(row.score);
+  return '<button type="button" class="home-score-chip home-event-score-action" onclick="event.stopPropagation();'+action+'" aria-label="'+escAttr(label||'악보 보기')+'" title="악보 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h5"></path><path d="M10 17h4"></path></svg><span>악보</span>'+newBadge+'</button>';
+}
 function renderHomeEventInfo(schedule){
   var when=scheduleDateRangeLabel(schedule)+(schedule.time?' · '+schedule.time:'');
   var rows=[
@@ -6422,9 +6448,11 @@ function renderHomeEventProgram(schedule){
     return '<button type="button" class="home-event-day '+(section===homeEventHubSection?'on':'')+'" role="tab" aria-selected="'+(section===homeEventHubSection?'true':'false')+'" onclick="setHomeEventHubSection('+index+')">'+escHtml(section)+'</button>';
   }).join('')+'</div>':'';
   if(!visible.length)return dayHtml+'<div class="home-event-panel"><div class="home-event-empty">등록된 프로그램 순서가 없습니다</div></div>';
+  var availableScoreRows=scheduleMatchedScoreRows(schedule);
   var rows=visible.map(function(item,index){
     var title=rehearsalItemTitle(item);
-    return '<div class="home-event-row" role="listitem"><div class="home-event-order">'+String(index+1).padStart(2,'0')+'</div><div class="home-event-row-copy"><div class="home-event-row-title">'+escHtml(title)+'</div></div>'+renderProgramPerformanceBadge(rehearsalItemPerformanceType(item),'home-event-type')+'</div>';
+    var scoreRow=homeEventMatchedScoreRow(schedule,title,availableScoreRows);
+    return '<div class="home-event-row" role="listitem"><div class="home-event-order">'+String(index+1).padStart(2,'0')+'</div><div class="home-event-row-copy"><div class="home-event-row-title">'+escHtml(title)+'</div><div class="home-event-row-meta">'+programPerformanceTypeLabel(rehearsalItemPerformanceType(item))+'</div></div>'+homeEventScoreAction(scoreRow,title+' 악보 보기')+'</div>';
   }).join('');
   return dayHtml+'<div class="home-event-panel"><div class="home-event-program-list" role="list" aria-label="행사 순서">'+rows+'</div></div>';
 }
