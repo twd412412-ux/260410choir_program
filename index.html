@@ -773,6 +773,26 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-card.clickable{cursor:pointer}
 .score-card.clickable:hover{background:#FEFCF6;border-color:#CAD5B5}
 .score-card.clickable:active{transform:scale(.995)}
+.score-singer-list{overflow:hidden;background:var(--sf);border:1px solid var(--bd);border-radius:10px}
+.score-singer-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:66px;padding:10px 11px;border-bottom:1px solid var(--bd);cursor:pointer}
+.score-singer-row:last-child{border-bottom:0}
+.score-singer-row:hover{background:var(--pl)}
+.score-singer-row:active{background:var(--pl)}
+.score-singer-main{width:100%;min-width:0;border:0;background:transparent;color:inherit;padding:0;text-align:left;font:inherit;cursor:pointer}
+.score-singer-main:focus-visible,.score-singer-open:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+.score-singer-title-line{display:flex;align-items:center;gap:6px;min-width:0}
+.score-singer-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx);font-size:14px;font-weight:880;line-height:1.3}
+.score-singer-title-line .score-new-badge{flex:0 0 auto}
+.score-singer-detail{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;min-width:0;margin-top:5px;color:var(--ts);font-size:10.5px;font-weight:650}
+.score-singer-file{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-singer-version{color:#7A5A24;font-size:10px;font-weight:820;white-space:nowrap}
+.score-singer-open{min-width:56px;display:inline-flex;align-items:center;justify-content:center}
+.dark .score-singer-list{background:#1D211B;border-color:#343B31}
+.dark .score-singer-row{border-bottom-color:#343B31}
+.dark .score-singer-row:hover,.dark .score-singer-row:active{background:#263126}
+.dark .score-singer-title{color:#F4F0E8}
+.dark .score-singer-detail{color:#AAB3A4}
+.dark .score-singer-version{color:#D8C08C}
 .score-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0}
 .score-title-row>div:first-child{min-width:0}
 .score-title{font-size:14px;font-weight:850;line-height:1.25;word-break:keep-all}
@@ -3393,6 +3413,7 @@ var storage = firebase.storage();
 var allSongs=[], filteredSongs=[], currentTab='home';
 var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false, scoreCandidateSelectedIds=[];
 var scoreLoadTimer=null;
+var scoreRealtimeUnsubscribe=null, scoreRealtimeReadyPromise=null, scoreRealtimeGeneration=0;
 var scoreViewMode=localStorage.getItem('choir_score_view')||'';
 var SCORE_CACHE_KEY='choir_scores_public';
 var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
@@ -8139,8 +8160,77 @@ function canOpenScoreItem(score){
 function scoreMatchesActiveMode(score){
   return normalizeScoreKind(score&&score.scoreKind)===ensureScoreViewMode();
 }
+function scoreRowsFromSettingsSnapshot(doc){
+  var rows=[];
+  var data=doc&&doc.exists?(doc.data()||{}):{};
+  var items=data.items||{};
+  if(Array.isArray(items)){
+    items.forEach(function(item){if(item&&item.id)rows.push(scoreRowFromSettingsItem(item.id,item));});
+  }else{
+    Object.keys(items).forEach(function(id){rows.push(scoreRowFromSettingsItem(id,items[id]));});
+  }
+  return sortScores(rows);
+}
+function applyScoreSettingsSnapshot(doc){
+  allScores=scoreRowsFromSettingsSnapshot(doc);
+  scoresLoaded=true;
+  scoresLoadedPrivate=true;
+  savePublicScoreCache();
+  if(currentTab==='scores')renderScoresPage();
+  var managePanel=document.getElementById('subScoreManage');
+  if(managePanel&&!managePanel.classList.contains('hidden')&&canManageScores())renderScoreManage();
+  requestHomeRender();
+  return allScores;
+}
+function stopScoreRealtimeSync(){
+  scoreRealtimeGeneration++;
+  if(scoreRealtimeUnsubscribe){
+    try{scoreRealtimeUnsubscribe();}catch(e){}
+  }
+  scoreRealtimeUnsubscribe=null;
+  scoreRealtimeReadyPromise=null;
+}
+function ensureScoreRealtimeSync(){
+  if(!canViewScores()){
+    stopScoreRealtimeSync();
+    return null;
+  }
+  if(scoreRealtimeUnsubscribe&&scoreRealtimeReadyPromise)return scoreRealtimeReadyPromise;
+  var generation=++scoreRealtimeGeneration;
+  var settled=false,resolveReady,rejectReady;
+  scoreRealtimeReadyPromise=new Promise(function(resolve,reject){
+    resolveReady=resolve;
+    rejectReady=reject;
+  });
+  try{
+    scoreRealtimeUnsubscribe=scoreSettingsRef().onSnapshot(function(doc){
+      if(generation!==scoreRealtimeGeneration)return;
+      var rows=applyScoreSettingsSnapshot(doc);
+      if(!settled){
+        settled=true;
+        resolveReady(rows);
+      }
+    },function(error){
+      if(generation!==scoreRealtimeGeneration)return;
+      console.error(error);
+      scoreRealtimeUnsubscribe=null;
+      scoreRealtimeReadyPromise=null;
+      if(!settled){
+        settled=true;
+        rejectReady(error);
+      }
+    });
+  }catch(error){
+    scoreRealtimeUnsubscribe=null;
+    scoreRealtimeReadyPromise=null;
+    settled=true;
+    rejectReady(error);
+  }
+  return scoreRealtimeReadyPromise;
+}
 function clearScoreAccessCache(){
   if(scoreLoadTimer){clearTimeout(scoreLoadTimer);scoreLoadTimer=null;}
+  stopScoreRealtimeSync();
   allScores=[];
   scoresLoaded=false;
   scoresLoadedPrivate=false;
@@ -8152,7 +8242,11 @@ function scheduleScoresLoad(delay){
     clearScoreAccessCache();
     return Promise.resolve([]);
   }
-  if(scoresLoaded||scoresLoadPromise||scoreLoadTimer)return Promise.resolve(allScores);
+  if(scoreRealtimeUnsubscribe||scoresLoadPromise||scoreLoadTimer)return Promise.resolve(allScores);
+  if(scoresLoaded){
+    ensureScoreRealtimeSync();
+    return Promise.resolve(allScores);
+  }
   scoreLoadTimer=setTimeout(function(){
     scoreLoadTimer=null;
     initScores();
@@ -8282,41 +8376,51 @@ function savePublicScoreCache(){
   }
   saveCache(SCORE_CACHE_KEY,sortScores(allScores.filter(function(s){return canViewScoreItem(s)})));
 }
+function fetchScoreSettingsOnce(includePrivate){
+  return scoreSettingsRef().get().then(function(doc){
+    return applyScoreSettingsSnapshot(doc);
+  }).catch(function(e){
+    console.error(e);
+    scoresLoaded=true;
+    if(includePrivate)scoresLoadedPrivate=true;
+    return allScores;
+  });
+}
 function loadScores(force, includePrivate){
   if(!canViewScores()){
     clearScoreAccessCache();
     return Promise.resolve([]);
   }
   includePrivate=!!includePrivate&&canManageScores();
-  if(!force&&scoresLoaded&&(!includePrivate||scoresLoadedPrivate))return Promise.resolve(allScores);
+  if(!force&&scoresLoaded&&(!includePrivate||scoresLoadedPrivate)){
+    ensureScoreRealtimeSync();
+    return Promise.resolve(allScores);
+  }
   var cached=!includePrivate?loadCache(SCORE_CACHE_KEY,600000):null;
   if(!force&&!includePrivate&&Array.isArray(cached)){
     allScores=cached;
     scoresLoaded=true;
+    scoresLoadedPrivate=false;
     requestHomeRender();
     if(currentTab==='scores')setTimeout(renderScoresPage,0);
   }
-  if(!force&&scoresLoadPromise&&(!includePrivate||scoresLoadedPrivate))return scoresLoadPromise;
-  scoresLoadPromise=scoreSettingsRef().get().then(function(doc){
-    var rows=[];
-    var data=doc.exists?(doc.data()||{}):{};
-    var items=data.items||{};
-    if(Array.isArray(items)){
-      items.forEach(function(item){if(item&&item.id)rows.push(scoreRowFromSettingsItem(item.id,item));});
-    }else{
-      Object.keys(items).forEach(function(id){rows.push(scoreRowFromSettingsItem(id,items[id]));});
+  if(!force&&scoresLoadPromise)return scoresLoadPromise;
+  if(!force){
+    var realtime=ensureScoreRealtimeSync();
+    if(realtime){
+      scoresLoadPromise=realtime.then(function(rows){
+        scoresLoadPromise=null;
+        return rows;
+      },function(){
+        scoresLoadPromise=null;
+        return fetchScoreSettingsOnce(includePrivate);
+      });
+      return scoresLoadPromise;
     }
-    allScores=sortScores(rows);
-    scoresLoaded=true;
-    scoresLoadedPrivate=true;
-    savePublicScoreCache();
-    if(currentTab==='scores')renderScoresPage();
-    return allScores;
-  }).catch(function(e){
-    console.error(e);
-    scoresLoaded=true;
-    if(includePrivate)scoresLoadedPrivate=true;
-    return allScores;
+  }
+  scoresLoadPromise=fetchScoreSettingsOnce(includePrivate).then(function(rows){
+    scoresLoadPromise=null;
+    return rows;
   });
   return scoresLoadPromise;
 }
@@ -8330,6 +8434,22 @@ function initScores(){
     requestHomeRender();
   });
 }
+function resumeScoreRealtimeSync(){
+  if(!canViewScores()){
+    stopScoreRealtimeSync();
+    return;
+  }
+  ensureScoreRealtimeSync();
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible')setTimeout(resumeScoreRealtimeSync,150);
+});
+window.addEventListener('pageshow',function(){
+  setTimeout(resumeScoreRealtimeSync,150);
+});
+window.addEventListener('online',function(){
+  setTimeout(resumeScoreRealtimeSync,150);
+});
 function scoreFileSizeText(bytes){
   bytes=Number(bytes||0);
   if(!bytes)return '';
@@ -8637,6 +8757,26 @@ function renderScoreMeta(score){
   if(scoreFileSizeText(score.currentFileSize))parts.push(scoreFileSizeText(score.currentFileSize));
   return parts.map(function(p){return '<span>'+escHtml(p)+'</span>';}).join('<span>·</span>');
 }
+function renderSingerScoreRow(score){
+  var fileParts=[];
+  if(score.currentLabel)fileParts.push(score.currentLabel);
+  if(score.currentFileName)fileParts.push(score.currentFileName);
+  var fileSize=scoreFileSizeText(score.currentFileSize);
+  if(fileSize)fileParts.push(fileSize);
+  var updated=scoreUpdatedText(score);
+  var version='v'+Math.max(1,Number(score.versionNumber||1))+(updated?' · '+updated:'');
+  var id=escAttr(score.id);
+  return '<div class="score-singer-row">'
+    +'<button type="button" class="score-singer-main" onclick="openMatchedSongForScore(\''+id+'\')" aria-label="'+escAttr((score.title||'악보')+' 상세 보기')+'">'
+      +'<div class="score-singer-title-line"><div class="score-singer-title">'+escHtml(score.title||'곡명 없음')+'</div>'+renderScoreNewBadge(score)+'</div>'
+      +'<div class="score-singer-detail"><span class="score-singer-file">'+escHtml(fileParts.join(' · ')||'최신 악보')+'</span><span class="score-singer-version">'+escHtml(version)+'</span></div>'
+    +'</button>'
+    +'<button type="button" class="score-action-btn open score-singer-open" onclick="openScoreFileById(\''+id+'\')" aria-label="'+escAttr((score.title||'악보')+' 보기')+'">보기</button>'
+    +'</div>';
+}
+function renderSingerScoreList(rows){
+  return '<div class="score-singer-list">'+(rows||[]).map(renderSingerScoreRow).join('')+'</div>';
+}
 function renderScoreCard(score, adminMode){
   var status=adminMode
     ? '<div class="score-status-stack"><span class="score-badge '+(score.public?'':'private')+'">'+(score.public?'공개':'비공개')+'</span>'+renderScoreVersionBadge(score)+'</div>'
@@ -8928,6 +9068,7 @@ function renderScoresPage(){
     list.innerHTML='<div class="score-empty">로그인한 단원만 악보를 볼 수 있습니다.<br><button class="btn btn-p" style="margin-top:12px" onclick="pendingTabAfterLogin=\'scores\';openUserModal()">로그인</button></div>';
     return;
   }
+  ensureScoreRealtimeSync();
   syncQuickCreateActions();
   renderScoreModeTabs('scoreModeTabs',false);
   if(!scoresLoaded){
@@ -8950,7 +9091,7 @@ function renderScoresPage(){
     list.innerHTML='<div class="score-empty">조건에 맞는 공개 악보가 없습니다.</div>';
     return;
   }
-  list.innerHTML=ensureScoreViewMode()==='orchestra'?renderScoreFolderList(rows,false):rows.map(function(score){return renderScoreCard(score,false);}).join('');
+  list.innerHTML=ensureScoreViewMode()==='orchestra'?renderScoreFolderList(rows,false):renderSingerScoreList(rows);
 }
 function renderSongScoreDetail(song){
   var scores=findVisibleScoresForSong(song);
@@ -8971,7 +9112,7 @@ function renderScoreManage(){
   renderScoreModeTabs('scoreAdminModeTabs',true);
   if(!scoresLoadedPrivate){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
-    loadScores(true,true).then(renderScoreManage);
+    loadScores(false,true).then(renderScoreManage);
     return;
   }
   var qEl=document.getElementById('scoreAdminSearch');
