@@ -1872,13 +1872,14 @@ body{font-weight:500}
 .home-event-day{flex:0 0 auto;border:0;border-bottom:2px solid transparent;background:transparent;color:#7A7060;padding:4px 1px 7px;font-family:inherit;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer}
 .home-event-day.on{border-bottom-color:#6F7D4E;color:#3F512E}
 .home-event-panel{padding:4px 16px 12px}
-.home-event-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:center;min-height:48px;border-bottom:1px solid #EEE2D0}
+.home-event-row{display:flex;gap:9px;align-items:center;width:100%;max-width:100%;min-width:0;min-height:48px;border-bottom:1px solid #EEE2D0;box-sizing:border-box;overflow:hidden}
 .home-event-row:last-child{border-bottom:0}
-.home-event-order{color:#9A8D7B;font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
-.home-event-row-copy{min-width:0}
+.home-event-order{flex:0 0 28px;color:#9A8D7B;font-size:11px;font-weight:900;font-variant-numeric:tabular-nums}
+.home-event-row-copy{flex:0 1 auto;min-width:0}
 .home-event-row-title{color:#25261F;font-size:13px;font-weight:820;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
 .home-event-row-meta{margin-top:2px;color:#82796A;font-size:10px;font-weight:700;line-height:1.25}
-.home-event-program-list{max-height:288px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#BCC5AA transparent}
+.home-event-score-action{flex:0 0 auto;justify-self:auto}
+.home-event-program-list{max-width:100%;max-height:288px;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#BCC5AA transparent}
 .home-event-program-list::-webkit-scrollbar{width:5px}
 .home-event-program-list::-webkit-scrollbar-thumb{border-radius:99px;background:#BCC5AA}
 .program-type-badge{display:inline-flex;align-items:center;justify-content:center;min-width:40px;border-radius:6px;padding:4px 7px;font-size:10px;font-weight:900;line-height:1;white-space:nowrap}
@@ -2145,7 +2146,8 @@ body{font-weight:500}
   .home-event-head{padding:14px 13px 11px}
   .home-event-title{font-size:17px}
   .home-event-panel{padding-left:13px;padding-right:13px}
-  .home-event-row{grid-template-columns:24px minmax(0,1fr) auto;gap:7px}
+  .home-event-row{gap:7px}
+  .home-event-order{flex-basis:24px}
   .home-event-days{padding-left:13px;padding-right:13px}
   .home-attendance-rings{grid-template-columns:1fr 1fr}
   .home-schedule-row{grid-template-columns:76px minmax(0,1fr) 54px 12px;gap:6px;padding:10px}
