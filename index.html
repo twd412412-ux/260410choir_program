@@ -457,6 +457,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .late-chip.cancel{color:var(--ts)}
 .reason-help{font-size:12px;color:var(--ts);line-height:1.5;margin-bottom:10px}
 .photo-crop-stage{display:flex;justify-content:center;margin:8px 0 14px}
+#modalPhotoCrop .modal-content{max-height:min(92vh,calc(100dvh - 24px));overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .photo-crop-frame{width:240px;height:240px;border-radius:50%;overflow:hidden;background:#ECE4D6;border:3px solid var(--pl);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
 .photo-crop-frame canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .photo-crop-controls{display:grid;gap:10px;margin-top:8px}
@@ -3250,10 +3251,10 @@ body{font-weight:500}
       <label class="photo-crop-control"><span>좌우</span><input id="photoCropX" type="range" min="-120" max="120" step="1" value="0" oninput="updatePhotoCropFromControls()"></label>
       <label class="photo-crop-control"><span>상하</span><input id="photoCropY" type="range" min="-120" max="120" step="1" value="0" oninput="updatePhotoCropFromControls()"></label>
     </div>
-    <div class="photo-crop-note">얼굴이 원 안에 오도록 위치를 맞춘 뒤 업로드하세요.</div>
+    <div class="photo-crop-note">사진을 직접 끌거나 조절 막대를 사용해 얼굴이 원 안에 오도록 맞춰주세요.</div>
     <div class="account-action-actions">
       <button type="button" class="btn" onclick="cancelPhotoCrop()">취소</button>
-      <button type="button" class="btn btn-p" onclick="confirmPhotoCropUpload()">업로드</button>
+      <button type="button" class="btn btn-p" id="photoCropConfirmBtn" onclick="confirmPhotoCropUpload()">사진 적용</button>
     </div>
   </div>
 </div>
@@ -3452,6 +3453,7 @@ var recoveryFirebaseApp=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
+var myProfilePhotoSavePromise=null;
 var forceFreshDataOnInit=(function(){
   try{
     var url=new URL(window.location.href);
@@ -4031,6 +4033,7 @@ function closeModal(id){
   if(id==='modalScheduleEditor')restoreScheduleEditorMount();
   if(id==='modalRehearsalCue')teardownRehearsalCue();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
+  if(id==='modalUser'&&myProfilePhotoSavePromise)return showToast('프로필 사진을 저장하는 중입니다');
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
   if(id==='modalPhotoCrop'&&photoCropState){
@@ -5259,11 +5262,14 @@ function renderUserModalBody(){
   var b=document.getElementById('userModalBody');
   if(!b)return;
   if(firebaseAuthChecking){
+    b.dataset.userView='checking';
     b.innerHTML='<div style="padding:30px 12px;text-align:center"><div class="spinner" style="margin:0 auto 14px"></div><div style="font-size:15px;font-weight:850">자동 로그인 확인 중</div><div style="font-size:12px;color:var(--ts);margin-top:6px">잠시만 기다려주세요.</div></div>';
   }else if(isMemberLoggedIn()){
+    b.dataset.userView='profile';
     renderCurrentUserProfile(null,'loading');
     loadCurrentUserLinkedMember();
   }else{
+    b.dataset.userView='login';
     var hint=loadLastLoginHint();
     var name=hint&&hint.name?hint.name:'';
     b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">단원 계정으로 로그인하면 곡목록, 악보, 즐겨찾기 동기화를 이용할 수 있습니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" autocomplete="username" value="'+escHtml(name)+'" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 곡목록과 악보는 로그인 후 이용합니다.</p>';
@@ -5339,6 +5345,7 @@ function saveMyScoreParts(){
 function renderCurrentUserProfile(member,state){
   var b=document.getElementById('userModalBody');
   if(!b||!currentUser)return;
+  b.dataset.userView='profile';
   var memberBox='';
   if(!currentUser.memberId){
     memberBox='<div style="padding:12px;background:var(--bg);border:1px solid var(--bd);border-radius:12px;font-size:12px;color:var(--ts);line-height:1.5;margin-top:14px">명부 연결 전입니다. 계정은 정상 사용 가능하며, 명부 사진 업로드는 관리자 연결 후 사용할 수 있습니다.</div>';
@@ -5355,9 +5362,9 @@ function renderCurrentUserProfile(member,state){
       +preview
       +'<div style="font-size:13px;font-weight:850;margin-bottom:2px">'+escHtml(member.name||currentUser.name)+'</div>'
       +'<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+escHtml(accountLinkMemberLabel(member))+'</div>'
-      +'<div style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="display:none"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="selectPhotoForUpload(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">사진첩에서 선택</button></div>'
+      +'<div style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="display:none"><button class="btn btn-sm" id="myProfilePhotoSelectBtn" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="selectPhotoForUpload(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">사진첩에서 선택</button></div>'
       +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly data-saved-url="'+escHtml(photo)+'" value="'+escHtml(photo)+'">'
-      +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
+      +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" id="myProfilePhotoSaveBtn" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" id="myProfilePhotoRemoveBtn" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
   }
   b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(accountPartDisplayLabel(currentUser))+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+renderMyScorePartSettings()+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
@@ -5712,8 +5719,8 @@ function deleteIssueReport(id){
 }
 
 function loadCurrentUserLinkedMember(){
-  if(!currentUser||!currentUser.memberId)return;
-  db.collection('members').doc(currentUser.memberId).get().then(function(doc){
+  if(!currentUser||!currentUser.memberId)return Promise.resolve(null);
+  return db.collection('members').doc(currentUser.memberId).get().then(function(doc){
     if(!currentUser||currentUser.memberId!==doc.id)return;
     if(!doc.exists)return renderCurrentUserProfile(null,'missing');
     var member=Object.assign({id:doc.id},doc.data());
@@ -5722,45 +5729,90 @@ function loadCurrentUserLinkedMember(){
     updateUserBar();
     if(isHandbookExcludedMember(member))return renderCurrentUserProfile(member,'inactive');
     renderCurrentUserProfile(member,'ready');
+    return member;
   }).catch(function(){
     renderCurrentUserProfile(null,'missing');
+    return null;
   });
 }
 
+function setMyProfilePhotoSaving(saving){
+  ['myProfilePhotoSelectBtn','myProfilePhotoRemoveBtn'].forEach(function(id){
+    var button=document.getElementById(id);
+    if(button)button.disabled=!!saving;
+  });
+  var saveButton=document.getElementById('myProfilePhotoSaveBtn');
+  if(saveButton){
+    saveButton.disabled=!!saving;
+    saveButton.textContent=saving?'저장 중...':'사진 저장';
+  }
+}
+
 function saveMyProfilePhoto(){
-  if(!currentUser||!currentUser.memberId)return showToast('명부 연결 후 사용할 수 있습니다');
+  if(myProfilePhotoSavePromise)return myProfilePhotoSavePromise;
+  if(!currentUser||!currentUser.memberId){
+    showToast('명부 연결 후 사용할 수 있습니다');
+    return Promise.resolve(false);
+  }
   var input=document.getElementById('myProfilePhotoUrl');
   var url=input?input.value.trim():'';
   var savedUrl=getPhotoSavedUrl(input);
-  if(!url&&!savedUrl)return showToast('저장할 사진 변경이 없습니다');
-  if(url===savedUrl)return showToast('이미 저장된 사진입니다');
+  if(!url&&!savedUrl){
+    showToast('저장할 사진 변경이 없습니다');
+    return Promise.resolve(false);
+  }
+  if(url===savedUrl){
+    showToast('이미 저장된 사진입니다');
+    return Promise.resolve(false);
+  }
   var previousPhoto='';
-  db.collection('members').doc(currentUser.memberId).get().then(function(doc){
+  var savedMember=null;
+  var photoUpdatedAt=new Date().toISOString();
+  setMyProfilePhotoSaving(true);
+  myProfilePhotoSavePromise=db.collection('members').doc(currentUser.memberId).get().then(function(doc){
     if(!doc.exists)throw new Error('missing');
     var member=Object.assign({id:doc.id},doc.data());
     if(isHandbookExcludedMember(member))throw new Error('inactive');
     previousPhoto=member.photo||'';
-    return db.collection('members').doc(currentUser.memberId).update({
+    var changes={
       photo:url,
-      photoUpdatedAt:new Date().toISOString(),
+      photoUpdatedAt:photoUpdatedAt,
       photoUpdatedByAccountId:currentUser.id,
       photoUpdatedBy:currentUser.name
-    });
+    };
+    savedMember=Object.assign(member,changes);
+    return db.collection('members').doc(currentUser.memberId).update(changes);
   }).then(function(){
     if(input)setPhotoSavedUrl(input,url);
     if(previousPhoto&&previousPhoto!==url)deleteStoragePhotoByUrl(previousPhoto);
     invalidateSharedMembers();
+    applyLinkedMemberToUserSession(currentUser,savedMember);
+    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    updateUserBar();
+    renderCurrentUserProfile(savedMember,'ready');
     showToast('프로필 사진이 저장되었습니다');
-    loadCurrentUserLinkedMember();
+    return true;
   }).catch(function(e){
-    if(e&&e.message==='inactive')return showToast('비활성 명부는 사진을 저장할 수 없습니다');
-    if(e&&e.message==='missing')return showToast('연결된 명부를 찾을 수 없습니다');
+    if(e&&e.message==='inactive'){
+      showToast('비활성 명부는 사진을 저장할 수 없습니다');
+      return false;
+    }
+    if(e&&e.message==='missing'){
+      showToast('연결된 명부를 찾을 수 없습니다');
+      return false;
+    }
     console.error(e);
-    showToast('사진 저장 중 오류가 발생했습니다');
+    showToast(securityErrorMessage(e,'사진 저장 중 오류가 발생했습니다'));
+    return false;
+  }).finally(function(){
+    myProfilePhotoSavePromise=null;
+    setMyProfilePhotoSaving(false);
   });
+  return myProfilePhotoSavePromise;
 }
 
 function removeMyProfilePhoto(){
+  if(myProfilePhotoSavePromise)return showToast('프로필 사진을 저장하는 중입니다');
   var input=document.getElementById('myProfilePhotoUrl');
   if(!input)return;
   var current=input.value.trim();
@@ -5863,8 +5915,9 @@ function updateUserBar(){
   syncAccessShell();
   renderPushSettings();
   var userModal=document.getElementById('modalUser');
-  var manualLoginButton=document.querySelector('#userModalBody button[onclick="loginUser()"]');
-  if(userModal&&userModal.classList.contains('active')&&!(currentUser&&manualLoginButton))renderUserModalBody();
+  var userModalBody=document.getElementById('userModalBody');
+  var expectedView=firebaseAuthChecking?'checking':(currentUser?'profile':'login');
+  if(userModal&&userModalBody&&userModal.classList.contains('active')&&userModalBody.dataset.userView!==expectedView)renderUserModalBody();
   setTimeout(routePushTarget,0);
 }
 function showCachedUserChecking(user){
@@ -18254,10 +18307,18 @@ function cleanupUnsavedPhotoUpload(inputOrId){
 
 var photoCropState=null;
 
+function setPhotoCropConfirmState(uploading,urlInputId){
+  var button=document.getElementById('photoCropConfirmBtn');
+  if(!button)return;
+  button.disabled=!!uploading;
+  button.textContent=uploading?'저장 중...':(urlInputId==='myProfilePhotoUrl'?'프로필에 저장':'사진 적용');
+}
+
 function selectPhotoForUpload(fileInputId,urlInputId){
   var input=document.getElementById(fileInputId);
   if(!input)return showToast('사진 입력칸을 찾을 수 없습니다');
   input.onchange=function(){uploadPhotoAndResize(fileInputId,urlInputId);};
+  input.value='';
   input.click();
 }
 
@@ -18265,6 +18326,14 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
   var fileInput=document.getElementById(fileInputId);
   if(!fileInput||!fileInput.files||fileInput.files.length===0)return showToast('먼저 사진을 선택해주세요');
   var file=fileInput.files[0];
+  if(file.type&&file.type.indexOf('image/')!==0){
+    fileInput.value='';
+    return showToast('사진 파일만 선택할 수 있습니다');
+  }
+  if(file.size>30*1024*1024){
+    fileInput.value='';
+    return showToast('사진이 너무 큽니다. 30MB 이하 사진을 선택해주세요');
+  }
   var reader=new FileReader();
   reader.onload=function(event){
     var img=new Image();
@@ -18275,13 +18344,24 @@ function uploadPhotoAndResize(fileInputId, urlInputId) {
         if(el)el.value=id==='photoCropZoom'?'1':'0';
       });
       openModal('modalPhotoCrop');
+      setPhotoCropConfirmState(false,urlInputId);
       initPhotoCropCanvasEvents();
       drawPhotoCropPreview();
     };
-    img.onerror=function(){showToast('사진을 읽을 수 없습니다. 다른 사진을 선택해주세요');};
+    img.onerror=function(){
+      fileInput.value='';
+      showToast('사진을 읽을 수 없습니다. JPG·PNG 사진으로 다시 선택해주세요');
+    };
     img.src=event.target.result;
   };
-  reader.readAsDataURL(file);
+  reader.onerror=function(){
+    fileInput.value='';
+    showToast('사진을 불러오지 못했습니다. 다시 선택해주세요');
+  };
+  try{reader.readAsDataURL(file);}catch(e){
+    fileInput.value='';
+    showToast('사진을 불러오지 못했습니다. 다시 선택해주세요');
+  }
 }
 
 function updatePhotoCropFromControls(){
@@ -18363,16 +18443,24 @@ function confirmPhotoCropUpload(){
   if(photoCropState.uploading)return;
   photoCropState.uploading=true;
   var state=photoCropState;
+  setPhotoCropConfirmState(true,state.urlInputId);
   showToast('사진 업로드 중...');
   var out=document.createElement('canvas');
   drawPhotoCropToCanvas(out,300,false);
   out.toBlob(function(blob){
-    if(!blob){state.uploading=false;return showToast('사진 변환에 실패했습니다');}
+    if(!blob){
+      state.uploading=false;
+      setPhotoCropConfirmState(false,state.urlInputId);
+      return showToast('사진 변환에 실패했습니다');
+    }
     var safeName=String(state.file.name||'profile.jpg').replace(/[^\w.\-가-힣]/g,'_').replace(/\.[^.]+$/,'')+'.jpg';
-    var fileName='profiles/'+currentActorId()+'/'+Date.now()+'_'+safeName;
     var targetUrlInputId=state.urlInputId;
     var sourceInputId=state.fileInputId;
-    storage.ref().child(fileName).put(blob,{contentType:'image/jpeg'}).then(function(snapshot){
+    ensureFirebaseAuth().then(function(auth){
+      if(!auth.currentUser)throw {code:'storage/unauthenticated'};
+      var fileName='profiles/'+auth.currentUser.uid+'/'+Date.now()+'_'+safeName;
+      return storage.ref().child(fileName).put(blob,{contentType:'image/jpeg'});
+    }).then(function(snapshot){
       return snapshot.ref.getDownloadURL();
     }).then(function(downloadURL){
       var urlInput=document.getElementById(targetUrlInputId);
@@ -18381,7 +18469,8 @@ function confirmPhotoCropUpload(){
         var savedUrl=getPhotoSavedUrl(urlInput);
         if(previousUrl&&previousUrl!==savedUrl&&previousUrl!==downloadURL)deleteStoragePhotoByUrl(previousUrl);
         urlInput.value=downloadURL;
-        urlInput.classList.remove('hidden');
+        if(targetUrlInputId==='editHbPhotoUrl')urlInput.classList.remove('hidden');
+        else urlInput.classList.add('hidden');
         var previewId=targetUrlInputId==='hbPhotoUrl'?'hbPhotoPreview':(targetUrlInputId==='myProfilePhotoUrl'?'myProfilePhotoPreview':'editHbPhotoPreview');
         var previewImg=document.getElementById(previewId);
         if(previewImg){previewImg.src=downloadURL;previewImg.style.display='block';}
@@ -18390,11 +18479,23 @@ function confirmPhotoCropUpload(){
       if(fileInput)fileInput.value='';
       photoCropState=null;
       closeModal('modalPhotoCrop');
-      showToast('사진 업로드 완료. 저장을 눌러 반영하세요');
+      if(targetUrlInputId==='myProfilePhotoUrl'){
+        showToast('프로필 사진을 저장하는 중...');
+        return saveMyProfilePhoto();
+      }
+      showToast('사진을 적용했습니다. 명부 저장을 눌러 반영하세요');
+      return true;
     }).catch(function(error){
       console.error(error);
-      if(photoCropState)photoCropState.uploading=false;
-      showToast('사진 업로드 실패: '+error.message);
+      if(photoCropState===state){
+        photoCropState.uploading=false;
+        setPhotoCropConfirmState(false,state.urlInputId);
+      }
+      var code=String(error&&error.code||'');
+      if(code==='storage/unauthenticated')showToast('로그인을 다시 확인한 뒤 시도해주세요');
+      else if(code==='storage/unauthorized')showToast('프로필 사진 업로드 권한을 확인해주세요');
+      else if(code==='storage/retry-limit-exceeded')showToast('네트워크가 불안정합니다. 잠시 후 다시 시도해주세요');
+      else showToast('사진 업로드에 실패했습니다. 다시 시도해주세요');
     });
   },'image/jpeg',0.85);
 }
