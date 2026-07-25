@@ -770,6 +770,35 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-part-edit-file{font-size:11px;color:var(--ts);line-height:1.4;margin-top:4px;overflow-wrap:anywhere}
 .score-part-edit-note{font-size:11px;color:var(--ts);line-height:1.45;margin-top:-2px}
 .score-part-edit-actions{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:8px;margin-top:14px}
+.score-file-control{display:grid;gap:9px;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:11px 0}
+.score-file-control-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.score-file-control-copy{min-width:0}
+.score-file-control-title{font-size:13px;font-weight:900;color:var(--tx);line-height:1.35}
+.score-file-control-desc{margin-top:3px;font-size:11px;font-weight:650;color:var(--ts);line-height:1.4;word-break:keep-all}
+.score-file-pick-btn{align-self:center;white-space:nowrap}
+.score-file-selected{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;border-left:3px solid #6F7D4E;background:var(--pl);padding:9px 10px}
+.score-file-selected-copy{min-width:0}
+.score-file-selected-label{font-size:9px;font-weight:950;color:var(--pd);line-height:1.2}
+.score-file-selected-name{margin-top:3px;font-size:12px;font-weight:900;color:var(--tx);line-height:1.35;overflow-wrap:anywhere}
+.score-file-selected-meta{margin-top:3px;font-size:10.5px;font-weight:700;color:var(--ts);line-height:1.35}
+.score-file-selected-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+.score-file-selected-actions .score-light-btn{padding:7px 8px;font-size:11px}
+.score-replace-confirm-modal .modal-content{max-width:440px}
+.score-replace-intro{font-size:13px;font-weight:780;color:var(--tx);line-height:1.5;margin-bottom:13px}
+.score-replace-compare{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:11px 0}
+.score-replace-file{min-width:0}
+.score-replace-file-label{font-size:9px;font-weight:950;color:var(--ts)}
+.score-replace-file-version{margin-top:3px;font-size:12px;font-weight:950;color:var(--pd)}
+.score-replace-file-name{margin-top:4px;font-size:11px;font-weight:750;color:var(--tx);line-height:1.35;overflow-wrap:anywhere}
+.score-replace-arrow{color:var(--ts);font-size:16px;font-weight:900;text-align:center}
+.score-replace-warning{margin-top:11px;border-left:3px solid #B27720;background:#FFF8E8;color:#765018;padding:9px 10px;font-size:11px;font-weight:750;line-height:1.45}
+.dark .score-replace-warning{background:#352C1B;color:#E4C06E}
+.score-replace-preview{margin-top:10px}
+.score-replace-actions{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:8px;margin-top:14px}
+@media(max-width:390px){
+  .score-file-selected{grid-template-columns:1fr}
+  .score-file-selected-actions{justify-content:flex-start}
+}
 .score-card{padding:10px 11px;margin-bottom:8px;border-radius:10px;box-shadow:none}
 .score-card.clickable{cursor:pointer}
 .score-card.clickable:hover{background:#FEFCF6;border-color:#CAD5B5}
@@ -2556,7 +2585,31 @@ body{font-weight:500}
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
         <div class="form-group hidden" id="scoreInstrumentWrap" style="margin-bottom:0"><label class="form-label">관현악 파트</label><select class="form-sel" id="scoreInstrument" onchange="syncScoreInstrumentCustom()"></select><input class="form-input hidden" id="scoreInstrumentCustom" placeholder="예: 알토색소폰, 베이스클라리넷" style="margin-top:6px"></div>
         <div class="score-linked-note empty hidden" id="scoreCurrentFileNote"></div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF 파일</label><input class="form-input" id="scoreFile" type="file" accept="application/pdf,.pdf" multiple style="padding:8px" onchange="handleScoreFilesChanged()"></div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">PDF 파일</label>
+          <input class="hidden" id="scoreFile" type="file" accept="application/pdf,.pdf" multiple onchange="handleScoreFilesChanged()">
+          <div class="score-file-control">
+            <div class="score-file-control-head">
+              <div class="score-file-control-copy">
+                <div class="score-file-control-title" id="scoreFileControlTitle">등록할 PDF를 선택해주세요</div>
+                <div class="score-file-control-desc" id="scoreFileControlDesc">선택한 파일은 저장 전에 미리 확인할 수 있습니다.</div>
+              </div>
+              <button type="button" class="score-light-btn score-file-pick-btn" id="scoreFilePickBtn" onclick="openScoreFilePicker()">PDF 선택</button>
+            </div>
+            <div class="score-file-selected hidden" id="scoreFileSelected">
+              <div class="score-file-selected-copy">
+                <div class="score-file-selected-label" id="scoreFileSelectedLabel">선택한 파일</div>
+                <div class="score-file-selected-name" id="scoreFileSelectedName"></div>
+                <div class="score-file-selected-meta" id="scoreFileSelectedMeta"></div>
+              </div>
+              <div class="score-file-selected-actions">
+                <button type="button" class="score-light-btn" id="scoreFilePreviewBtn" onclick="previewScoreSelectedFile()">미리보기</button>
+                <button type="button" class="score-light-btn" onclick="openScoreFilePicker()">다시 선택</button>
+                <button type="button" class="score-light-btn" onclick="clearScoreSelectedFiles(true)">선택 취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <section class="score-upload-review hidden" id="scoreUploadReview" aria-live="polite">
           <div class="score-upload-review-head">
             <div><div class="score-upload-review-title">파트보 업로드 작업표</div><div class="score-upload-review-desc">파일별 파트를 확인한 뒤 업로드 상태를 한눈에 볼 수 있습니다.</div></div>
@@ -2576,7 +2629,7 @@ body{font-weight:500}
           </div>
           <datalist id="scoreUploadInstrumentOptions"></datalist>
         </section>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">PDF URL</label><input class="form-input" id="scoreUrl" placeholder="외부 PDF 링크를 사용할 때 입력" oninput="handleScoreUrlChanged()"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx)"><input type="checkbox" id="scorePublic" checked> 단원에게 공개</label>
         <div class="score-form-note">관현악 PDF를 여러 개 선택하면 작업표에서 파일별 파트와 진행 상태를 확인할 수 있습니다. 실패한 파일만 다시 시도할 수 있습니다.</div>
         <div style="display:flex;gap:8px">
@@ -3171,6 +3224,33 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 악보 파일 교체 확인 -->
+<div class="modal-overlay modal-center score-replace-confirm-modal" id="modalScoreReplaceConfirm">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">악보 파일 교체 확인</span><button class="modal-close" onclick="cancelScoreReplacementConfirm()">✕</button></div>
+    <div class="score-replace-intro">선택한 파일이 맞는지 마지막으로 확인해주세요.</div>
+    <div class="score-replace-compare">
+      <div class="score-replace-file">
+        <div class="score-replace-file-label">현재 악보</div>
+        <div class="score-replace-file-version" id="scoreReplaceCurrentVersion"></div>
+        <div class="score-replace-file-name" id="scoreReplaceCurrentName"></div>
+      </div>
+      <div class="score-replace-arrow" aria-hidden="true">→</div>
+      <div class="score-replace-file">
+        <div class="score-replace-file-label">교체할 악보</div>
+        <div class="score-replace-file-version" id="scoreReplaceNextVersion"></div>
+        <div class="score-replace-file-name" id="scoreReplaceNextName"></div>
+      </div>
+    </div>
+    <div class="score-replace-warning">교체가 완료되면 기존 파일은 삭제되며, 단원 화면에는 새 버전으로 표시됩니다.</div>
+    <button type="button" class="score-light-btn score-replace-preview hidden" id="scoreReplacePreviewBtn" onclick="previewScoreReplacementSource()">선택 파일 미리보기</button>
+    <div class="score-replace-actions">
+      <button type="button" class="btn" style="background:var(--bg);color:var(--ts)" onclick="cancelScoreReplacementConfirm()">다시 확인</button>
+      <button type="button" class="btn btn-p" id="scoreReplaceConfirmBtn" onclick="confirmScoreReplacement()">교체하기</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 공개 자리배치 -->
 <div class="modal-overlay modal-center public-seating-modal" id="modalPublicSeating">
   <div class="modal-content">
@@ -3513,6 +3593,7 @@ var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
 var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false;
 var songRecommendCache=[];
+var scoreReplacementConfirmed=false, scoreLocalPreviewUrl='';
 var WEB_PUSH_PUBLIC_KEY='BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY';
 var PUSH_STATE_PREFIX='choir_push_state_v1_';
 var PUSH_OWNER_KEY='choir_push_owner_v1';
@@ -4938,6 +5019,155 @@ function setScoreCurrentFileNote(score){
   note.innerHTML='<span class="score-version-badge">'+version+'</span> 현재 파일<br><b>'+escHtml(score.currentFileName)+'</b>'+previous;
 }
 
+function scoreFormPreviousScore(){
+  var editId=((document.getElementById('scoreEditId')||{}).value||'').trim();
+  return editId?allScores.find(function(score){return score.id===editId;}):null;
+}
+function scoreUrlDisplayName(url){
+  var value=String(url||'').trim();
+  if(!value)return '';
+  try{
+    var parsed=new URL(value,window.location.href);
+    var name=decodeURIComponent((parsed.pathname.split('/').pop()||'').trim());
+    return name||parsed.hostname||'외부 PDF 링크';
+  }catch(e){
+    return value;
+  }
+}
+function scoreFormReplacementInfo(){
+  var previous=scoreFormPreviousScore();
+  var fileEl=document.getElementById('scoreFile');
+  var files=fileEl&&fileEl.files?Array.prototype.slice.call(fileEl.files):[];
+  var url=((document.getElementById('scoreUrl')||{}).value||'').trim();
+  var previousUrl=previous&&!previous.currentFilePath?String(previous.currentFileUrl||'').trim():'';
+  var urlChanged=!!(previous&&url&&((previous.currentFilePath||'')||url!==previousUrl));
+  var replacing=!!(previous&&(files.length||urlChanged));
+  var currentVersion=Math.max(1,Number(previous&&previous.versionNumber||1));
+  var nextName=files.length===1?files[0].name:(files.length?(files.length+'개 PDF'):(urlChanged?scoreUrlDisplayName(url):''));
+  return {
+    previous:previous||null,
+    files:files,
+    url:url,
+    urlChanged:urlChanged,
+    replacing:replacing,
+    currentVersion:currentVersion,
+    nextVersion:previous?(replacing?currentVersion+1:currentVersion):1,
+    currentName:previous&&previous.currentFileName?previous.currentFileName:'현재 파일',
+    nextName:nextName,
+    hasConflict:!!(files.length&&url)
+  };
+}
+function revokeScoreLocalPreview(){
+  if(!scoreLocalPreviewUrl)return;
+  try{URL.revokeObjectURL(scoreLocalPreviewUrl)}catch(e){}
+  scoreLocalPreviewUrl='';
+}
+function openScoreFilePicker(){
+  var file=document.getElementById('scoreFile');
+  if(file)file.click();
+}
+function renderScoreFileControl(){
+  var info=scoreFormReplacementInfo();
+  var title=document.getElementById('scoreFileControlTitle');
+  var desc=document.getElementById('scoreFileControlDesc');
+  var pick=document.getElementById('scoreFilePickBtn');
+  var selected=document.getElementById('scoreFileSelected');
+  var selectedLabel=document.getElementById('scoreFileSelectedLabel');
+  var selectedName=document.getElementById('scoreFileSelectedName');
+  var selectedMeta=document.getElementById('scoreFileSelectedMeta');
+  var preview=document.getElementById('scoreFilePreviewBtn');
+  if(title)title.textContent=info.previous
+    ?(info.files.length?'교체할 PDF를 확인해주세요':(info.urlChanged?'교체할 PDF 링크를 확인해주세요':'현재 파일을 그대로 유지합니다'))
+    :(info.files.length?'등록할 PDF를 확인해주세요':'등록할 PDF를 선택해주세요');
+  if(desc)desc.textContent=info.previous
+    ?(info.replacing?('저장하면 v'+info.nextVersion+'로 교체됩니다.'):'새 파일로 교체할 때만 아래 버튼을 눌러주세요.')
+    :(info.files.length>1?'파일별 파트를 확인한 뒤 등록합니다.':'선택한 파일은 저장 전에 미리 확인할 수 있습니다.');
+  if(pick)pick.textContent=info.files.length?'다시 선택':(info.previous?'새 파일로 교체':'PDF 선택');
+  if(!selected)return syncScoreSaveButton();
+  if(!info.files.length){
+    selected.classList.add('hidden');
+    return syncScoreSaveButton();
+  }
+  selected.classList.remove('hidden');
+  var totalSize=info.files.reduce(function(sum,file){return sum+Number(file&&file.size||0);},0);
+  if(selectedLabel)selectedLabel.textContent=info.previous?('v'+info.nextVersion+' 교체 예정'):'선택한 파일';
+  if(selectedName)selectedName.textContent=info.files.length===1?info.files[0].name:(info.files.length+'개 PDF 선택');
+  if(selectedMeta)selectedMeta.textContent=[
+    scoreFileSizeText(totalSize),
+    info.previous?('현재 v'+info.currentVersion+'에서 교체'):'',
+    info.hasConflict?'PDF URL을 비워주세요':''
+  ].filter(Boolean).join(' · ');
+  if(preview)preview.classList.toggle('hidden',info.files.length!==1);
+  syncScoreSaveButton();
+}
+function clearScoreSelectedFiles(notify){
+  cleanupPendingScoreUploads();
+  revokeScoreLocalPreview();
+  var file=document.getElementById('scoreFile');
+  if(file){file.value='';delete file.dataset.targetScoreId;}
+  scoreUploadReviewRows=[];
+  scoreUploadReviewConfirmed=false;
+  scoreUploadPendingResults=Object.create(null);
+  scoreReplacementConfirmed=false;
+  renderScoreUploadReview();
+  renderScoreFileControl();
+  if(notify)showToast(scoreFormPreviousScore()?'현재 악보 파일을 유지합니다':'파일 선택을 취소했습니다');
+}
+function previewScoreSelectedFile(){
+  var info=scoreFormReplacementInfo();
+  if(info.files.length!==1)return showToast('PDF 파일 1개를 선택해주세요');
+  revokeScoreLocalPreview();
+  scoreLocalPreviewUrl=URL.createObjectURL(info.files[0]);
+  var win=window.open(scoreLocalPreviewUrl,'_blank');
+  if(!win||win.closed)showToast('미리보기 창이 차단되었습니다');
+}
+function previewScoreReplacementSource(){
+  var info=scoreFormReplacementInfo();
+  if(info.files.length===1)return previewScoreSelectedFile();
+  if(info.urlChanged){
+    var win=window.open(info.url,'_blank');
+    if(!win||win.closed)showToast('미리보기 창이 차단되었습니다');
+    return;
+  }
+  showToast('미리볼 교체 파일을 찾을 수 없습니다');
+}
+function handleScoreUrlChanged(){
+  scoreReplacementConfirmed=false;
+  renderScoreFileControl();
+}
+function openScoreReplacementConfirm(info){
+  info=info||scoreFormReplacementInfo();
+  if(!info.previous||!info.replacing)return false;
+  var currentVersion=document.getElementById('scoreReplaceCurrentVersion');
+  var currentName=document.getElementById('scoreReplaceCurrentName');
+  var nextVersion=document.getElementById('scoreReplaceNextVersion');
+  var nextName=document.getElementById('scoreReplaceNextName');
+  var preview=document.getElementById('scoreReplacePreviewBtn');
+  var confirmBtn=document.getElementById('scoreReplaceConfirmBtn');
+  if(currentVersion)currentVersion.textContent='v'+info.currentVersion;
+  if(currentName)currentName.textContent=info.currentName;
+  if(nextVersion)nextVersion.textContent='v'+info.nextVersion;
+  if(nextName)nextName.textContent=info.nextName||'새 파일';
+  if(preview)preview.classList.toggle('hidden',!(info.files.length===1||info.urlChanged));
+  if(confirmBtn)confirmBtn.textContent='v'+info.nextVersion+'로 교체';
+  openModal('modalScoreReplaceConfirm');
+  return true;
+}
+function cancelScoreReplacementConfirm(){
+  scoreReplacementConfirmed=false;
+  closeModal('modalScoreReplaceConfirm');
+}
+function confirmScoreReplacement(){
+  var info=scoreFormReplacementInfo();
+  if(!info.replacing){
+    closeModal('modalScoreReplaceConfirm');
+    return showToast('교체할 파일을 다시 선택해주세요');
+  }
+  scoreReplacementConfirmed=true;
+  closeModal('modalScoreReplaceConfirm');
+  return saveScoreUpload();
+}
+
 function openQuickScoreManage(songName,songId){
   if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
   if(document.getElementById('modalDetail')&&document.getElementById('modalDetail').classList.contains('active'))closeModal('modalDetail');
@@ -4953,7 +5183,7 @@ function openQuickScoreManage(songName,songId){
       if(title)title.value=linkedName;
     }
     setScoreLinkedSong(songId||'',songId?linkedName:'');
-    var target=document.getElementById(linkedName?'scoreFile':'scoreTitle')||document.getElementById('scoreTitle');
+    var target=document.getElementById(linkedName?'scoreFilePickBtn':'scoreTitle')||document.getElementById('scoreTitle');
     if(target)target.focus();
   },0);
 }
@@ -4972,8 +5202,8 @@ function openQuickScoreManageForGroup(groupKey){
     if(title)title.value=base.title||group.title||'';
     setScoreLinkedSongs(base.linkedSongIds&&base.linkedSongIds.length?base.linkedSongIds:(base.linkedSongId?[base.linkedSongId]:[]),base.linkedSongName||'');
     setScoreInstrumentSelection('');
-    var file=document.getElementById('scoreFile');
-    if(file)file.focus();
+    var fileButton=document.getElementById('scoreFilePickBtn');
+    if(fileButton)fileButton.focus();
     showToast('같은 곡 그룹에 추가할 파트보를 선택해주세요');
   },0);
 }
@@ -8105,9 +8335,14 @@ function syncScoreSaveButton(){
   if(!btn||btn.dataset.busy==='true')return;
   var editId=((document.getElementById('scoreEditId')||{}).value||'').trim();
   var reviewActive=isScoreUploadReviewActive();
-  btn.disabled=reviewActive&&!scoreUploadReviewConfirmed;
+  var replacementInfo=scoreFormReplacementInfo();
+  btn.disabled=(reviewActive&&!scoreUploadReviewConfirmed)||replacementInfo.hasConflict;
   var hasFailed=scoreUploadReviewRows.some(function(row){return row.status==='error';});
-  btn.textContent=editId?'수정 저장':(reviewActive?(scoreUploadReviewConfirmed?(hasFailed?'실패 파일 다시 시도':('파트보 '+scoreUploadReviewRows.length+'개 등록')):'먼저 파일 확인'):'악보 등록');
+  btn.textContent=replacementInfo.hasConflict
+    ?'PDF 또는 URL 선택'
+    :editId
+      ?(replacementInfo.replacing?('v'+replacementInfo.nextVersion+'로 교체'):'정보 저장')
+      :(reviewActive?(scoreUploadReviewConfirmed?(hasFailed?'실패 파일 다시 시도':('파트보 '+scoreUploadReviewRows.length+'개 등록')):'먼저 파일 확인'):'악보 등록');
 }
 function renderScoreUploadReview(){
   var box=document.getElementById('scoreUploadReview');
@@ -8208,11 +8443,18 @@ function confirmScoreUploadReview(){
 }
 function handleScoreFilesChanged(){
   cleanupPendingScoreUploads();
+  revokeScoreLocalPreview();
   var file=document.getElementById('scoreFile');if(file)delete file.dataset.targetScoreId;
+  if(file&&file.files&&file.files.length){
+    var url=document.getElementById('scoreUrl');
+    if(url)url.value='';
+  }
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
   scoreUploadPendingResults=Object.create(null);
+  scoreReplacementConfirmed=false;
   renderScoreUploadReview();
+  renderScoreFileControl();
 }
 function scoreUploadReviewedInstruments(files){
   syncScoreUploadReviewRows(files||[]);
@@ -9451,8 +9693,10 @@ function setScoreFormKind(kind){
   if(wrap)wrap.classList.toggle('hidden',kind!=='orchestra');
   syncScoreInstrumentCustom();
   var file=document.getElementById('scoreFile');
-  if(file)file.multiple=kind==='orchestra';
+  var editId=((document.getElementById('scoreEditId')||{}).value||'').trim();
+  if(file)file.multiple=kind==='orchestra'&&!editId;
   renderScoreUploadReview();
+  renderScoreFileControl();
 }
 function cleanupPendingScoreUploads(){
   var paths=Object.keys(scoreUploadPendingResults).map(function(key){
@@ -9464,6 +9708,8 @@ function cleanupPendingScoreUploads(){
 }
 function resetScoreForm(saved){
   if(!saved)cleanupPendingScoreUploads();
+  revokeScoreLocalPreview();
+  scoreReplacementConfirmed=false;
   scoreCandidateSelectedIds=[];
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
@@ -9478,6 +9724,7 @@ function resetScoreForm(saved){
   renderScoreLinkedSongNote();
   renderScoreSongCandidates();
   renderScoreUploadReview();
+  renderScoreFileControl();
 }
 function scoreSafeFileName(name){
   var base=String(name||'score.pdf').trim().replace(/[\\\/\u0000-\u001F]/g,'_');
@@ -9534,6 +9781,7 @@ function saveScoreUpload(){
   var reviewedInstruments=reviewActive?scoreUploadReviewedInstruments(files):[];
   var file=files[0]||null;
   var urlInput=(document.getElementById('scoreUrl').value||'').trim();
+  var replacementInfo=scoreFormReplacementInfo();
   var linkedSongId=(document.getElementById('scoreLinkedSongId').value||'').trim();
   var linkedSongName=(document.getElementById('scoreLinkedSongName').value||'').trim();
   var linkedSongIds=getScoreLinkedSongIds();
@@ -9551,7 +9799,7 @@ function saveScoreUpload(){
   if(!reviewActive&&scoreKind==='orchestra'&&(document.getElementById('scoreInstrument')||{}).value==='__custom__'&&!selectedInstrument)return showToast('직접 입력할 관현악 파트명을 입력해주세요');
   if(editId&&files.length>1)return showToast('기존 악보 수정 시 PDF는 1개만 선택해주세요');
   if(scoreKind!=='orchestra'&&files.length>1)return showToast('여러 PDF 등록은 관현악 파트보에서만 사용할 수 있습니다');
-  if(files.length>1&&urlInput)return showToast('여러 PDF 등록 시 PDF URL은 함께 사용할 수 없습니다');
+  if(files.length&&urlInput)return showToast('PDF 파일과 PDF URL 중 하나만 선택해주세요');
   if(!files.length&&!urlInput&&!(previous&&(previous.currentFilePath||previous.currentFileUrl)))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
   if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
   for(var vf=0;vf<files.length;vf++){
@@ -9559,15 +9807,19 @@ function saveScoreUpload(){
     if(files[vf].type&&files[vf].type!=='application/pdf'&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
     if(!files[vf].type&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
   }
+  if(editId&&replacementInfo.replacing&&!scoreReplacementConfirmed){
+    openScoreReplacementConfirm(replacementInfo);
+    return;
+  }
   var scoreId=editId||(fileEl&&fileEl.dataset.targetScoreId)||createScoreId();
   if(!editId&&fileEl)fileEl.dataset.targetScoreId=scoreId;
   var now=new Date().toISOString();
   var actorName=currentActorName();
   var actorId=currentActorId();
   var btn=document.getElementById('scoreSaveBtn');
-  var replacingFile=!!(files.length||urlInput);
+  var replacingFile=previous?replacementInfo.replacing:!!(files.length||urlInput);
   if(btn){btn.dataset.busy='true';btn.disabled=true;btn.textContent=editId?'수정 저장 중...':'등록 중...';}
-  showToast(files.length>1?('관현악 파트보 '+files.length+'개 업로드 중...'):(file?(editId?'악보 파일 교체 중...':'악보 업로드 중...'):(urlInput?'악보 링크 저장 중...':(editId?'악보 정보 저장 중...':'악보 등록 중...'))));
+  showToast(files.length>1?('관현악 파트보 '+files.length+'개 업로드 중...'):(file?(editId?'악보 파일 교체 중...':'악보 업로드 중...'):((urlInput&&replacingFile)?(editId?'악보 링크 교체 중...':'악보 링크 저장 중...'):(editId?'악보 정보 저장 중...':'악보 등록 중...'))));
 
   function instrumentForName(name, previousScore){
     if(scoreKind!=='orchestra')return '';
@@ -9709,6 +9961,7 @@ function saveScoreUpload(){
     else if(reviewActive&&scoreUploadReviewRows.some(function(row){return row.status==='error';}))showToast('실패한 파일을 확인한 뒤 다시 시도해주세요');
     else showToast(securityErrorMessage(e,'악보 저장 중 오류가 발생했습니다'));
   }).finally(function(){
+    scoreReplacementConfirmed=false;
     if(btn){
       delete btn.dataset.busy;
       syncScoreSaveButton();
@@ -9720,6 +9973,8 @@ function editScoreUpload(id){
   if(!score)return;
   if(!canEditScoreItem(score))return showToast('악보 수정 권한이 없습니다');
   cleanupPendingScoreUploads();
+  revokeScoreLocalPreview();
+  scoreReplacementConfirmed=false;
   scoreUploadPendingResults=Object.create(null);
   var file=document.getElementById('scoreFile');if(file){file.value='';delete file.dataset.targetScoreId;}
   scoreUploadReviewRows=[];
@@ -9734,6 +9989,7 @@ function editScoreUpload(id){
   setScoreLinkedSongs(score.linkedSongIds&&score.linkedSongIds.length?score.linkedSongIds:(score.linkedSongId?[score.linkedSongId]:[]),score.linkedSongName||'');
   document.getElementById('scorePublic').checked=score.public!==false;
   renderScoreUploadReview();
+  renderScoreFileControl();
   var focusTarget=normalizeScoreKind(score.scoreKind)==='orchestra'
     ? (document.getElementById('scoreInstrumentWrap')||document.getElementById('scoreInstrument'))
     : document.getElementById('scoreTitle');
