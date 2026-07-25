@@ -788,6 +788,10 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-singer-file{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .score-singer-version{color:#7A5A24;font-size:10px;font-weight:820;white-space:nowrap}
 .score-singer-open{min-width:56px;display:inline-flex;align-items:center;justify-content:center}
+.score-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px 8px;background:var(--bg)}
+.score-list-head .result-count{min-width:0;padding:0;background:transparent}
+.score-sort-control{display:flex;align-items:center;gap:6px;flex:0 0 auto;color:var(--ts);font-size:11px;font-weight:850}
+.score-sort-select{width:auto;min-width:120px;max-width:154px;height:34px;border:1px solid var(--bd);border-radius:9px;background:var(--sf);color:var(--tx);padding:0 28px 0 9px;font-family:inherit;font-size:12px;font-weight:850}
 .dark .score-singer-list{background:#1D211B;border-color:#343B31}
 .dark .score-singer-row{border-bottom-color:#343B31}
 .dark .score-singer-row:hover,.dark .score-singer-row:active{background:#263126}
@@ -819,6 +823,9 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-card .score-action-btn.open{font-size:11px;padding:7px 9px;border-radius:9px}
 .score-week-title{font-size:14px;font-weight:850;margin-bottom:8px}
 .score-week-grid{display:grid;gap:8px}
+.score-week-grid.scrollable{max-height:220px;overflow-y:auto;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--bd) transparent;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-right:3px}
+.score-week-grid.scrollable::-webkit-scrollbar{width:5px}
+.score-week-grid.scrollable::-webkit-scrollbar-thumb{background:var(--bd);border-radius:999px}
 .score-week-row{display:grid;grid-template-columns:68px 1fr auto;gap:8px;align-items:center;border-top:1px solid var(--bd);padding-top:8px;font-size:12px}
 .score-week-row:first-child{border-top:0;padding-top:0}
 .score-week-date{font-weight:850;color:var(--pd)}
@@ -2371,7 +2378,17 @@ body{font-weight:500}
     <div class="quick-manage-row hidden" id="scoreQuickActions"><button type="button" class="quick-manage-btn primary" onclick="openQuickScoreManage()">+ 악보 등록</button></div>
   </div>
   <div id="scoreWeekPanel"></div>
-  <div class="result-count" id="scoreCount">악보 0개</div>
+  <div class="score-list-head">
+    <div class="result-count" id="scoreCount">악보 0개</div>
+    <label class="score-sort-control" id="scoreSortControl" for="scoreSortSelect">
+      <span>정렬</span>
+      <select class="score-sort-select" id="scoreSortSelect" onchange="setScoreSortMode(this.value)">
+        <option value="name">가나다순</option>
+        <option value="updated">최근 업데이트순</option>
+        <option value="created">최초 등록일순</option>
+      </select>
+    </label>
+  </div>
   <div class="score-list" id="scoreList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
 </div>
 
@@ -3481,6 +3498,15 @@ var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivat
 var scoreLoadTimer=null;
 var scoreRealtimeUnsubscribe=null, scoreRealtimeReadyPromise=null, scoreRealtimeGeneration=0;
 var scoreViewMode=localStorage.getItem('choir_score_view')||'';
+var SCORE_SORT_KEY='choir_score_sort_v1';
+var scoreSortMode=(function(){
+  try{
+    var saved=localStorage.getItem(SCORE_SORT_KEY);
+    return ['name','updated','created'].indexOf(saved)>-1?saved:'name';
+  }catch(e){
+    return 'name';
+  }
+})();
 var SCORE_CACHE_KEY='choir_scores_public';
 var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
 var scoreSeenStateCache={key:'',items:{}};
@@ -8608,6 +8634,43 @@ function scoreUpdatedText(score){
   if(!raw)return '';
   return raw.slice(0,10).replace(/-/g,'.');
 }
+function normalizeScoreSortMode(value){
+  return ['name','updated','created'].indexOf(value)>-1?value:'name';
+}
+function scoreDateSortValue(value){
+  if(!value)return 0;
+  if(value&&typeof value.toMillis==='function')return value.toMillis();
+  if(value&&typeof value.seconds==='number')return value.seconds*1000;
+  var parsed=Date.parse(String(value));
+  return isNaN(parsed)?0:parsed;
+}
+function scoreLastChangedValue(score){
+  return Math.max(
+    scoreDateSortValue(score&&score.currentUploadedAt),
+    scoreDateSortValue(score&&score.updatedAt),
+    scoreDateSortValue(score&&score.createdAt)
+  );
+}
+function sortSingerScores(rows,mode){
+  mode=normalizeScoreSortMode(mode);
+  return (rows||[]).slice().sort(function(a,b){
+    if(mode==='updated'){
+      var updatedDiff=scoreLastChangedValue(b)-scoreLastChangedValue(a);
+      if(updatedDiff)return updatedDiff;
+    }else if(mode==='created'){
+      var createdDiff=scoreDateSortValue(b&&b.createdAt)-scoreDateSortValue(a&&a.createdAt);
+      if(createdDiff)return createdDiff;
+    }
+    return String(a&&a.title||'').localeCompare(String(b&&b.title||''),'ko')
+      ||scoreLastChangedValue(b)-scoreLastChangedValue(a)
+      ||String(a&&a.id||'').localeCompare(String(b&&b.id||''));
+  });
+}
+function setScoreSortMode(mode){
+  scoreSortMode=normalizeScoreSortMode(mode);
+  try{localStorage.setItem(SCORE_SORT_KEY,scoreSortMode)}catch(e){}
+  renderScoresPage();
+}
 function scoreVersionToken(score){
   if(!score)return '';
   return [Math.max(1,Number(score.versionNumber||1)),score.currentUploadedAt||'',score.currentFilePath||score.currentFileUrl||''].join('|');
@@ -9175,6 +9238,21 @@ function renderScoreFolderCard(group, adminMode){
     +body
     +'</div>';
 }
+function syncScoreWeekPanelViewport(panel){
+  var grid=panel&&panel.querySelector('.score-week-grid');
+  if(!grid)return;
+  var rows=grid.querySelectorAll('.score-week-row');
+  if(rows.length<=4)return;
+  grid.classList.add('scrollable');
+  requestAnimationFrame(function(){
+    if(!grid.isConnected)return;
+    var currentRows=grid.querySelectorAll('.score-week-row');
+    if(currentRows.length<=4)return;
+    var firstRect=currentRows[0].getBoundingClientRect();
+    var fourthRect=currentRows[3].getBoundingClientRect();
+    grid.style.maxHeight=Math.ceil(fourthRect.bottom-firstRect.top)+'px';
+  });
+}
 function renderScoreWeekPanel(){
   var panel=document.getElementById('scoreWeekPanel');
   if(!panel)return;
@@ -9191,26 +9269,49 @@ function renderScoreWeekPanel(){
     {label:'다음 주',date:getSundayFrom(featured,1)},
     {label:'다다음 주',date:getSundayFrom(featured,2)}
   ];
+  var lastBaseDate=weeks[weeks.length-1].date;
+  var extraDates={};
+  allSongs.forEach(function(song){
+    var y=Number(song&&song.year),m=Number(song&&song.month),d=Number(song&&song.day);
+    if(!y||!m||!d)return;
+    var date=new Date(y,m-1,d);
+    if(isNaN(date.getTime())||date<=lastBaseDate)return;
+    var category=scoreSearchKey(song&&song.category);
+    var isSundaySong=category
+      ? category.indexOf(scoreSearchKey('주일찬송'))>-1
+      : date.getDay()===0;
+    if(!isSundaySong)return;
+    extraDates[homeInputDate(date)]=date;
+  });
+  Object.keys(extraDates).sort().forEach(function(key){
+    var date=extraDates[key];
+    var weeksAfter=Math.round((date-featured)/(7*24*60*60*1000));
+    weeks.push({label:weeksAfter+'주 후',date:date});
+  });
   var html=weeks.map(function(w){
     var key=homeInputDate(w.date);
     var parts=key.split('-');
     var y=Number(parts[0]),m=Number(parts[1]),d=Number(parts[2]);
-    var rows=allSongs.filter(function(s){return s.year===y&&s.month===m&&s.day===d;});
+    var rows=allSongs.filter(function(s){return Number(s.year)===y&&Number(s.month)===m&&Number(s.day)===d;});
     if(rows.length===0){
-      return '<div class="score-week-row"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" style="color:var(--ts)">등록된 곡 없음</div><div></div></div>';
+      return '<div class="score-week-row" data-score-week-key="'+key+'"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" style="color:var(--ts)">등록된 곡 없음</div><div></div></div>';
     }
     return rows.map(function(song){
       var action=renderScoreActionForSong(song,true);
-      return '<div class="score-week-row"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openDetail(\''+escAttr(song.id)+'\')">'+escHtml(song.songName||'곡명 없음')+'</div><div>'+action+'</div></div>';
+      return '<div class="score-week-row" data-score-week-key="'+key+'"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openDetail(\''+escAttr(song.id)+'\')">'+escHtml(song.songName||'곡명 없음')+'</div><div>'+action+'</div></div>';
     }).join('');
   }).join('');
   panel.innerHTML='<div class="score-week-card"><div class="score-week-title">주일찬송곡 악보</div><div class="score-week-grid">'+html+'</div></div>';
+  syncScoreWeekPanelViewport(panel);
 }
 function renderScoresPage(){
   var list=document.getElementById('scoreList');
   var count=document.getElementById('scoreCount');
+  var sortControl=document.getElementById('scoreSortControl');
+  var sortSelect=document.getElementById('scoreSortSelect');
   if(!list)return;
   if(!canViewScores()){
+    if(sortControl)sortControl.classList.add('hidden');
     if(count)count.textContent='악보 로그인 필요';
     list.innerHTML='<div class="score-empty">로그인한 단원만 악보를 볼 수 있습니다.<br><button class="btn btn-p" style="margin-top:12px" onclick="pendingTabAfterLogin=\'scores\';openUserModal()">로그인</button></div>';
     return;
@@ -9218,6 +9319,9 @@ function renderScoresPage(){
   ensureScoreRealtimeSync();
   syncQuickCreateActions();
   renderScoreModeTabs('scoreModeTabs',false);
+  var activeMode=ensureScoreViewMode();
+  if(sortControl)sortControl.classList.toggle('hidden',activeMode!=='singer');
+  if(sortSelect)sortSelect.value=scoreSortMode;
   if(!scoresLoaded){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
     loadScores(false,false).then(renderScoresPage);
@@ -9227,18 +9331,19 @@ function renderScoresPage(){
   var qEl=document.getElementById('scoreSearchInput');
   var q=(qEl?qEl.value:'').trim().toLowerCase();
   var qKey=scoreSearchKey(q);
-  var rows=sortScoresBySchedule(allScores.filter(function(score){
+  var rows=allScores.filter(function(score){
     if(!canViewScoreItem(score)||!scoreMatchesActiveMode(score))return false;
     if(!q)return true;
     var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName,scoreKindLabel(score.scoreKind),scoreInstrumentLabel(score.instrument)].join(' ').toLowerCase();
     return text.indexOf(q)>-1||(qKey&&scoreSearchKey(text).indexOf(qKey)>-1);
-  }));
-  if(count)count.textContent=q?'검색 결과 '+rows.length+'개':scoreKindLabel(ensureScoreViewMode())+' 악보 '+rows.length+'개';
+  });
+  rows=activeMode==='singer'?sortSingerScores(rows,scoreSortMode):sortScoresBySchedule(rows);
+  if(count)count.textContent=q?'검색 결과 '+rows.length+'개':scoreKindLabel(activeMode)+' 악보 '+rows.length+'개';
   if(rows.length===0){
     list.innerHTML='<div class="score-empty">조건에 맞는 공개 악보가 없습니다.</div>';
     return;
   }
-  list.innerHTML=ensureScoreViewMode()==='orchestra'?renderScoreFolderList(rows,false):renderSingerScoreList(rows);
+  list.innerHTML=activeMode==='orchestra'?renderScoreFolderList(rows,false):renderSingerScoreList(rows);
 }
 function renderSongScoreDetail(song){
   var scores=findVisibleScoresForSong(song);
