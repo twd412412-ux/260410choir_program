@@ -406,6 +406,13 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .handbook-extra-body{padding:0 12px 12px}
 .handbook-extra-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .handbook-extra-grid .span-2{grid-column:1/-1}
+.handbook-date-field{margin-top:8px}
+.handbook-date-field .form-label{margin-bottom:5px}
+.handbook-date-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.handbook-date-grid>*{min-width:0}
+.handbook-date-note{margin-top:5px;color:var(--ts);font-size:10.5px;font-weight:700;line-height:1.45}
+.handbook-join-line{margin-top:2px;color:var(--ts);font-size:11px;font-weight:750}
+.dark .handbook-date-note,.dark .handbook-join-line{color:#AAB3A4}
 .handbook-title-count{display:inline-flex;align-items:center;margin-left:6px;padding:3px 8px;border-radius:999px;background:var(--pl);color:var(--pd);font-size:11px;font-weight:800;vertical-align:middle}
 .handbook-summary-card{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:14px;padding:12px;margin-bottom:14px}
 .handbook-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -441,6 +448,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .handbook-add-body{padding:0 14px 14px}
 .handbook-add-panel:not([open]) .handbook-add-body{display:none}
 @media(max-width:420px){.handbook-extra-grid{grid-template-columns:1fr}.handbook-extra-grid .span-2{grid-column:auto}.account-roster-status{grid-template-columns:repeat(2,minmax(0,1fr))}.account-roster-row{grid-template-columns:minmax(0,1fr) auto}.account-roster-register{grid-column:2}.account-row{grid-template-columns:1fr}.account-actions{justify-content:flex-start}.account-action-btn{min-width:48px}}
+@media(max-width:360px){.handbook-date-grid{grid-template-columns:1fr}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .modal-title{font-size:18px;font-weight:700}
@@ -2836,6 +2844,11 @@ body{font-weight:500}
         <input class="form-input" id="hbBirth" type="text" placeholder="생년월일" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
 
       </div>
+      <div class="handbook-date-field">
+        <label class="form-label" for="hbJoinDate">입단일</label>
+        <input class="form-input" id="hbJoinDate" type="date">
+        <div class="handbook-date-note">신규 등록 시 오늘 날짜가 자동으로 들어갑니다.</div>
+      </div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px">
         <input class="form-input" id="hbDist" placeholder="교구">
         <input class="form-input" id="hbArea" placeholder="구역">
@@ -3472,7 +3485,11 @@ body{font-weight:500}
       </select>
     </div>
     <div class="form-group"><label class="form-label">전화번호</label><input class="form-input" id="editHbPhone"></div>
-    <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="editHbBirth" type="date"></div>
+    <div class="handbook-date-grid">
+      <div class="form-group"><label class="form-label">생년월일</label><input class="form-input" id="editHbBirth" type="date"></div>
+      <div class="form-group"><label class="form-label">입단일</label><input class="form-input" id="editHbJoinDate" type="date"></div>
+    </div>
+    <div class="handbook-date-note" id="editHbJoinDateNote"></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
       <div class="form-group"><label class="form-label">교구</label><input class="form-input" id="editHbDist"></div>
       <div class="form-group"><label class="form-label">구역</label><input class="form-input" id="editHbArea"></div>
@@ -4275,6 +4292,10 @@ function isMemberAddOpen(){
 function syncMemberAddOpen(){
   var panel=document.getElementById('hbAddPanel');
   if(panel&&!panel.open)cleanupUnsavedPhotoUpload('hbPhotoUrl');
+  if(panel&&panel.open){
+    var joinDate=document.getElementById('hbJoinDate');
+    if(joinDate&&!joinDate.value)joinDate.value=getTodayInputDate();
+  }
   syncLayoutState();
 }
 function syncLayoutState(){
@@ -6508,6 +6529,32 @@ function isAttendanceTargetMember(d){
 function normalizeDateKey(v){
   var s=String(v||'').trim().slice(0,10);
   return /^\d{4}-\d{2}-\d{2}$/.test(s)?s:'';
+}
+function normalizeMemberMetadataDate(value){
+  var date=null;
+  if(value&&typeof value.toDate==='function'){
+    try{date=value.toDate();}catch(e){}
+  }else if(value&&typeof value.seconds==='number'){
+    date=new Date(value.seconds*1000);
+  }else if(value instanceof Date){
+    date=value;
+  }else if(typeof value==='string'&&value.indexOf('T')>-1){
+    date=new Date(value);
+  }
+  if(date&&!isNaN(date.getTime()))return homeInputDate(date);
+  return normalizeDateKey(value);
+}
+function memberJoinDate(member){
+  return normalizeMemberMetadataDate(member&&member.joinDate);
+}
+function memberSystemCreatedDate(member){
+  return normalizeMemberMetadataDate(member&&member.createdAt);
+}
+function formatHandbookDate(value){
+  var key=normalizeMemberMetadataDate(value);
+  if(!key)return '';
+  var parts=key.split('-').map(Number);
+  return parts[0]+'. '+parts[1]+'. '+parts[2]+'.';
 }
 function memberAttendanceStartDate(member){
   return normalizeDateKey(member&&member.attendanceStartDate)||normalizeDateKey(member&&member.createdAt);
@@ -12028,6 +12075,8 @@ function renderHandbook(list) {
     var stateBadge=isHandbookExcludedMember(m)
       ? ' <span style="font-size:10px;background:#ECE7DA;color:#655E52;padding:1px 6px;border-radius:8px">명단제외</span>'
       : (!isAttendanceTargetMember(m)?' <span style="font-size:10px;background:#F4E7CC;color:#7C571E;padding:1px 6px;border-radius:8px">출결제외</span>':'');
+    var joinDate=memberJoinDate(m);
+    var joinText=joinDate?formatHandbookDate(joinDate):'미입력';
 
     return `
       <div class="song-card" style="border-left-color: ${(m.status||'active') === 'active' ? 'var(--p)' : 'var(--ts)'}">
@@ -12048,6 +12097,7 @@ ${m.role==='attendance'?' <span style="font-size:10px;background:#22C55E;color:#
         <div class="hb-card-info">
           🏠 ${m.district || '-'}교구 ${m.area || '-'}구역 | 💼 ${m.job || '-'}<br>
           👥 ${m.group || '-'} | 🎂 ${m.birthday || '생일 미입력'}
+          <div class="handbook-join-line">📅 입단 ${joinText}</div>
         </div>
       </div>`;
   }).join('');
@@ -12940,7 +12990,7 @@ function filterHandbook() {
   var filtered = directoryData.filter(function(m) {
     var haystack=[
       m.name||'',m.district||'',m.area||'',m.job||'',m.group||'',
-      normalizePartName(m.part),normalizePartName(m.subPart)
+      normalizePartName(m.part),normalizePartName(m.subPart),memberJoinDate(m)
     ].join(' ').toLowerCase();
     return (!q||haystack.indexOf(q)>-1)&&matchesHandbookFilter(m,selectedHbPart);
   });
@@ -13031,6 +13081,7 @@ function addHandbookMember(){
     subPart: subPart,
     noAtt: document.getElementById('hbNoAtt').checked || false,
     status: part==='명단제외' ? 'inactive' : 'active',
+    joinDate: normalizeDateKey((document.getElementById('hbJoinDate')||{}).value)||getTodayInputDate(),
     attendanceStartDate: getTodayInputDate(),
     createdAt: new Date().toISOString()
   };
@@ -13044,6 +13095,7 @@ function addHandbookMember(){
     document.getElementById('hbGroup').selectedIndex = 0;
     document.getElementById('hbSub').selectedIndex = 0;
     document.getElementById('hbNoAtt').checked = false;
+    document.getElementById('hbJoinDate').value = getTodayInputDate();
     clearHandbookProfileFields('add');
     if(document.getElementById('hbPhotoUrl')) {
       document.getElementById('hbPhotoUrl').value = ''; // 입력칸 초기화
@@ -13059,7 +13111,7 @@ function addHandbookMember(){
     syncMemberAddOpen();
     invalidateSharedMembers();
     loadHandbook();
-    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 🏠 ${distInfo}`);
+    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 📅 입단: ${data.joinDate} | 🏠 ${distInfo}`);
   });
 }
 
@@ -13091,12 +13143,20 @@ function editHandbookMember(id){
   document.getElementById('editHbPart').value = statusPart ? '' : mainPart;
   document.getElementById('editHbPhone').value = m.phone || '';
   document.getElementById('editHbBirth').value = m.birthday || '';
+  document.getElementById('editHbJoinDate').value = memberJoinDate(m);
   document.getElementById('editHbDist').value = m.district || '';
   document.getElementById('editHbArea').value = m.area || '';
   document.getElementById('editHbJob').value = m.job || '';
   document.getElementById('editHbGroup').value = m.group || '';
   document.getElementById('editHbSub').value = subPart || statusPart;
   document.getElementById('editHbNoAtt').checked = m.noAtt || false;
+  var joinNote=document.getElementById('editHbJoinDateNote');
+  if(joinNote){
+    var systemDate=memberSystemCreatedDate(m);
+    joinNote.textContent=memberJoinDate(m)
+      ?(systemDate?'시스템 명부 등록일 '+formatHandbookDate(systemDate)+' · 입단일과 별도로 유지됩니다.':'입단일은 언제든 수정할 수 있습니다.')
+      :(systemDate?'기존 입단일은 저장되어 있지 않습니다. 시스템 명부 등록일 '+formatHandbookDate(systemDate)+'을 참고해 입력해주세요.':'기존 입단일과 시스템 등록일이 저장되어 있지 않습니다.');
+  }
   fillHandbookProfileFields('edit', m);
   var profileExtra=document.getElementById('editHbProfileExtra');
   if(profileExtra)profileExtra.open=hasHandbookProfileFields(m);
@@ -13145,11 +13205,13 @@ function updateHandbookMember(){
     group: document.getElementById('editHbGroup').value||'',
     subPart: subPart,
     noAtt: document.getElementById('editHbNoAtt').checked || false,
-    status: part==='명단제외' ? 'inactive' : 'active'
+    status: part==='명단제외' ? 'inactive' : 'active',
+    joinDate: normalizeDateKey((document.getElementById('editHbJoinDate')||{}).value)
 
   };
   Object.assign(data, readHandbookProfileFields('edit'));
   var reactivatedForAttendance=previousMember&&!isAttendanceTargetMember(previousMember)&&isAttendanceTargetMember(data);
+  var joinDateChanged=memberJoinDate(previousMember)!==data.joinDate;
   if(reactivatedForAttendance)data.attendanceStartDate=getTodayInputDate();
   
   showToast('저장 중...');
@@ -13160,7 +13222,7 @@ function updateHandbookMember(){
     closeModal('modalMemberEdit');
     invalidateSharedMembers();
     loadHandbook();
-    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}${reactivatedForAttendance?' | 출결 시작일 '+data.attendanceStartDate:''}`);
+    writeLog('명부 수정', `✏️ [${name}] 단원 정보 업데이트\n👉 파트: ${part}${subPart?' · '+subPart:''}${joinDateChanged?' | 입단일 '+(data.joinDate||'미입력'):''}${reactivatedForAttendance?' | 출결 시작일 '+data.attendanceStartDate:''}`);
   }).catch(function(e){ console.error('명부 수정 오류:', e); showToast('수정 중 오류: '+e.message); });
 }
 
@@ -19432,8 +19494,9 @@ function generateReport() {
            activeMembers.push({id: d.id, name: d.name, part: normalizePartName(d.part), attendanceStartDate: memberAttendanceStartDate(d)});
            memStats[d.id] = { amTotal:0, amPresent:0, pmTotal:0, pmPresent:0, drops:0 };
        }
-       // 신규 입단자 추출 (등록일이 이번 달인 사람)
-       if(d.createdAt && d.createdAt.startsWith(prefix) && d.part !== '명단제외') {
+       // 입단일을 우선 사용하고, 기존 데이터는 시스템 등록일로 종전 집계를 유지합니다.
+       var reportJoinDate=memberJoinDate(d)||memberSystemCreatedDate(d);
+       if(reportJoinDate && reportJoinDate.startsWith(prefix) && d.part !== '명단제외') {
            newMembers.push(d);
        }
     });
