@@ -9703,6 +9703,32 @@ function scoreGroupUpdatedText(scores){
   });
   return latest?latest.slice(0,10).replace(/-/g,'.'):'';
 }
+function scoreGroupLastChangedValue(scores){
+  return (scores||[]).reduce(function(latest,score){
+    return Math.max(latest,scoreLastChangedValue(score));
+  },0);
+}
+function scoreGroupCreatedValue(scores){
+  return (scores||[]).reduce(function(earliest,score){
+    var created=scoreDateSortValue(score&&score.createdAt);
+    return created&&(!earliest||created<earliest)?created:earliest;
+  },0);
+}
+function sortScoreFolderGroups(groups,mode){
+  mode=normalizeScoreSortMode(mode);
+  return (groups||[]).slice().sort(function(a,b){
+    if(mode==='updated'){
+      var updatedDiff=scoreGroupLastChangedValue(b&&b.scores)-scoreGroupLastChangedValue(a&&a.scores);
+      if(updatedDiff)return updatedDiff;
+    }else if(mode==='created'){
+      var createdDiff=scoreGroupCreatedValue(b&&b.scores)-scoreGroupCreatedValue(a&&a.scores);
+      if(createdDiff)return createdDiff;
+    }
+    return String(a&&a.title||'').localeCompare(String(b&&b.title||''),'ko')
+      ||scoreGroupLastChangedValue(b&&b.scores)-scoreGroupLastChangedValue(a&&a.scores)
+      ||String(a&&a.key||'').localeCompare(String(b&&b.key||''));
+  });
+}
 function scoreGroupVersionInfo(scores){
   var versions=[];
   (scores||[]).forEach(function(score){
@@ -9717,8 +9743,10 @@ function scoreGroupVersionInfo(scores){
     :'v'+versions[0];
   return {versions:versions,mixed:mixed,label:label};
 }
-function renderScoreFolderList(rows, adminMode){
-  return scoreFolderGroups(rows).map(function(group){return renderScoreFolderCard(group,adminMode);}).join('');
+function renderScoreFolderList(rows, adminMode, sortMode){
+  var groups=scoreFolderGroups(rows);
+  if(sortMode)groups=sortScoreFolderGroups(groups,sortMode);
+  return groups.map(function(group){return renderScoreFolderCard(group,adminMode);}).join('');
 }
 function renderScoreFolderCard(group, adminMode){
   var scores=adminMode?sortScoreParts(group.scores||[]):sortScorePartsForCurrentUser(group.scores||[]);
@@ -9836,7 +9864,7 @@ function renderScoresPage(){
   syncQuickCreateActions();
   renderScoreModeTabs('scoreModeTabs',false);
   var activeMode=ensureScoreViewMode();
-  if(sortControl)sortControl.classList.toggle('hidden',activeMode!=='singer');
+  if(sortControl)sortControl.classList.remove('hidden');
   if(sortSelect)sortSelect.value=scoreSortMode;
   if(!scoresLoaded){
     list.innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
@@ -9853,13 +9881,13 @@ function renderScoresPage(){
     var text=[score.title,score.currentLabel,score.linkedSongName,score.currentFileName,scoreKindLabel(score.scoreKind),scoreInstrumentLabel(score.instrument)].join(' ').toLowerCase();
     return text.indexOf(q)>-1||(qKey&&scoreSearchKey(text).indexOf(qKey)>-1);
   });
-  rows=activeMode==='singer'?sortSingerScores(rows,scoreSortMode):sortScoresBySchedule(rows);
+  rows=activeMode==='singer'?sortSingerScores(rows,scoreSortMode):rows;
   if(count)count.textContent=q?'검색 결과 '+rows.length+'개':scoreKindLabel(activeMode)+' 악보 '+rows.length+'개';
   if(rows.length===0){
     list.innerHTML='<div class="score-empty">조건에 맞는 공개 악보가 없습니다.</div>';
     return;
   }
-  list.innerHTML=activeMode==='orchestra'?renderScoreFolderList(rows,false):renderSingerScoreList(rows);
+  list.innerHTML=activeMode==='orchestra'?renderScoreFolderList(rows,false,scoreSortMode):renderSingerScoreList(rows);
 }
 function renderSongScoreDetail(song){
   var scores=findVisibleScoresForSong(song);
