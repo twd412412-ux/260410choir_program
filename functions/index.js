@@ -29,6 +29,7 @@ const HASH_VERSION = "scrypt-v1";
 const ELEVATION_MS = 4 * 60 * 60 * 1000;
 const SONG_INDEX_SHARDS = 16;
 const MAX_SAME_NAME_ACCOUNTS = 12;
+const MAX_SCORE_FILE_SIZE = 100 * 1024 * 1024;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
 const ACCOUNT_PIN_ENCRYPTION_KEY = defineSecret("ACCOUNT_PIN_ENCRYPTION_KEY");
@@ -1370,7 +1371,7 @@ function sanitizeScoreItem(raw, scoreId, existing, actor) {
     currentFileName: safeScoreFileName(raw.currentFileName || raw.fileName, {title}),
     currentFileSize: (() => {
       const size = Number(raw.currentFileSize || raw.fileSize || 0);
-      return Number.isFinite(size) ? Math.max(0, Math.min(size, 30 * 1024 * 1024)) : 0;
+      return Number.isFinite(size) ? Math.max(0, Math.min(size, MAX_SCORE_FILE_SIZE)) : 0;
     })(),
     currentUploadedAt: fileChanged || !existing
       ? cleanString(raw.currentUploadedAt, 100) || now

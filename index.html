@@ -3633,6 +3633,7 @@ var scoreLoadTimer=null;
 var scoreRealtimeUnsubscribe=null, scoreRealtimeReadyPromise=null, scoreRealtimeGeneration=0;
 var scoreViewMode=localStorage.getItem('choir_score_view')||'';
 var SCORE_SORT_KEY='choir_score_sort_v1';
+var SCORE_MAX_FILE_SIZE=100*1024*1024;
 var scoreSortMode=(function(){
   try{
     var saved=localStorage.getItem(SCORE_SORT_KEY);
@@ -10106,7 +10107,7 @@ function saveScoreUpload(){
   if(!files.length&&!urlInput&&!(previous&&(previous.currentFilePath||previous.currentFileUrl)))return showToast('PDF 파일 또는 PDF URL을 입력해주세요');
   if(urlInput&&!/^https?:\/\//i.test(urlInput))return showToast('PDF URL은 http 또는 https 링크여야 합니다');
   for(var vf=0;vf<files.length;vf++){
-    if(files[vf].size>30*1024*1024)return showToast('PDF는 30MB 이하만 업로드해주세요');
+    if(files[vf].size>SCORE_MAX_FILE_SIZE)return showToast('PDF는 100MB 이하만 업로드해주세요');
     if(files[vf].type&&files[vf].type!=='application/pdf'&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
     if(!files[vf].type&&!/\.pdf$/i.test(files[vf].name))return showToast('PDF 파일만 업로드할 수 있습니다');
   }
