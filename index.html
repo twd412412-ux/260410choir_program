@@ -2489,8 +2489,8 @@ body{font-weight:500}
     <label class="score-sort-control" id="scoreSortControl" for="scoreSortSelect">
       <span>정렬</span>
       <select class="score-sort-select" id="scoreSortSelect" onchange="setScoreSortMode(this.value)">
-        <option value="name">가나다순</option>
         <option value="updated">최근 업데이트순</option>
+        <option value="name">가나다순</option>
         <option value="created">최초 등록일순</option>
       </select>
     </label>
@@ -3686,9 +3686,9 @@ var SCORE_MAX_FILE_SIZE=100*1024*1024;
 var scoreSortMode=(function(){
   try{
     var saved=localStorage.getItem(SCORE_SORT_KEY);
-    return ['name','updated','created'].indexOf(saved)>-1?saved:'name';
+    return ['name','updated','created'].indexOf(saved)>-1?saved:'updated';
   }catch(e){
-    return 'name';
+    return 'updated';
   }
 })();
 var SCORE_CACHE_KEY='choir_scores_public';
@@ -9339,7 +9339,7 @@ function scoreUpdatedText(score){
   return raw.slice(0,10).replace(/-/g,'.');
 }
 function normalizeScoreSortMode(value){
-  return ['name','updated','created'].indexOf(value)>-1?value:'name';
+  return ['name','updated','created'].indexOf(value)>-1?value:'updated';
 }
 function scoreDateSortValue(value){
   if(!value)return 0;
