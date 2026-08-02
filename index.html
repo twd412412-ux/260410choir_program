@@ -979,6 +979,13 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-link-candidate.selected{border-color:#6F7D4E;background:#EAEFDF;color:#2F3B24}
 .score-link-candidate-main{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:900}
 .score-link-candidate-meta{font-size:11px;font-weight:700;color:var(--ts);line-height:1.35}
+.score-title-field{position:relative}
+.score-title-suggestions{position:absolute;z-index:45;top:calc(100% + 5px);left:0;right:0;display:grid;gap:3px;max-height:min(260px,36dvh);overflow-y:auto;border:1px solid var(--bd);border-radius:10px;background:var(--sf);padding:5px;box-shadow:0 10px 24px rgba(47,52,39,.16)}
+.score-title-suggestion{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:0;border-radius:7px;background:transparent;color:var(--tx);padding:9px 10px;text-align:left;font-family:inherit;cursor:pointer}
+.score-title-suggestion:hover,.score-title-suggestion.active{background:var(--pl)}
+.score-title-suggestion-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:900}
+.score-title-suggestion-meta{color:var(--ts);font-size:10px;font-weight:800;white-space:nowrap}
+.dark .score-title-suggestions{box-shadow:0 12px 28px rgba(0,0,0,.32)}
 .score-link-empty{font-size:12px;color:var(--ts);background:var(--sf);border:1px dashed var(--bd);border-radius:10px;padding:10px;text-align:center}
 .score-link-actions{display:flex;gap:6px;flex-wrap:wrap}
 .score-song-link{margin-top:12px;border-top:1px solid var(--bd);padding-top:12px}
@@ -2618,7 +2625,7 @@ body{font-weight:500}
             <button type="button" class="score-kind-tab" data-score-kind="orchestra" onclick="setScoreFormKind('orchestra')">관현악 파트보</button>
           </div>
         </div>
-        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><input class="form-input" id="scoreTitle" list="scoreTitleOptions" autocomplete="off" placeholder="예: 하나님의 은혜" oninput="handleScoreTitleChanged()" onfocus="renderScoreTitleOptions();renderScoreSongCandidates();renderScoreExistingMatch()"><datalist id="scoreTitleOptions"></datalist></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">곡명 *</label><div class="score-title-field"><input class="form-input" id="scoreTitle" autocomplete="off" placeholder="예: 하나님의 은혜" role="combobox" aria-autocomplete="list" aria-controls="scoreTitleSuggestions" aria-expanded="false" oninput="handleScoreTitleChanged(event)" onfocus="renderScoreTitleOptions();renderScoreSongCandidates();renderScoreExistingMatch()" onkeydown="handleScoreTitleKeydown(event)" onblur="hideScoreTitleSuggestionsSoon()" oncompositionstart="scoreTitleComposing=true" oncompositionend="scoreTitleComposing=false;handleScoreTitleChanged(event)"><div class="score-title-suggestions hidden" id="scoreTitleSuggestions" role="listbox"></div></div></div>
         <div class="score-existing-match hidden" id="scoreExistingMatch"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">버전 메모</label><input class="form-input" id="scoreLabel" placeholder="예: 수정본, 2026-07-04"></div>
         <div class="form-group hidden" id="scoreInstrumentWrap" style="margin-bottom:0"><label class="form-label">관현악 파트</label><select class="form-sel" id="scoreInstrument" onchange="syncScoreInstrumentCustom()"></select><input class="form-input hidden" id="scoreInstrumentCustom" placeholder="예: 알토색소폰, 베이스클라리넷" style="margin-top:6px"></div>
@@ -3674,6 +3681,7 @@ var scorePickerSongId='', scorePickerActiveOnly=false;
 var songRecommendCache=[];
 var scoreReplacementConfirmed=false, scoreBatchReplacementConfirmed=false, scorePendingReplacementInfo=null, scoreLocalPreviewUrl='';
 var scoreLinkSelectionTouched=false, scoreTargetGroupKey='';
+var scoreTitleComposing=false, scoreTitleSuggestionIndex=-1, scoreTitleSuggestionBlurTimer=null;
 var WEB_PUSH_PUBLIC_KEY='BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY';
 var PUSH_STATE_PREFIX='choir_push_state_v1_';
 var PUSH_OWNER_KEY='choir_push_owner_v1';
@@ -5158,7 +5166,9 @@ function linkSameTitleScoreSongs(){
   showToast('곡명이 일치하는 항목 '+matches.length+'개를 선택했습니다. 연결하려면 선택한 곡에 연결을 누르세요');
 }
 
-function handleScoreTitleChanged(){
+function handleScoreTitleChanged(event){
+  if(scoreTitleComposing||(event&&event.isComposing))return;
+  renderScoreTitleOptions();
   scoreCandidateSelectedIds=[];
   scoreTargetGroupKey='';
   resetScoreUploadReplacementPlan();
@@ -5168,17 +5178,89 @@ function handleScoreTitleChanged(){
   renderScoreUploadReview();
 }
 function renderScoreTitleOptions(){
-  var list=document.getElementById('scoreTitleOptions');
-  if(!list)return;
+  var list=document.getElementById('scoreTitleSuggestions');
+  var input=document.getElementById('scoreTitle');
+  if(!list||!input)return;
   var kind=getScoreFormKind();
-  var seen={};
-  var titles=(allScores||[]).filter(function(score){return normalizeScoreKind(score&&score.scoreKind)===kind;}).map(function(score){return String(score&&score.title||'').trim();}).filter(function(title){
+  var query=String(input.value||'').trim();
+  var queryKey=scoreSearchKey(query);
+  var grouped={};
+  (allScores||[]).filter(function(score){return normalizeScoreKind(score&&score.scoreKind)===kind;}).forEach(function(score){
+    var title=String(score&&score.title||'').trim();
     var key=scoreSearchKey(title);
-    if(!key||seen[key])return false;
-    seen[key]=true;
-    return true;
-  }).sort(function(a,b){return a.localeCompare(b,'ko');});
-  list.innerHTML=titles.map(function(title){return '<option value="'+escAttr(title)+'"></option>';}).join('');
+    if(!key)return;
+    if(!grouped[key])grouped[key]={title:title,count:0,key:key};
+    grouped[key].count++;
+  });
+  var rows=Object.keys(grouped).map(function(key){return grouped[key];}).filter(function(row){
+    return queryKey&&row.key.indexOf(queryKey)>-1;
+  }).sort(function(a,b){
+    var aStarts=a.key.indexOf(queryKey)===0?0:1;
+    var bStarts=b.key.indexOf(queryKey)===0?0:1;
+    return aStarts-bStarts||a.title.localeCompare(b.title,'ko');
+  }).slice(0,12);
+  scoreTitleSuggestionIndex=-1;
+  if(!rows.length){
+    list.innerHTML='';
+    list.classList.add('hidden');
+    input.setAttribute('aria-expanded','false');
+    return;
+  }
+  list.innerHTML=rows.map(function(row){
+    var meta=kind==='orchestra'?(row.count+'개 파트보'):'등록된 악보';
+    return '<button type="button" class="score-title-suggestion" role="option" aria-selected="false" data-score-title="'+escAttr(row.title)+'" onpointerdown="event.preventDefault()" onclick="selectScoreTitleSuggestion(this.dataset.scoreTitle)"><span class="score-title-suggestion-name">'+escHtml(row.title)+'</span><span class="score-title-suggestion-meta">'+escHtml(meta)+'</span></button>';
+  }).join('');
+  list.classList.remove('hidden');
+  input.setAttribute('aria-expanded','true');
+}
+function hideScoreTitleSuggestions(){
+  if(scoreTitleSuggestionBlurTimer){clearTimeout(scoreTitleSuggestionBlurTimer);scoreTitleSuggestionBlurTimer=null;}
+  scoreTitleSuggestionIndex=-1;
+  var list=document.getElementById('scoreTitleSuggestions');
+  var input=document.getElementById('scoreTitle');
+  if(list)list.classList.add('hidden');
+  if(input)input.setAttribute('aria-expanded','false');
+}
+function hideScoreTitleSuggestionsSoon(){
+  if(scoreTitleSuggestionBlurTimer)clearTimeout(scoreTitleSuggestionBlurTimer);
+  scoreTitleSuggestionBlurTimer=setTimeout(hideScoreTitleSuggestions,140);
+}
+function selectScoreTitleSuggestion(title){
+  var input=document.getElementById('scoreTitle');
+  if(!input)return;
+  input.value=String(title||'');
+  handleScoreTitleChanged();
+  hideScoreTitleSuggestions();
+  input.focus();
+  try{input.setSelectionRange(input.value.length,input.value.length);}catch(e){}
+}
+function setScoreTitleSuggestionActive(buttons,index){
+  scoreTitleSuggestionIndex=index;
+  buttons.forEach(function(button,buttonIndex){
+    var active=buttonIndex===index;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-selected',active?'true':'false');
+  });
+  if(index>-1&&buttons[index])buttons[index].scrollIntoView({block:'nearest'});
+}
+function handleScoreTitleKeydown(event){
+  if(!event||event.isComposing||scoreTitleComposing)return;
+  var list=document.getElementById('scoreTitleSuggestions');
+  if(!list||list.classList.contains('hidden'))return;
+  var buttons=Array.prototype.slice.call(list.querySelectorAll('.score-title-suggestion'));
+  if(!buttons.length)return;
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    event.preventDefault();
+    var step=event.key==='ArrowDown'?1:-1;
+    var next=scoreTitleSuggestionIndex<0?(step>0?0:buttons.length-1):(scoreTitleSuggestionIndex+step+buttons.length)%buttons.length;
+    setScoreTitleSuggestionActive(buttons,next);
+  }else if(event.key==='Enter'&&scoreTitleSuggestionIndex>-1){
+    event.preventDefault();
+    selectScoreTitleSuggestion(buttons[scoreTitleSuggestionIndex].dataset.scoreTitle);
+  }else if(event.key==='Escape'){
+    event.preventDefault();
+    hideScoreTitleSuggestions();
+  }
 }
 
 function setScoreCurrentFileNote(score){
