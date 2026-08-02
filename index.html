@@ -762,6 +762,10 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-folder-badges .score-new-badge{margin-left:0}
 .score-folder-version{display:inline-flex;align-items:center;border-radius:7px;padding:2px 6px;background:#F7F1E4;color:#7A5A24;font-size:9.5px;font-weight:900;line-height:1.2;white-space:nowrap}
 .score-folder-version.mixed{background:#F3E9D5;color:#805F28}
+.score-folder-version.updated{background:#E3F0F2;color:#2F6170}
+.score-version-token.updated{border-radius:4px;background:#D7EAED;color:#285B68;padding:1px 3px;font-weight:950}
+.score-version-separator{margin:0 1px;color:#9B8B70}
+.score-version-mixed-label{margin-left:4px}
 .score-folder-meta{font-size:11px;color:var(--ts);margin-top:4px;line-height:1.4}
 .score-folder-count{border-radius:999px;background:var(--pl);color:var(--pd);padding:4px 8px;font-size:11px;font-weight:900;white-space:nowrap}
 .score-part-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
@@ -769,6 +773,7 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-part-btn:hover{background:#E7EFD8}
 .score-part-btn.mine{border-color:#6F826E;background:#E8F0E3;color:#2F4732;box-shadow:inset 3px 0 0 #6F826E}
 .score-part-version{color:#85652D;font-size:9px;font-weight:950;white-space:nowrap}
+.score-part-version.updated{border-radius:5px;background:#DCECEF;color:#285B68;padding:1px 4px}
 .score-my-part-dot,.score-my-part-badge{display:inline-flex;align-items:center;margin-left:6px;color:#557056;font-size:9px;font-weight:950;white-space:nowrap}
 .score-my-part-badge{padding:2px 5px;border-radius:6px;background:#E5EEDF;vertical-align:middle}
 .score-part-admin-list{display:grid;gap:5px;margin-top:10px}
@@ -835,6 +840,8 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .dark .score-folder-version,.dark .score-part-version,.dark .score-upload-review-version,.dark .score-batch-version.replace{color:#D8C08C}
 .dark .score-folder-version{background:#352F22}
 .dark .score-folder-version.mixed,.dark .score-batch-summary span.replace{background:#3B3020;color:#E0C27F}
+.dark .score-folder-version.updated{background:#19343B;color:#A9D8E0}
+.dark .score-version-token.updated,.dark .score-part-version.updated{background:#244750;color:#B9E4EA}
 @media(max-width:390px){
   .score-file-selected{grid-template-columns:1fr}
   .score-file-selected-actions{justify-content:flex-start}
@@ -10008,7 +10015,10 @@ function renderScoreFolderCard(group, adminMode){
   var scores=adminMode?sortScoreParts(group.scores||[]):sortScorePartsForCurrentUser(group.scores||[]);
   var unreadBadge=adminMode?'':renderScoreRowsNewBadge(scores,'group');
   var versionInfo=scoreGroupVersionInfo(scores);
-  var versionBadge='<span class="score-folder-version '+(versionInfo.mixed?'mixed':'')+'">'+escHtml(versionInfo.label)+'</span>';
+  var versionTokens=versionInfo.versions.map(function(version){
+    return '<span class="score-version-token '+(version>1?'updated':'')+'">v'+version+'</span>';
+  }).join('<span class="score-version-separator">·</span>');
+  var versionBadge='<span class="score-folder-version '+(versionInfo.mixed?'mixed':(versionInfo.versions[0]>1?'updated':''))+'">'+versionTokens+(versionInfo.mixed?'<span class="score-version-mixed-label">혼합</span>':'')+'</span>';
   var updated=scoreGroupUpdatedText(scores);
   var meta=['관현악 파트보 '+scores.length+'개',updated?'업데이트 '+updated:''].filter(Boolean).join(' · ');
   var groupAction=adminMode&&canManageScores()?'<div class="score-admin-actions"><button class="score-light-btn" onclick="openQuickScoreManageForGroup(\''+escAttr(group.key)+'\')">＋ 파트보 추가</button></div>':'';
@@ -10030,7 +10040,8 @@ function renderScoreFolderCard(group, adminMode){
       }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
         var mine=isMyScorePart(score);
-        var partVersion=versionInfo.mixed?'<span class="score-part-version">v'+Math.max(1,Number(score.versionNumber||1))+'</span>':'';
+        var partVersionNumber=Math.max(1,Number(score.versionNumber||1));
+        var partVersion=versionInfo.mixed?'<span class="score-part-version '+(partVersionNumber>1?'updated':'')+'">v'+partVersionNumber+'</span>':'';
         return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+partVersion+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</button>';
       }).join('')+'</div>';
   return '<div class="score-folder-card">'
