@@ -36,6 +36,21 @@ service cloud.firestore {
           && request.auth.token.permissions.hasAny([permission]));
     }
 
+    function canReadScoreKind(kind) {
+      let scope = signedIn() ? request.auth.token.get('scoreAccessScope', 'default') : 'none';
+      let part = signedIn() ? request.auth.token.get('choirPart', '') : '';
+      return isAdmin()
+        || hasPermission('score.manage')
+        || (isAccount()
+          && scope != 'none'
+          && (scope == 'all'
+            || scope == kind
+            || (scope == 'default'
+              && (part == '지휘'
+                || (part == '관현악' && kind == 'orchestra')
+                || (part != '관현악' && kind == 'singer')))));
+    }
+
     function ownsCreatedDoc(data) {
       return signedIn()
         && (data.createdById == request.auth.uid
@@ -90,6 +105,17 @@ service cloud.firestore {
     match /settings/scores {
       allow read: if isAppUser();
       allow write: if false;
+    }
+
+    match /scoreCatalog/{catalogId} {
+      allow read: if catalogId == '_meta'
+        ? isAppUser()
+        : canReadScoreKind(resource.data.kind);
+      allow write: if false;
+    }
+
+    match /scoreChangeEvents/{eventId} {
+      allow read, write: if false;
     }
 
     match /settings/admin {

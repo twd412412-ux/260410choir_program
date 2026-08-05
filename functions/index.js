@@ -30,6 +30,9 @@ const ELEVATION_MS = 4 * 60 * 60 * 1000;
 const SONG_INDEX_SHARDS = 16;
 const MAX_SAME_NAME_ACCOUNTS = 12;
 const MAX_SCORE_FILE_SIZE = 100 * 1024 * 1024;
+const SCORE_CATALOG_VERSION = 1;
+const SCORE_CATALOG_SHARDS = Object.freeze({singer: 2, orchestra: 8});
+const SCORE_LEGACY_MIRROR_MAX_BYTES = 800000;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
 const ACCOUNT_PIN_ENCRYPTION_KEY = defineSecret("ACCOUNT_PIN_ENCRYPTION_KEY");
@@ -729,6 +732,62 @@ function scoreItemsById(data) {
   return source && typeof source === "object" ? source : {};
 }
 
+function scoreCatalogShardCount(kind) {
+  return SCORE_CATALOG_SHARDS[normalizeScoreKind(kind)];
+}
+
+function scoreCatalogShardId(scoreId, kind) {
+  const normalizedKind = normalizeScoreKind(kind);
+  const digest = crypto.createHash("sha256").update(String(scoreId)).digest();
+  const index = digest.readUInt16BE(0) % scoreCatalogShardCount(normalizedKind);
+  return normalizedKind + "_" + String(index).padStart(2, "0");
+}
+
+function scoreCatalogShardIds(kinds = ["singer", "orchestra"]) {
+  const ids = [];
+  kinds.map(normalizeScoreKind).filter((kind, index, rows) => rows.indexOf(kind) === index).forEach((kind) => {
+    for (let index = 0; index < scoreCatalogShardCount(kind); index++) {
+      ids.push(kind + "_" + String(index).padStart(2, "0"));
+    }
+  });
+  return ids;
+}
+
+function scoreCatalogItemsFromSnapshot(snapshot) {
+  return scoreItemsById(snapshot && snapshot.exists ? snapshot.data() || {} : {});
+}
+
+function distributeScoreCatalogItems(items) {
+  const shards = {};
+  scoreCatalogShardIds().forEach((id) => { shards[id] = {}; });
+  Object.keys(items || {}).forEach((id) => {
+    const item = items[id] || {};
+    shards[scoreCatalogShardId(id, item.scoreKind || item.kind)][id] = item;
+  });
+  return shards;
+}
+
+function scoreCatalogSummary(items) {
+  const counts = {singer: 0, orchestra: 0};
+  Object.keys(items || {}).forEach((id) => {
+    counts[normalizeScoreKind(items[id] && (items[id].scoreKind || items[id].kind))]++;
+  });
+  const ids = Object.keys(items || {}).sort();
+  return {
+    count: ids.length,
+    counts,
+    idDigest: crypto.createHash("sha256").update(ids.join("\n")).digest("hex"),
+  };
+}
+
+function assertScoreCatalogShardSize(id, items) {
+  const bytes = Buffer.byteLength(JSON.stringify(items || {}), "utf8");
+  if (bytes > 850000) {
+    throw new HttpsError("resource-exhausted", `악보 목록 묶음(${id})이 안전 한도를 넘었습니다.`);
+  }
+  return bytes;
+}
+
 function isPublishedScore(item) {
   return Boolean(item && item.public !== false && (item.currentFilePath || item.currentFileUrl));
 }
@@ -819,24 +878,24 @@ function scheduleDateText(data) {
   return start === end ? shortDate(start) : shortDate(start) + "~" + shortDate(end);
 }
 
-async function notifyScoreWrite(event) {
+async function notifyScoreChangeEvent(event) {
   if (!event.data || !event.data.after.exists) return null;
-  const before = event.data.before.exists ? scoreItemsById(event.data.before.data() || {}) : {};
-  const after = scoreItemsById(event.data.after.data() || {});
+  const data = event.data.after.data() || {};
   const changes = [];
-  Object.keys(after).forEach((id) => {
-    const next = after[id] || {};
-    if (!isPublishedScore(next)) return;
-    const previous = before[id] || null;
-    if (!isPublishedScore(previous)) {
-      changes.push({item: next, kind: "new"});
-    } else if (scoreNoticeFingerprint(previous) !== scoreNoticeFingerprint(next)) {
-      changes.push({item: next, kind: "updated"});
-    }
+  (Array.isArray(data.changes) ? data.changes : []).forEach((row) => {
+    const previous = row && row.before && typeof row.before === "object" ? row.before : null;
+    const next = row && row.after && typeof row.after === "object" ? row.after : null;
+    if (!next || next.archived === true || !isPublishedScore(next)) return;
+    if (!previous) changes.push({item: next, kind: "new"});
+    else if (scoreNoticeFingerprint(previous) !== scoreNoticeFingerprint(next)) changes.push({item: next, kind: "updated"});
   });
+  return deliverScoreChanges(event.id, changes);
+}
+
+async function deliverScoreChanges(eventId, changes) {
   if (!changes.length) return null;
-  if (!await claimPushEvent(event.id, "scores")) return null;
-  await recordScoreAppNotifications(event.id, changes).catch((error) => {
+  if (!await claimPushEvent(eventId, "scores")) return null;
+  await recordScoreAppNotifications(eventId, changes).catch((error) => {
     console.error("score_app_notification_failed", error);
   });
   const groups = {singer: [], orchestra: []};
@@ -1264,28 +1323,49 @@ async function secureScoreFiles(request) {
     await file.setMetadata({metadata: {firebaseStorageDownloadTokens: crypto.randomUUID()}});
   });
   const scoreRef = db.collection("settings").doc("scores");
-  const scoreSnap = await scoreRef.get();
+  const catalog = await readAllScoreCatalogItems();
   let protectedRows = 0;
-  if (scoreSnap.exists) {
-    const data = scoreSnap.data() || {};
-    const protectItem = (item) => {
-      const next = Object.assign({}, item);
-      if (next.currentFilePath) {
-        next.currentFileUrl = "";
-        protectedRows++;
-      }
-      return next;
-    };
-    const sourceItems = data.items || {};
-    const items = Array.isArray(sourceItems)
-      ? sourceItems.map(protectItem)
-      : Object.keys(sourceItems).reduce((result, id) => {
-        result[id] = protectItem(sourceItems[id]);
-        return result;
-      }, {});
-    await scoreRef.set({items, securityUpdatedAt: nowIso()}, {merge: true});
+  const items = Object.keys(catalog.items).reduce((result, id) => {
+    const next = Object.assign({}, catalog.items[id]);
+    if (next.currentFilePath) {
+      next.currentFileUrl = "";
+      protectedRows++;
+    }
+    result[id] = next;
+    return result;
+  }, {});
+  const now = nowIso();
+  const actor = scoreActor(request);
+  const batch = db.batch();
+  const legacyBytes = Buffer.byteLength(JSON.stringify(items), "utf8");
+  if (legacyBytes <= SCORE_LEGACY_MIRROR_MAX_BYTES) {
+    batch.set(scoreRef, {items, securityUpdatedAt: now}, {merge: true});
+  } else {
+    batch.set(scoreRef, {legacyMirrorStoppedAt: now, securityUpdatedAt: now}, {merge: true});
   }
-  return {files: files.length, protectedRows};
+  if (catalog.source === "catalog") {
+    const shards = distributeScoreCatalogItems(scoreItemsById({items}));
+    Object.keys(shards).forEach((id) => {
+      assertScoreCatalogShardSize(id, shards[id]);
+      batch.set(db.collection("scoreCatalog").doc(id), {
+        version: SCORE_CATALOG_VERSION,
+        kind: id.startsWith("orchestra_") ? "orchestra" : "singer",
+        shard: Number(id.slice(-2)),
+        items: shards[id],
+        updatedAt: now,
+        updatedById: actor.id,
+        updatedByName: actor.name,
+      });
+    });
+    batch.set(db.collection("scoreCatalog").doc("_meta"), {
+      securityUpdatedAt: now,
+      updatedAt: now,
+      updatedById: actor.id,
+      updatedByName: actor.name,
+    }, {merge: true});
+  }
+  await batch.commit();
+  return {files: files.length, protectedRows, source: catalog.source};
 }
 
 function normalizeScoreKind(value) {
@@ -1300,6 +1380,17 @@ function normalizeScoreLinkedSongIds(values) {
     if (id && isValidDocumentId(id) && !rows.includes(id) && rows.length < 80) rows.push(id);
   });
   return rows;
+}
+
+function scoreArchiveGroupKey(item) {
+  const ids = normalizeScoreLinkedSongIds(item && item.linkedSongIds);
+  const linkedSongId = cleanString(item && item.linkedSongId, 100);
+  if (linkedSongId && isValidDocumentId(linkedSongId) && !ids.includes(linkedSongId)) ids.unshift(linkedSongId);
+  const titleKey = cleanString(item && item.searchKey, 300) || cleanString(item && item.title, 160)
+    .toLowerCase()
+    .replace(/[\s\u00a0]+/g, "")
+    .replace(/[·ㆍ.,，、;:/|\\\-_*+~!?\"'`‘’“”()[\]{}<>《》「」『』]/g, "");
+  return ids.length ? `songs:${ids.slice().sort().join("|")}:${titleKey}` : `title:${titleKey}`;
 }
 
 function scoreActor(request) {
@@ -1358,6 +1449,10 @@ function sanitizeScoreItem(raw, scoreId, existing, actor) {
   const previousVersion = Math.max(1, Number(existing && existing.versionNumber || 1));
   const versionNumber = existing ? (fileChanged ? previousVersion + 1 : previousVersion) : 1;
   const now = nowIso();
+  const archived = fileChanged ? false : raw.archived === true;
+  const archivedAt = archived
+    ? cleanString(raw.archivedAt || (existing && existing.archivedAt), 100) || now
+    : "";
   const next = {
     id: scoreId,
     title,
@@ -1384,6 +1479,10 @@ function sanitizeScoreItem(raw, scoreId, existing, actor) {
     linkedSongId: linkedSongIds[0] || "",
     linkedSongIds,
     linkedSongName: cleanString(raw.linkedSongName, 160),
+    archived,
+    archivedAt,
+    archivedById: archived ? cleanString(raw.archivedById || (existing && existing.archivedById), 100) || actor.id : "",
+    archivedByName: archived ? cleanString(raw.archivedByName || (existing && existing.archivedByName), 60) || actor.name : "",
     createdAt: cleanString(existing && existing.createdAt, 100) || now,
     createdById: cleanString(existing && existing.createdById, 100) || actor.id,
     createdByName: cleanString(existing && existing.createdByName, 60) || actor.name,
@@ -1424,6 +1523,64 @@ async function cleanupReplacedScoreFiles(rows) {
   await mapLimit(Array.from(paths), 6, deleteScoreObject);
 }
 
+async function readAllScoreCatalogItems() {
+  const metaRef = db.collection("scoreCatalog").doc("_meta");
+  const metaSnap = await metaRef.get();
+  if (!metaSnap.exists || Number((metaSnap.data() || {}).version) !== SCORE_CATALOG_VERSION) {
+    const legacySnap = await db.collection("settings").doc("scores").get();
+    return {
+      items: Object.assign({}, scoreItemsById(legacySnap.exists ? legacySnap.data() || {} : {})),
+      source: "legacy",
+    };
+  }
+  const ids = scoreCatalogShardIds();
+  const snapshots = await db.getAll(...ids.map((id) => db.collection("scoreCatalog").doc(id)));
+  const items = {};
+  snapshots.forEach((snapshot) => Object.assign(items, scoreCatalogItemsFromSnapshot(snapshot)));
+  const summary = scoreCatalogSummary(items);
+  const meta = metaSnap.data() || {};
+  if (summary.count !== Number(meta.count || 0) || (meta.idDigest && summary.idDigest !== meta.idDigest)) {
+    throw new HttpsError("failed-precondition", "악보 목록 분할 상태를 다시 점검해주세요.");
+  }
+  return {items, source: "catalog", meta};
+}
+
+function scoreCatalogTransactionState(snapshots) {
+  const states = {};
+  snapshots.forEach((snapshot) => {
+    states[snapshot.id] = {
+      ref: snapshot.ref,
+      items: Object.assign({}, scoreCatalogItemsFromSnapshot(snapshot)),
+    };
+  });
+  return states;
+}
+
+function scoreCatalogFindItem(states, scoreId) {
+  const candidateIds = [
+    scoreCatalogShardId(scoreId, "singer"),
+    scoreCatalogShardId(scoreId, "orchestra"),
+  ];
+  for (const id of candidateIds) {
+    if (states[id] && states[id].items[scoreId]) return {item: states[id].items[scoreId], shardId: id};
+  }
+  return {item: null, shardId: ""};
+}
+
+function scoreCatalogMetaUpdate(meta, summary, actor, now) {
+  return {
+    version: SCORE_CATALOG_VERSION,
+    count: summary.count,
+    counts: summary.counts,
+    idDigest: summary.idDigest,
+    shardCounts: SCORE_CATALOG_SHARDS,
+    migratedAt: cleanString(meta && meta.migratedAt, 100) || now,
+    updatedAt: now,
+    updatedById: actor.id,
+    updatedByName: actor.name,
+  };
+}
+
 async function upsertScores(request) {
   requirePermission(request, "score.manage");
   const requested = Array.isArray(request.data && request.data.items)
@@ -1438,21 +1595,44 @@ async function upsertScores(request) {
     }
     ids.add(id);
   });
-  const scoreRef = db.collection("settings").doc("scores");
+  const legacyRef = db.collection("settings").doc("scores");
+  const metaRef = db.collection("scoreCatalog").doc("_meta");
+  const changeRef = db.collection("scoreChangeEvents").doc();
   const actor = scoreActor(request);
   const cleanupRows = [];
   let savedItems = [];
+  let mirrorWritten = false;
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(scoreRef);
-    const data = snap.exists ? snap.data() || {} : {};
-    const items = Object.assign({}, scoreItemsById(data));
+    const catalogIds = scoreCatalogShardIds();
+    const catalogRefs = catalogIds.map((id) => db.collection("scoreCatalog").doc(id));
+    const [legacySnap, metaSnap, ...catalogSnaps] = await Promise.all([
+      tx.get(legacyRef),
+      tx.get(metaRef),
+      ...catalogRefs.map((ref) => tx.get(ref)),
+    ]);
+    if (!metaSnap.exists || Number((metaSnap.data() || {}).version) !== SCORE_CATALOG_VERSION) {
+      throw new HttpsError("failed-precondition", "악보 목록 전환을 먼저 완료해주세요.");
+    }
+    const states = scoreCatalogTransactionState(catalogSnaps);
+    const legacyData = legacySnap.exists ? legacySnap.data() || {} : {};
+    const legacyItems = Object.assign({}, scoreItemsById(legacyData));
+    const changes = [];
+    const touchedIds = new Set();
+    const restoreGroupKeys = new Set();
     savedItems = requested.map((raw) => {
       const id = cleanString(raw.id, 180);
-      const existing = items[id] || null;
+      const found = scoreCatalogFindItem(states, id);
+      const existing = found.item;
+      if (!existing && legacyItems[id]) {
+        throw new HttpsError("failed-precondition", "악보 목록 동기화가 필요합니다. 관리자에게 다시 점검을 요청해주세요.");
+      }
       if (existing && !canEditStoredScore(request, existing)) {
         throw new HttpsError("permission-denied", "다른 사람이 등록한 악보를 수정할 권한이 없습니다.");
       }
       const sanitized = sanitizeScoreItem(raw, id, existing, actor);
+      if (existing && existing.archived === true && sanitized.fileChanged && sanitized.next.scoreKind === "orchestra") {
+        restoreGroupKeys.add(scoreArchiveGroupKey(existing));
+      }
       if (existing && sanitized.fileChanged) {
         const oldPath = cleanString(existing.currentFilePath || existing.filePath, 1500);
         const oldName = safeScoreFileName(existing.currentFileName || existing.fileName, existing);
@@ -1461,45 +1641,152 @@ async function upsertScores(request) {
           canonicalPath: oldPath ? `scores/${id}/${oldName}` : "",
         });
       }
-      items[id] = sanitized.next;
+      const targetShardId = scoreCatalogShardId(id, sanitized.next.scoreKind);
+      if (!states[targetShardId]) {
+        const ref = db.collection("scoreCatalog").doc(targetShardId);
+        states[targetShardId] = {ref, items: {}};
+      }
+      if (found.shardId && found.shardId !== targetShardId) {
+        delete states[found.shardId].items[id];
+        touchedIds.add(found.shardId);
+      }
+      states[targetShardId].items[id] = sanitized.next;
+      touchedIds.add(targetShardId);
+      legacyItems[id] = sanitized.next;
+      changes.push({id, before: existing || null, after: sanitized.next});
       return sanitized.next;
     });
-    const estimatedBytes = Buffer.byteLength(JSON.stringify(items), "utf8");
-    if (estimatedBytes > 850000) {
-      throw new HttpsError("resource-exhausted", "악보 목록 용량이 안전 한도에 가까워 저장할 수 없습니다.");
+    const now = nowIso();
+    if (restoreGroupKeys.size) {
+      Object.keys(states).forEach((shardId) => {
+        const state = states[shardId];
+        Object.keys(state.items).forEach((id) => {
+          const item = state.items[id];
+          if (!item || item.archived !== true || normalizeScoreKind(item.scoreKind) !== "orchestra") return;
+          if (!restoreGroupKeys.has(scoreArchiveGroupKey(item))) return;
+          if (!canEditStoredScore(request, item)) {
+            throw new HttpsError("permission-denied", "보관된 관현악 악보 묶음 전체를 복원할 권한이 없습니다.");
+          }
+          const next = Object.assign({}, item, {
+            archived: false,
+            archivedAt: "",
+            archivedById: "",
+            archivedByName: "",
+            updatedAt: now,
+            updatedById: actor.id,
+            updatedByName: actor.name,
+          });
+          state.items[id] = next;
+          legacyItems[id] = next;
+          touchedIds.add(shardId);
+          changes.push({id, before: item, after: next});
+          if (!savedItems.some((saved) => saved.id === id)) savedItems.push(next);
+        });
+      });
     }
-    tx.set(scoreRef, {
-      items,
-      updatedAt: nowIso(),
+    Array.from(touchedIds).forEach((id) => {
+      const state = states[id];
+      assertScoreCatalogShardSize(id, state.items);
+      tx.set(state.ref, {
+        version: SCORE_CATALOG_VERSION,
+        kind: id.startsWith("orchestra_") ? "orchestra" : "singer",
+        shard: Number(id.slice(-2)),
+        items: state.items,
+        updatedAt: now,
+        updatedById: actor.id,
+        updatedByName: actor.name,
+      });
+    });
+    const catalogItems = {};
+    Object.keys(states).forEach((id) => Object.assign(catalogItems, states[id].items));
+    const summary = scoreCatalogSummary(catalogItems);
+    tx.set(metaRef, scoreCatalogMetaUpdate(metaSnap.data() || {}, summary, actor, now));
+    const legacyBytes = Buffer.byteLength(JSON.stringify(legacyItems), "utf8");
+    mirrorWritten = legacyBytes <= SCORE_LEGACY_MIRROR_MAX_BYTES;
+    if (mirrorWritten) {
+      tx.set(legacyRef, {
+        items: legacyItems,
+        catalogVersion: SCORE_CATALOG_VERSION,
+        updatedAt: now,
+        updatedById: actor.id,
+        updatedByName: actor.name,
+      }, {merge: true});
+    } else {
+      tx.set(legacyRef, {
+        catalogVersion: SCORE_CATALOG_VERSION,
+        legacyMirrorStoppedAt: now,
+        updatedById: actor.id,
+        updatedByName: actor.name,
+      }, {merge: true});
+    }
+    tx.set(changeRef, {
+      changes,
+      createdAt: now,
       updatedById: actor.id,
       updatedByName: actor.name,
-    }, {merge: true});
+    });
   });
   await cleanupReplacedScoreFiles(cleanupRows);
-  return {items: savedItems};
+  return {items: savedItems, catalogVersion: SCORE_CATALOG_VERSION, legacyMirror: mirrorWritten};
 }
 
 async function deleteStoredScore(request) {
   requireAdmin(request);
   const scoreId = cleanString(request.data && request.data.scoreId, 180);
   if (!isValidDocumentId(scoreId)) throw new HttpsError("invalid-argument", "삭제할 악보를 확인해주세요.");
-  const scoreRef = db.collection("settings").doc("scores");
+  const legacyRef = db.collection("settings").doc("scores");
+  const metaRef = db.collection("scoreCatalog").doc("_meta");
   let deleted = null;
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(scoreRef);
-    if (!snap.exists) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
-    const data = snap.data() || {};
-    const items = Object.assign({}, scoreItemsById(data));
-    deleted = items[scoreId] || null;
+    const shardIds = [scoreCatalogShardId(scoreId, "singer"), scoreCatalogShardId(scoreId, "orchestra")];
+    const shardRefs = shardIds.map((id) => db.collection("scoreCatalog").doc(id));
+    const [legacySnap, metaSnap, ...shardSnaps] = await Promise.all([
+      tx.get(legacyRef),
+      tx.get(metaRef),
+      ...shardRefs.map((ref) => tx.get(ref)),
+    ]);
+    if (!metaSnap.exists || Number((metaSnap.data() || {}).version) !== SCORE_CATALOG_VERSION) {
+      throw new HttpsError("failed-precondition", "악보 목록 전환을 먼저 완료해주세요.");
+    }
+    const states = scoreCatalogTransactionState(shardSnaps);
+    const found = scoreCatalogFindItem(states, scoreId);
+    deleted = found.item;
     if (!deleted) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
-    delete items[scoreId];
+    delete states[found.shardId].items[scoreId];
     const actor = scoreActor(request);
-    tx.set(scoreRef, {
-      items,
-      updatedAt: nowIso(),
+    const now = nowIso();
+    const state = states[found.shardId];
+    tx.set(state.ref, {
+      version: SCORE_CATALOG_VERSION,
+      kind: found.shardId.startsWith("orchestra_") ? "orchestra" : "singer",
+      shard: Number(found.shardId.slice(-2)),
+      items: state.items,
+      updatedAt: now,
       updatedById: actor.id,
       updatedByName: actor.name,
-    }, {merge: true});
+    });
+    const meta = metaSnap.data() || {};
+    const counts = Object.assign({singer: 0, orchestra: 0}, meta.counts || {});
+    const deletedKind = normalizeScoreKind(deleted.scoreKind || deleted.kind);
+    counts[deletedKind] = Math.max(0, Number(counts[deletedKind] || 0) - 1);
+    tx.set(metaRef, {
+      version: SCORE_CATALOG_VERSION,
+      count: Math.max(0, Number(meta.count || 0) - 1),
+      counts,
+      idDigest: "",
+      shardCounts: SCORE_CATALOG_SHARDS,
+      migratedAt: cleanString(meta.migratedAt, 100) || now,
+      updatedAt: now,
+      updatedById: actor.id,
+      updatedByName: actor.name,
+    });
+    const legacyItems = Object.assign({}, scoreItemsById(legacySnap.exists ? legacySnap.data() || {} : {}));
+    delete legacyItems[scoreId];
+    if (Buffer.byteLength(JSON.stringify(legacyItems), "utf8") <= SCORE_LEGACY_MIRROR_MAX_BYTES) {
+      tx.set(legacyRef, {items: legacyItems, catalogVersion: SCORE_CATALOG_VERSION, updatedAt: now, updatedById: actor.id, updatedByName: actor.name}, {merge: true});
+    } else {
+      tx.set(legacyRef, {catalogVersion: SCORE_CATALOG_VERSION, legacyMirrorStoppedAt: now, updatedById: actor.id, updatedByName: actor.name}, {merge: true});
+    }
   });
   await getStorage().bucket().deleteFiles({prefix: `scores/${scoreId}/`}).catch((error) => {
     console.error("score_folder_cleanup_failed", {scoreId, code: error && error.code});
@@ -1514,8 +1801,8 @@ async function cleanupUnusedScoreUploads(request) {
     value.startsWith("scores/") && value.includes("/uploads/") && !value.includes("..")
   ));
   if (!paths.length) return {deleted: 0};
-  const snap = await db.collection("settings").doc("scores").get();
-  const inUse = new Set(Object.values(scoreItemsById(snap.exists ? snap.data() || {} : {}))
+  const catalog = await readAllScoreCatalogItems();
+  const inUse = new Set(Object.values(catalog.items)
     .map((item) => cleanString(item && item.currentFilePath, 1500))
     .filter(Boolean));
   const unused = paths.filter((path) => !inUse.has(path));
@@ -1595,12 +1882,20 @@ async function openScoreFile(request) {
   requireAuth(request);
   const scoreId = cleanString(request.data && request.data.scoreId, 180);
   if (!isValidDocumentId(scoreId)) throw new HttpsError("invalid-argument", "악보를 확인해주세요.");
-
-  const scoreSnap = await db.collection("settings").doc("scores").get();
-  const sourceItems = scoreSnap.exists ? (scoreSnap.data() || {}).items || {} : {};
-  const score = Array.isArray(sourceItems)
-    ? sourceItems.find((item) => item && cleanString(item.id, 180) === scoreId)
-    : sourceItems[scoreId];
+  const kindHintRaw = cleanString(request.data && request.data.scoreKind, 30).toLowerCase();
+  const hintedKinds = ["singer", "orchestra"].includes(kindHintRaw)
+    ? [kindHintRaw, kindHintRaw === "singer" ? "orchestra" : "singer"]
+    : ["singer", "orchestra"];
+  let score = null;
+  for (const kind of hintedKinds) {
+    const shardSnap = await db.collection("scoreCatalog").doc(scoreCatalogShardId(scoreId, kind)).get();
+    score = scoreCatalogItemsFromSnapshot(shardSnap)[scoreId] || null;
+    if (score) break;
+  }
+  if (!score) {
+    const legacySnap = await db.collection("settings").doc("scores").get();
+    score = scoreItemsById(legacySnap.exists ? legacySnap.data() || {} : {})[scoreId] || null;
+  }
   if (!score) throw new HttpsError("not-found", "악보를 찾을 수 없습니다.");
 
   const canManage = isAdminRequest(request) || hasPermission(request, "score.manage");
@@ -1802,10 +2097,10 @@ exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
 });
 
 exports.notifyScoreUpdates = onDocumentWritten({
-  document: "settings/scores",
+  document: "scoreChangeEvents/{eventId}",
   secrets: [WEB_PUSH_PRIVATE_KEY],
   retry: false,
-}, notifyScoreWrite);
+}, notifyScoreChangeEvent);
 
 exports.notifyScheduleUpdates = onDocumentWritten({
   document: "schedules/{scheduleId}",
