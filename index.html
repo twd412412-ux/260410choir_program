@@ -7472,12 +7472,7 @@ function renderHome(){
     ? Promise.resolve(allSongs)
     : songsLoadPromise
       ? songsLoadPromise
-    : db.collection('songs').get().then(function(snap){
-        var rows=[];
-        snap.forEach(function(doc){rows.push(songRowFromDoc(doc))});
-        allSongs=rows;songsLoaded=true;saveCache('choir_songs',allSongs);
-        return rows;
-      });
+    : initSongs(false);
   var schedulePromise=ensureScheduleRange(weekStartStr,weekEndStr,false);
   var publicSeatingPromise=getPublishedSeatingPlan(false).catch(function(e){
     console.error(e);
