@@ -7184,7 +7184,7 @@ function homeEventMatchedScoreRow(schedule,title,rows){
   rows=Array.isArray(rows)?rows:scheduleMatchedScoreRows(schedule);
   for(var i=0;i<rows.length;i++){
     var row=rows[i];
-    var names=[row.song&&row.song.songName,row.score&&row.score.title].filter(Boolean);
+    var names=[row.song&&row.song.songName,row.matchedSong&&row.matchedSong.songName,row.score&&row.score.title].filter(Boolean);
     for(var j=0;j<names.length;j++){
       var key=scoreSearchKey(names[j]);
       if(key&&(titleKey.indexOf(key)>-1||key.indexOf(titleKey)>-1))return row;
@@ -7826,17 +7826,7 @@ function openGlobalSearchResult(type,id){
     var score=allScores.find(function(item){return item.id===id});
     if(!score)return showToast('악보를 찾을 수 없습니다');
     closeModal('modalGlobalSearch');
-    var song=findSongForScore(score);
-    if(song)return openDetail(song.id);
-    scoreLibraryMode=isArchivedScore(score)?'archive':'active';
-    try{localStorage.setItem(SCORE_LIBRARY_KEY,scoreLibraryMode)}catch(e){}
-    switchTab('scores');
-    setScoreViewMode(normalizeScoreKind(score.scoreKind));
-    var scoreInput=document.getElementById('scoreSearchInput');
-    if(scoreInput)scoreInput.value=score.title||'';
-    renderScoresPage();
-    window.scrollTo({top:0,behavior:'smooth'});
-    return;
+    return openMatchedSongForScore(id,true);
   }
   if(type==='schedule'){
     closeModal('modalGlobalSearch');
@@ -9717,6 +9707,119 @@ function findSongForScore(score){
   });
   return candidates[0]||null;
 }
+var scoreScheduleLookupPromise=null;
+var scoreScheduleLookupAt=0;
+var SCORE_SCHEDULE_LOOKUP_TTL_MS=120000;
+var SCORE_SCHEDULE_LOOKUP_DAYS=120;
+function scoreSongIsCurrentOrFuture(song){
+  var value=songScheduleValue(song);
+  return value!==Number.MAX_SAFE_INTEGER&&value>=todayScheduleValue();
+}
+function findExplicitSongForScore(score){
+  if(!score)return null;
+  var ids=normalizeScoreLinkedSongIds(score.linkedSongIds||[]);
+  if(score.linkedSongId&&ids.indexOf(score.linkedSongId)===-1)ids.unshift(score.linkedSongId);
+  return (allSongs||[]).filter(function(song){
+    return ids.indexOf(song.id)!==-1||(score.id&&song.scoreId===score.id);
+  }).sort(function(a,b){
+    return songScheduleRankValue(a)-songScheduleRankValue(b)
+      ||String(a.songName||'').localeCompare(String(b.songName||''),'ko');
+  })[0]||null;
+}
+function scoreScheduleCandidateTitles(schedule){
+  var titles=[];
+  function add(value){
+    value=String(value||'').trim();
+    if(value)titles.push(value);
+  }
+  add(schedule&&schedule.title);
+  String(schedule&&schedule.songs||'').split(/[,;|\n\r]+/).forEach(add);
+  rehearsalItemsFromSchedule(schedule||{}).forEach(function(item){add(rehearsalItemTitle(item));});
+  return uniqueArray(titles);
+}
+function scoreScheduleMatchRank(schedule,score){
+  var scoreKey=scoreSearchKey(score&&score.title);
+  if(!scoreKey)return 0;
+  var keys=scoreScheduleCandidateTitles(schedule).map(scoreSearchKey).filter(Boolean);
+  if(keys.indexOf(scoreKey)!==-1)return 3;
+  if(scoreKey.length<6)return 0;
+  return keys.some(function(key){return key.length>=4&&(key.indexOf(scoreKey)>-1||scoreKey.indexOf(key)>-1);})?1:0;
+}
+function findUpcomingScheduleForScore(score){
+  var today=getTodayInputDate();
+  return (allSchedules||[]).map(function(schedule){
+    return {schedule:schedule,rank:scoreScheduleMatchRank(schedule,score)};
+  }).filter(function(row){
+    return row.rank>0&&scheduleEndDate(row.schedule)>=today;
+  }).sort(function(a,b){
+    return b.rank-a.rank
+      ||scheduleStartDate(a.schedule).localeCompare(scheduleStartDate(b.schedule))
+      ||String(a.schedule.title||'').localeCompare(String(b.schedule.title||''),'ko');
+  }).map(function(row){return row.schedule;})[0]||null;
+}
+function scoreScheduleDateValue(schedule){
+  var key=scheduleStartDate(schedule);
+  return key?Number(key.replace(/-/g,'')):Number.MAX_SAFE_INTEGER;
+}
+function scoreDetailTargetFromLoadedData(score,includeHistorical){
+  var explicitSong=findExplicitSongForScore(score);
+  if(scoreSongIsCurrentOrFuture(explicitSong))return {type:'song',item:explicitSong};
+  var song=findSongForScore(score);
+  var futureSong=scoreSongIsCurrentOrFuture(song)?song:null;
+  var schedule=findUpcomingScheduleForScore(score);
+  if(futureSong&&schedule){
+    return songScheduleValue(futureSong)<=scoreScheduleDateValue(schedule)
+      ?{type:'song',item:futureSong}
+      :{type:'schedule',item:schedule};
+  }
+  if(futureSong)return {type:'song',item:futureSong};
+  if(schedule)return {type:'schedule',item:schedule};
+  return includeHistorical&&(explicitSong||song)?{type:'song',item:explicitSong||song}:null;
+}
+function mergeScoreScheduleLookupRows(rows){
+  (rows||[]).forEach(function(row){
+    var index=allSchedules.findIndex(function(schedule){return schedule.id===row.id;});
+    if(index>-1)allSchedules[index]=row;
+    else allSchedules.push(row);
+  });
+}
+function loadUpcomingScoreSchedules(){
+  if(scoreScheduleLookupPromise)return scoreScheduleLookupPromise;
+  if(scoreScheduleLookupAt&&(Date.now()-scoreScheduleLookupAt)<SCORE_SCHEDULE_LOOKUP_TTL_MS)return Promise.resolve(allSchedules);
+  var startDate=new Date();
+  var endDate=new Date(startDate.getFullYear(),startDate.getMonth(),startDate.getDate()+SCORE_SCHEDULE_LOOKUP_DAYS);
+  var start=homeInputDate(startDate), end=homeInputDate(endDate);
+  scoreScheduleLookupPromise=db.collection('schedules')
+    .where('date','>=',start)
+    .where('date','<=',end)
+    .orderBy('date')
+    .limit(120)
+    .get()
+    .then(function(snap){
+      var rows=[];
+      snap.forEach(function(doc){rows.push(scheduleRowFromDoc(doc));});
+      mergeScoreScheduleLookupRows(rows);
+      scoreScheduleLookupAt=Date.now();
+      return allSchedules;
+    }).finally(function(){scoreScheduleLookupPromise=null;});
+  return scoreScheduleLookupPromise;
+}
+function openScoreLibraryMatch(score){
+  scoreLibraryMode=isArchivedScore(score)?'archive':'active';
+  try{localStorage.setItem(SCORE_LIBRARY_KEY,scoreLibraryMode)}catch(e){}
+  switchTab('scores');
+  setScoreViewMode(normalizeScoreKind(score.scoreKind));
+  var scoreInput=document.getElementById('scoreSearchInput');
+  if(scoreInput)scoreInput.value=score.title||'';
+  renderScoresPage();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function openScoreDetailTarget(target){
+  if(!target||!target.item)return false;
+  if(target.type==='schedule')openSchDetail(target.item.id);
+  else openDetail(target.item.id);
+  return true;
+}
 function scoreLinkedSongs(score){
   var ids=normalizeScoreLinkedSongIds(score&&score.linkedSongIds||[]);
   if(score&&score.linkedSongId&&ids.indexOf(score.linkedSongId)===-1)ids.unshift(score.linkedSongId);
@@ -9740,11 +9843,30 @@ function sortScoresBySchedule(rows){
       ||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
   });
 }
-function openMatchedSongForScore(id){
+function openMatchedSongForScore(id,fallbackToLibrary){
   var score=allScores.find(function(s){return s.id===id});
-  var song=findSongForScore(score);
-  if(song)return openDetail(song.id);
-  showToast('연결된 곡 상세정보를 찾을 수 없습니다');
+  if(!score)return showToast('악보를 찾을 수 없습니다');
+  var target=scoreDetailTargetFromLoadedData(score,false);
+  if(target)return openScoreDetailTarget(target);
+  if(isArchivedScore(score)){
+    target=scoreDetailTargetFromLoadedData(score,true);
+    if(target)return openScoreDetailTarget(target);
+    if(fallbackToLibrary)return openScoreLibraryMatch(score);
+    return showToast('연결된 곡 상세정보를 찾을 수 없습니다');
+  }
+  showToast('연결된 최신 일정을 확인 중입니다');
+  return loadUpcomingScoreSchedules().then(function(){
+    var resolved=scoreDetailTargetFromLoadedData(score,true);
+    if(resolved)return openScoreDetailTarget(resolved);
+    if(fallbackToLibrary)return openScoreLibraryMatch(score);
+    showToast('연결된 곡 또는 일정을 찾을 수 없습니다');
+  }).catch(function(error){
+    console.warn('악보 일정 연결 확인 실패',error);
+    var fallback=scoreDetailTargetFromLoadedData(score,true);
+    if(fallback)return openScoreDetailTarget(fallback);
+    if(fallbackToLibrary)return openScoreLibraryMatch(score);
+    showToast('연결된 곡 상세정보를 찾을 수 없습니다');
+  });
 }
 function scoreOpenFileName(score){
   var name=String(score&&score.currentFileName||'').trim();
@@ -14859,15 +14981,16 @@ function scheduleMatchedSongs(schedule){
 function scheduleMatchedScoreRows(schedule){
   var rows=[], seenScores={};
   scheduleMatchedSongs(schedule).forEach(function(song){
+    var contextualSong=scheduleSongInRange(song,schedule)?song:null;
     var scores=findVisibleScoresForSong(song);
     if(scores.length){
       scores.forEach(function(score){
         if(seenScores[score.id])return;
         seenScores[score.id]=true;
-        rows.push({song:song,score:score});
+        rows.push({song:contextualSong,matchedSong:song,score:score});
       });
     }else{
-      rows.push({song:song,score:null});
+      rows.push({song:contextualSong,matchedSong:song,score:null});
     }
   });
   var sourceKey=scoreSearchKey(scheduleScoreSource(schedule));
@@ -14910,8 +15033,8 @@ function renderScheduleScoreSection(schedule,allowLoad){
     return score&&normalizeScoreKind(score.scoreKind)==='orchestra';
   }),'group');
   var html=rows.map(function(row){
-    var song=row.song, score=row.score;
-    var name=song?(song.songName||'곡명 없음'):(score&&score.title||'악보');
+    var song=row.song, matchedSong=row.matchedSong||song, score=row.score;
+    var name=song?(song.songName||'곡명 없음'):(score&&score.title||(matchedSong&&matchedSong.songName)||'악보');
     var meta=[];
     if(song&&song.category)meta.push(song.category);
     if(song&&song.year&&song.month&&song.day)meta.push(song.year+'.'+String(song.month).padStart(2,'0')+'.'+String(song.day).padStart(2,'0'));
