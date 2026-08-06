@@ -913,6 +913,20 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-admin-focus-note button{border:0;background:transparent;color:var(--pd);padding:3px 0;font-family:inherit;font-size:11px;font-weight:950;text-decoration:underline;cursor:pointer;white-space:nowrap}
 .score-folder-card.score-manage-focus{animation:score-manage-focus 1.2s ease-in-out 2}
 @keyframes score-manage-focus{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(110,126,77,.28)}}
+.score-info-current{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--bd)}
+.score-info-eyebrow{color:var(--ts);font-size:10px;font-weight:900}
+.score-info-version{margin-top:4px;color:var(--tx);font-size:15px;font-weight:950}
+.score-info-file{margin-top:4px;color:var(--ts);font-size:11px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.score-info-open{min-width:88px;border:0;border-radius:9px;background:var(--p);color:#fff;padding:10px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.score-info-link{padding-top:15px}
+.score-info-link-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.score-info-link-title{color:var(--tx);font-size:14px;font-weight:950}
+.score-info-link-type{border-radius:6px;background:var(--pl);color:var(--pd);padding:4px 7px;font-size:10px;font-weight:900;white-space:nowrap}
+.score-info-empty{padding:20px 4px;color:var(--ts);font-size:12px;font-weight:750;line-height:1.5;text-align:center}
+.score-info-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+.score-info-actions.single{grid-template-columns:1fr}
+.score-info-action{border:1px solid var(--bd);border-radius:9px;background:var(--pl);color:var(--pd);padding:10px 12px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.score-info-action.primary{border-color:var(--p);background:var(--p);color:#fff}
 .score-sort-control{display:flex;align-items:center;gap:6px;flex:0 0 auto;color:var(--ts);font-size:11px;font-weight:850}
 .score-sort-select{width:auto;min-width:120px;max-width:154px;height:34px;border:1px solid var(--bd);border-radius:9px;background:var(--sf);color:var(--tx);padding:0 28px 0 9px;font-family:inherit;font-size:12px;font-weight:850}
 .dark .score-singer-list{background:#1D211B;border-color:#343B31}
@@ -931,6 +945,7 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
   .score-organize-actions{width:100%;justify-content:flex-start}
   .score-folder-head{gap:7px}
   .score-folder-head-actions{gap:4px}
+  .score-info-current{grid-template-columns:minmax(0,1fr) 82px;gap:9px}
 }
 @media(prefers-reduced-motion:reduce){.score-folder-card.score-manage-focus{animation:none;box-shadow:0 0 0 3px rgba(110,126,77,.28)}}
 .score-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0}
@@ -3331,6 +3346,14 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 악보 정보 -->
+<div class="modal-overlay" id="modalScoreInfo">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="scoreInfoTitle">악보 정보</span><button class="modal-close" onclick="closeModal('modalScoreInfo')">✕</button></div>
+    <div id="scoreInfoBody"></div>
+  </div>
+</div>
+
 <!-- MODAL: 관현악 파트 변경 -->
 <div class="modal-overlay modal-center" id="modalScorePartEdit">
   <div class="modal-content">
@@ -3751,6 +3774,7 @@ var SCORE_CACHE_KEY='choir_scores_public';
 var SCORE_SEEN_STORAGE_PREFIX='choir_score_seen_v1_';
 var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false, scorePickerOrchestraOpen=false;
+var scoreInfoScoreId='', scoreInfoTarget=null, scoreInfoLookupToken=0;
 var songRecommendCache=[];
 var scoreReplacementConfirmed=false, scoreBatchReplacementConfirmed=false, scorePendingReplacementInfo=null, scoreLocalPreviewUrl='';
 var scoreLinkSelectionTouched=false, scoreTargetGroupKey='';
@@ -7901,7 +7925,7 @@ function openGlobalSearchResult(type,id){
     var score=allScores.find(function(item){return item.id===id});
     if(!score)return showToast('악보를 찾을 수 없습니다');
     closeModal('modalGlobalSearch');
-    return openMatchedSongForScore(id,true);
+    return openMatchedSongForScore(id);
   }
   if(type==='schedule'){
     closeModal('modalGlobalSearch');
@@ -9981,21 +10005,93 @@ function loadUpcomingScoreSchedules(){
     }).finally(function(){scoreScheduleLookupPromise=null;});
   return scoreScheduleLookupPromise;
 }
-function openScoreLibraryMatch(score){
-  scoreLibraryMode=isArchivedScore(score)?'archive':'active';
-  try{localStorage.setItem(SCORE_LIBRARY_KEY,scoreLibraryMode)}catch(e){}
-  switchTab('scores');
-  setScoreViewMode(normalizeScoreKind(score.scoreKind));
-  var scoreInput=document.getElementById('scoreSearchInput');
-  if(scoreInput)scoreInput.value=score.title||'';
-  renderScoresPage();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
 function openScoreDetailTarget(target){
   if(!target||!target.item)return false;
   if(target.type==='schedule')openSchDetail(target.item.id);
   else openDetail(target.item.id);
   return true;
+}
+function scoreInfoSongDate(song){
+  if(!song)return '-';
+  var parts=[];
+  if(song.year)parts.push(song.year+'년');
+  if(song.month)parts.push(song.month+'월');
+  if(song.day)parts.push(song.day+'일');
+  var label=parts.join(' ');
+  if(song.dayOfWeek)label+=' ('+song.dayOfWeek+')';
+  return label||'-';
+}
+function scoreInfoMatchText(score,target){
+  if(!score||!target||!target.item)return '-';
+  if(target.type==='schedule'){
+    return scoreScheduleMatchRank(target.item,score)>=3?'같은 곡명의 예정 일정':'일정 프로그램에서 확인';
+  }
+  var ids=normalizeScoreLinkedSongIds(score.linkedSongIds||[]);
+  if(score.linkedSongId&&ids.indexOf(score.linkedSongId)===-1)ids.unshift(score.linkedSongId);
+  if(ids.indexOf(target.item.id)!==-1||(score.id&&target.item.scoreId===score.id))return '곡목록에 직접 연결';
+  return '같은 곡명의 곡목록';
+}
+function renderScoreInfoModal(loading){
+  var score=allScores.find(function(row){return row.id===scoreInfoScoreId;});
+  var title=document.getElementById('scoreInfoTitle');
+  var body=document.getElementById('scoreInfoBody');
+  if(!score||!body)return;
+  if(title)title.textContent=score.title||'악보 정보';
+  var updated=scoreUpdatedText(score);
+  var version='v'+Math.max(1,Number(score.versionNumber||1))+(updated?' · '+updated:'');
+  var fileMeta=[normalizeScoreKind(score.scoreKind)==='orchestra'?scorePartDisplayLabel(score):scoreKindLabel(score.scoreKind),score.currentFileName||'',scoreFileSizeText(score.currentFileSize)].filter(Boolean).join(' · ');
+  var html='<div class="score-info-current">'
+    +'<div><div class="score-info-eyebrow">현재 악보</div><div class="score-info-version">'+escHtml(version)+'</div><div class="score-info-file">'+escHtml(fileMeta||'최신 악보')+'</div></div>'
+    +'<button type="button" class="score-info-open" onclick="openScoreInfoFile()">악보 보기</button>'
+    +'</div>';
+  if(loading){
+    html+='<div class="score-info-empty"><div class="spinner" style="margin:0 auto 9px"></div>연결된 예정 정보를 확인하는 중입니다.</div>';
+    body.innerHTML=html;
+    return;
+  }
+  var target=scoreInfoTarget;
+  if(!target||!target.item){
+    html+='<div class="score-info-empty">연결된 예정 정보를 찾지 못했습니다.<br>악보는 위의 버튼으로 바로 열 수 있습니다.</div>';
+    body.innerHTML=html;
+    return;
+  }
+  var item=target.item;
+  var typeLabel=target.type==='schedule'?'예정된 일정':(scoreSongIsCurrentOrFuture(item)?'예정된 곡':'과거 곡 기록');
+  var rows=[];
+  if(target.type==='schedule'){
+    rows.push(['날짜',scheduleDateRangeLabel(item)]);
+    rows.push(['일정',item.title||score.title||'-']);
+    rows.push(['시간',item.time||'-']);
+    rows.push(['장소',item.location||'-']);
+  }else{
+    rows.push(['날짜',scoreInfoSongDate(item)]);
+    rows.push(['분류',item.category||'-']);
+    rows.push(['세부분류',item.subCategory||'-']);
+    rows.push(['장소',item.location||'-']);
+  }
+  rows.push(['연결 기준',scoreInfoMatchText(score,target)]);
+  html+='<div class="score-info-link"><div class="score-info-link-head"><div class="score-info-link-title">연결 정보</div><span class="score-info-link-type">'+typeLabel+'</span></div>'
+    +rows.map(function(row){return '<div class="detail-row"><span class="detail-label">'+row[0]+'</span><span class="detail-value">'+escHtml(row[1])+'</span></div>';}).join('')
+    +'<div class="score-info-actions single"><button type="button" class="score-info-action" onclick="openScoreInfoTargetDetail()">'+(target.type==='schedule'?'일정 상세 보기':'곡 상세 보기')+'</button></div></div>';
+  body.innerHTML=html;
+}
+function showScoreInfoModal(score,target,loading){
+  scoreInfoScoreId=score.id;
+  scoreInfoTarget=target||null;
+  renderScoreInfoModal(!!loading);
+  openModal('modalScoreInfo');
+}
+function openScoreInfoFile(){
+  var id=scoreInfoScoreId;
+  if(!id)return;
+  closeModal('modalScoreInfo');
+  openScoreFileById(id);
+}
+function openScoreInfoTargetDetail(){
+  var target=scoreInfoTarget;
+  if(!target||!target.item)return;
+  closeModal('modalScoreInfo');
+  openScoreDetailTarget(target);
 }
 function scoreLinkedSongs(score){
   var ids=normalizeScoreLinkedSongIds(score&&score.linkedSongIds||[]);
@@ -10020,29 +10116,28 @@ function sortScoresBySchedule(rows){
       ||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
   });
 }
-function openMatchedSongForScore(id,fallbackToLibrary){
+function openMatchedSongForScore(id){
   var score=allScores.find(function(s){return s.id===id});
   if(!score)return showToast('악보를 찾을 수 없습니다');
+  var lookupToken=++scoreInfoLookupToken;
   var target=scoreDetailTargetFromLoadedData(score,false);
-  if(target)return openScoreDetailTarget(target);
+  if(target)return showScoreInfoModal(score,target,false);
   if(isArchivedScore(score)){
     target=scoreDetailTargetFromLoadedData(score,true);
-    if(target)return openScoreDetailTarget(target);
-    if(fallbackToLibrary)return openScoreLibraryMatch(score);
-    return showToast('연결된 곡 상세정보를 찾을 수 없습니다');
+    return showScoreInfoModal(score,target,false);
   }
-  showToast('연결된 최신 일정을 확인 중입니다');
+  showScoreInfoModal(score,null,true);
   return loadUpcomingScoreSchedules().then(function(){
+    if(lookupToken!==scoreInfoLookupToken||scoreInfoScoreId!==score.id)return;
     var resolved=scoreDetailTargetFromLoadedData(score,true);
-    if(resolved)return openScoreDetailTarget(resolved);
-    if(fallbackToLibrary)return openScoreLibraryMatch(score);
-    showToast('연결된 곡 또는 일정을 찾을 수 없습니다');
+    scoreInfoTarget=resolved||null;
+    renderScoreInfoModal(false);
   }).catch(function(error){
     console.warn('악보 일정 연결 확인 실패',error);
+    if(lookupToken!==scoreInfoLookupToken||scoreInfoScoreId!==score.id)return;
     var fallback=scoreDetailTargetFromLoadedData(score,true);
-    if(fallback)return openScoreDetailTarget(fallback);
-    if(fallbackToLibrary)return openScoreLibraryMatch(score);
-    showToast('연결된 곡 상세정보를 찾을 수 없습니다');
+    scoreInfoTarget=fallback||null;
+    renderScoreInfoModal(false);
   });
 }
 function scoreOpenFileName(score){
