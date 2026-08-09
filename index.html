@@ -3897,7 +3897,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.07';
+var APP_RELEASE_VERSION='26.08.09';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -10328,6 +10328,34 @@ function renderScoreActionForSong(song, activeOnly){
     ? '<button class="score-action-btn add" onclick="openQuickScoreManage(\''+escAttr(song.songName)+'\',\''+escAttr(song.id)+'\')">＋ 악보 등록</button>'
     : '<button class="score-action-btn empty" disabled>악보 없음</button>';
 }
+function visibleScoresForTitle(title,activeOnly){
+  var key=scoreSearchKey(title);
+  if(!key)return [];
+  return sortScorePartsForCurrentUser(sortScores(allScores.filter(function(score){
+    return isPublicScore(score)&&canViewScoreItem(score)&&scoreSearchKey(score&&score.title)===key&&(!activeOnly||scoreMatchesActiveMode(score));
+  })));
+}
+function openScorePickerRows(title,rows,songId,activeOnly){
+  rows=(rows||[]).filter(canOpenScoreItem);
+  if(!rows.length)return showToast('볼 수 있는 악보가 없습니다');
+  if(rows.length===1)return openScoreFileById(rows[0].id);
+  scorePickerSongId=songId||'';
+  scorePickerActiveOnly=!!activeOnly;
+  scorePickerOrchestraOpen=false;
+  var titleEl=document.getElementById('scorePickerTitle');
+  var body=document.getElementById('scorePickerBody');
+  if(titleEl)titleEl.textContent='📄 '+(title||'악보');
+  if(body)body.innerHTML=renderScorePickerRows(rows);
+  openModal('modalScorePicker');
+}
+function openScorePickerForTitle(title,activeOnly){
+  if(!canViewScores()){
+    showToast('로그인한 단원만 악보를 볼 수 있습니다');
+    openUserModal();
+    return;
+  }
+  openScorePickerRows(title,visibleScoresForTitle(title,!!activeOnly),'',!!activeOnly);
+}
 function openScorePickerForSong(songId, activeOnly){
   if(!canViewScores()){
     showToast('로그인한 단원만 악보를 볼 수 있습니다');
@@ -10337,16 +10365,7 @@ function openScorePickerForSong(songId, activeOnly){
   var song=allSongs.find(function(s){return s.id===songId});
   if(!song)return showToast('연결된 곡을 찾을 수 없습니다');
   var rows=activeOnly?getActiveModeScoresForSong(song):findVisibleScoresForSong(song);
-  if(!rows.length)return showToast('볼 수 있는 악보가 없습니다');
-  if(rows.length===1)return openScoreFileById(rows[0].id);
-  scorePickerSongId=songId;
-  scorePickerActiveOnly=!!activeOnly;
-  scorePickerOrchestraOpen=false;
-  var title=document.getElementById('scorePickerTitle');
-  var body=document.getElementById('scorePickerBody');
-  if(title)title.textContent='📄 '+(song.songName||'악보');
-  if(body)body.innerHTML=renderScorePickerRows(rows);
-  openModal('modalScorePicker');
+  openScorePickerRows(song.songName||'악보',rows,songId,activeOnly);
 }
 function renderScorePickerRows(rows){
   rows=sortScorePartsForCurrentUser(rows).filter(canOpenScoreItem);
@@ -10774,6 +10793,58 @@ function renderScoreFolderCard(group, adminMode){
     +body
     +'</div>';
 }
+var scoreWeekScheduleRangeKey='', scoreWeekSchedulePromise=null;
+function scoreWeekScheduleNames(schedule){
+  var names=[];
+  function add(value){
+    value=String(value||'').trim();
+    if(!value)return;
+    var key=scoreSearchKey(value);
+    if(!key||names.some(function(name){return scoreSearchKey(name)===key;}))return;
+    if(visibleScoresForTitle(value,true).length)names.push(value);
+  }
+  String(schedule&&schedule.songs||'').split(/[,;|\n\r]+/).forEach(add);
+  rehearsalItemsFromSchedule(schedule||{}).forEach(function(item){add(rehearsalItemTitle(item));});
+  add(schedule&&schedule.title);
+  return names;
+}
+function scoreWeekScheduleRows(dateKey){
+  var rows=[];
+  allSchedules.filter(function(schedule){
+    return !schedule.useBriefing&&scheduleStartDate(schedule)===dateKey&&scheduleEndDate(schedule)===dateKey;
+  }).forEach(function(schedule){
+    scoreWeekScheduleNames(schedule).forEach(function(name){rows.push({name:name,schedule:schedule});});
+  });
+  return rows;
+}
+function ensureScoreWeekSchedules(featured){
+  var start=homeInputDate(getSundayFrom(featured,-1));
+  var end=homeInputDate(getSundayFrom(featured,5));
+  var rangeKey=start+'|'+end;
+  if(scoreWeekScheduleRangeKey===rangeKey)return Promise.resolve(allSchedules);
+  if(scoreWeekSchedulePromise)return scoreWeekSchedulePromise;
+  scoreWeekSchedulePromise=ensureScheduleRange(start,end,false).then(function(){
+    scoreWeekScheduleRangeKey=rangeKey;
+    scoreWeekSchedulePromise=null;
+    if(currentTab==='scores')renderScoreWeekPanel();
+    return allSchedules;
+  }).catch(function(error){
+    console.warn('주일찬송 일정 확인 실패',error);
+    scoreWeekSchedulePromise=null;
+    return allSchedules;
+  });
+  return scoreWeekSchedulePromise;
+}
+function renderScoreActionForTitle(title){
+  var rows=visibleScoresForTitle(title,true);
+  if(rows.length){
+    var label=rows.length>1?'📄 악보 '+rows.length+'개':'📄 보기';
+    return '<button class="score-action-btn open" onclick="openScorePickerForTitle(\''+escAttr(title)+'\',true)">'+label+renderScoreRowsNewBadge(rows)+'</button>';
+  }
+  return canManageScores()
+    ? '<button class="score-action-btn add" onclick="openQuickScoreManage(\''+escAttr(title)+'\',\'\')">＋ 악보 등록</button>'
+    : '<button class="score-action-btn empty" disabled>악보 없음</button>';
+}
 function syncScoreWeekPanelViewport(panel){
   var grid=panel&&panel.querySelector('.score-week-grid');
   if(!grid)return;
@@ -10799,6 +10870,7 @@ function renderScoreWeekPanel(){
   }
   var today=new Date();
   var featured=getFeaturedSunday(today);
+  ensureScoreWeekSchedules(featured);
   var weeks=[
     {label:'지난 주',date:getSundayFrom(featured,-1)},
     {label:'이번 주',date:featured},
@@ -10824,18 +10896,38 @@ function renderScoreWeekPanel(){
     var weeksAfter=Math.round((date-featured)/(7*24*60*60*1000));
     weeks.push({label:weeksAfter+'주 후',date:date});
   });
+  for(var offset=3;offset<=5;offset++){
+    var scheduleDate=getSundayFrom(featured,offset);
+    var scheduleKey=homeInputDate(scheduleDate);
+    if(scoreWeekScheduleRows(scheduleKey).length&&!weeks.some(function(week){return homeInputDate(week.date)===scheduleKey;})){
+      weeks.push({label:offset+'주 후',date:scheduleDate});
+    }
+  }
+  weeks.sort(function(a,b){return a.date-b.date;});
   var html=weeks.map(function(w){
     var key=homeInputDate(w.date);
     var parts=key.split('-');
     var y=Number(parts[0]),m=Number(parts[1]),d=Number(parts[2]);
     var rows=allSongs.filter(function(s){return Number(s.year)===y&&Number(s.month)===m&&Number(s.day)===d;});
-    if(rows.length===0){
+    var usedTitles={};
+    rows.forEach(function(song){usedTitles[scoreSearchKey(song.songName)]=true;});
+    var scheduleRows=scoreWeekScheduleRows(key).filter(function(row){
+      var titleKey=scoreSearchKey(row.name);
+      if(!titleKey||usedTitles[titleKey])return false;
+      usedTitles[titleKey]=true;
+      return true;
+    });
+    if(rows.length===0&&scheduleRows.length===0){
       return '<div class="score-week-row" data-score-week-key="'+key+'"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" style="color:var(--ts)">등록된 곡 없음</div><div></div></div>';
     }
-    return rows.map(function(song){
+    var songHtml=rows.map(function(song){
       var action=renderScoreActionForSong(song,true);
       return '<div class="score-week-row" data-score-week-key="'+key+'"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openDetail(\''+escAttr(song.id)+'\')">'+escHtml(song.songName||'곡명 없음')+'</div><div>'+action+'</div></div>';
     }).join('');
+    var scheduleHtml=scheduleRows.map(function(row){
+      return '<div class="score-week-row" data-score-week-key="'+key+'"><div class="score-week-date">'+w.label+'<br>'+homeDateStr(w.date)+'</div><div class="score-week-song" onclick="openSchDetail(\''+escAttr(row.schedule.id)+'\')">'+escHtml(row.name)+'</div><div>'+renderScoreActionForTitle(row.name)+'</div></div>';
+    }).join('');
+    return songHtml+scheduleHtml;
   }).join('');
   panel.innerHTML='<div class="score-week-card"><div class="score-week-title">주일찬송곡 악보</div><div class="score-week-grid">'+html+'</div></div>';
   syncScoreWeekPanelViewport(panel);
