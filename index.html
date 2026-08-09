@@ -2101,6 +2101,11 @@ body{font-weight:500}
 .schedule-home-event-option label{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:13px;font-weight:780;cursor:pointer}
 .schedule-event-badge{display:inline-flex;border-radius:6px;background:#F3EDDE;color:#6E6244;padding:2px 6px;font-size:10px;font-weight:850;vertical-align:middle}
 .dark .schedule-event-badge{background:#393426;color:#D7C698}
+.schedule-sunday-score-option{margin:2px 0 12px;padding:11px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--sf)}
+.schedule-sunday-score-option label{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:13px;font-weight:800;cursor:pointer}
+.schedule-sunday-score-option p{margin:5px 0 0 24px;color:var(--ts);font-size:11px;line-height:1.45}
+.schedule-sunday-score-badge{display:inline-flex;border-radius:6px;background:#E7EEDB;color:#52643B;padding:2px 6px;font-size:10px;font-weight:850;vertical-align:middle}
+.dark .schedule-sunday-score-badge{background:#2F3A27;color:#C7D9AD}
 .home-part-row{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr) 12px;gap:7px;align-items:center;padding:10px 11px;border-bottom:1px solid #EEE2D0}
 .home-part-row:last-child{border-bottom:0}
 .home-part-row-name{font-size:14px;font-weight:850;color:#191A15}
@@ -3075,6 +3080,10 @@ body{font-weight:500}
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
     <div class="schedule-inline-row schedule-time-row" style="display:flex;gap:8px"><div class="form-group"><label class="form-label">시간</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display empty" id="schTimeDisplay" tabindex="-1">시간 선택</button><input class="schedule-native-input" id="schTime" type="time" aria-label="시간" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleDisplays()" onchange="syncScheduleDisplays()"></div></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
+    <div class="schedule-sunday-score-option">
+      <label><input type="checkbox" id="schShowInSundayScores">주일찬송곡 악보에 표시</label>
+      <p>주일예배 찬송곡일 때만 선택합니다. 봉사회·교구 특송은 선택하지 않습니다.</p>
+    </div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-input" id="schMemo" placeholder="추가 메모"></div>
     <div class="form-group" style="padding:12px;border:1px solid var(--bd);border-radius:12px;background:var(--bg)">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer">
@@ -5074,6 +5083,8 @@ function resetScheduleForm(defaultDate){
   if(endDateEl)endDateEl.value=defaultDate||'';
   var briefing=document.getElementById('schUseBriefing');
   if(briefing)briefing.checked=false;
+  var showInSundayScores=document.getElementById('schShowInSundayScores');
+  if(showInSundayScores)showInSundayScores.checked=false;
   var showEvent=document.getElementById('schShowEventHub');
   if(showEvent)showEvent.checked=false;
   toggleScheduleBriefing();
@@ -10811,7 +10822,7 @@ function scoreWeekScheduleNames(schedule){
 function scoreWeekScheduleRows(dateKey){
   var rows=[];
   allSchedules.filter(function(schedule){
-    return !schedule.useBriefing&&scheduleStartDate(schedule)===dateKey&&scheduleEndDate(schedule)===dateKey;
+    return !!schedule.showInSundayScores&&scheduleStartDate(schedule)===dateKey&&scheduleEndDate(schedule)===dateKey;
   }).forEach(function(schedule){
     scoreWeekScheduleNames(schedule).forEach(function(name){rows.push({name:name,schedule:schedule});});
   });
@@ -14960,7 +14971,7 @@ function initSchedules(force){
 }
 function scheduleRowFromDoc(doc){
   var d=doc.data()||{};
-  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
+  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,showInSundayScores:!!d.showInSundayScores,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
@@ -14991,6 +15002,7 @@ function addSchedule(){
   if(!date||!title)return showToast('날짜와 제목은 필수입니다');
   if(endDate<date)return showToast('종료일은 시작일보다 빠를 수 없습니다');
   var useBriefing=!!document.getElementById('schUseBriefing').checked;
+  var showInSundayScores=!!document.getElementById('schShowInSundayScores').checked;
   var showEventHub=useBriefing&&!!document.getElementById('schShowEventHub').checked;
   var affectsHomeEvent=showEventHub||!!(editingSchedule&&editingSchedule.showEventHub);
   var now=new Date().toISOString();
@@ -14998,7 +15010,7 @@ function addSchedule(){
   var actorId=currentActorId();
   var directEdit=scheduleDirectEditActive;
   var directReturnDate=scheduleDirectEditReturnDate;
-  var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,showEventHub:showEventHub,program:useBriefing?document.getElementById('schProgram').value.trim():'',programItems:useBriefing?getScheduleProgramItemsFromForm():[],dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
+  var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,showInSundayScores:showInSundayScores,showEventHub:showEventHub,program:useBriefing?document.getElementById('schProgram').value.trim():'',programItems:useBriefing?getScheduleProgramItemsFromForm():[],dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
   var write=scheduleEditId
     ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
     : db.collection('schedules').add(Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName})).then(function(docRef){return {id:docRef.id,updated:false};});
@@ -15015,8 +15027,9 @@ function addSchedule(){
     var logTime = scheduleData.time ? ` 🕐 ${scheduleData.time}` : '';
     var logLoc = scheduleData.location ? ` | 📍 ${scheduleData.location}` : '';
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
+    var logSundayScore = showInSundayScores ? '\n🎵 주일찬송곡 악보에 표시' : '';
     var logHomeEvent = showEventHub ? '\n🏠 단원 홈 행사 표시' : '';
-    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}${logHomeEvent}`);
+    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}${logSundayScore}${logHomeEvent}`);
     resetScheduleForm(getTodayInputDate());
     loadSchAdmin();
     if(currentTab==='calendar'){
@@ -15073,7 +15086,7 @@ function loadSchAdmin(skipLoad){
     var id=escAttr(s.id);
     var editBtn=canEditScheduleItem(s)?'<button class="btn btn-sm" style="background:var(--pl);color:var(--p)" onclick="editSchedule(\''+id+'\')">수정</button>':'';
     var delBtn=canDeleteScheduleItem(s)?'<button class="btn btn-sm btn-d" onclick="delSchedule(\''+id+'\',\''+escAttr(s.title)+'\')">삭제</button>':'';
-    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+(s.showEventHub?' <span class="schedule-event-badge">홈 행사</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(scheduleDateRangeLabel(s))+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
+    return '<div class="sch-item" style="'+(past?'opacity:.5;':'')+'"><div class="sch-info"><div style="width:4px;min-height:36px;border-radius:2px;background:'+safeColor(s.color)+';flex-shrink:0"></div><div class="sch-text"><div style="font-weight:700;font-size:14px">'+escHtml(s.title)+(s.useBriefing?' <span style="font-size:10px;background:var(--pl);color:var(--pd);padding:2px 6px;border-radius:10px">프로그램 브리핑</span>':'')+(s.showInSundayScores?' <span class="schedule-sunday-score-badge">주일찬송</span>':'')+(s.showEventHub?' <span class="schedule-event-badge">홈 행사</span>':'')+'</div><div style="font-size:12px;color:var(--ts)">'+escHtml(scheduleDateRangeLabel(s))+(s.time?' '+escHtml(s.time):'')+(s.location?' · '+escHtml(s.location):'')+'</div>'+(s.songs?'<div style="font-size:12px;color:var(--p);margin-top:2px">🎵 '+escHtml(s.songs)+'</div>':'')+(s.useBriefing&&s.program?'<div style="font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+s.program.split('\n').filter(Boolean).length+'개</div>':'')+'</div></div><div class="sch-actions">'+editBtn+delBtn+'</div></div>';
   }).join('');
 }
 function editSchedule(id,options){
@@ -15088,6 +15101,7 @@ function editSchedule(id,options){
   document.getElementById('schLoc').value=s.location||'';
   document.getElementById('schSongs').value=s.songs||'';
   document.getElementById('schMemo').value=s.memo||'';
+  document.getElementById('schShowInSundayScores').checked=!!s.showInSundayScores;
   document.getElementById('schUseBriefing').checked=!!s.useBriefing;
   document.getElementById('schShowEventHub').checked=!!s.showEventHub;
   document.getElementById('schProgram').value=s.program||'';
