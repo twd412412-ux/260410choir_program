@@ -102,6 +102,10 @@ service cloud.firestore {
       allow read, write: if hasPermission('seating.manage');
     }
 
+    match /seatingPlans/{planId} {
+      allow read, write: if hasPermission('seating.manage');
+    }
+
     match /settings/scores {
       allow read: if isAppUser();
       allow write: if false;

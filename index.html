@@ -2874,7 +2874,7 @@ body{font-weight:500}
         </div>
         <div class="seating-submission-bar" id="seatingSubmissionBar"></div>
         <div class="seating-lock-row" id="seatingLockRow"></div>
-        <div class="seating-help-note"><b>미제출</b>은 파트 참석 확인 전 상태입니다. <b>제출완료</b>는 파트 담당자가 확인을 마쳐 그 파트 명단을 잠글 때, <b>고정</b>은 전체 운영 담당자가 모든 파트 확인 후 최종 잠글 때 사용합니다.</div>
+        <div class="seating-help-note"><b>미제출</b>은 파트 참석 확인 전 상태입니다. <b>제출완료</b>는 파트 담당자가 확인을 마쳐 그 파트 명단을 잠글 때, <b>고정</b>은 자리배치 권한자가 모든 파트 확인 후 최종 잠글 때 사용합니다.</div>
         <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
         <div class="seating-part-filter" id="seatingPartFilter"></div>
         <div id="seatingMemberList" class="seating-member-list"><div class="loading"><div class="spinner"></div>명단 불러오는 중...</div></div>
@@ -3952,7 +3952,7 @@ var PERMISSION_GROUPS=[
   {title:'관리 도구',items:[
     {key:'notice.manage',label:'공지 관리',desc:'상단 공지 저장/삭제'},
     {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'},
-    {key:'seating.manage',label:'찬양의밤 자리배치',desc:'배치도 보기/편집/저장. 파트 제출과 명단 고정은 담당 범위와 전체 운영 설정을 따름'}
+    {key:'seating.manage',label:'찬양의밤 자리배치',desc:'전체 파트 참석 명단과 배치도 편집·저장·공개'}
   ]}
 ];
 var PERMISSION_LABELS={};
@@ -13019,7 +13019,7 @@ function renderPermissionEditor(preset, permissions, scope, scoreScope){
     html+='<option value="'+escHtml(opt.key)+'"'+(scoreScope===opt.key?' selected':'')+'>'+escHtml(opt.label)+' - '+escHtml(opt.desc)+'</option>';
   });
   html+='</select></div>';
-  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">담당 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">출결 체크와 찬양의밤 파트 제출에서 여기서 지정한 범위만 열립니다. 비워두면 계정의 파트를 기본 범위로 사용하고, 지휘 계정은 전체 범위로 사용합니다.</div><div class="perm-scope-grid">';
+  html+='<div class="perm-group" id="attendanceScopeBox"><div class="perm-group-title">출결 범위</div><div style="font-size:11px;color:var(--ts);line-height:1.45">전자출결부에서 조회·체크할 파트를 지정합니다. 자리배치 권한은 이 범위와 별개로 전체 파트에 적용됩니다.</div><div class="perm-scope-grid">';
   ATTENDANCE_SCOPE_OPTIONS.forEach(function(opt){
     html+='<label class="perm-scope-item"><input type="checkbox" class="perm-scope-input" value="'+escHtml(opt.key)+'" '+(scope.indexOf(opt.key)>-1?'checked':'')+'><span>'+escHtml(opt.label)+'</span></label>';
   });
@@ -13073,7 +13073,7 @@ function syncAttendanceScopeVisibility(){
   var box=document.getElementById('attendanceScopeBox');
   if(!box)return;
   var perms=readPermissionEditorChecks();
-  var needs=perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1||perms.indexOf('seating.manage')>-1;
+  var needs=perms.indexOf('attendance.view')>-1||perms.indexOf('attendance.check')>-1||perms.indexOf('attendance.delete')>-1;
   box.style.display=needs?'block':'none';
 }
 
@@ -16276,34 +16276,24 @@ function isSeatingPartSubmitted(part){
   return !!(info&&info.submitted);
 }
 function seatingSubmissionScopeParts(){
-  if(adminRole==='admin')return seatingPartOrder();
-  if(!currentUser)return [];
-  var scope=Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length
-    ? normalizeAttendanceScopeArray(currentUser.attendanceScope)
-    : accountDefaultScope(currentUser);
-  var expanded=expandAttendanceScope(scope);
-  if(expanded.indexOf('ALL')>-1||expanded.indexOf('all')>-1)return seatingPartOrder();
-  return uniqueArray(expanded.map(normalizePartName)).filter(function(part){
-    return seatingPartOrder().indexOf(part)>-1;
-  });
+  return canUseSeatingPlan()?seatingPartOrder():[];
 }
 function canSubmitSeatingPart(part){
   part=normalizePartName(part);
-  if(adminRole==='admin')return true;
-  return seatingSubmissionScopeParts().indexOf(part)>-1;
+  return seatingPartOrder().indexOf(part)>-1&&canUseSeatingPlan();
 }
 function canToggleSeatingPartSubmission(part){
   part=normalizePartName(part);
   if(seatingPartOrder().indexOf(part)===-1)return false;
-  if(adminRole==='admin')return true;
+  if(canUseSeatingPlan())return true;
   if(isSeatingPartSubmitted(part))return false;
   return canSubmitSeatingPart(part);
 }
 function seatingPartSubmissionTitle(part){
   part=normalizePartName(part);
-  if(adminRole==='admin')return isSeatingPartSubmitted(part)?part+' 제출완료 해제':'전체 운영 담당자로 '+part+' 제출완료';
+  if(canUseSeatingPlan())return isSeatingPartSubmitted(part)?part+' 제출완료 해제':'자리배치 운영자로 '+part+' 제출완료';
   if(!canSubmitSeatingPart(part))return part+' 제출 권한이 없습니다';
-  if(isSeatingPartSubmitted(part))return '제출완료 해제는 전체 운영 담당자가 처리합니다';
+  if(isSeatingPartSubmitted(part))return '제출완료 해제는 자리배치 권한자가 처리합니다';
   return part+' 참석명단을 제출완료로 확정합니다';
 }
 function seatingPartAttendeeCount(part){
@@ -16319,13 +16309,11 @@ function isSeatingMemberAttendanceLocked(member){
 function canEditSeatingMemberAttendance(member){
   if(!member)return false;
   if(isSeatingMemberAttendanceLocked(member))return false;
-  if(adminRole==='admin')return true;
-  return canSubmitSeatingPart(member.part);
+  return canUseSeatingPlan();
 }
 function canEditAnySeatingAttendance(){
   if(seatingAttendeesLocked)return false;
-  if(adminRole==='admin')return true;
-  return seatingMembers.some(function(m){return canEditSeatingMemberAttendance(m);});
+  return canUseSeatingPlan();
 }
 function seatingSubmissionCompleteCount(){
   return seatingPartOrder().filter(function(part){return isSeatingPartSubmitted(part);}).length;
@@ -16985,7 +16973,7 @@ function renderSeatingHistory(){
     }).join('')+'</div>';
 }
 function showSeatingSubmissionInfo(){
-  alert('찬양의밤 참석명단 운영 방식\n\n1. 각 파트 담당자는 본인 파트 참석 여부를 확인합니다.\n2. 제출완료를 누르면 해당 파트 참석명단이 잠겨 이후 실수 변경을 줄일 수 있습니다.\n3. 제출완료를 잘못 눌렀다면 전체 운영 담당자에게 해제를 요청하면 됩니다.\n4. 명단 고정은 모든 파트 확인이 끝난 뒤 전체 운영 담당자가 최종 잠금할 때 사용합니다.\n5. 잠금 상태는 현재 배치에 저장됩니다. 새 배치를 만들면 미제출/고정 해제 상태로 다시 시작합니다.\n6. 자리배치 편집/저장은 참석명단 확인과 별개입니다.\n7. 변경 내용은 저장 버튼을 눌러야 저장된 배치에 반영됩니다.');
+  alert('찬양의밤 참석명단 운영 방식\n\n1. 각 파트 담당자는 본인 파트 참석 여부를 확인합니다.\n2. 제출완료를 누르면 해당 파트 참석명단이 잠겨 이후 실수 변경을 줄일 수 있습니다.\n3. 제출완료를 잘못 눌렀다면 자리배치 권한자가 해제할 수 있습니다.\n4. 명단 고정은 모든 파트 확인이 끝난 뒤 자리배치 권한자가 최종 잠금할 때 사용합니다.\n5. 자리배치 권한자는 출결 범위와 관계없이 전체 파트를 운영할 수 있습니다.\n6. 잠금 상태는 현재 배치에 저장됩니다. 새 배치를 만들면 미제출/고정 해제 상태로 다시 시작합니다.\n7. 변경 내용은 저장 버튼을 눌러야 저장된 배치에 반영됩니다.');
 }
 function seatingPartFillColor(part){
   part=normalizePartName(part);
@@ -17244,13 +17232,13 @@ function renderSeatingSubmissionState(){
   var row=document.getElementById('seatingLockRow');
   if(row){
     var editable=canEditAnySeatingAttendance();
-    var adminLockButton=adminRole==='admin'
+    var adminLockButton=canUseSeatingPlan()
       ? '<button class="btn btn-sm" style="background:'+(seatingAttendeesLocked?'var(--bg)':'var(--p)')+';color:'+(seatingAttendeesLocked?'var(--ts)':'#fff')+'" onclick="toggleSeatingAttendeesLocked()">'+(seatingAttendeesLocked?'고정 해제':'명단 고정')+'</button>'
-      : '<span class="seating-lock-note">고정은 전체 운영 담당자용</span>';
+      : '<span class="seating-lock-note">고정은 자리배치 권한자용</span>';
     row.innerHTML='<span>파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+' · '+(seatingAttendeesLocked?'전체 명단 고정 중':'전체 명단 수정 가능')+'</span>'
       +'<div class="seating-lock-actions"><button class="seating-info-btn" onclick="showSeatingSubmissionInfo()" title="제출/미제출/명단 고정 설명">i</button>'
       +adminLockButton+'</div>';
-    var scopedLabel=adminRole==='admin'||seatingSubmissionScopeParts().length===seatingPartOrder().length;
+    var scopedLabel=canUseSeatingPlan()||seatingSubmissionScopeParts().length===seatingPartOrder().length;
     var allBtn=document.getElementById('seatingMarkAllBtn');
     var clearBtn=document.getElementById('seatingClearAllBtn');
     if(allBtn){allBtn.textContent=scopedLabel?'전체':'담당 전체';allBtn.disabled=!editable;}
@@ -17266,14 +17254,14 @@ function toggleSeatingPartSubmission(part){
   part=normalizePartName(part);
   if(seatingPartOrder().indexOf(part)===-1)return;
   if(!canToggleSeatingPartSubmission(part)){
-    if(isSeatingPartSubmitted(part))return showToast('제출완료 해제는 전체 운영 담당자가 처리합니다');
+    if(isSeatingPartSubmitted(part))return showToast('제출완료 해제는 자리배치 권한자가 처리합니다');
     return showToast(part+' 제출 권한이 없습니다');
   }
   var current=seatingPartSubmissions[part]||{};
   if(!current.submitted){
     var count=seatingPartAttendeeCount(part);
     var total=seatingPartMemberCount(part);
-    if(!confirm(part+' 참석명단을 제출완료로 표시할까요?\n\n현재 참석 '+count+'/'+total+'명입니다.\n제출완료 후에는 해당 파트 참석 체크가 잠깁니다.\n잘못 눌렀다면 전체 운영 담당자에게 해제를 요청하면 됩니다.'))return;
+    if(!confirm(part+' 참석명단을 제출완료로 표시할까요?\n\n현재 참석 '+count+'/'+total+'명입니다.\n제출완료 후에는 해당 파트 참석 체크가 잠깁니다.\n잘못 눌렀다면 자리배치 권한자가 해제할 수 있습니다.'))return;
   }
   beginSeatingEdit();
   seatingPartSubmissions[part]=current.submitted
@@ -17284,7 +17272,7 @@ function toggleSeatingPartSubmission(part){
   showToast(part+(seatingPartSubmissions[part].submitted?' 참석명단 제출완료':' 제출완료 해제'));
 }
 function toggleSeatingAttendeesLocked(){
-  if(adminRole!=='admin')return showToast('명단 고정/해제는 전체 운영 담당자가 처리합니다');
+  if(!canUseSeatingPlan())return showToast('명단 고정/해제는 자리배치 권한자가 처리합니다');
   beginSeatingEdit();
   seatingAttendeesLocked=!seatingAttendeesLocked;
   renderSeatingMemberList();
