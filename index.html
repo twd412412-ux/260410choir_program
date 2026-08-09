@@ -523,7 +523,11 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .cal-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
 .cal-nav-title{font-size:16px;font-weight:700}
 .cal-nav button{background:var(--pl);border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--p)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:0 8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;padding:0 8px;touch-action:pan-y;overscroll-behavior-x:contain}
+.cal-grid.cal-swipe-from-right{animation:calSwipeFromRight .2s ease-out}
+.cal-grid.cal-swipe-from-left{animation:calSwipeFromLeft .2s ease-out}
+@keyframes calSwipeFromRight{from{opacity:.72;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes calSwipeFromLeft{from{opacity:.72;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
 .cal-hdr{text-align:center;font-size:11px;font-weight:700;color:var(--ts);padding:6px 0}
 .cal-cell{min-height:60px;padding:2px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;font-size:11px;background:var(--sf);overflow:hidden}
 .cal-cell:hover{background:var(--pl)}
@@ -3832,6 +3836,7 @@ var forceFreshDataOnInit=(function(){
   }catch(e){return false;}
 })();
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
+var calendarSwipeLocked=false, calendarSwipeSuppressClickUntil=0;
 var scheduleLoadedMonths=Object.create(null), scheduleMonthPromises=Object.create(null), scheduleMonthIds=Object.create(null), scheduleAdminWindowLoaded=false, scheduleAdminWindowPromise=null;
 var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
 var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
@@ -4913,7 +4918,7 @@ function switchTab(tab){
   }
   if(tab==='scores')renderScoresPage();
   if(tab==='favorites')renderFav();
-  if(tab==='calendar')renderCal();
+  if(tab==='calendar'){setupCalendarSwipe();renderCal()}
   if(tab==='archive')renderArchivePage();
   if(tab==='stats')renderStats();
   syncQuickCreateActions();
@@ -15172,8 +15177,52 @@ function delSchedule(id,title){
 
 // ==================== 캘린더 ====================
 function initCal(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
-function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()}
-function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()}
+function animateCalendarMonthSwipe(delta){
+  var grid=document.getElementById('calGrid');
+  if(!grid)return;
+  var cls=delta>0?'cal-swipe-from-right':'cal-swipe-from-left';
+  grid.classList.remove('cal-swipe-from-right','cal-swipe-from-left');
+  void grid.offsetWidth;
+  grid.classList.add(cls);
+  setTimeout(function(){grid.classList.remove(cls)},220);
+}
+function changeCalendarMonth(delta,fromSwipe){
+  calMonth+=delta;
+  if(calMonth<0){calMonth=11;calYear--}
+  if(calMonth>11){calMonth=0;calYear++}
+  renderCal();
+  if(fromSwipe)animateCalendarMonthSwipe(delta);
+}
+function calPrev(){changeCalendarMonth(-1,false)}
+function calNext(){changeCalendarMonth(1,false)}
+function setupCalendarSwipe(){
+  var grid=document.getElementById('calGrid');
+  if(!grid||grid.dataset.monthSwipeBound==='1')return;
+  grid.dataset.monthSwipeBound='1';
+  var tracking=false,startX=0,startY=0,startAt=0;
+  grid.addEventListener('touchstart',function(e){
+    if(e.touches.length!==1){tracking=false;return}
+    tracking=true;
+    startX=e.touches[0].clientX;
+    startY=e.touches[0].clientY;
+    startAt=Date.now();
+  },{passive:true});
+  grid.addEventListener('touchend',function(e){
+    if(!tracking||e.changedTouches.length!==1){tracking=false;return}
+    tracking=false;
+    var dx=e.changedTouches[0].clientX-startX;
+    var dy=e.changedTouches[0].clientY-startY;
+    if(Date.now()-startAt>900||Math.abs(dx)<52||Math.abs(dx)<=Math.abs(dy)*1.25||calendarSwipeLocked)return;
+    calendarSwipeLocked=true;
+    calendarSwipeSuppressClickUntil=Date.now()+350;
+    changeCalendarMonth(dx<0?1:-1,true);
+    setTimeout(function(){calendarSwipeLocked=false},260);
+  },{passive:true});
+  grid.addEventListener('touchcancel',function(){tracking=false},{passive:true});
+  grid.addEventListener('click',function(e){
+    if(Date.now()<calendarSwipeSuppressClickUntil){e.preventDefault();e.stopPropagation()}
+  },true);
+}
 function setCalViewMode(v){calViewMode=v==='default'?'default':'stack';localStorage.setItem('choir_cal_view',calViewMode);renderCal()}
 function escHtml(v){return String(v||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
 function safeColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||''))?String(v):COLORS[0]}
