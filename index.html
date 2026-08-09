@@ -2861,7 +2861,7 @@ body{font-weight:500}
     </div>
     <div class="seating-program-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">프로그램</label><input class="form-input" id="seatingProgram" placeholder="예: 전체 합창" oninput="markSeatingDirty();renderSeatingBoard()"></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">템플릿</label><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('full')">전체합창</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 T1·T2 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('male')">남성합창</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 S1·S2 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('female')">여성합창</button><button class="btn btn-sm" style="background:var(--bg);color:var(--tx)" title="배치 전에는 참석 인원에 맞춰 다시 생성하고, 배치 후에는 부족한 좌석만 추가" onclick="fitSeatingToAttendance()">명단 맞춤</button></div></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">템플릿</label><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('full')">전체합창</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 T1·T2 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('male')">남성합창</button><button class="btn btn-sm" style="background:var(--pl);color:var(--pd)" title="현재 S1·S2 참석 명단에 맞춰 4줄로 생성" onclick="applySeatingTemplate('female')">여성합창</button><button class="btn btn-sm" style="background:var(--bg);color:var(--tx)" title="배치된 단원과 미배치 단원을 합친 참석 인원에 좌석 수를 맞춤" onclick="fitSeatingToAttendance()">명단 맞춤</button></div></div>
     </div>
     <div class="seating-tool">
       <aside class="seating-panel">
@@ -16461,10 +16461,53 @@ function addSeatingCapacity(count){
   }
   seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount());
 }
+function removeEmptySeatingCapacity(count){
+  count=Math.max(0,parseInt(count,10)||0);
+  var removed=0;
+  function findCandidate(){
+    var best=null;
+    seatingRows.forEach(function(row,rowIndex){
+      if(!row||!Array.isArray(row.seats)||row.seats.length===0)return;
+      var emptyIndexes=[];
+      row.seats.forEach(function(seat,index){if(!seat)emptyIndexes.push(index);});
+      if(emptyIndexes.length===0)return;
+      var seatIndex=-1;
+      var edge=false;
+      if(!row.seats[row.seats.length-1])seatIndex=row.seats.length-1;
+      else if(!row.seats[0])seatIndex=0;
+      else{
+        seatIndex=emptyIndexes.reduce(function(chosen,index){
+          if(chosen<0)return index;
+          var distance=Math.min(index,row.seats.length-1-index);
+          var chosenDistance=Math.min(chosen,row.seats.length-1-chosen);
+          return distance<chosenDistance?index:chosen;
+        },-1);
+      }
+      edge=seatIndex===0||seatIndex===row.seats.length-1;
+      if(seatIndex<0)return;
+      if(!best||row.seats.length>best.rowLength||(row.seats.length===best.rowLength&&edge&&!best.edge)){
+        best={rowIndex:rowIndex,seatIndex:seatIndex,rowLength:row.seats.length,edge:edge};
+      }
+    });
+    return best;
+  }
+  while(removed<count){
+    var candidate=findCandidate();
+    if(!candidate)break;
+    var targetRow=seatingRows[candidate.rowIndex];
+    targetRow.seats.splice(candidate.seatIndex,1);
+    if(targetRow.seats.length===0&&seatingRows.length>1)seatingRows.splice(candidate.rowIndex,1);
+    removed++;
+  }
+  syncSeatingRowLabels();
+  seatingZoom=seatingZoomForSeatCount(seatingMaxSeatCount());
+  return removed;
+}
 function fitEmptySeatingRowsToAttendance(rowCount){
   var attended=seatingAttendeeCount();
   if(attended<=0)return false;
   rowCount=Math.max(1,parseInt(rowCount,10)||seatingRows.length||4);
+  rowCount=Math.min(rowCount,attended);
   seatingRows=createSeatingRowsByTotal(rowCount,attended);
   seatingMicSlots=defaultSeatingMicSlots(seatingMaxSeatCount());
   seatingZoom=seatingZoomForSeatCount(seatingMaxSeatCount());
@@ -16905,22 +16948,36 @@ function applySeatingTemplate(type){
 function fitSeatingToAttendance(){
   var stats=seatingPlacementStats();
   if(stats.attended<=0)return showToast('참석 단원을 먼저 선택해주세요');
+  if(stats.dup>0)return showToast('중복 배치 '+stats.dup+'명을 먼저 정리해주세요');
+  var beforeCapacity=stats.capacity;
   if(stats.placedUnique===0){
     beginSeatingEdit();
     seatingAutoFit=true;
     fitEmptySeatingRowsToAttendance(seatingRows.length||4);
     seatingSelectedSeat=null;
     renderSeatingBoard();
-    showToast('참석 '+stats.attended+'명에 맞춰 좌석을 조정했습니다');
+    showToast('명단 맞춤 · 참석 '+stats.attended+'명 · 좌석 '+beforeCapacity+'→'+seatingSeatCapacity()+'칸');
     return;
   }
-  var shortage=Math.max(0,stats.attended-seatingSeatCapacity());
-  if(shortage<=0)return showToast('배치가 시작되어 남는 좌석은 그대로 유지합니다');
-  if(!confirm('참석 인원보다 좌석이 '+shortage+'칸 부족합니다.\n기존 배치는 유지하고 부족한 좌석만 추가할까요?'))return;
+  var difference=stats.attended-beforeCapacity;
+  if(difference===0)return showToast('이미 참석 '+stats.attended+'명과 좌석 '+beforeCapacity+'칸이 맞습니다');
+  var actionText=difference>0
+    ? '부족한 빈칸 '+difference+'개를 추가합니다.'
+    : '남는 빈칸 '+Math.abs(difference)+'개를 줄입니다.';
+  var preserveText=difference>0
+    ? '기존 배치는 그대로 유지됩니다.'
+    : '배치된 단원은 삭제되지 않으며, 빈칸 정리로 같은 줄의 위치가 조금 당겨질 수 있습니다.';
+  if(!confirm('참석 명단에 좌석 수를 맞출까요?\n\n참석 '+stats.attended+'명 · 배치 '+stats.placedUnique+'명 · 미배치 '+stats.unplaced+'명\n좌석 '+beforeCapacity+'→'+stats.attended+'칸\n\n'+actionText+'\n'+preserveText))return;
   beginSeatingEdit();
-  addSeatingCapacity(shortage);
+  seatingAutoFit=true;
+  if(difference>0)addSeatingCapacity(difference);
+  else removeEmptySeatingCapacity(Math.abs(difference));
+  seatingSelectedSeat=null;
   renderSeatingBoard();
-  showToast('부족한 좌석 '+shortage+'칸을 추가했습니다');
+  var afterCapacity=seatingSeatCapacity();
+  var changed=afterCapacity-beforeCapacity;
+  var changeLabel=changed>0?'+'+changed:String(changed);
+  showToast('명단 맞춤 · 참석 '+stats.attended+'명 · 좌석 '+beforeCapacity+'→'+afterCapacity+'칸 ('+changeLabel+')');
 }
 function seatingAssignedMap(){
   var map={};
