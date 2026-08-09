@@ -299,6 +299,9 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .dark .seating-member.locked{background:#2C2A22}
 .dark .seating-member.unplaced{background:#352C1B}
 .seating-member input{width:16px;height:16px}
+.seating-member .seating-attendance-checkbox{width:20px;height:20px;touch-action:none;cursor:crosshair}
+.seating-member-list.painting,.seating-member-list.painting .seating-member{user-select:none;cursor:crosshair}
+.seating-member.paint-hit{box-shadow:inset 0 0 0 2px var(--p)}
 .seating-member-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seating-member-meta{font-size:10px;color:var(--ts);font-weight:700}
 .seating-status{font-size:12px;color:var(--ts);line-height:1.5;margin-top:8px}
@@ -3902,6 +3905,7 @@ var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seat
 var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingUnplacedOnly=false, seatingAbsentOnly=false, seatingAttendeesLocked=false, seatingAutoFit=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
 var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
 var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt='', seatingPublishPreviewData=null;
+var seatingAttendancePaint=null, seatingAttendancePaintListenersBound=false, seatingAttendancePaintSuppressClickUntil=0;
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
@@ -17216,6 +17220,162 @@ function markAllSeatingAttendees(value){
   renderSeatingBoard();
   if(value&&shortage>0&&!addMissing&&statsBefore.placedUnique>0)showToast('참석은 반영했습니다. 좌석 '+shortage+'칸이 부족합니다');
 }
+function seatingAttendancePaintApplyAtPoint(clientX,clientY){
+  var state=seatingAttendancePaint;
+  if(!state)return;
+  var hit=document.elementFromPoint(clientX,clientY);
+  var row=hit&&hit.closest?hit.closest('.seating-member[data-seating-member-id]'):null;
+  if(!row||!state.list.contains(row))return;
+  applySeatingAttendancePaintMember(row.getAttribute('data-seating-member-id'),row);
+}
+function seatingAttendancePaintUpdateScroll(clientX,clientY){
+  var state=seatingAttendancePaint;
+  if(!state)return;
+  var rect=state.list.getBoundingClientRect();
+  state.lastX=clientX;
+  state.lastY=clientY;
+  state.autoScrollDirection=0;
+  if(clientX<rect.left||clientX>rect.right)return;
+  if(clientY<rect.top+30)state.autoScrollDirection=-1;
+  else if(clientY>rect.bottom-30)state.autoScrollDirection=1;
+}
+function seatingAttendancePaintFrame(){
+  var state=seatingAttendancePaint;
+  if(!state)return;
+  if(state.autoScrollDirection){
+    var before=state.list.scrollTop;
+    state.list.scrollTop+=state.autoScrollDirection*7;
+    if(state.list.scrollTop!==before)seatingAttendancePaintApplyAtPoint(state.lastX,state.lastY);
+  }
+  state.raf=requestAnimationFrame(seatingAttendancePaintFrame);
+}
+function applySeatingAttendancePaintMember(id,row){
+  var state=seatingAttendancePaint;
+  if(!state||state.visited[id])return true;
+  state.visited[id]=true;
+  var member=seatingMembers.find(function(m){return m.id===id;});
+  if(!member||isSeatingMemberAttendanceLocked(member)||!canEditSeatingMemberAttendance(member)){
+    state.skipped++;
+    return false;
+  }
+  var current=!!seatingAttendees[id];
+  if(current===state.target)return true;
+  var wasPlaced=!!state.assigned[id];
+  if(!state.target&&wasPlaced&&!state.confirmedPlaced){
+    if(!confirm('배치된 단원이 포함되어 있습니다.\n\n계속 끌어서 해제하면 해당 단원의 자리도 함께 비워집니다. 계속할까요?')){
+      finishSeatingAttendancePaint();
+      return false;
+    }
+    state.confirmedPlaced=true;
+  }
+  if(!state.editStarted){
+    beginSeatingEdit();
+    state.editStarted=true;
+  }
+  seatingAttendees[id]=state.target;
+  if(!state.target){
+    seatingRows.forEach(function(seatingRow){
+      seatingRow.seats=seatingRow.seats.map(function(seat){return seat&&seat.memberId===id?null:seat;});
+    });
+    if(seatingSelectedMemberId===id)seatingSelectedMemberId='';
+    if(wasPlaced){state.removedPlaced++;delete state.assigned[id];}
+  }
+  state.changed++;
+  if(row){
+    var input=row.querySelector('.seating-attendance-checkbox');
+    if(input)input.checked=state.target;
+    row.classList.toggle('placed',state.target&&wasPlaced);
+    row.classList.toggle('unplaced',state.target&&!wasPlaced);
+    row.classList.add('paint-hit');
+  }
+  return true;
+}
+function ensureSeatingAttendancePaintListeners(){
+  if(seatingAttendancePaintListenersBound)return;
+  seatingAttendancePaintListenersBound=true;
+  document.addEventListener('pointermove',function(event){
+    var state=seatingAttendancePaint;
+    if(!state||event.pointerId!==state.pointerId)return;
+    event.preventDefault();
+    seatingAttendancePaintUpdateScroll(event.clientX,event.clientY);
+    seatingAttendancePaintApplyAtPoint(event.clientX,event.clientY);
+  },{passive:false});
+  document.addEventListener('pointerup',function(event){
+    var state=seatingAttendancePaint;
+    if(!state||event.pointerId!==state.pointerId)return;
+    event.preventDefault();
+    finishSeatingAttendancePaint();
+  },{passive:false});
+  document.addEventListener('pointercancel',function(event){
+    var state=seatingAttendancePaint;
+    if(!state||event.pointerId!==state.pointerId)return;
+    finishSeatingAttendancePaint();
+  });
+}
+function startSeatingAttendancePaint(event,id){
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  var input=event.currentTarget;
+  var list=document.getElementById('seatingMemberList');
+  if(!list||input.disabled)return;
+  if(seatingAttendancePaint)finishSeatingAttendancePaint();
+  event.preventDefault();
+  event.stopPropagation();
+  ensureSeatingAttendancePaintListeners();
+  seatingAttendancePaintSuppressClickUntil=Date.now()+800;
+  seatingAttendancePaint={
+    pointerId:event.pointerId,
+    input:input,
+    list:list,
+    target:!seatingAttendees[id],
+    visited:{},
+    assigned:seatingAssignedMap(),
+    placedAtStart:seatingPlacementStats().placedUnique,
+    confirmedPlaced:false,
+    editStarted:false,
+    changed:0,
+    skipped:0,
+    removedPlaced:0,
+    lastX:event.clientX,
+    lastY:event.clientY,
+    autoScrollDirection:0,
+    raf:0
+  };
+  list.classList.add('painting');
+  try{input.focus({preventScroll:true});input.setPointerCapture(event.pointerId);}catch(e){}
+  applySeatingAttendancePaintMember(id,input.closest('.seating-member'));
+  if(seatingAttendancePaint)seatingAttendancePaint.raf=requestAnimationFrame(seatingAttendancePaintFrame);
+}
+function finishSeatingAttendancePaint(){
+  var state=seatingAttendancePaint;
+  if(!state)return;
+  seatingAttendancePaint=null;
+  seatingAttendancePaintSuppressClickUntil=Date.now()+800;
+  if(state.raf)cancelAnimationFrame(state.raf);
+  state.list.classList.remove('painting');
+  try{if(state.input.hasPointerCapture(state.pointerId))state.input.releasePointerCapture(state.pointerId);}catch(e){}
+  if(!state.editStarted){
+    if(state.skipped)showToast('고정되었거나 수정 권한이 없는 단원입니다');
+    return;
+  }
+  if(seatingAutoFit&&state.placedAtStart===0&&seatingAttendeeCount()>0)fitEmptySeatingRowsToAttendance(seatingRows.length||4);
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  var stats=seatingPlacementStats();
+  var message=(state.target?'참석 체크 ':'참석 해제 ')+state.changed+'명';
+  if(state.removedPlaced)message+=' · 자리 '+state.removedPlaced+'개 비움';
+  if(state.skipped)message+=' · 고정/권한 '+state.skipped+'명 제외';
+  if(state.target&&stats.shortage>0)message+=' · 좌석 '+stats.shortage+'칸 부족';
+  showToast(message);
+}
+function handleSeatingAttendanceCheckboxClick(event,id){
+  event.stopPropagation();
+  if(Date.now()<seatingAttendancePaintSuppressClickUntil){
+    event.preventDefault();
+    return false;
+  }
+  toggleSeatingAttendee(id,event.currentTarget.checked);
+  return true;
+}
 function toggleSeatingAttendee(id,checked){
   var member=seatingMembers.find(function(m){return m.id===id;});
   if(isSeatingMemberAttendanceLocked(member))return showToast((member&&member.part?member.part+' ':'')+'참석명단이 제출완료/고정 상태입니다');
@@ -17383,8 +17543,8 @@ function renderSeatingMemberList(){
     var absent=!checked;
     var locked=isSeatingMemberAttendanceLocked(m);
     var canEdit=canEditSeatingMemberAttendance(m);
-    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked':'')+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
-      +'<input type="checkbox" '+(checked?'checked':'')+((locked||!canEdit)?' disabled':'')+' onclick="event.stopPropagation();toggleSeatingAttendee(\''+escAttr(m.id)+'\',this.checked)">'
+    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked':'')+'" data-seating-member-id="'+escAttr(m.id)+'" onclick="selectSeatingMember(\''+escAttr(m.id)+'\')">'
+      +'<input type="checkbox" class="seating-attendance-checkbox" '+(checked?'checked':'')+((locked||!canEdit)?' disabled':'')+' title="누르거나 끌어서 참석 체크/해제" aria-label="'+escAttr(m.name)+' 참석 체크/해제" onpointerdown="startSeatingAttendancePaint(event,\''+escAttr(m.id)+'\')" onclick="return handleSeatingAttendanceCheckboxClick(event,\''+escAttr(m.id)+'\')">'
       +'<div class="seating-member-name">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(absent?' · 미참석':'')+(locked?' · 고정':(!canEdit?' · 읽기':'') )+'</span></div>'
       +'</div>';
   }).join('');
