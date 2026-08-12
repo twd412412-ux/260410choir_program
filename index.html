@@ -302,6 +302,13 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-member .seating-attendance-checkbox{width:20px;height:20px;touch-action:none;cursor:crosshair}
 .seating-member-list.painting,.seating-member-list.painting .seating-member{user-select:none;cursor:crosshair}
 .seating-member.paint-hit{box-shadow:inset 0 0 0 2px var(--p)}
+.seating-paint-status{display:none;align-items:center;justify-content:space-between;gap:10px;margin:0 0 7px;padding:7px 10px;border:1px solid #B8C39C;border-radius:7px;background:#EFF3E5;color:#46522D;font-size:11px;font-weight:850}
+.seating-paint-status.active{display:flex}
+.seating-paint-status strong{font-size:13px;color:#35421F}
+.seating-paint-status-dot{width:7px;height:7px;border-radius:50%;background:var(--p);box-shadow:0 0 0 4px rgba(111,130,78,.12);flex:none}
+.seating-paint-status-copy{display:flex;align-items:center;gap:8px;min-width:0}
+.dark .seating-paint-status{border-color:#596346;background:#29301F;color:#DDE6C8}
+.dark .seating-paint-status strong{color:#F1F5E7}
 .seating-member-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seating-member-meta{font-size:10px;color:var(--ts);font-weight:700}
 .seating-status{font-size:12px;color:var(--ts);line-height:1.5;margin-top:8px}
@@ -2360,6 +2367,8 @@ body{font-weight:500}
 .home-seating-card{cursor:pointer}
 .home-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .home-seating-pill{font-size:11px;font-weight:750;background:#EAEFDF;color:#4E5A35;border:1px solid #C8D0B9;border-radius:999px;padding:4px 8px}
+.home-seating-published{display:flex;align-items:center;gap:6px;margin-top:9px;color:#687052;font-size:10.5px;font-weight:800}
+.home-seating-published:before{content:'';width:6px;height:6px;border-radius:50%;background:#74864B;box-shadow:0 0 0 3px rgba(116,134,75,.12)}
 .public-seating-modal .modal-content{max-width:min(1120px,96vw);max-height:92vh}
 .public-seating-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .public-seating-search{width:100%;border:1.5px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;font-weight:760;padding:11px 12px;outline:none;min-width:0}
@@ -2368,6 +2377,7 @@ body{font-weight:500}
 .public-seating-zoom-label{min-width:42px;text-align:center;font-size:12px;font-weight:900;color:var(--ts)}
 .public-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .public-seating-pill{font-size:11px;font-weight:850;background:var(--bg);border:1px solid var(--bd);border-radius:999px;color:var(--ts);padding:5px 8px}
+.public-seating-published{display:flex;align-items:center;gap:6px;margin:-2px 0 10px;padding:8px 10px;border-left:3px solid var(--p);background:var(--pl);color:var(--pd);font-size:11px;font-weight:850}
 .public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
 .public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .public-seating-board-scale{position:relative;width:max-content;min-width:100%}
@@ -2885,6 +2895,7 @@ body{font-weight:500}
         <div class="seating-help-note"><b>미제출</b>은 파트 참석 확인 전 상태입니다. <b>제출완료</b>는 파트 담당자가 확인을 마쳐 그 파트 명단을 잠글 때, <b>고정</b>은 자리배치 권한자가 모든 파트 확인 후 최종 잠글 때 사용합니다.</div>
         <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
         <div class="seating-part-filter" id="seatingPartFilter"></div>
+        <div class="seating-paint-status" id="seatingAttendancePaintStatus" aria-live="polite"></div>
         <div id="seatingMemberList" class="seating-member-list"><div class="loading"><div class="spinner"></div>명단 불러오는 중...</div></div>
         <div class="seating-status" id="seatingStatus">배치를 불러오면 상태가 표시됩니다.</div>
       </aside>
@@ -3828,6 +3839,8 @@ var firebaseAuthReadyPromise=null;
 var firebaseAuthReady=false;
 var firebaseAuthChecking=false;
 var secureElevatedSession=false;
+var secureAuthClaimsFingerprint='', secureAuthClaimsRefreshPromise=null, secureAuthClaimsLastCheckedAt=0;
+var SECURE_AUTH_CLAIMS_REFRESH_MIN_MS=2*60*1000;
 var recoveryFirebaseApp=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
@@ -3889,9 +3902,9 @@ var homeEventSchedules=[], homeEventSchedulesLoaded=false, homeEventSchedulesLoa
 var homeEventHubSchedule=null, homeEventHubTab='program', homeEventHubSection='';
 var NOTICE_CACHE_TTL_MS=6*60*60*1000;
 var PUBLISHED_SEATING_CACHE_KEY='choir_published_seating';
-var PUBLISHED_SEATING_ACTIVE_TTL_MS=10*60*1000;
-var PUBLISHED_SEATING_EMPTY_TTL_MS=60*60*1000;
-var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publicSeatingSearch='', publicSeatingZoom=1.18;
+var PUBLISHED_SEATING_ACTIVE_TTL_MS=2*60*1000;
+var PUBLISHED_SEATING_EMPTY_TTL_MS=10*60*1000;
+var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSearch='', publicSeatingZoom=1.18;
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
@@ -3922,7 +3935,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.09';
+var APP_RELEASE_VERSION='26.08.12';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5911,9 +5924,28 @@ function secureProfileFromClaims(uid,claims,profile){
     favorites:Array.isArray(profile.favorites)?profile.favorites:(Array.isArray(cached.favorites)?cached.favorites:favorites)
   };
 }
+function secureAuthAccessFingerprint(claims){
+  claims=claims||{};
+  return JSON.stringify({
+    account:claims.account===true,
+    admin:claims.admin===true,
+    legacyRole:String(claims.legacyRole||''),
+    elevatedUntil:Number(claims.elevatedUntil||0),
+    choirName:String(claims.choirName||''),
+    choirPart:String(claims.choirPart||''),
+    memberId:String(claims.memberId||''),
+    role:String(claims.role||''),
+    permissionPreset:String(claims.permissionPreset||''),
+    permissions:normalizePermissionArray(claims.permissions).slice().sort(),
+    attendanceScope:normalizeAttendanceScopeArray(claims.attendanceScope||[]).slice().sort(),
+    scoreAccessScope:normalizeScoreAccessScope(claims.scoreAccessScope)
+  });
+}
 function applySecureAuthState(firebaseUser,claims,profile){
   claims=claims||{};
   firebaseAuthReady=true;
+  secureAuthClaimsFingerprint=secureAuthAccessFingerprint(claims);
+  secureAuthClaimsLastCheckedAt=Date.now();
   secureElevatedSession=Number(claims.elevatedUntil||0)>Date.now()&&(claims.admin===true||claims.legacyRole==='chongmu');
   if(claims.account===true){
     currentUser=secureProfileFromClaims(firebaseUser.uid,claims,profile);
@@ -5934,6 +5966,52 @@ function applySecureAuthState(firebaseUser,claims,profile){
   updateUserBar();
   syncAccessShell();
 }
+function refreshSecureAuthClaims(force){
+  if(!firebaseAuthReady||firebaseAuthChecking)return Promise.resolve(false);
+  var now=Date.now();
+  if(!force&&secureAuthClaimsLastCheckedAt&&(now-secureAuthClaimsLastCheckedAt)<SECURE_AUTH_CLAIMS_REFRESH_MIN_MS)return Promise.resolve(false);
+  if(secureAuthClaimsRefreshPromise)return secureAuthClaimsRefreshPromise;
+  secureAuthClaimsRefreshPromise=ensureFirebaseAuth().then(function(auth){
+    var firebaseUser=auth.currentUser;
+    if(!firebaseUser)return false;
+    return firebaseUser.getIdTokenResult(true).then(function(tokenResult){
+      var claims=tokenResult.claims||{};
+      var nextFingerprint=secureAuthAccessFingerprint(claims);
+      var nextElevated=Number(claims.elevatedUntil||0)>Date.now()&&(claims.admin===true||claims.legacyRole==='chongmu');
+      var changed=nextFingerprint!==secureAuthClaimsFingerprint||nextElevated!==secureElevatedSession;
+      secureAuthClaimsLastCheckedAt=Date.now();
+      if(!changed)return false;
+      applySecureAuthState(firebaseUser,claims,null);
+      updateAdminTabs();
+      if(currentTab==='admin'&&!canOpenAdminArea())switchTab('home');
+      if(currentTab==='scores'&&!canViewScores())switchTab('home');
+      if(!canViewScores())clearScoreAccessCache();
+      else resumeScoreRealtimeSync();
+      refreshHomeAccessState();
+      showToast('변경된 계정 권한을 반영했습니다');
+      return true;
+    });
+  }).catch(function(error){
+    console.warn('auth_claims_refresh_failed',error);
+    var code=String(error&&error.code||'');
+    if(code==='auth/user-token-expired'||code==='auth/user-disabled'||code==='auth/invalid-user-token'||code==='auth/user-not-found'){
+      logoutUser();
+      showToast('계정 정보가 변경되어 다시 로그인해주세요');
+    }
+    return false;
+  }).finally(function(){
+    secureAuthClaimsRefreshPromise=null;
+  });
+  return secureAuthClaimsRefreshPromise;
+}
+function scheduleSecureAuthClaimsRefresh(force){
+  setTimeout(function(){refreshSecureAuthClaims(!!force)},180);
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible')scheduleSecureAuthClaimsRefresh(false);
+});
+window.addEventListener('pageshow',function(){scheduleSecureAuthClaimsRefresh(false)});
+window.addEventListener('online',function(){scheduleSecureAuthClaimsRefresh(false)});
 function refreshAfterSecureAuth(forceFresh){
   updateAdminTabs();
   refreshHomeAccessState();
@@ -6702,7 +6780,10 @@ function logoutUser(){
   currentUser=null;
   resetArchiveReactionSession();
   secureElevatedSession=false;
+  secureAuthClaimsFingerprint='';
+  secureAuthClaimsLastCheckedAt=0;
   localStorage.removeItem('choir_user');
+  invalidatePublishedSeatingCache(true);
   if(!canViewScores())clearScoreAccessCache();
   syncAccessShell();
   updateUserBar();
@@ -6763,8 +6844,11 @@ function restoreUser() {
           currentUser=null;
           adminRole=null;
           secureElevatedSession=false;
+          secureAuthClaimsFingerprint='';
+          secureAuthClaimsLastCheckedAt=0;
           firebaseAuthReady=true;
           localStorage.removeItem('choir_user');
+          invalidatePublishedSeatingCache(true);
           updateUserBar();
           syncAccessShell();
           if(hadCachedUser&&!sessionStorage.getItem('choir_secure_relogin_notice')){
@@ -6783,6 +6867,7 @@ function restoreUser() {
           applySecureAuthState(firebaseUser,claims,null);
           refreshAfterSecureAuth(forceFreshDataOnInit);
           forceFreshDataOnInit=false;
+          scheduleSecureAuthClaimsRefresh(true);
           resolve(currentUser);
         }).catch(function(e){
           console.error(e);
@@ -6921,16 +7006,31 @@ function refreshHomeAccessState(){
   invalidateHomeAttendanceCache();
   requestHomeRender();
 }
+function canViewPublishedSeating(){
+  return !!(firebaseAuthReady&&(isMemberLoggedIn()||adminRole==='admin'||adminRole==='chongmu'));
+}
+function publishedSeatingCacheTtl(){
+  return publishedSeatingPlan?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
+}
 function invalidatePublishedSeatingCache(clearStored){
+  publishedSeatingRequestId++;
   publishedSeatingPlan=null;
   publishedSeatingLoaded=false;
   publishedSeatingPromise=null;
+  publishedSeatingLastCheckedAt=0;
   if(clearStored){
     try{localStorage.removeItem(PUBLISHED_SEATING_CACHE_KEY)}catch(e){}
   }
 }
 function getPublishedSeatingPlan(force){
-  if(!force&&publishedSeatingLoaded)return Promise.resolve(publishedSeatingPlan);
+  if(!firebaseAuthReady)return Promise.resolve(null);
+  if(!canViewPublishedSeating()){
+    if(publishedSeatingPlan||!publishedSeatingLoaded)invalidatePublishedSeatingCache(true);
+    publishedSeatingLoaded=true;
+    return Promise.resolve(null);
+  }
+  var now=Date.now();
+  if(!force&&publishedSeatingLoaded&&publishedSeatingLastCheckedAt&&(now-publishedSeatingLastCheckedAt)<publishedSeatingCacheTtl())return Promise.resolve(publishedSeatingPlan);
   if(!force&&publishedSeatingPromise)return publishedSeatingPromise;
   if(!force){
     var cached=loadCacheEntry(PUBLISHED_SEATING_CACHE_KEY,PUBLISHED_SEATING_EMPTY_TTL_MS);
@@ -6945,11 +7045,18 @@ function getPublishedSeatingPlan(force){
         }
         publishedSeatingPlan=cachedData;
         publishedSeatingLoaded=true;
+        publishedSeatingLastCheckedAt=cached.ts;
         return Promise.resolve(publishedSeatingPlan);
       }
     }
   }
+  var requestId=++publishedSeatingRequestId;
   publishedSeatingPromise=db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){
+    if(requestId!==publishedSeatingRequestId)return null;
+    if(!canViewPublishedSeating()){
+      publishedSeatingPromise=null;
+      return null;
+    }
     var data=doc.exists?(doc.data()||{}):null;
     if(data&&data.rows){
       data.rows=normalizeSeatingRows(data.rows);
@@ -6959,15 +7066,25 @@ function getPublishedSeatingPlan(force){
       publishedSeatingPlan=null;
     }
     publishedSeatingLoaded=true;
+    publishedSeatingLastCheckedAt=Date.now();
     publishedSeatingPromise=null;
     saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
     return publishedSeatingPlan;
   }).catch(function(err){
-    publishedSeatingPromise=null;
+    if(requestId===publishedSeatingRequestId)publishedSeatingPromise=null;
     throw err;
   });
   return publishedSeatingPromise;
 }
+function refreshPublishedSeatingOnResume(){
+  if(currentTab!=='home'||!canViewPublishedSeating())return;
+  getPublishedSeatingPlan(false).then(function(){requestHomeRender()}).catch(function(error){console.warn('published_seating_refresh_failed',error)});
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible')setTimeout(refreshPublishedSeatingOnResume,220);
+});
+window.addEventListener('pageshow',function(){setTimeout(refreshPublishedSeatingOnResume,220)});
+window.addEventListener('online',function(){setTimeout(refreshPublishedSeatingOnResume,220)});
 function publicSeatingMaxSeatCount(rows){
   var max=0;
   (rows||[]).forEach(function(row){if(row.seats&&row.seats.length>max)max=row.seats.length;});
@@ -7097,18 +7214,21 @@ function findPublicSeatingMine(plan){
   return found;
 }
 function renderPublicSeatingHomeCard(plan,pending){
-  if(pending||!plan)return '';
+  if(!canViewPublishedSeating()||pending||!plan)return '';
   var stats=publicSeatingStats(plan);
   var mine=findPublicSeatingMine(plan);
   var mineText=mine.length?'내 자리 '+mine.map(function(x){return x.label;}).join(', '):'이름 검색 가능';
+  var publishedText=seatingPublishedTime(plan.publishedAt);
   return '<div class="home-card home-seating-card" onclick="openPublicSeatingModal()">'
     +'<div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🎚️</span><span>찬양의밤 자리배치</span></div><button class="home-view-link" onclick="event.stopPropagation();openPublicSeatingModal()">보기 ›</button></div>'
     +'<div class="home-row-main">'+escHtml(plan.title||'찬양의밤')+'</div>'
-    +'<div class="home-main-sub" style="margin-top:5px">'+escHtml([plan.date||'',plan.program||'',plan.publishedAt?('공개 '+seatingFormatHistoryTime(plan.publishedAt)):''].filter(Boolean).join(' · '))+'</div>'
+    +'<div class="home-main-sub" style="margin-top:5px">'+escHtml([plan.date||'',plan.program||''].filter(Boolean).join(' · '))+'</div>'
     +'<div class="home-seating-meta"><span class="home-seating-pill">배치 '+stats.placed+'명</span><span class="home-seating-pill">'+escHtml(mineText)+'</span></div>'
+    +(publishedText?'<div class="home-seating-published">최신 공개본 · '+escHtml(publishedText)+' 공개</div>':'')
     +'</div>';
 }
 function openPublicSeatingModal(){
+  if(!canViewPublishedSeating())return showToast('단원 로그인 후 자리배치를 볼 수 있습니다');
   getPublishedSeatingPlan(false).then(function(plan){
     if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
     var input=document.getElementById('publicSeatingSearch');
@@ -7135,13 +7255,16 @@ function renderPublicSeatingModalBody(){
   var boardHeight=Math.max(110,(rows.length*50)+90);
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
-    : '로그인하면 내 자리가 자동으로 강조됩니다. 지금은 이름 검색으로 확인해 주세요.';
+    : '이름 검색으로 배치된 자리를 확인해 주세요.';
+  var publishedText=seatingPublishedTime(plan.publishedAt);
   var html='<div class="public-seating-meta">'
     +'<span class="public-seating-pill">'+escHtml(plan.title||'찬양의밤')+'</span>'
     +(plan.date?'<span class="public-seating-pill">'+escHtml(plan.date)+'</span>':'')
     +(plan.program?'<span class="public-seating-pill">'+escHtml(plan.program)+'</span>':'')
     +'<span class="public-seating-pill">배치 '+stats.placed+'명</span>'
-    +'</div><div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
+    +'</div>'
+    +(publishedText?'<div class="public-seating-published">최신 공개본 · '+escHtml(publishedText)+' 공개</div>':'')
+    +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
   html+='<div class="public-seating-board-scroll"><div class="public-seating-board-scale" id="publicSeatingBoardScale"><div class="public-seating-board" id="publicSeatingBoard" data-board-width="'+boardWidth+'" data-board-height="'+boardHeight+'" style="min-width:'+boardWidth+'px">';
   rows.forEach(function(row,r){
     html+='<div class="public-seating-row '+(row.offset===0.5?'offset':'')+'">'
@@ -16537,8 +16660,32 @@ function normalizeSeatingRows(rows){
     return {label:normalizeSeatingRowLabel(row.label,i),offset:row.offset===0.5?0.5:(i%2?0.5:0),seats:seats};
   });
 }
+function seatingMemberDirectoryRows(data){
+  if(!data||data.complete!==true||Number(data.version||0)!==1||!Array.isArray(data.members))return null;
+  return data.members.map(function(row){
+    row=row||{};
+    return {id:String(row.id||''),name:String(row.name||''),part:normalizePartName(row.part),subPart:normalizePartName(row.subPart),group:String(row.group||''),status:String(row.status||'active')};
+  }).filter(function(row){return !!row.id&&isSeatingEligibleMember(row)});
+}
+function loadSeatingMemberDirectory(){
+  return db.collection('settings').doc('seatingMemberDirectory').get().then(function(doc){
+    var rows=seatingMemberDirectoryRows(doc.exists?(doc.data()||{}):null);
+    if(rows)return rows;
+    return callSecureFunction('seatingDirectory',{action:'rebuild'}).then(function(data){
+      var rebuilt=seatingMemberDirectoryRows(data);
+      if(!rebuilt)throw new Error('invalid_seating_member_directory');
+      return rebuilt;
+    });
+  }).catch(function(error){
+    if(hasPermission('member.view')||hasPermission('member.manage')||hasPermission('account.manage')||hasPermission('attendance.view')){
+      console.warn('seating_directory_fallback',error);
+      return loadSharedMembers(false);
+    }
+    throw error;
+  });
+}
 function loadSeatingMembers(){
-  return loadSharedMembers(false).then(function(rows){
+  return loadSeatingMemberDirectory().then(function(rows){
     seatingMembers=[];
     rows.forEach(function(d){
       if(isSeatingEligibleMember(d)){
@@ -17024,6 +17171,13 @@ function seatingFormatHistoryTime(value){
   if(isNaN(d.getTime()))return String(value);
   return d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
+function seatingPublishedTime(value){
+  if(!value)return '';
+  var d=new Date(value);
+  if(isNaN(d.getTime()))return String(value);
+  function pad(n){return String(n).padStart(2,'0')}
+  return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
 function renderSeatingHistory(){
   var box=document.getElementById('seatingHistoryPanel');if(!box)return;
   var list=Array.isArray(seatingPlanHistory)?seatingPlanHistory:[];
@@ -17220,6 +17374,18 @@ function markAllSeatingAttendees(value){
   renderSeatingBoard();
   if(value&&shortage>0&&!addMissing&&statsBefore.placedUnique>0)showToast('참석은 반영했습니다. 좌석 '+shortage+'칸이 부족합니다');
 }
+function renderSeatingAttendancePaintStatus(){
+  var box=document.getElementById('seatingAttendancePaintStatus');
+  if(!box)return;
+  var state=seatingAttendancePaint;
+  if(!state){
+    box.classList.remove('active');
+    box.innerHTML='';
+    return;
+  }
+  box.classList.add('active');
+  box.innerHTML='<span class="seating-paint-status-copy"><span class="seating-paint-status-dot"></span><span>'+(state.target?'참석 체크 중':'참석 해제 중')+'</span></span><strong>'+state.changed+'명</strong>';
+}
 function seatingAttendancePaintApplyAtPoint(clientX,clientY){
   var state=seatingAttendancePaint;
   if(!state)return;
@@ -17281,6 +17447,7 @@ function applySeatingAttendancePaintMember(id,row){
     if(wasPlaced){state.removedPlaced++;delete state.assigned[id];}
   }
   state.changed++;
+  renderSeatingAttendancePaintStatus();
   if(row){
     var input=row.querySelector('.seating-attendance-checkbox');
     if(input)input.checked=state.target;
@@ -17341,6 +17508,7 @@ function startSeatingAttendancePaint(event,id){
     raf:0
   };
   list.classList.add('painting');
+  renderSeatingAttendancePaintStatus();
   try{input.focus({preventScroll:true});input.setPointerCapture(event.pointerId);}catch(e){}
   applySeatingAttendancePaintMember(id,input.closest('.seating-member'));
   if(seatingAttendancePaint)seatingAttendancePaint.raf=requestAnimationFrame(seatingAttendancePaintFrame);
@@ -17350,6 +17518,7 @@ function finishSeatingAttendancePaint(){
   if(!state)return;
   seatingAttendancePaint=null;
   seatingAttendancePaintSuppressClickUntil=Date.now()+800;
+  renderSeatingAttendancePaintStatus();
   if(state.raf)cancelAnimationFrame(state.raf);
   state.list.classList.remove('painting');
   try{if(state.input.hasPointerCapture(state.pointerId))state.input.releasePointerCapture(state.pointerId);}catch(e){}
@@ -17981,9 +18150,11 @@ function publishSeatingPlan(previewData){
   var data=previewData||buildPublishedSeatingPlanData();
   showToast('자리배치를 공개하는 중...');
   db.collection('settings').doc('publishedSeatingPlan').set(data).then(function(){
+    publishedSeatingRequestId++;
     publishedSeatingPlan=cloneSeatingValue(data);
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
+    publishedSeatingLastCheckedAt=Date.now();
     saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
     seatingPublishPreviewData=null;
     publicSeatingSearch='';
@@ -18000,9 +18171,11 @@ function unpublishSeatingPlan(){
   if(!confirm('단원에게 공개된 찬양의밤 자리배치를 취소할까요?\n취소하면 홈 화면에서 자리배치 카드가 사라집니다.'))return;
   showToast('자리배치 공개를 취소하는 중...');
   db.collection('settings').doc('publishedSeatingPlan').delete().then(function(){
+    publishedSeatingRequestId++;
     publishedSeatingPlan=null;
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
+    publishedSeatingLastCheckedAt=Date.now();
     saveCache(PUBLISHED_SEATING_CACHE_KEY,null);
     publicSeatingSearch='';
     closeModal('modalPublicSeating');

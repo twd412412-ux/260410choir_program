@@ -33,6 +33,8 @@ const MAX_SCORE_FILE_SIZE = 100 * 1024 * 1024;
 const SCORE_CATALOG_VERSION = 1;
 const SCORE_CATALOG_SHARDS = Object.freeze({singer: 2, orchestra: 8});
 const SCORE_LEGACY_MIRROR_MAX_BYTES = 800000;
+const SEATING_MEMBER_DIRECTORY_VERSION = 1;
+const SEATING_MEMBER_DIRECTORY_MAX_BYTES = 800000;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
 const ACCOUNT_PIN_ENCRYPTION_KEY = defineSecret("ACCOUNT_PIN_ENCRYPTION_KEY");
@@ -77,6 +79,86 @@ function normalizeName(value) {
   let text = cleanString(value, 80);
   if (text.normalize) text = text.normalize("NFKC");
   return text.replace(/\s+/g, "").toLowerCase();
+}
+
+function seatingMemberDirectoryEntry(memberId, data) {
+  data = data || {};
+  const rawPart = cleanString(data.part, 30);
+  const upperPart = rawPart.toUpperCase();
+  const part = ["S1", "S2", "T1", "T2"].includes(upperPart) ? upperPart : rawPart;
+  const status = cleanString(data.status, 30) || "active";
+  if (status !== "active" || !["S1", "S2", "T1", "T2"].includes(part)) return null;
+  return {
+    id: cleanString(memberId, 1500),
+    name: cleanString(data.name, 60),
+    part,
+    subPart: cleanString(data.subPart, 30),
+    group: cleanString(data.group, 60),
+    status: "active",
+  };
+}
+
+function sortSeatingMemberDirectory(rows) {
+  const partOrder = ["S1", "S2", "T1", "T2"];
+  return rows.sort((a, b) => {
+    const partDiff = partOrder.indexOf(a.part) - partOrder.indexOf(b.part);
+    return partDiff || String(a.name || "").localeCompare(String(b.name || ""), "ko");
+  });
+}
+
+function seatingMemberDirectoryPayload(rows, complete = true) {
+  const members = sortSeatingMemberDirectory((Array.isArray(rows) ? rows : []).filter(Boolean));
+  const payload = {
+    version: SEATING_MEMBER_DIRECTORY_VERSION,
+    complete: Boolean(complete),
+    count: members.length,
+    members,
+    updatedAt: nowIso(),
+  };
+  if (Buffer.byteLength(JSON.stringify(payload), "utf8") > SEATING_MEMBER_DIRECTORY_MAX_BYTES) {
+    throw new Error("seating_member_directory_too_large");
+  }
+  return payload;
+}
+
+async function rebuildSeatingMemberDirectory() {
+  const snap = await db.collection("members").get();
+  const rows = [];
+  snap.forEach((doc) => {
+    const entry = seatingMemberDirectoryEntry(doc.id, doc.data() || {});
+    if (entry) rows.push(entry);
+  });
+  const payload = seatingMemberDirectoryPayload(rows, true);
+  await db.collection("settings").doc("seatingMemberDirectory").set(payload);
+  return payload;
+}
+
+async function handleSeatingDirectory(request) {
+  requirePermission(request, "seating.manage");
+  const action = cleanString(request.data && request.data.action, 40) || "rebuild";
+  if (action !== "rebuild") throw new HttpsError("invalid-argument", "지원하지 않는 자리배치 명단 요청입니다.");
+  return rebuildSeatingMemberDirectory();
+}
+
+async function syncSeatingMemberDirectoryWrite(event) {
+  if (!event.data) return null;
+  const memberId = cleanString(event.params && event.params.memberId, 1500);
+  if (!memberId) return null;
+  const before = event.data.before.exists ? seatingMemberDirectoryEntry(memberId, event.data.before.data() || {}) : null;
+  const eventAfter = event.data.after.exists ? seatingMemberDirectoryEntry(memberId, event.data.after.data() || {}) : null;
+  if (JSON.stringify(before) === JSON.stringify(eventAfter)) return null;
+  const memberRef = db.collection("members").doc(memberId);
+  const ref = db.collection("settings").doc("seatingMemberDirectory");
+  await db.runTransaction(async (tx) => {
+    const [memberSnap, directorySnap] = await Promise.all([tx.get(memberRef), tx.get(ref)]);
+    const latest = memberSnap.exists ? seatingMemberDirectoryEntry(memberId, memberSnap.data() || {}) : null;
+    const existing = directorySnap.exists ? directorySnap.data() || {} : {};
+    const rows = (Array.isArray(existing.members) ? existing.members : [])
+      .filter((row) => cleanString(row && row.id, 1500) !== memberId);
+    if (latest) rows.push(latest);
+    tx.set(ref, seatingMemberDirectoryPayload(rows, directorySnap.exists && existing.complete === true));
+  });
+  return null;
 }
 
 function isValidDocumentId(value) {
@@ -2070,6 +2152,8 @@ exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", sec
   throw new HttpsError("invalid-argument", "지원하지 않는 보안 정리 요청입니다.");
 });
 
+exports.seatingDirectory = onCall({timeoutSeconds: 120, memory: "256MiB"}, handleSeatingDirectory);
+
 exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
   const songId = event.params.songId;
   const beforeExists = event.data.before.exists;
@@ -2095,6 +2179,11 @@ exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
     });
   });
 });
+
+exports.syncSeatingMemberDirectory = onDocumentWritten({
+  document: "members/{memberId}",
+  retry: true,
+}, syncSeatingMemberDirectoryWrite);
 
 exports.notifyScoreUpdates = onDocumentWritten({
   document: "scoreChangeEvents/{eventId}",

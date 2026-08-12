@@ -94,8 +94,13 @@ service cloud.firestore {
     }
 
     match /settings/publishedSeatingPlan {
-      allow read: if true;
+      allow read: if isAppUser();
       allow write: if hasPermission('seating.manage');
+    }
+
+    match /settings/seatingMemberDirectory {
+      allow read: if hasPermission('seating.manage');
+      allow write: if false;
     }
 
     match /settings/seatingPlans {
@@ -141,8 +146,7 @@ service cloud.firestore {
         || hasPermission('attendance.check')
         || hasPermission('attendance.delete')
         || hasPermission('account.manage')
-        || hasPermission('song.manage')
-        || hasPermission('seating.manage');
+        || hasPermission('song.manage');
       allow create: if isAdmin() || hasPermission('member.manage');
       allow update: if isAdmin()
         || hasPermission('member.manage')
