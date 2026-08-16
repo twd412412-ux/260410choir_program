@@ -320,6 +320,10 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-board-tab.on{background:var(--p);color:#fff;box-shadow:0 2px 8px rgba(65,76,40,.16)}
 .seating-board-tab-count{margin-left:4px;font-size:10px;opacity:.8}
 .seating-zoom{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.seating-board-size-control{display:none;align-items:center;gap:8px;white-space:nowrap}
+.seating-board-size-control label{font-size:11px;font-weight:850;color:var(--ts)}
+.seating-board-size-control input{width:120px;accent-color:var(--p);cursor:pointer}
+.seating-board-size-control output{min-width:30px;font-size:12px;font-weight:900;color:var(--pd);text-align:right}
 .seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .seating-board-scroll:focus{outline:none}
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
@@ -390,12 +394,14 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 #subSeatingPlan.seating-fullscreen .seating-board-tabs{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
+#subSeatingPlan.seating-fullscreen .seating-zoom{display:none}
+#subSeatingPlan.seating-fullscreen .seating-board-size-control{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
 #subSeatingPlan.seating-fullscreen .seating-toolbar-main{flex:0 0 auto;flex-wrap:nowrap}
 #subSeatingPlan.seating-fullscreen .seating-toolbar-group{flex:0 0 auto;flex-wrap:nowrap}
 #subSeatingPlan.seating-fullscreen .seating-toolbar-publish{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-toolbar .btn{flex:0 0 auto;padding:7px 9px}
-#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:58dvh;flex:0 0 58dvh;min-height:58dvh;padding:20px 12px 56px}
+#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:var(--seating-board-height,60dvh);flex:0 0 var(--seating-board-height,60dvh);min-height:var(--seating-board-height,60dvh);padding:20px 12px 56px}
 #subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 auto}
 body.seating-fullscreen{overflow:hidden}
 body.seating-fullscreen .bottom-nav{display:none!important}
@@ -411,7 +417,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   .seating-board-scroll{height:480px}
   #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
   #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0}
-  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:auto;min-height:320px}
+  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:var(--seating-board-height,60dvh);min-height:var(--seating-board-height,60dvh)}
 }
 @media(max-width:520px){
   #subSeatingPlan.seating-fullscreen .seating-member-list{grid-template-columns:1fr}
@@ -2922,6 +2928,11 @@ body{font-weight:500}
             <span id="seatingZoomLabel" style="font-size:13px;font-weight:900;color:var(--ts)">58%</span>
             <button class="btn btn-sm" onclick="changeSeatingZoom(0.1)">+</button>
           </div>
+          <div class="seating-board-size-control">
+            <label for="seatingBoardHeightRange">배치도 크기</label>
+            <input id="seatingBoardHeightRange" type="range" min="30" max="90" step="10" value="60" oninput="setSeatingBoardHeight(this.value)" aria-label="배치도 세로 크기">
+            <output id="seatingBoardHeightLabel" for="seatingBoardHeightRange">60%</output>
+          </div>
         </div>
         <div class="seating-toolbar" aria-label="자리배치 작업">
           <div class="seating-toolbar-main">
@@ -3923,7 +3934,7 @@ var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
 var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
-var SEATING_PLAN_COLLECTION='seatingPlans', SEATING_PLAN_LEGACY_DOC='seatingPlans', SEATING_DRAFT_KEY='choir_seating_draft_v1';
+var SEATING_PLAN_COLLECTION='seatingPlans', SEATING_PLAN_LEGACY_DOC='seatingPlans', SEATING_DRAFT_KEY='choir_seating_draft_v1', SEATING_BOARD_HEIGHT_KEY='choir_seating_board_height_pct';
 var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingOrchestraRows=[], seatingMicSlots=[], seatingPartSubmissions={}, seatingPlanHistory=[];
 var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all', seatingBoardTab='choir';
@@ -3931,6 +3942,7 @@ var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistory
 var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
 var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt='', seatingPublishPreviewData=null;
 var seatingAttendancePaint=null, seatingAttendancePaintListenersBound=false, seatingAttendancePaintSuppressClickUntil=0;
+var seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(localStorage.getItem(SEATING_BOARD_HEIGHT_KEY),10)||60)/10)*10));
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
@@ -3947,7 +3959,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.16.7';
+var APP_RELEASE_VERSION='26.08.16.8';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18273,6 +18285,20 @@ function setupSeatingBoardGestures(){
     if(e.touches.length===0)seatingTouchPanning=false;
   },{passive:false});
 }
+function applySeatingBoardHeight(){
+  var sub=document.getElementById('subSeatingPlan');
+  var range=document.getElementById('seatingBoardHeightRange');
+  var label=document.getElementById('seatingBoardHeightLabel');
+  seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(seatingBoardHeightPct,10)||60)/10)*10));
+  if(sub)sub.style.setProperty('--seating-board-height',seatingBoardHeightPct+'dvh');
+  if(range)range.value=String(seatingBoardHeightPct);
+  if(label)label.textContent=seatingBoardHeightPct+'%';
+}
+function setSeatingBoardHeight(value){
+  seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(value,10)||60)/10)*10));
+  localStorage.setItem(SEATING_BOARD_HEIGHT_KEY,String(seatingBoardHeightPct));
+  applySeatingBoardHeight();
+}
 function toggleSeatingFullscreen(){
   var sub=document.getElementById('subSeatingPlan');
   var btn=document.getElementById('seatingFullscreenBtn');
@@ -18280,6 +18306,7 @@ function toggleSeatingFullscreen(){
   var on=!sub.classList.contains('seating-fullscreen');
   sub.classList.toggle('seating-fullscreen',on);
   document.body.classList.toggle('seating-fullscreen',on);
+  if(on)applySeatingBoardHeight();
   if(btn)btn.textContent=on?'전체 화면 닫기':'전체 화면';
   setTimeout(function(){
     if(on)sub.scrollTop=0;
