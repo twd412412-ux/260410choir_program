@@ -325,12 +325,12 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
-.seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
+.seating-row{position:relative;display:flex;align-items:center;height:64px;margin-bottom:8px;z-index:1}
 .seating-row.offset .seating-line{transform:translateX(26px)}
 .seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px}
 .seating-line{display:flex;gap:4px}
-.seating-seat{width:48px;height:36px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
+.seating-seat{width:48px;height:58px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;cursor:pointer;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
 .seating-seat-name{display:block;max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap;line-height:1}
 .seating-seat-name.medium{font-size:11.7px}
 .seating-seat-name.long{font-size:10.5px}
@@ -419,9 +419,6 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 @media(min-width:761px) and (max-width:1080px){
   .seating-tool{grid-template-columns:1fr}
   .seating-member-list{max-height:260px}
-}
-@media(min-width:761px) and (max-width:1366px){
-  #subSeatingPlan:not(.seating-fullscreen) .seating-board-scroll{height:clamp(700px,78dvh,800px)}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -2393,12 +2390,12 @@ body{font-weight:500}
 .public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .public-seating-board-scale{position:relative;width:max-content;min-width:100%}
 .public-seating-board{position:relative;width:max-content;min-width:100%}
-.public-seating-row{display:flex;align-items:center;height:42px;margin-bottom:8px}
+.public-seating-row{display:flex;align-items:center;height:64px;margin-bottom:8px}
 .public-seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .public-seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px;color:#596354}
 .public-seating-line{display:flex;gap:4px}
 .public-seating-row.offset .public-seating-line{transform:translateX(26px)}
-.public-seating-seat{width:48px;height:36px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
+.public-seating-seat{width:48px;height:58px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
 .public-seating-seat.empty{background:#FFFDF8;color:#B7B09E}
 .public-seating-seat.part-S1{background:#E8B9D5}
 .public-seating-seat.part-S2{background:#9FD1D8}
@@ -3950,7 +3947,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.16.4';
+var APP_RELEASE_VERSION='26.08.16.5';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7289,7 +7286,7 @@ function renderPublicSeatingModalBody(){
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
   var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
-  var boardHeight=Math.max(110,(rows.length*50)+90);
+  var boardHeight=Math.max(110,(rows.length*72)+90);
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '이름 검색으로 배치된 자리를 확인해 주세요.';
