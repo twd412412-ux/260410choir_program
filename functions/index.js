@@ -33,7 +33,7 @@ const MAX_SCORE_FILE_SIZE = 100 * 1024 * 1024;
 const SCORE_CATALOG_VERSION = 1;
 const SCORE_CATALOG_SHARDS = Object.freeze({singer: 2, orchestra: 8});
 const SCORE_LEGACY_MIRROR_MAX_BYTES = 800000;
-const SEATING_MEMBER_DIRECTORY_VERSION = 1;
+const SEATING_MEMBER_DIRECTORY_VERSION = 2;
 const SEATING_MEMBER_DIRECTORY_MAX_BYTES = 800000;
 const WEB_PUSH_PUBLIC_KEY = "BP86C82vcDoE_quMY8q6mUDNmrfMyHQMXfTeM7DPuxqRlq-newKbPf_bRb84fZEHdUiGQjMaE72ByhAV34Qw5qY";
 const WEB_PUSH_PRIVATE_KEY = defineSecret("WEB_PUSH_PRIVATE_KEY");
@@ -87,7 +87,7 @@ function seatingMemberDirectoryEntry(memberId, data) {
   const upperPart = rawPart.toUpperCase();
   const part = ["S1", "S2", "T1", "T2"].includes(upperPart) ? upperPart : rawPart;
   const status = cleanString(data.status, 30) || "active";
-  if (status !== "active" || !["S1", "S2", "T1", "T2"].includes(part)) return null;
+  if (status !== "active" || !["S1", "S2", "T1", "T2", "관현악"].includes(part)) return null;
   return {
     id: cleanString(memberId, 1500),
     name: cleanString(data.name, 60),
@@ -99,7 +99,7 @@ function seatingMemberDirectoryEntry(memberId, data) {
 }
 
 function sortSeatingMemberDirectory(rows) {
-  const partOrder = ["S1", "S2", "T1", "T2"];
+  const partOrder = ["S1", "S2", "T1", "T2", "관현악"];
   return rows.sort((a, b) => {
     const partDiff = partOrder.indexOf(a.part) - partOrder.indexOf(b.part);
     return partDiff || String(a.name || "").localeCompare(String(b.name || ""), "ko");

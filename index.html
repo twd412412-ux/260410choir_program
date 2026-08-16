@@ -3935,7 +3935,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.12';
+var APP_RELEASE_VERSION='26.08.16';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -16374,10 +16374,10 @@ function uploadArchiveMedia(){
 function isSeatingEligibleMember(d){
   var part=normalizePartName(d&&d.part);
   var status=(d&&d.status)||'active';
-  return status==='active'&&['S1','S2','T1','T2'].indexOf(part)!==-1;
+  return status==='active'&&['S1','S2','T1','T2','관현악'].indexOf(part)!==-1;
 }
 function seatingPartOrder(){
-  return ['S1','S2','T1','T2'];
+  return ['S1','S2','T1','T2','관현악'];
 }
 function defaultSeatingPartSubmissions(){
   var out={};
@@ -16661,7 +16661,7 @@ function normalizeSeatingRows(rows){
   });
 }
 function seatingMemberDirectoryRows(data){
-  if(!data||data.complete!==true||Number(data.version||0)!==1||!Array.isArray(data.members))return null;
+  if(!data||data.complete!==true||Number(data.version||0)!==2||!Array.isArray(data.members))return null;
   return data.members.map(function(row){
     row=row||{};
     return {id:String(row.id||''),name:String(row.name||''),part:normalizePartName(row.part),subPart:normalizePartName(row.subPart),group:String(row.group||''),status:String(row.status||'active')};
@@ -17596,7 +17596,7 @@ function toggleSeatingAbsentFilter(){
 function renderSeatingPartFilter(){
   var box=document.getElementById('seatingPartFilter');if(!box)return;
   var parts=['all'].concat(seatingPartOrder());
-  var labels={all:'전체',S1:'S1',S2:'S2',T1:'T1',T2:'T2'};
+  var labels={all:'전체',S1:'S1',S2:'S2',T1:'T1',T2:'T2','관현악':'관현악'};
   var assigned=seatingAssignedMap();
   var html=parts.map(function(p){
     var count=p==='all'?seatingMembers.length:seatingMembers.filter(function(m){return m.part===p;}).length;
@@ -17699,6 +17699,9 @@ function renderSeatingMemberList(){
     var unplacedOk=!seatingUnplacedOnly||(seatingAttendees[m.id]&&!assigned[m.id]);
     var absentOk=!seatingAbsentOnly||!seatingAttendees[m.id];
     return partOk&&unplacedOk&&absentOk&&(!q||text.indexOf(q)>-1);
+  });
+  filtered.sort(function(a,b){
+    return String(a.name||'').localeCompare(String(b.name||''),'ko');
   });
   if(filtered.length===0){
     list.innerHTML='<div style="padding:14px;font-size:12px;color:var(--ts);text-align:center">표시할 단원이 없습니다</div>';
