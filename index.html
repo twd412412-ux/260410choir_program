@@ -3947,7 +3947,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.16.2';
+var APP_RELEASE_VERSION='26.08.16.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -16529,8 +16529,19 @@ function setActiveSeatingRows(rows){
 function seatingAllBoardRows(){
   return seatingRows.concat(seatingOrchestraRows);
 }
-function seatingMemberMatchesBoard(member,tab){
-  return seatingBoardKeyForPart(member&&member.part)===(tab||seatingBoardTab);
+function seatingMemberMatchesBoard(member,tab,assigned){
+  tab=tab||seatingBoardTab;
+  assigned=assigned||seatingAssignedMap();
+  var placement=member&&assigned[member.id];
+  if(placement)return placement.board===tab;
+  return seatingBoardKeyForPart(member&&member.part)===tab;
+}
+function seatingBoardTargetMembers(tab){
+  tab=tab||seatingBoardTab;
+  var assigned=seatingAssignedMap();
+  return seatingMembers.filter(function(member){
+    return !!seatingAttendees[member.id]&&seatingMemberMatchesBoard(member,tab,assigned);
+  });
 }
 function defaultOrchestraSeatingRows(){
   var rows=createSeatingRows(2,4);
@@ -16648,7 +16659,7 @@ function seatingSeatCapacity(rows){
 }
 function seatingAttendeeCount(tab){
   tab=tab||seatingBoardTab;
-  return seatingMembers.reduce(function(total,m){return total+(seatingAttendees[m.id]&&seatingMemberMatchesBoard(m,tab)?1:0);},0);
+  return seatingBoardTargetMembers(tab).length;
 }
 function seatingZoomForSeatCount(count){
   count=Math.max(1,parseInt(count,10)||1);
@@ -16776,37 +16787,10 @@ function normalizeOrchestraSeatingRows(rows){
   });
 }
 function normalizeSeatingBoardRows(choirRows,orchestraRows){
-  var choir=normalizeSeatingRows(cloneSeatingValue(choirRows||[]));
-  var orchestra=normalizeOrchestraSeatingRows(cloneSeatingValue(orchestraRows||[]));
-  var orchestraIds={};
-  orchestra.forEach(function(row){
-    row.seats.forEach(function(seat){if(seat&&seat.memberId)orchestraIds[seat.memberId]=true;});
-  });
-  var moved=[];
-  choir.forEach(function(row){
-    row.seats=row.seats.map(function(seat){
-      if(seat&&seatingBoardKeyForPart(seat.part)==='orchestra'){
-        if(!orchestraIds[seat.memberId]){moved.push(seat);orchestraIds[seat.memberId]=true;}
-        return null;
-      }
-      return seat;
-    });
-  });
-  moved.forEach(function(seat){
-    var targetRow=null,targetCol=-1;
-    orchestra.some(function(row){
-      var col=row.seats.indexOf(null);
-      if(col<0)return false;
-      targetRow=row;targetCol=col;return true;
-    });
-    if(!targetRow){
-      targetRow=orchestra.reduce(function(best,row){return !best||row.seats.length<best.seats.length?row:best;},null);
-      targetCol=targetRow.seats.length;
-      targetRow.seats.push(null);
-    }
-    targetRow.seats[targetCol]=seat;
-  });
-  return {choir:choir,orchestra:orchestra};
+  return {
+    choir:normalizeSeatingRows(cloneSeatingValue(choirRows||[])),
+    orchestra:normalizeOrchestraSeatingRows(cloneSeatingValue(orchestraRows||[]))
+  };
 }
 function seatingMemberDirectoryRows(data){
   if(!data||data.complete!==true||Number(data.version||0)!==2||!Array.isArray(data.members))return null;
@@ -17565,7 +17549,10 @@ function markAllSeatingAttendees(value){
   if(!value&&placedAffected>0&&!confirm('배치된 '+placedAffected+'명을 포함해 수정 가능한 참석 체크를 모두 해제할까요?\n\n기존 좌석 틀은 유지되고 해당 단원의 자리만 비워집니다.'))return;
   var futureByBoard={choir:0,orchestra:0};
   seatingMembers.forEach(function(m){
-    if(editableMap[m.id]?!!value:!!seatingAttendees[m.id])futureByBoard[seatingBoardKeyForPart(m.part)]++;
+    if(editableMap[m.id]?!!value:!!seatingAttendees[m.id]){
+      var placement=assigned[m.id];
+      futureByBoard[placement?placement.board:seatingBoardKeyForPart(m.part)]++;
+    }
   });
   var shortage=Math.max(0,futureByBoard.choir-seatingSeatCapacity(seatingRows))
     +Math.max(0,futureByBoard.orchestra-seatingSeatCapacity(seatingOrchestraRows));
@@ -17761,7 +17748,7 @@ function toggleSeatingAttendee(id,checked){
     renderSeatingMemberList();
     return;
   }
-  var targetBoard=seatingBoardKeyForPart(member&&member.part);
+  var targetBoard=assigned[id]?assigned[id].board:seatingBoardKeyForPart(member&&member.part);
   var boardStatsBefore=statsBefore.boards[targetBoard];
   var shortage=checked?Math.max(0,(boardStatsBefore.attended+1)-boardStatsBefore.capacity):0;
   var addMissing=checked&&statsBefore.placedUnique>0&&shortage>0
@@ -17788,18 +17775,6 @@ function toggleSeatingAttendee(id,checked){
 }
 function setSeatingPartFilter(part){
   seatingPartFilter=part||'all';
-  if(seatingPartFilter==='관현악'&&seatingBoardTab!=='orchestra'){
-    setSeatingBoardTab('orchestra');
-    return;
-  }
-  if(['S1','S2','T1','T2'].indexOf(seatingPartFilter)>-1&&seatingBoardTab!=='choir'){
-    seatingBoardTab='choir';
-    seatingSelectedSeat=null;
-    seatingSelectedMemberId='';
-    seatingInlineQuery='';
-    seatingZoom=seatingZoomForSeatCount(seatingMaxSeatCount(seatingRows));
-    renderSeatingBoard();
-  }
   renderSeatingMemberList();
 }
 function toggleSeatingUnplacedFilter(){
@@ -17891,16 +17866,6 @@ function toggleSeatingAttendeesLocked(){
 }
 function selectSeatingMember(id){
   if(!seatingAttendees[id])return showToast('참석 체크된 단원만 배치할 수 있습니다');
-  var member=seatingMembers.find(function(m){return m.id===id;});
-  var memberBoard=seatingBoardKeyForPart(member&&member.part);
-  if(memberBoard!==seatingBoardTab){
-    setSeatingBoardTab(memberBoard);
-    seatingSelectedMemberId=id;
-    renderSeatingMemberList();
-    renderSeatingBoard();
-    showToast(memberBoard==='orchestra'?'관현악 배치도로 이동했습니다':'합창 배치도로 이동했습니다');
-    return;
-  }
   if(seatingSelectedMemberId===id){
     seatingSelectedMemberId='';
     renderSeatingMemberList();
@@ -17955,7 +17920,6 @@ function seatingInlineCandidates(){
   var q=String(seatingInlineQuery||'').trim().toLowerCase();
   return seatingMembers.filter(function(m){
     if(!seatingAttendees[m.id])return false;
-    if(!seatingMemberMatchesBoard(m,seatingBoardTab))return false;
     var text=[m.name,m.part,m.subPart,m.group].join(' ').toLowerCase();
     return !q||text.indexOf(q)>-1;
   }).sort(function(a,b){
@@ -18159,14 +18123,6 @@ function assignMemberToSeat(memberId,row,col,clearSelectionAfter){
   var member=seatingMembers.find(function(m){return m.id===memberId;});
   if(!member)return showToast('단원을 찾을 수 없습니다');
   if(!seatingAttendees[memberId])return showToast('참석 체크된 단원만 배치할 수 있습니다');
-  var targetBoard=seatingBoardKeyForPart(member.part);
-  if(targetBoard!==seatingBoardTab){
-    setSeatingBoardTab(targetBoard);
-    seatingSelectedMemberId=memberId;
-    renderSeatingMemberList();
-    renderSeatingBoard();
-    return showToast(targetBoard==='orchestra'?'관현악 배치도에서 자리를 선택해주세요':'합창 배치도에서 자리를 선택해주세요');
-  }
   beginSeatingEdit();
   seatingAutoFit=false;
   var rows=seatingActiveRows();
