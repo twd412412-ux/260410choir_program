@@ -320,10 +320,14 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-board-tab.on{background:var(--p);color:#fff;box-shadow:0 2px 8px rgba(65,76,40,.16)}
 .seating-board-tab-count{margin-left:4px;font-size:10px;opacity:.8}
 .seating-zoom{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.seating-zoom-control{display:none;align-items:center;gap:8px;white-space:nowrap}
 .seating-board-size-control{display:none;align-items:center;gap:8px;white-space:nowrap}
 .seating-board-size-control label{font-size:11px;font-weight:850;color:var(--ts)}
 .seating-board-size-control input{width:120px;accent-color:var(--p);cursor:pointer}
 .seating-board-size-control output{min-width:30px;font-size:12px;font-weight:900;color:var(--pd);text-align:right}
+.seating-zoom-control label{font-size:11px;font-weight:850;color:var(--ts)}
+.seating-zoom-control input{width:120px;accent-color:var(--p);cursor:pointer}
+.seating-zoom-control output{min-width:32px;font-size:12px;font-weight:900;color:var(--pd);text-align:right}
 .seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .seating-board-scroll:focus{outline:none}
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
@@ -394,8 +398,9 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 #subSeatingPlan.seating-fullscreen .seating-board-tabs{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
-#subSeatingPlan.seating-fullscreen .seating-zoom{display:none}
+#subSeatingPlan.seating-fullscreen .seating-zoom{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-board-size-control{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-zoom-control{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
 #subSeatingPlan.seating-fullscreen .seating-toolbar-main{flex:0 0 auto;flex-wrap:nowrap}
 #subSeatingPlan.seating-fullscreen .seating-toolbar-group{flex:0 0 auto;flex-wrap:nowrap}
@@ -2928,12 +2933,17 @@ body{font-weight:500}
             <span id="seatingZoomLabel" style="font-size:13px;font-weight:900;color:var(--ts)">58%</span>
             <button class="btn btn-sm" onclick="changeSeatingZoom(0.1)">+</button>
           </div>
-          <div class="seating-board-size-control">
-            <label for="seatingBoardHeightRange">배치도 크기</label>
-            <input id="seatingBoardHeightRange" type="range" min="30" max="90" step="10" value="60" oninput="setSeatingBoardHeight(this.value)" aria-label="배치도 세로 크기">
-            <output id="seatingBoardHeightLabel" for="seatingBoardHeightRange">60%</output>
+           <div class="seating-board-size-control">
+             <label for="seatingBoardHeightRange">배치도 크기</label>
+             <input id="seatingBoardHeightRange" type="range" min="30" max="90" step="10" value="60" oninput="setSeatingBoardHeight(this.value)" aria-label="배치도 세로 크기">
+             <output id="seatingBoardHeightLabel" for="seatingBoardHeightRange">60%</output>
+           </div>
+          <div class="seating-zoom-control">
+            <label for="seatingZoomRange">확대</label>
+            <input id="seatingZoomRange" type="range" min="35" max="180" step="1" value="58" oninput="setSeatingZoom(this.value)" aria-label="자리배치 확대">
+            <output id="seatingZoomRangeLabel" for="seatingZoomRange">58%</output>
           </div>
-        </div>
+          </div>
         <div class="seating-toolbar" aria-label="자리배치 작업">
           <div class="seating-toolbar-main">
             <div class="seating-toolbar-group">
@@ -18230,12 +18240,21 @@ function removeSelectedSeatingRow(){
 function updateSeatingZoom(){
   var board=document.getElementById('seatingBoard');
   var label=document.getElementById('seatingZoomLabel');
+  var slider=document.getElementById('seatingZoomRange');
+  var sliderLabel=document.getElementById('seatingZoomRangeLabel');
   seatingZoom=Math.max(0.35,Math.min(1.8,seatingZoom));
+  var pct=Math.round(seatingZoom*100);
   if(board)board.style.transform='scale('+seatingZoom+')';
-  if(label)label.textContent=Math.round(seatingZoom*100)+'%';
+  if(label)label.textContent=pct+'%';
+  if(slider)slider.value=String(pct);
+  if(sliderLabel)sliderLabel.textContent=pct+'%';
 }
 function changeSeatingZoom(delta){
   seatingZoom+=delta;
+  updateSeatingZoom();
+}
+function setSeatingZoom(value){
+  seatingZoom=(parseInt(value,10)||58)/100;
   updateSeatingZoom();
 }
 function seatingTouchDistance(touches){
@@ -18283,6 +18302,18 @@ function setupSeatingBoardGestures(){
       seatingPinchStartZoom=0;
     }
     if(e.touches.length===0)seatingTouchPanning=false;
+  },{passive:false});
+
+  scroller.addEventListener('wheel',function(e){
+    var sub=document.getElementById('subSeatingPlan');
+    if(!sub||!sub.classList.contains('seating-fullscreen'))return;
+    if(!(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey))return;
+    if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
+    e.preventDefault();
+    var step=e.deltaMode===0?0.06:0.2;
+    if(e.deltaY>0)seatingZoom-=step;
+    else seatingZoom+=step;
+    updateSeatingZoom();
   },{passive:false});
 }
 function applySeatingBoardHeight(){
