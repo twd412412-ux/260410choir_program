@@ -2959,6 +2959,7 @@ body{font-weight:500}
                 <button class="btn seating-btn-soft" onclick="undoSeatingChange()">되돌리기</button>
                 <button class="btn seating-btn-soft" onclick="redoSeatingChange()">앞돌리기</button>
                 <button class="btn seating-btn-soft" onclick="insertBlankSeat()">빈칸 추가</button>
+                <button class="btn seating-btn-soft" onclick="removeSelectedSeatingSeat()">칸 제거</button>
                 <button class="btn seating-btn-soft" onclick="addSeatingRow()">줄 추가</button>
                 <button class="btn seating-btn-soft" onclick="removeSelectedSeatingRow()">줄 제거</button>
                 <button class="btn seating-btn-soft" onclick="shiftSelectedSeatingRow(-1)">좌로 밀기</button>
@@ -3969,7 +3970,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.16.8';
+var APP_RELEASE_VERSION='26.08.21.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18175,6 +18176,24 @@ function insertBlankSeat(){
   if(seatingBoardTab==='choir')seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount(rows));
   seatingSelectedSeat={row:rowIndex,col:colIndex};
   renderSeatingBoard();
+}
+function removeSelectedSeatingSeat(){
+  if(!seatingSelectedSeat)return showToast('제거할 칸을 먼저 선택해주세요');
+  var rows=seatingActiveRows();
+  var rowIndex=seatingSelectedSeat.row;
+  var colIndex=seatingSelectedSeat.col;
+  var seats=rows[rowIndex]&&rows[rowIndex].seats;
+  if(!seats||seats.length<=1)return showToast('마지막 칸은 제거할 수 없습니다');
+  var removed=seats[colIndex];
+  if(removed&&!confirm(removed.name+'님이 배치된 칸입니다.\n칸을 제거하고 '+removed.name+'님을 미배치로 돌릴까요?'))return;
+  beginSeatingEdit();
+  seatingAutoFit=false;
+  seats.splice(colIndex,1);
+  if(seatingBoardTab==='choir')seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount(rows));
+  seatingSelectedSeat={row:rowIndex,col:Math.min(colIndex,seats.length-1)};
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast(removed?removed.name+'님을 미배치로 돌리고 칸을 제거했습니다':'빈칸을 제거했습니다');
 }
 function shiftSelectedSeatingRow(dir){
   if(!seatingSelectedSeat)return showToast('기준이 될 자리를 먼저 선택해주세요');
