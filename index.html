@@ -938,7 +938,7 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-picker-folder-toggle::before{content:'열기'}
 .score-picker-folder[open] .score-picker-folder-toggle::before{content:'접기'}
 .score-picker-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;border-top:1px solid var(--bd);padding:9px}
-.score-picker-part{min-width:0;min-height:42px;display:flex;align-items:center;gap:5px;border:1px solid #CAD5B5;border-radius:8px;background:#F4F8EC;color:#3F4B2F;padding:8px 9px;text-align:left;font-family:inherit;cursor:pointer}
+.score-picker-part{min-width:0;min-height:42px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;border:1px solid #CAD5B5;border-radius:8px;background:#F4F8EC;color:#3F4B2F;padding:8px 9px;text-align:left;font-family:inherit;cursor:pointer}
 .score-picker-part:hover{background:#E7EFD8}
 .score-picker-part.mine{border-color:#6F826E;background:#E8F0E3;box-shadow:inset 3px 0 0 #6F826E}
 .score-picker-part-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;font-weight:900}
@@ -967,8 +967,12 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .score-part-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #CAD5B5;background:#F4F8EC;color:#3F4B2F;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer}
 .score-part-btn:hover{background:#E7EFD8}
 .score-part-btn.mine{border-color:#6F826E;background:#E8F0E3;color:#2F4732;box-shadow:inset 3px 0 0 #6F826E}
+.score-part-side{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0;white-space:nowrap}
+.score-part-version-meta{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;white-space:nowrap}
 .score-part-version{color:#85652D;font-size:9px;font-weight:950;white-space:nowrap}
 .score-part-version.updated{border-radius:5px;background:#DCECEF;color:#285B68;padding:1px 4px}
+.score-part-updated{color:var(--ts);font-size:8.5px;font-weight:800;white-space:nowrap}
+.score-part-side .score-my-part-dot{margin-left:1px}
 .score-my-part-dot,.score-my-part-badge{display:inline-flex;align-items:center;margin-left:6px;color:#557056;font-size:9px;font-weight:950;white-space:nowrap}
 .score-my-part-badge{padding:2px 5px;border-radius:6px;background:#E5EEDF;vertical-align:middle}
 .score-part-admin-list{display:grid;gap:5px;margin-top:10px}
@@ -4178,7 +4182,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.22.2';
+var APP_RELEASE_VERSION='26.08.22.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -10100,6 +10104,19 @@ function scoreUpdatedText(score){
   if(!raw)return '';
   return raw.slice(0,10).replace(/-/g,'.');
 }
+function scoreCompactUpdatedText(score){
+  var date=scoreUpdatedText(score);
+  return /^20\d{2}\./.test(date)?date.slice(2):date;
+}
+function renderScorePartVersionMeta(score){
+  var version=Math.max(1,Number(score&&score.versionNumber||1));
+  var fullDate=scoreUpdatedText(score);
+  var compactDate=scoreCompactUpdatedText(score);
+  return '<span class="score-part-version-meta"'+(fullDate?' title="'+escAttr('업데이트 '+fullDate)+'"':'')+'>'
+    +'<span class="score-part-version '+(version>1?'updated':'')+'">v'+version+'</span>'
+    +(compactDate?'<span class="score-part-updated">· '+escHtml(compactDate)+'</span>':'')
+    +'</span>';
+}
 function normalizeScoreSortMode(value){
   return ['name','updated','created'].indexOf(value)>-1?value:'updated';
 }
@@ -10807,14 +10824,13 @@ function renderScorePickerRows(rows){
   if(orchestraRows.length){
     html+='<div class="score-picker-section">관현악 악보</div>';
     var mineCount=orchestraRows.filter(isMyScorePart).length;
-    var folderMeta=['파트보 '+orchestraRows.length+'개',mineCount?'내 파트 '+mineCount+'개':''].filter(Boolean).join(' · ');
+    var folderUpdated=scoreGroupUpdatedText(orchestraRows);
+    var folderMeta=['파트보 '+orchestraRows.length+'개',mineCount?'내 파트 '+mineCount+'개':'',folderUpdated?'최종 업데이트 '+folderUpdated:''].filter(Boolean).join(' · ');
     var partButtons=orchestraRows.map(function(score){
       var myPart=isMyScorePart(score);
-      var version=Math.max(1,Number(score.versionNumber||1));
       return '<button type="button" class="score-picker-part '+(myPart?'mine':'')+'" title="'+escAttr(scorePartDisplayLabel(score))+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'
         +'<span class="score-picker-part-name">'+escHtml(scorePartDisplayLabel(score))+'</span>'
-        +'<span class="score-part-version '+(version>1?'updated':'')+'">v'+version+'</span>'
-        +(myPart?'<span class="score-my-part-dot">내 파트</span>':'')
+        +'<span class="score-part-side">'+renderScorePartVersionMeta(score)+(myPart?'<span class="score-my-part-dot">내 파트</span>':'')+'</span>'
         +'</button>';
     }).join('');
     html+='<details class="score-picker-folder" '+(scorePickerOrchestraOpen?'open':'')+' ontoggle="scorePickerOrchestraOpen=this.open">'
@@ -11191,7 +11207,8 @@ function renderScoreFolderCard(group, adminMode){
     ? '<div class="score-part-admin-list">'+scores.map(function(score){
         var canEdit=canEditScoreItem(score);
         var part=scorePartDisplayLabel(score);
-        var details=['v'+Math.max(1,Number(score.versionNumber||1)),score.currentFileName||'',scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
+        var partUpdated=scoreUpdatedText(score);
+        var details=['v'+Math.max(1,Number(score.versionNumber||1)),partUpdated?'업데이트 '+partUpdated:'',score.currentFileName||'',scoreFileSizeText(score.currentFileSize),score.currentLabel||'',score.public?'공개':'비공개'].filter(Boolean).join(' · ');
         return '<div class="score-part-row">'
           +'<div class="score-part-main"><div class="score-part-name">'+escHtml(part)+'</div><div class="score-part-meta">'+escHtml(details||'파트보')+'</div></div>'
           +'<div class="score-part-actions">'
@@ -11205,9 +11222,8 @@ function renderScoreFolderCard(group, adminMode){
       }).join('')+'</div>'+groupAction
     : '<div class="score-part-grid">'+scores.map(function(score){
         var mine=isMyScorePart(score);
-        var partVersionNumber=Math.max(1,Number(score.versionNumber||1));
-        var partVersion=versionInfo.mixed?'<span class="score-part-version '+(partVersionNumber>1?'updated':'')+'">v'+partVersionNumber+'</span>':'';
-        return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')">'+escHtml(scorePartDisplayLabel(score))+partVersion+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</button>';
+        var partVersion=versionInfo.mixed?renderScorePartVersionMeta(score):'';
+        return '<button class="score-part-btn '+(mine?'mine':'')+'" onclick="openScoreFileById(\''+escAttr(score.id)+'\')"><span>'+escHtml(scorePartDisplayLabel(score))+'</span>'+(partVersion||mine?'<span class="score-part-side">'+partVersion+(mine?'<span class="score-my-part-dot">내 파트</span>':'')+'</span>':'')+'</button>';
       }).join('')+'</div>';
   return '<div class="score-folder-card" data-score-group-key="'+escAttr(group.key)+'">'
     +'<div class="score-folder-head"><div><div class="score-folder-title"><span class="score-folder-name">'+escHtml(group.title||'곡명 없음')+'</span><span class="score-folder-badges">'+(groupArchived?'<span class="score-archive-badge">지난 악보</span>':'')+unreadBadge+versionBadge+'</span></div><div class="score-folder-meta">'+escHtml(meta)+'</div></div>'+headActions+'</div>'
