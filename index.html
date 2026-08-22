@@ -542,6 +542,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:1;grid-row:1}
   #subSeatingPlan.seating-fullscreen .seating-panel{grid-column:1;grid-row:2;max-height:var(--seating-member-panel-height,32dvh)}
   #subSeatingPlan.seating-fullscreen .seating-panel-toggle{display:inline-flex}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-panel-toggle{display:none}
   #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{max-height:48px}
   #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-member-panel-body{display:none}
   #subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-stage-card{grid-column:1;grid-row:1/-1}
@@ -4182,7 +4183,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.22.3';
+var APP_RELEASE_VERSION='26.08.22.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
