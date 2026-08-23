@@ -4294,7 +4294,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.7';
+var APP_RELEASE_VERSION='26.08.23.8';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -4471,15 +4471,25 @@ function initAutoAppUpdate(){
     if(document.visibilityState==='visible')checkForAppUpdate(false);
   },APP_UPDATE_CHECK_INTERVAL_MS);
 }
-function reloadAppVersion(){
-  if(!confirm('최신 버전을 다시 불러올까요?\n저장하지 않은 내용이 있으면 사라질 수 있습니다.'))return;
-  showToast('앱을 다시 불러오는 중...');
+function performAppVersionReload(){
   try{
     sessionStorage.removeItem(APP_UPDATE_RELOAD_KEY);
     window.location.replace(appUpdateUrl(appUpdatePendingSha?appUpdatePendingSha.slice(0,12):Date.now(),true));
   }catch(e){
     window.location.reload();
   }
+}
+function reloadAppVersion(){
+  if(!confirm('최신 버전을 다시 불러올까요?\n저장하지 않은 내용이 있으면 사라질 수 있습니다.'))return;
+  showToast(currentUser?'계정 권한과 최신 앱을 확인하는 중...':'앱을 다시 불러오는 중...');
+  if(!currentUser||!firebaseAuthReady||firebaseAuthChecking){
+    performAppVersionReload();
+    return;
+  }
+  Promise.race([
+    refreshSecureAuthClaims(true),
+    new Promise(function(resolve){setTimeout(resolve,2500)})
+  ]).then(performAppVersionReload,performAppVersionReload);
 }
 
 // ==================== 다크모드 ====================
@@ -6456,15 +6466,34 @@ function syncAdminPasswordInputMode(clearValue){
     input.placeholder='비밀번호 입력';
   }
 }
+function openAdminPasswordModal(){
+  syncAdminPasswordInputMode(false);
+  openModal('modalAdmin');
+  setTimeout(function(){document.getElementById('adminPw').focus()},300);
+}
 function openAdminLogin(){
   var userSessionRole=getSessionRoleForUser(currentUser);
   if(adminRole&&(!currentUser||adminRole==='admin'||(adminRole==='chongmu'&&userSessionRole!=='chongmu'))){
     exitAdminMode();
     return;
   }
-  syncAdminPasswordInputMode(false);
-  openModal('modalAdmin');
-  setTimeout(function(){document.getElementById('adminPw').focus()},300);
+  if(currentUser&&canOpenAdminArea()){
+    switchTab('admin');
+    return;
+  }
+  if(currentUser&&firebaseAuthReady&&!firebaseAuthChecking){
+    showToast('계정 권한을 확인하는 중...');
+    refreshSecureAuthClaims(true).then(function(){
+      if(currentUser&&canOpenAdminArea()){
+        updateAdminTabs();
+        switchTab('admin');
+        return;
+      }
+      openAdminPasswordModal();
+    });
+    return;
+  }
+  openAdminPasswordModal();
 }
 function setAdminLoginBusy(busy){
   adminLoginBusy=!!busy;
@@ -7217,7 +7246,7 @@ function restoreUser() {
           resolve(null);
           return;
         }
-        firebaseUser.getIdTokenResult().then(function(tokenResult){
+        firebaseUser.getIdTokenResult(!!forceFreshDataOnInit).then(function(tokenResult){
           var claims=tokenResult.claims||{};
           if(claims.account!==true&&claims.admin!==true&&claims.legacyRole!=='chongmu'){
             return auth.signOut().then(function(){throw new Error('unsupported_auth_session')});
