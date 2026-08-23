@@ -509,7 +509,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-member-search,#subSeatingPlan.seating-fullscreen .seating-part-filter,#subSeatingPlan.seating-fullscreen .seating-filter-result,#subSeatingPlan.seating-fullscreen .seating-attendance-batchbar,#subSeatingPlan.seating-fullscreen .seating-paint-status{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-help-note{display:none}
 #subSeatingPlan.seating-fullscreen .seating-submission-bar,#subSeatingPlan.seating-fullscreen .seating-lock-row{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-bar,#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-lock-row{display:flex}
+#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-bar,#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-lock-row{display:flex;flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-member-list{display:block;flex:1 1 auto;height:auto;min-height:100px;max-height:none;overflow-y:auto}
 #subSeatingPlan.seating-fullscreen .seating-member{min-height:42px;padding:8px 9px;border-right:0}
 #subSeatingPlan.seating-fullscreen .seating-filter-result{flex:0 0 auto}
@@ -4190,7 +4190,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.1';
+var APP_RELEASE_VERSION='26.08.23.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
