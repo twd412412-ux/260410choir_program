@@ -348,6 +348,7 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-board-scroll:focus{outline:none}
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
+.seating-board.has-specials .seating-center-line{bottom:124px}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
 .seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
 .seating-row.offset .seating-line{transform:translateX(26px)}
@@ -378,9 +379,34 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-mic-line{display:flex;gap:4px}
 .seating-mic-slot{width:48px;height:30px;border:1px dashed #B7B09E;border-radius:4px;background:#FFFDF8;color:#B7B09E;font-size:10px;font-weight:850;cursor:pointer}
 .seating-mic-slot.on{background:#4F7FB7;border-style:solid;border-color:#4F7FB7;color:#fff}
-.seating-front{position:relative;height:74px;margin-top:12px;font-size:13px;font-weight:850;color:var(--ts)}
-.seating-front-note{position:absolute;left:0;top:20px}
-.seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:18px 24px;font-size:16px;font-weight:900}
+.seating-front{position:relative;height:44px;margin-top:4px;font-size:11px;font-weight:850;color:var(--ts)}
+.seating-front-note{position:absolute;left:0;top:14px}
+.seating-conductor{position:absolute;top:1px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:6px;padding:10px 16px;font-size:13px;font-weight:900}
+.seating-accompanist-area{position:relative;height:40px;margin-top:5px}
+.seating-special-role-label{position:absolute;left:0;top:50%;transform:translateY(-50%);font-size:10px;font-weight:900;color:var(--ts)}
+.seating-piano-slot{position:absolute;top:0;transform:translateX(-50%);width:72px;height:36px;border:1px solid #B8AC98;border-radius:5px;background:#F7F2E8;color:#292720;display:flex;align-items:center;justify-content:center;gap:3px;padding:3px 4px;cursor:pointer}
+.seating-piano-slot.ready,.seating-staff-slot.ready{outline:2px dashed var(--p);outline-offset:2px;background:var(--pl)}
+.seating-piano-scene{position:relative;width:27px;height:25px;flex:0 0 27px}
+.seating-piano-body{position:absolute;right:1px;top:2px;width:22px;height:15px;border:1.5px solid #9F927B;border-radius:75% 18% 55% 18%;background:#EEE3D1;transform:rotate(-7deg)}
+.seating-piano-body:after{content:'';position:absolute;left:5px;bottom:-8px;width:1.5px;height:8px;background:#9F927B;box-shadow:12px 1px 0 #9F927B}
+.seating-piano-keys{position:absolute;right:-2px;bottom:-2px;width:17px;height:5px;border:1px solid #9F927B;border-radius:1px;background:repeating-linear-gradient(90deg,#F8F3E9 0 3px,#B5A993 3px 4px)}
+.seating-piano-player{display:none}
+.seating-special-copy{min-width:0;display:flex;align-items:center;line-height:1}
+.seating-special-copy b{max-width:34px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+.seating-special-copy small{display:none}
+.seating-staff-area{position:relative;display:flex;align-items:center;gap:5px;min-height:38px;margin-top:2px;padding-left:61px}
+.seating-staff-area>.seating-special-role-label{top:18px}
+.seating-staff-slots{display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:calc(100% - 4px)}
+.seating-staff-slot{width:60px;height:34px;border:1px solid #B8AC98;border-radius:5px;background:#F7F2E8;color:#292720;display:flex;align-items:center;justify-content:center;gap:3px;padding:3px 4px;cursor:pointer;-webkit-touch-callout:none;user-select:none}
+.seating-staff-person{width:15px;height:25px;flex:0 0 15px;background:radial-gradient(circle at 50% 4px,transparent 0 3px,#9F927B 3.3px 4.6px,transparent 4.9px),linear-gradient(#9F927B 0 0) center 9px/1.5px 9px no-repeat,linear-gradient(32deg,transparent 44%,#9F927B 45% 55%,transparent 56%) center 9px/14px 9px no-repeat,linear-gradient(24deg,transparent 44%,#9F927B 45% 55%,transparent 56%) left 2px bottom 1px/8px 9px no-repeat,linear-gradient(-24deg,transparent 44%,#9F927B 45% 55%,transparent 56%) right 2px bottom 1px/8px 9px no-repeat}
+.seating-staff-slot .seating-special-copy b{max-width:34px}
+.seating-special-hold-hint{display:none}
+.seating-special-slot.filled{border-color:#A99D87;background:#F1E8D8}
+.dark .seating-piano-slot,.dark .seating-staff-slot,.dark .public-seating-piano-slot,.dark .public-seating-staff-slot{background:#2E2C25;border-color:#6A6558;color:#F3F0E7}
+.dark .seating-special-slot.filled,.dark .public-seating-piano-slot,.dark .public-seating-staff-slot{background:#393329;border-color:#756C5C}
+.dark .seating-piano-body{background:#554A3B;border-color:#C3B79F}
+.dark .seating-piano-keys{border-color:#C3B79F;background:repeating-linear-gradient(90deg,#E7DFD0 0 3px,#817662 3px 4px)}
+.dark .seating-staff-person{filter:brightness(1.45)}
 .seating-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .seating-chip{font-size:11px;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:5px 8px;font-weight:850;color:var(--ts)}
 .seating-chip.warn{background:#FFF4D8;border-color:#E4B950;color:#6E4700}
@@ -2566,8 +2592,28 @@ body{font-weight:500}
 .public-seating-seat.dim{opacity:.26}
 .public-seating-seat.match{outline:3px solid #7C571E;outline-offset:1px}
 .public-seating-seat.mine{outline:3px solid #2563EB;outline-offset:1px;box-shadow:0 0 0 5px rgba(37,99,235,.14)}
-.public-seating-front{position:relative;height:62px;margin-top:12px;font-size:12px;font-weight:850;color:var(--ts)}
-.public-seating-conductor{position:absolute;top:4px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:8px;padding:13px 20px;font-size:14px;font-weight:900}
+.public-seating-front{position:relative;height:44px;margin-top:4px;font-size:11px;font-weight:850;color:var(--ts)}
+.public-seating-conductor{position:absolute;top:1px;transform:translateX(-50%);background:#F4DF4D;color:#222;border:2px solid #C7AE17;border-radius:6px;padding:10px 16px;font-size:13px;font-weight:900}
+.public-seating-accompanist-area{position:relative;height:40px;margin-top:5px}
+.public-seating-piano-slot{position:absolute;top:0;transform:translateX(-50%);width:72px;height:36px;border:1px solid #B8AC98;border-radius:5px;background:#F7F2E8;color:#292720;display:flex;align-items:center;justify-content:center;gap:3px;padding:3px 4px}
+.public-seating-piano-slot.dim,.public-seating-staff-slot.dim{opacity:.26}
+.public-seating-piano-slot.match,.public-seating-staff-slot.match{outline:3px solid #7C571E;outline-offset:1px}
+.public-seating-piano-slot.mine,.public-seating-staff-slot.mine{outline:3px solid #2563EB;outline-offset:1px;box-shadow:0 0 0 5px rgba(37,99,235,.14)}
+.public-seating-staff-area{position:relative;display:flex;align-items:center;gap:5px;min-height:38px;margin-top:2px;padding-left:61px}
+.public-seating-staff-slots{display:flex;flex-wrap:wrap;gap:4px}
+.public-seating-staff-slot{width:60px;height:34px;border:1px solid #B8AC98;border-radius:5px;background:#F1E8D8;color:#292720;display:flex;align-items:center;justify-content:center;gap:3px;padding:3px 4px}
+.public-seating-staff-slot .seating-special-copy b{max-width:34px}
+.seating-special-modal .modal-content{max-width:430px;max-height:86vh}
+.seating-special-current{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);font-size:12px;color:var(--ts)}
+.seating-special-current strong{font-size:14px;color:var(--tx)}
+.seating-special-search{margin-bottom:8px}
+.seating-special-candidates{display:grid;gap:5px;max-height:310px;overflow:auto;padding-right:2px}
+.seating-special-candidate{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--bd);border-radius:9px;background:var(--sf);color:var(--tx);padding:9px 10px;text-align:left;font-size:12px;font-weight:900;cursor:pointer}
+.seating-special-candidate small{color:var(--ts);font-size:10px;font-weight:800}
+.seating-image-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);cursor:pointer}
+.seating-image-option input{width:19px;height:19px;margin-top:1px;accent-color:var(--p)}
+.seating-image-option strong{display:block;font-size:13px;color:var(--tx);margin-bottom:3px}
+.seating-image-option span{display:block;font-size:11px;line-height:1.45;color:var(--ts)}
 @media(max-width:390px){
   .home-dashboard{padding:14px 14px 13px}
   .home-dashboard-top{grid-template-columns:minmax(0,1fr) 84px;min-height:92px;gap:8px}
@@ -3069,7 +3115,7 @@ body{font-weight:500}
     <div class="seating-settings-actions">
       <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
       <button class="btn seating-btn-soft" onclick="saveSeatingPlanAs()">다른 이름 저장</button>
-      <button class="btn seating-btn-soft" onclick="downloadSeatingImage()">이미지 저장</button>
+      <button class="btn seating-btn-soft" onclick="openSeatingImageExportOptions()">이미지 저장</button>
       <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
       <button class="btn seating-btn-danger-soft" onclick="unpublishSeatingPlan()">공개 취소</button>
       <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
@@ -3168,7 +3214,7 @@ body{font-weight:500}
               <button class="btn btn-p" onclick="saveSeatingPlan()">저장</button>
               <button class="btn seating-btn-soft" onclick="saveSeatingPlanAs()">다른 이름 저장</button>
               <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
-              <button class="btn seating-btn-soft" onclick="downloadSeatingImage()">이미지 저장</button>
+              <button class="btn seating-btn-soft" onclick="openSeatingImageExportOptions()">이미지 저장</button>
             </div>
             <details class="seating-toolbar-group collapsible">
               <summary><span class="seating-toolbar-label">편집</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
@@ -3734,6 +3780,48 @@ body{font-weight:500}
   </div>
 </div>
 
+<!-- MODAL: 반주자·스태프 배치 -->
+<div class="modal-overlay modal-center seating-special-modal" id="modalSeatingSpecialAssignment">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title" id="seatingSpecialAssignmentTitle">역할 자리 배치</span><button class="modal-close" onclick="closeModal('modalSeatingSpecialAssignment')">✕</button></div>
+    <div class="seating-special-current" id="seatingSpecialCurrent"></div>
+    <input class="form-input seating-special-search" id="seatingSpecialSearch" placeholder="이름 또는 파트 검색" oninput="seatingSpecialQuery=this.value;renderSeatingSpecialCandidates()">
+    <div class="seating-special-candidates" id="seatingSpecialCandidates"></div>
+    <div class="seating-confirm-actions">
+      <button class="btn seating-btn-danger-soft" id="seatingSpecialClearBtn" type="button" onclick="clearCurrentSeatingSpecialSlot()">자리 비우기</button>
+      <button class="btn seating-btn-soft" type="button" onclick="closeModal('modalSeatingSpecialAssignment')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 스태프 자리 관리 -->
+<div class="modal-overlay modal-center seating-special-modal" id="modalSeatingStaffManage">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">스태프 자리 관리</span><button class="modal-close" onclick="closeModal('modalSeatingStaffManage')">✕</button></div>
+    <div class="seating-special-current" id="seatingStaffManageCurrent"></div>
+    <div class="seating-help-note" style="margin:0">스태프 자리를 길게 누르면 이 화면이 열립니다. 빈 자리 하나는 다음 스태프를 배치할 수 있도록 남겨둡니다.</div>
+    <div class="seating-confirm-actions">
+      <button class="btn btn-p" type="button" onclick="addSeatingStaffSlot()">자리 추가</button>
+      <button class="btn seating-btn-danger-soft" type="button" id="seatingStaffRemoveBtn" onclick="removeSeatingStaffSlot()">이 자리 제거</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 자리배치 이미지 저장 -->
+<div class="modal-overlay modal-center seating-special-modal" id="modalSeatingImageExport">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">배치도 이미지 저장</span><button class="modal-close" onclick="closeModal('modalSeatingImageExport')">✕</button></div>
+    <label class="seating-image-option">
+      <input type="checkbox" id="seatingImageIncludeSpecial" checked>
+      <span><strong>반주자·스태프 포함</strong><span>공개 배치에는 항상 포함되며, 이 선택은 저장할 이미지에만 적용됩니다.</span></span>
+    </label>
+    <div class="seating-confirm-actions">
+      <button class="btn seating-btn-soft" type="button" onclick="closeModal('modalSeatingImageExport')">취소</button>
+      <button class="btn btn-p" type="button" onclick="confirmSeatingImageDownload()">이미지 저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 전체화면 자리배치 빠른 안내 -->
 <div class="modal-overlay modal-center seating-workspace-help-modal" id="modalSeatingWorkspaceHelp">
   <div class="modal-content">
@@ -3742,7 +3830,7 @@ body{font-weight:500}
     <div class="seating-help-step"><b class="seating-help-index">1</b><div><strong>배치</strong><span>명단에서 단원을 누르거나 빈칸을 눌러 바로 배치합니다.</span></div></div>
     <div class="seating-help-step"><b class="seating-help-index">2</b><div><strong>참석</strong><span>여러 명의 참석 여부를 정리하면서 필요한 자리도 함께 조정합니다.</span></div></div>
     <div class="seating-help-step"><b class="seating-help-index">3</b><div><strong>공통 도구</strong><span>칸이나 줄을 선택한 뒤 추가, 제거, 이동 도구를 사용합니다.</span></div></div>
-    <div class="seating-help-tip">왼쪽 명단은 배치도 제목 옆의 화살표로 접고 펼칠 수 있습니다.</div>
+    <div class="seating-help-tip">왼쪽 명단은 배치도 제목 옆의 화살표로 접고 펼칠 수 있습니다. 반주자·스태프 자리는 눌러 배치하고, 스태프 자리는 길게 눌러 추가하거나 제거합니다.</div>
     <button class="btn btn-p btn-bl" type="button" onclick="closeModal('modalSeatingWorkspaceHelp')">배치 시작</button>
   </div>
 </div>
@@ -4176,7 +4264,7 @@ var memberLinkAuditRequestId=0;
 var MEMBER_LINK_AUDIT_TIMEOUT_MS=8000;
 var songMemberSelections={add:{},edit:{}};
 var SEATING_PLAN_COLLECTION='seatingPlans', SEATING_PLAN_LEGACY_DOC='seatingPlans', SEATING_DRAFT_KEY='choir_seating_draft_v1', SEATING_BOARD_HEIGHT_KEY='choir_seating_board_height_pct';
-var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingOrchestraRows=[], seatingMicSlots=[], seatingPartSubmissions={}, seatingPlanHistory=[];
+var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, seatingRows=[], seatingOrchestraRows=[], seatingMicSlots=[], seatingSpecialSlots={accompanist:null,staff:[null]}, seatingPartSubmissions={}, seatingPlanHistory=[];
 var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingPartFilter='all', seatingBoardTab='choir';
 var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingAttendingOnly=false, seatingUnplacedOnly=false, seatingAbsentOnly=false, seatingAttendeesLocked=false, seatingAutoFit=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
@@ -4185,6 +4273,8 @@ var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt=
 var seatingAttendancePaint=null, seatingAttendancePaintListenersBound=false, seatingAttendancePaintSuppressClickUntil=0;
 var seatingWorkspaceMode='place', seatingSettingsOpen=false, seatingMemberPanelCollapsed=false, seatingAttendanceBatchSelected={};
 var seatingPlacementQueue=[], seatingPlacementQueueCompleted=[], seatingPlacementQueueSelecting=false, seatingPlacementQueueActive=false;
+var seatingSpecialAssignmentType='', seatingSpecialAssignmentIndex=0, seatingSpecialQuery='', seatingStaffManageIndex=0;
+var seatingSpecialPressTimer=null, seatingSpecialPressStartX=0, seatingSpecialPressStartY=0, seatingSpecialPressTriggered=false, seatingSpecialClickSuppressUntil=0;
 var seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(localStorage.getItem(SEATING_BOARD_HEIGHT_KEY),10)||60)/10)*10));
 var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
@@ -4202,7 +4292,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.5';
+var APP_RELEASE_VERSION='26.08.23.6';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7310,6 +7400,7 @@ function getPublishedSeatingPlan(force){
           cachedData.rows=normalizeSeatingRows(cachedData.rows);
           cachedData.orchestraRows=normalizeOrchestraSeatingRows(cachedData.orchestraRows||[]);
           cachedData.micSlots=normalizeSeatingMicSlots(cachedData.micSlots||[],publicSeatingMaxSeatCount(cachedData.rows));
+          cachedData.specialSlots=normalizeSeatingSpecialSlots(cachedData.specialSlots||{});
         }
         publishedSeatingPlan=cachedData;
         publishedSeatingLoaded=true;
@@ -7330,6 +7421,7 @@ function getPublishedSeatingPlan(force){
       data.rows=normalizeSeatingRows(data.rows);
       data.orchestraRows=normalizeOrchestraSeatingRows(data.orchestraRows||[]);
       data.micSlots=normalizeSeatingMicSlots(data.micSlots||[],publicSeatingMaxSeatCount(data.rows));
+      data.specialSlots=normalizeSeatingSpecialSlots(data.specialSlots||{});
       publishedSeatingPlan=data;
     }else{
       publishedSeatingPlan=null;
@@ -7359,6 +7451,9 @@ function publicSeatingMaxSeatCount(rows){
   (rows||[]).forEach(function(row){if(row.seats&&row.seats.length>max)max=row.seats.length;});
   return max||seatingDefaultSeatCount();
 }
+function publicSeatingSpecialSeatList(plan){
+  return seatingSpecialSeatList(normalizeSeatingSpecialSlots(plan&&plan.specialSlots||{}));
+}
 function publicSeatingStats(plan){
   var count=0, partCounts={};
   var boards={choir:{placed:0},orchestra:{placed:0}};
@@ -7372,6 +7467,11 @@ function publicSeatingStats(plan){
         }
       });
     });
+  });
+  publicSeatingSpecialSeatList(plan).forEach(function(item){
+    count++;boards.choir.placed++;
+    var part=normalizePartName(item.seat.part)||'기타';
+    partCounts[part]=(partCounts[part]||0)+1;
   });
   return {placed:count,partCounts:partCounts,boards:boards};
 }
@@ -7485,7 +7585,33 @@ function findPublicSeatingMine(plan){
       });
     });
   });
+  publicSeatingSpecialSeatList(plan).forEach(function(item){
+    if(publicSeatingIsMine(item.seat))found.push({board:'choir',specialType:item.type,specialIndex:item.index,seat:item.seat,label:seatingSpecialRoleLabel(item.type,item.index)});
+  });
   return found;
+}
+function publicSeatingSpecialStateClass(seat,query){
+  var mine=publicSeatingIsMine(seat);
+  var match=publicSeatingMatches(seat,query);
+  return (mine?' mine':'')+(match?' match':'')+(query&&seat&&!match&&!mine?' dim':'');
+}
+function renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,query){
+  var slots=normalizeSeatingSpecialSlots(plan&&plan.specialSlots||{});
+  var staff=slots.staff.map(function(seat,index){return {seat:seat,index:index};}).filter(function(item){return !!item.seat;});
+  var html='';
+  if(slots.accompanist){
+    var pianoLeft=Math.max(130,centerLeft-150);
+    html+='<div class="public-seating-accompanist-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">반주</span><div class="public-seating-piano-slot'+publicSeatingSpecialStateClass(slots.accompanist,query)+'" style="left:'+pianoLeft+'px" title="반주자 · '+escAttr(slots.accompanist.name)+'"><span class="seating-piano-scene" aria-hidden="true"><span class="seating-piano-player"></span><span class="seating-piano-body"><span class="seating-piano-keys"></span></span></span><span class="seating-special-copy"><b>'+escHtml(slots.accompanist.name)+'</b><small>반주자</small></span></div></div>';
+  }
+  html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  if(staff.length){
+    html+='<div class="public-seating-staff-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">스태프</span><div class="public-seating-staff-slots">';
+    staff.forEach(function(item){
+      html+='<div class="public-seating-staff-slot'+publicSeatingSpecialStateClass(item.seat,query)+'" title="스태프 · '+escAttr(item.seat.name)+'"><span class="seating-staff-person" aria-hidden="true"></span><span class="seating-special-copy"><b>'+escHtml(item.seat.name)+'</b><small>스태프 '+(item.index+1)+'</small></span></div>';
+    });
+    html+='</div></div>';
+  }
+  return html;
 }
 function renderPublicSeatingHomeCard(plan,pending){
   if(!canViewPublishedSeating()||pending||!plan)return '';
@@ -7531,7 +7657,7 @@ function renderPublicSeatingModalBody(){
   var stats=publicSeatingStats(plan);
   if(publicSeatingBoardTab==='orchestra'&&!stats.boards.orchestra.placed)publicSeatingBoardTab='choir';
   if(q){
-    var choirMatch=(plan.rows||[]).some(function(row){return (row.seats||[]).some(function(seat){return publicSeatingMatches(seat,q);});});
+    var choirMatch=(plan.rows||[]).some(function(row){return (row.seats||[]).some(function(seat){return publicSeatingMatches(seat,q);});})||publicSeatingSpecialSeatList(plan).some(function(item){return publicSeatingMatches(item.seat,q);});
     var orchestraMatch=(plan.orchestraRows||[]).some(function(row){return (row.seats||[]).some(function(seat){return publicSeatingMatches(seat,q);});});
     if(publicSeatingBoardTab==='choir'&&!choirMatch&&orchestraMatch)publicSeatingBoardTab='orchestra';
     else if(publicSeatingBoardTab==='orchestra'&&!orchestraMatch&&choirMatch)publicSeatingBoardTab='choir';
@@ -7541,7 +7667,10 @@ function renderPublicSeatingModalBody(){
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
   var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
-  var boardHeight=Math.max(110,(rows.length*50)+90);
+  var specialCount=publicSeatingBoardTab==='choir'?publicSeatingSpecialSeatList(plan).length:0;
+  var specialStaffCount=publicSeatingBoardTab==='choir'?normalizeSeatingSpecialSlots(plan.specialSlots||{}).staff.filter(function(seat){return !!seat;}).length:0;
+  var specialHeight=specialCount?(88+(specialStaffCount?Math.ceil(specialStaffCount/6)*38:0)):0;
+  var boardHeight=Math.max(110,(rows.length*50)+90+specialHeight);
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '이름 검색으로 배치된 자리를 확인해 주세요.';
@@ -7578,7 +7707,8 @@ function renderPublicSeatingModalBody(){
     });
     html+='</div></div>';
   });
-  html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  if(publicSeatingBoardTab==='choir'&&specialCount)html+=renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,q);
+  else html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
   html+='</div></div></div>';
   box.innerHTML=html;
   applyPublicSeatingZoom();
@@ -16800,7 +16930,7 @@ function seatingMemberMatchesBoard(member,tab,assigned){
   tab=tab||seatingBoardTab;
   assigned=assigned||seatingAssignedMap();
   var placement=member&&assigned[member.id];
-  if(placement)return placement.board===tab;
+  if(placement)return (placement.targetBoard||placement.board)===tab;
   return seatingBoardKeyForPart(member&&member.part)===tab;
 }
 function seatingBoardTargetMembers(tab){
@@ -16994,7 +17124,7 @@ function removeEmptySeatingCapacity(count){
 }
 function fitSeatingRowsForBoardToAttendance(tab,rowCount){
   tab=tab==='orchestra'?'orchestra':'choir';
-  var attended=seatingAttendeeCount(tab);
+  var attended=seatingBoardSeatTargetCount(tab);
   if(attended<=0)return false;
   var rows=seatingRowsForBoard(tab);
   rowCount=Math.max(1,parseInt(rowCount,10)||rows.length||(tab==='orchestra'?2:4));
@@ -17022,6 +17152,9 @@ function removeSeatingMemberFromAllBoards(memberId){
   seatingAllBoardRows().forEach(function(row){
     row.seats=row.seats.map(function(seat){return seat&&seat.memberId===memberId?null:seat;});
   });
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  if(seatingSpecialSlots.accompanist&&seatingSpecialSlots.accompanist.memberId===memberId)seatingSpecialSlots.accompanist=null;
+  seatingSpecialSlots.staff=seatingSpecialSlots.staff.map(function(seat){return seat&&seat.memberId===memberId?null:seat;});
 }
 function addMissingSeatingCapacityByBoard(){
   var stats=seatingPlacementStats();
@@ -17036,6 +17169,47 @@ function defaultSeatingRows(){
 function normalizeSeatingSeat(seat){
   if(!seat||!seat.memberId)return null;
   return {memberId:String(seat.memberId),name:String(seat.name||''),part:normalizePartName(seat.part||'')};
+}
+function defaultSeatingSpecialSlots(){
+  return {accompanist:null,staff:[null]};
+}
+function normalizeSeatingSpecialSlots(value){
+  value=value&&typeof value==='object'?value:{};
+  var staffSource=Array.isArray(value.staff)?value.staff:(Array.isArray(value.staffSlots)?value.staffSlots:[]);
+  var staff=staffSource.slice(0,12).map(normalizeSeatingSeat);
+  if(!staff.length)staff=[null];
+  return {
+    accompanist:normalizeSeatingSeat(value.accompanist||value.pianist),
+    staff:staff
+  };
+}
+function seatingSpecialSeatList(value){
+  var slots=normalizeSeatingSpecialSlots(value===undefined?seatingSpecialSlots:value);
+  var list=[];
+  if(slots.accompanist)list.push({type:'accompanist',index:0,seat:slots.accompanist});
+  slots.staff.forEach(function(seat,index){if(seat)list.push({type:'staff',index:index,seat:seat});});
+  return list;
+}
+function seatingGetSpecialSlot(type,index){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  if(type==='accompanist')return seatingSpecialSlots.accompanist||null;
+  return seatingSpecialSlots.staff[index]||null;
+}
+function seatingSetSpecialSlot(type,index,seat){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  if(type==='accompanist')seatingSpecialSlots.accompanist=normalizeSeatingSeat(seat);
+  else if(index>=0&&index<seatingSpecialSlots.staff.length)seatingSpecialSlots.staff[index]=normalizeSeatingSeat(seat);
+}
+function seatingSpecialRoleLabel(type,index){
+  return type==='accompanist'?'반주자':'스태프 '+(Number(index)+1);
+}
+function seatingSpecialAssignedCount(tab){
+  return seatingSpecialSeatList().filter(function(item){
+    return !tab||seatingBoardKeyForPart(item.seat.part)===tab;
+  }).length;
+}
+function seatingBoardSeatTargetCount(tab){
+  return Math.max(0,seatingAttendeeCount(tab)-seatingSpecialAssignedCount(tab));
 }
 function normalizeSeatingRows(rows){
   if(!Array.isArray(rows)||rows.length===0)return defaultSeatingRows();
@@ -17128,6 +17302,7 @@ function normalizeStoredSeatingPlan(plan,id){
   plan.rows=Array.isArray(plan.rows)?plan.rows:[];
   plan.orchestraRows=Array.isArray(plan.orchestraRows)?plan.orchestraRows:[];
   plan.micSlots=Array.isArray(plan.micSlots)?plan.micSlots:[];
+  plan.specialSlots=normalizeSeatingSpecialSlots(plan.specialSlots||plan.specialAssignments||{});
   plan.attendees=plan.attendees&&typeof plan.attendees==='object'?plan.attendees:{};
   plan.partSubmissions=normalizeSeatingPartSubmissions(plan.partSubmissions||plan.submissions||{});
   plan.history=Array.isArray(plan.history)?plan.history:[];
@@ -17240,6 +17415,7 @@ function seatingSnapshot(){
     rows:cloneSeatingValue(seatingRows),
     orchestraRows:cloneSeatingValue(seatingOrchestraRows),
     micSlots:cloneSeatingValue(seatingMicSlots),
+    specialSlots:cloneSeatingValue(seatingSpecialSlots),
     history:cloneSeatingValue(seatingPlanHistory),
     selectedSeat:seatingSelectedSeat?cloneSeatingValue(seatingSelectedSeat):null,
     selectedMemberId:seatingSelectedMemberId,
@@ -17262,6 +17438,7 @@ function applySeatingSnapshot(snap,keepDirty){
   seatingOrchestraRows=boards.orchestra;
   seatingBoardTab=snap.boardTab==='orchestra'?'orchestra':'choir';
   seatingMicSlots=normalizeSeatingMicSlots(cloneSeatingValue(snap.micSlots||[]),seatingMaxSeatCount(seatingRows));
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(cloneSeatingValue(snap.specialSlots||{}));
   seatingPlanHistory=Array.isArray(snap.history)?cloneSeatingValue(snap.history):[];
   seatingSelectedSeat=snap.selectedSeat||null;
   seatingSelectedMemberId=snap.selectedMemberId||'';
@@ -17400,6 +17577,7 @@ function createNewSeatingPlan(silent,skipConfirm){
   seatingOrchestraRows=defaultOrchestraSeatingRows();
   seatingBoardTab='choir';
   seatingMicSlots=defaultSeatingMicSlots(seatingDefaultSeatCount());
+  seatingSpecialSlots=defaultSeatingSpecialSlots();
   seatingAttendees={};
   seatingMembers.forEach(function(m){seatingAttendees[m.id]=true;});
   seatingAttendeesLocked=false;
@@ -17438,6 +17616,7 @@ function applySeatingPlan(plan){
   seatingOrchestraRows=boards.orchestra;
   seatingBoardTab='choir';
   seatingMicSlots=normalizeSeatingMicSlots(plan.micSlots,seatingMaxSeatCount(seatingRows));
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(plan.specialSlots||plan.specialAssignments||{});
   seatingAttendees={};
   seatingAttendeesLocked=!!(plan.attendeesLocked||plan.attendanceLocked);
   seatingAutoFit=!!plan.autoFit;
@@ -17550,7 +17729,7 @@ function applySeatingTemplate(type){
 function fitSeatingToAttendance(){
   var overall=seatingPlacementStats();
   var stats=overall.boards[seatingBoardTab];
-  if(stats.attended<=0)return showToast('참석 단원을 먼저 선택해주세요');
+  if(stats.rowTarget<=0)return showToast('합창석에 배치할 참석 단원이 없습니다');
   if(overall.dup>0)return showToast('중복 배치 '+overall.dup+'명을 먼저 정리해주세요');
   var beforeCapacity=stats.capacity;
   if(stats.placedUnique===0){
@@ -17559,18 +17738,18 @@ function fitSeatingToAttendance(){
     fitEmptySeatingRowsToAttendance(seatingActiveRows().length||(seatingBoardTab==='orchestra'?2:4));
     seatingSelectedSeat=null;
     renderSeatingBoard();
-    showToast('명단 맞춤 · 참석 '+stats.attended+'명 · 좌석 '+beforeCapacity+'→'+seatingSeatCapacity()+'칸');
+    showToast('명단 맞춤 · 합창석 대상 '+stats.rowTarget+'명 · 좌석 '+beforeCapacity+'→'+seatingSeatCapacity()+'칸');
     return;
   }
-  var difference=stats.attended-beforeCapacity;
-  if(difference===0)return showToast('이미 참석 '+stats.attended+'명과 좌석 '+beforeCapacity+'칸이 맞습니다');
+  var difference=stats.rowTarget-beforeCapacity;
+  if(difference===0)return showToast('이미 합창석 대상 '+stats.rowTarget+'명과 좌석 '+beforeCapacity+'칸이 맞습니다');
   var actionText=difference>0
     ? '부족한 빈칸 '+difference+'개를 추가합니다.'
     : '남는 빈칸 '+Math.abs(difference)+'개를 줄입니다.';
   var preserveText=difference>0
     ? '기존 배치는 그대로 유지됩니다.'
     : '배치된 단원은 삭제되지 않으며, 빈칸 정리로 같은 줄의 위치가 조금 당겨질 수 있습니다.';
-  if(!confirm('참석 명단에 좌석 수를 맞출까요?\n\n참석 '+stats.attended+'명 · 배치 '+stats.placedUnique+'명 · 미배치 '+stats.unplaced+'명\n좌석 '+beforeCapacity+'→'+stats.attended+'칸\n\n'+actionText+'\n'+preserveText))return;
+  if(!confirm('참석 명단에 좌석 수를 맞출까요?\n\n참석 '+stats.attended+'명 · 반주/스태프 '+stats.specialPlaced+'명 · 합창석 대상 '+stats.rowTarget+'명\n배치 '+stats.placedUnique+'명 · 미배치 '+stats.unplaced+'명\n좌석 '+beforeCapacity+'→'+stats.rowTarget+'칸\n\n'+actionText+'\n'+preserveText))return;
   beginSeatingEdit();
   seatingAutoFit=true;
   if(difference>0)addSeatingCapacity(difference);
@@ -17580,7 +17759,7 @@ function fitSeatingToAttendance(){
   var afterCapacity=seatingSeatCapacity();
   var changed=afterCapacity-beforeCapacity;
   var changeLabel=changed>0?'+'+changed:String(changed);
-  showToast('명단 맞춤 · 참석 '+stats.attended+'명 · 좌석 '+beforeCapacity+'→'+afterCapacity+'칸 ('+changeLabel+')');
+  showToast('명단 맞춤 · 합창석 대상 '+stats.rowTarget+'명 · 좌석 '+beforeCapacity+'→'+afterCapacity+'칸 ('+changeLabel+')');
 }
 function seatingAssignedMap(){
   var map={};
@@ -17588,6 +17767,12 @@ function seatingAssignedMap(){
     seatingRowsForBoard(tab).forEach(function(row,r){
       row.seats.forEach(function(seat,c){if(seat&&seat.memberId)map[seat.memberId]={board:tab,row:r,col:c};});
     });
+  });
+  seatingSpecialSeatList().forEach(function(item){
+    if(item.seat.memberId&&seatingAttendees[item.seat.memberId]===undefined)seatingAttendees[item.seat.memberId]=true;
+  });
+  seatingSpecialSeatList().forEach(function(item){
+    map[item.seat.memberId]={board:seatingBoardKeyForPart(item.seat.part),targetBoard:seatingBoardKeyForPart(item.seat.part),specialType:item.type,specialIndex:item.index,displayBoard:'choir'};
   });
   return map;
 }
@@ -17598,31 +17783,46 @@ function partClass(part){
 }
 function seatingPlacementStats(){
   var attended=0, placed=0, empty=0, dup=0, seen={}, unplacedMembers=[];
+  var boardWork={
+    choir:{attended:seatingAttendeeCount('choir'),placed:0,empty:0,seen:{},special:0},
+    orchestra:{attended:seatingAttendeeCount('orchestra'),placed:0,empty:0,seen:{},special:0}
+  };
   seatingMembers.forEach(function(m){if(seatingAttendees[m.id])attended++;});
-  var boardStats={};
   ['choir','orchestra'].forEach(function(tab){
-    var boardAttended=seatingAttendeeCount(tab),boardPlaced=0,boardEmpty=0,boardSeen={};
     seatingRowsForBoard(tab).forEach(function(row){
       row.seats.forEach(function(seat){
         if(seat&&seat.memberId){
-          placed++;boardPlaced++;
-          boardSeen[seat.memberId]=true;
+          placed++;boardWork[tab].placed++;
+          boardWork[tab].seen[seat.memberId]=true;
           if(seen[seat.memberId])dup++;
           seen[seat.memberId]=1;
-        }else{empty++;boardEmpty++;}
+        }else{empty++;boardWork[tab].empty++;}
       });
     });
-    var boardCapacity=boardPlaced+boardEmpty;
-    var boardPlacedUnique=Object.keys(boardSeen).length;
-    boardStats[tab]={attended:boardAttended,placed:boardPlaced,placedUnique:boardPlacedUnique,unplaced:Math.max(0,boardAttended-boardPlacedUnique),capacity:boardCapacity,shortage:Math.max(0,boardAttended-boardCapacity),surplus:Math.max(0,boardCapacity-boardAttended),empty:boardEmpty};
+  });
+  seatingSpecialSeatList().forEach(function(item){
+    var seat=item.seat;
+    var tab=seatingBoardKeyForPart(seat.part);
+    placed++;boardWork[tab].placed++;boardWork[tab].special++;
+    boardWork[tab].seen[seat.memberId]=true;
+    if(seen[seat.memberId])dup++;
+    seen[seat.memberId]=1;
+  });
+  var boardStats={};
+  ['choir','orchestra'].forEach(function(tab){
+    var work=boardWork[tab];
+    var boardCapacity=work.placed-work.special+work.empty;
+    var boardPlacedUnique=Object.keys(work.seen).length;
+    var rowTarget=Math.max(0,work.attended-work.special);
+    boardStats[tab]={attended:work.attended,placed:work.placed,placedUnique:boardPlacedUnique,unplaced:Math.max(0,work.attended-boardPlacedUnique),capacity:boardCapacity,shortage:Math.max(0,rowTarget-boardCapacity),surplus:Math.max(0,boardCapacity-rowTarget),empty:work.empty,specialPlaced:work.special,rowTarget:rowTarget};
   });
   seatingMembers.forEach(function(m){
     if(seatingAttendees[m.id]&&!seen[m.id])unplacedMembers.push(m);
   });
-  var capacity=placed+empty;
+  var capacity=boardStats.choir.capacity+boardStats.orchestra.capacity;
   var shortage=boardStats.choir.shortage+boardStats.orchestra.shortage;
   var surplus=boardStats.choir.surplus+boardStats.orchestra.surplus;
-  return {attended:attended,placed:placed,placedUnique:Object.keys(seen).length,capacity:capacity,shortage:shortage,surplus:surplus,empty:empty,dup:dup,unplaced:unplacedMembers.length,unplacedMembers:unplacedMembers,boards:boardStats};
+  return {attended:attended,placed:placed,placedUnique:Object.keys(seen).length,capacity:capacity,shortage:shortage,surplus:surplus,empty:empty,dup:dup,unplaced:unplacedMembers.length,unplacedMembers:unplacedMembers,specialPlaced:seatingSpecialAssignedCount(),boards:boardStats};
 }
 function seatingFormatHistoryTime(value){
   if(!value)return '';
@@ -17684,16 +17884,37 @@ function seatingDownloadFileName(){
   var boardLabel=seatingBoardTab==='orchestra'?'관현악':'합창';
   return (date+'_'+name+'_'+boardLabel).replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_')+'.png';
 }
-function downloadSeatingImage(){
+function openSeatingImageExportOptions(){
+  var input=document.getElementById('seatingImageIncludeSpecial');
+  if(input){
+    input.checked=true;
+    input.disabled=seatingBoardTab!=='choir'||seatingSpecialAssignedCount()===0;
+  }
+  openModal('modalSeatingImageExport');
+}
+function confirmSeatingImageDownload(){
+  var input=document.getElementById('seatingImageIncludeSpecial');
+  var includeSpecial=!!(input&&input.checked&&!input.disabled);
+  closeModal('modalSeatingImageExport');
+  downloadSeatingImage(includeSpecial);
+}
+function downloadSeatingImage(includeSpecial){
   var rows=seatingActiveRows();
   if(!rows.length)return showToast('저장할 배치가 없습니다');
+  includeSpecial=includeSpecial!==false&&seatingBoardTab==='choir';
+  var specialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  var staffItems=specialSlots.staff.map(function(seat,index){return {seat:seat,index:index};}).filter(function(item){return !!item.seat;});
+  var hasSpecial=includeSpecial&&(!!specialSlots.accompanist||staffItems.length>0);
   var stats=seatingPlacementStats().boards[seatingBoardTab];
   var maxSeats=seatingMaxSeatCount(rows);
   var seatW=84,seatH=50,gap=8,labelW=70,countW=42,leftPad=28,rightPad=28,topPad=92,rowGap=14;
   var rowBlockW=labelW+countW+(maxSeats*seatW)+((maxSeats-1)*gap);
   var width=Math.max(980,leftPad+rowBlockW+rightPad);
   var rowsH=rows.length*(seatH+rowGap);
-  var height=topPad+rowsH+150;
+  var staffPerRow=Math.max(1,Math.floor((width-leftPad-rightPad-labelW-countW)/92));
+  var staffRows=staffItems.length?Math.ceil(staffItems.length/staffPerRow):0;
+  var specialExtra=hasSpecial?((specialSlots.accompanist?48:0)+(staffRows?staffRows*44+6:0)):0;
+  var height=topPad+rowsH+150+specialExtra;
   var scale=2;
   var canvas=document.createElement('canvas');
   canvas.width=width*scale;
@@ -17709,7 +17930,7 @@ function downloadSeatingImage(){
   seatingCanvasText(ctx,(seatingInputValue('seatingProgram')||'전체 합창')+' · '+(seatingBoardTab==='orchestra'?'관현악':'합창')+' 배치도',leftPad,34,width-leftPad-rightPad);
   ctx.font='700 14px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
   ctx.fillStyle='#596354';
-  var subtitle=[seatingInputValue('seatingTitle')||'찬양의밤',seatingInputValue('seatingDate')||'', '참석 '+stats.attended+'명', '미배치 '+stats.unplaced+'명'].filter(Boolean).join(' · ');
+  var subtitle=[seatingInputValue('seatingTitle')||'찬양의밤',seatingInputValue('seatingDate')||'', '참석 '+stats.attended+'명', '미배치 '+stats.unplaced+'명',(!includeSpecial&&seatingBoardTab==='choir'&&seatingSpecialAssignedCount()?'반주·스태프 제외':'')].filter(Boolean).join(' · ');
   seatingCanvasText(ctx,subtitle,leftPad,64,width-leftPad-rightPad);
   var centerLeft=leftPad+labelW+countW+(((maxSeats*seatW)+((maxSeats-1)*gap))/2);
   ctx.save();
@@ -17776,6 +17997,29 @@ function downloadSeatingImage(){
   });
   frontY=micY+60;
   }
+  if(hasSpecial&&specialSlots.accompanist){
+    var piano=specialSlots.accompanist;
+    var pianoX=Math.max(leftPad+labelW+countW,centerLeft-138);
+    ctx.fillStyle='#596354';
+    ctx.font='900 12px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText('반주',leftPad,frontY+20);
+    seatingDrawRoundRect(ctx,pianoX,frontY,98,40,6);
+    ctx.fillStyle='#F7F2E8';ctx.fill();ctx.strokeStyle='#B8AC98';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pianoX+10,frontY+8);
+    ctx.bezierCurveTo(pianoX+27,frontY+3,pianoX+42,frontY+7,pianoX+43,frontY+18);
+    ctx.bezierCurveTo(pianoX+42,frontY+26,pianoX+30,frontY+28,pianoX+16,frontY+25);
+    ctx.closePath();
+    ctx.fillStyle='#EEE3D1';ctx.fill();ctx.strokeStyle='#9F927B';ctx.lineWidth=1.4;ctx.stroke();
+    ctx.fillStyle='#F8F3E9';ctx.fillRect(pianoX+15,frontY+23,30,7);ctx.strokeRect(pianoX+15,frontY+23,30,7);
+    ctx.strokeStyle='#B5A993';ctx.lineWidth=.8;
+    for(var pk=1;pk<6;pk++){ctx.beginPath();ctx.moveTo(pianoX+15+(pk*5),frontY+23);ctx.lineTo(pianoX+15+(pk*5),frontY+30);ctx.stroke();}
+    ctx.beginPath();ctx.moveTo(pianoX+20,frontY+29);ctx.lineTo(pianoX+19,frontY+36);ctx.moveTo(pianoX+40,frontY+29);ctx.lineTo(pianoX+41,frontY+36);ctx.stroke();
+    ctx.fillStyle='#202018';ctx.font='900 12px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';ctx.textAlign='center';
+    seatingCanvasText(ctx,piano.name,pianoX+72,frontY+20,44);
+    frontY+=48;
+  }
   ctx.fillStyle='#596354';
   ctx.font='900 15px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
   ctx.textAlign='left';
@@ -17790,6 +18034,23 @@ function downloadSeatingImage(){
   ctx.font='900 18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
   ctx.textAlign='center';
   ctx.fillText('지휘',centerLeft,frontY+26);
+  if(hasSpecial&&staffItems.length){
+    var staffY=frontY+60;
+    ctx.fillStyle='#596354';ctx.font='900 12px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';ctx.textAlign='left';ctx.fillText('스태프',leftPad,staffY+19);
+    staffItems.forEach(function(item,index){
+      var rowIndex=Math.floor(index/staffPerRow);
+      var colIndex=index%staffPerRow;
+      var x=leftPad+labelW+countW+(colIndex*92);
+      var y=staffY+(rowIndex*44);
+      seatingDrawRoundRect(ctx,x,y,84,36,6);
+      ctx.fillStyle='#F7F2E8';ctx.fill();ctx.strokeStyle='#B8AC98';ctx.lineWidth=1;ctx.stroke();
+      ctx.strokeStyle='#9F927B';ctx.lineWidth=1.3;
+      ctx.beginPath();ctx.arc(x+15,y+9,4,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+15,y+13);ctx.lineTo(x+15,y+23);ctx.moveTo(x+8,y+17);ctx.lineTo(x+22,y+17);ctx.moveTo(x+15,y+23);ctx.lineTo(x+9,y+31);ctx.moveTo(x+15,y+23);ctx.lineTo(x+21,y+31);ctx.stroke();
+      ctx.fillStyle='#202018';ctx.font='900 11px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';ctx.textAlign='center';
+      seatingCanvasText(ctx,item.seat.name,x+55,y+18,50);
+    });
+  }
   function finishDownload(url,cleanup){
     var a=document.createElement('a');
     a.href=url;
@@ -17829,14 +18090,23 @@ function markAllSeatingAttendees(value){
       futureByBoard[placement?placement.board:seatingBoardKeyForPart(m.part)]++;
     }
   });
-  var shortage=Math.max(0,futureByBoard.choir-seatingSeatCapacity(seatingRows))
-    +Math.max(0,futureByBoard.orchestra-seatingSeatCapacity(seatingOrchestraRows));
+  var futureSpecialByBoard={choir:0,orchestra:0};
+  seatingSpecialSeatList().forEach(function(item){
+    if(editableMap[item.seat.memberId]?!!value:!!seatingAttendees[item.seat.memberId])futureSpecialByBoard[seatingBoardKeyForPart(item.seat.part)]++;
+  });
+  var shortage=Math.max(0,(futureByBoard.choir-futureSpecialByBoard.choir)-seatingSeatCapacity(seatingRows))
+    +Math.max(0,(futureByBoard.orchestra-futureSpecialByBoard.orchestra)-seatingSeatCapacity(seatingOrchestraRows));
   var addMissing=value&&statsBefore.placedUnique>0&&shortage>0
     ? confirm('참석 인원이 좌석보다 '+shortage+'명 많아집니다.\n\n확인: 부족한 좌석도 함께 추가\n취소: 참석만 반영')
     : false;
   beginSeatingEdit();
   seatingMembers.forEach(function(m){if(editableMap[m.id])seatingAttendees[m.id]=!!value;});
-  if(!value)seatingAllBoardRows().forEach(function(row){row.seats=row.seats.map(function(seat){return seat&&lockedMap[seat.memberId]?seat:null;});});
+  if(!value){
+    seatingAllBoardRows().forEach(function(row){row.seats=row.seats.map(function(seat){return seat&&lockedMap[seat.memberId]?seat:null;});});
+    seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+    seatingSpecialSlots.accompanist=seatingSpecialSlots.accompanist&&lockedMap[seatingSpecialSlots.accompanist.memberId]?seatingSpecialSlots.accompanist:null;
+    seatingSpecialSlots.staff=seatingSpecialSlots.staff.map(function(seat){return seat&&lockedMap[seat.memberId]?seat:null;});
+  }
   if(value&&seatingAutoFit&&statsBefore.placedUnique===0)fitAllEmptySeatingBoardsToAttendance();
   else if(addMissing)addMissingSeatingCapacityByBoard();
   renderSeatingMemberList();
@@ -18025,7 +18295,7 @@ function toggleSeatingAttendee(id,checked){
   }
   var targetBoard=assigned[id]?assigned[id].board:seatingBoardKeyForPart(member&&member.part);
   var boardStatsBefore=statsBefore.boards[targetBoard];
-  var shortage=checked?Math.max(0,(boardStatsBefore.attended+1)-boardStatsBefore.capacity):0;
+  var shortage=checked?Math.max(0,(boardStatsBefore.rowTarget+1)-boardStatsBefore.capacity):0;
   var addMissing=checked&&statsBefore.placedUnique>0&&shortage>0
     ? confirm(member.name+'님을 추가하면 좌석이 '+shortage+'칸 부족합니다.\n\n확인: 빈칸을 추가하고 참석 처리\n취소: 참석만 반영')
     : false;
@@ -18671,8 +18941,10 @@ function renderSeatingBoard(){
     });
     html+='</div></div>';
   }
-  html+='<div class="seating-front" style="width:'+boardWidth+'px"><span class="seating-front-note">앞쪽 / 무대 아래</span><span class="seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  if(seatingBoardTab==='choir')html+=renderSeatingSpecialArea(boardWidth,centerLeft);
+  else html+='<div class="seating-front" style="width:'+boardWidth+'px"><span class="seating-front-note">앞쪽 / 무대 아래</span><span class="seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
   board.style.minWidth=boardWidth+'px';
+  board.classList.toggle('has-specials',seatingBoardTab==='choir');
   board.innerHTML=html;
   updateSeatingZoom();
   setupSeatingBoardGestures();
@@ -18700,6 +18972,7 @@ function renderSeatingSummary(){
     +(stats.shortage>0?'<span class="seating-chip danger">부족 '+stats.shortage+'칸</span>':'<span class="seating-chip">여유 '+stats.surplus+'칸</span>')
     +(overall.unplaced!==stats.unplaced?'<span class="seating-chip '+(overall.unplaced>0?'warn':'')+'">전체 미배치 '+overall.unplaced+'명</span>':'')
     +'<span class="seating-chip '+(overall.dup>0?'warn':'')+'">중복 '+overall.dup+'명</span>'
+    +(overall.specialPlaced?'<span class="seating-chip">반주·스태프 '+overall.specialPlaced+'명</span>':'')
     +'<span class="seating-chip">파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+'</span>'
     +(seatingAttendeesLocked?'<span class="seating-chip">명단 고정</span>':'')
     +(seatingBoardTab==='choir'?'<span class="seating-chip">마이크 '+seatingMicSlots.filter(function(v){return !!v;}).length+'개</span>':'');
@@ -18785,6 +19058,23 @@ function swapSeatingSeats(rowA,colA,rowB,colB){
   renderSeatingBoard();
   showToast('자리를 바꿨습니다');
 }
+function seatingPlacementSeat(placement){
+  if(!placement)return null;
+  if(placement.specialType)return seatingGetSpecialSlot(placement.specialType,placement.specialIndex);
+  var rows=seatingRowsForBoard(placement.board);
+  var row=rows[placement.row];
+  return row&&row.seats[placement.col]||null;
+}
+function seatingSetPlacementSeat(placement,seat){
+  if(!placement)return;
+  if(placement.specialType){
+    seatingSetSpecialSlot(placement.specialType,placement.specialIndex,seat);
+    return;
+  }
+  var rows=seatingRowsForBoard(placement.board);
+  var row=rows[placement.row];
+  if(row&&placement.col>=0&&placement.col<row.seats.length)row.seats[placement.col]=normalizeSeatingSeat(seat);
+}
 function moveSeatingMemberToSeat(memberId,row,col){
   var member=seatingMembers.find(function(m){return m.id===memberId;});
   var targetRows=seatingActiveRows();
@@ -18807,11 +19097,7 @@ function moveSeatingMemberToSeat(memberId,row,col){
   if(target&&!source&&!confirm(target.name+'님이 있는 자리입니다.\n'+member.name+'님으로 바꾸고 '+target.name+'님을 미배치로 돌릴까요?'))return;
   beginSeatingEdit();
   seatingAutoFit=false;
-  if(source){
-    var sourceRows=seatingRowsForBoard(source.board);
-    var sourceRow=sourceRows[source.row];
-    if(sourceRow)sourceRow.seats[source.col]=target;
-  }
+  if(source)seatingSetPlacementSeat(source,target);
   removeSeatingMemberFromAllBoards(memberId);
   targetRow.seats[col]={memberId:member.id,name:member.name,part:member.part};
   seatingSelectedMemberId='';
@@ -18840,6 +19126,199 @@ function assignMemberToSeat(memberId,row,col,clearSelectionAfter){
   if(input){input.value='';input.placeholder='이름/파트 검색';}
   renderSeatingMemberList();
   renderSeatingBoard();
+}
+function seatingPlacementLabel(placement){
+  if(!placement)return '미배치';
+  if(placement.specialType)return seatingSpecialRoleLabel(placement.specialType,placement.specialIndex);
+  var rows=seatingRowsForBoard(placement.board);
+  var row=rows[placement.row];
+  return (placement.board==='orchestra'?'관현악':'합창')+' · '+((row&&row.label)||'줄')+' '+(Number(placement.col)+1)+'번';
+}
+function seatingSpecialCandidates(){
+  var assigned=seatingAssignedMap();
+  var q=String(seatingSpecialQuery||'').trim().toLowerCase();
+  return seatingMembers.filter(function(member){
+    if(!seatingAttendees[member.id])return false;
+    return !q||[member.name,member.part,member.subPart,member.group].join(' ').toLowerCase().indexOf(q)>-1;
+  }).sort(function(a,b){
+    var ap=assigned[a.id]?1:0,bp=assigned[b.id]?1:0;
+    if(ap!==bp)return ap-bp;
+    return String(a.name||'').localeCompare(String(b.name||''),'ko');
+  }).slice(0,80);
+}
+function openSeatingSpecialAssignment(type,index){
+  type=type==='accompanist'?'accompanist':'staff';
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  index=type==='accompanist'?0:Math.max(0,Math.min(seatingSpecialSlots.staff.length-1,parseInt(index,10)||0));
+  seatingSpecialAssignmentType=type;
+  seatingSpecialAssignmentIndex=index;
+  seatingSpecialQuery='';
+  var search=document.getElementById('seatingSpecialSearch');
+  if(search)search.value='';
+  renderSeatingSpecialAssignment();
+  openModal('modalSeatingSpecialAssignment');
+  setTimeout(function(){var input=document.getElementById('seatingSpecialSearch');if(input)input.focus();},80);
+}
+function renderSeatingSpecialAssignment(){
+  var type=seatingSpecialAssignmentType||'staff';
+  var index=seatingSpecialAssignmentIndex||0;
+  var current=seatingGetSpecialSlot(type,index);
+  var title=document.getElementById('seatingSpecialAssignmentTitle');
+  if(title)title.textContent=seatingSpecialRoleLabel(type,index)+' 배치';
+  var currentBox=document.getElementById('seatingSpecialCurrent');
+  if(currentBox)currentBox.innerHTML='<span>현재 자리</span><strong>'+escHtml(current?current.name+' · '+current.part:'비어 있음')+'</strong>';
+  var clearBtn=document.getElementById('seatingSpecialClearBtn');
+  if(clearBtn)clearBtn.disabled=!current;
+  renderSeatingSpecialCandidates();
+}
+function renderSeatingSpecialCandidates(){
+  var list=document.getElementById('seatingSpecialCandidates');if(!list)return;
+  var rows=seatingSpecialCandidates();
+  var assigned=seatingAssignedMap();
+  if(!rows.length){list.innerHTML='<div class="home-empty-row">검색된 참석 단원이 없습니다</div>';return;}
+  list.innerHTML=rows.map(function(member){
+    var placement=assigned[member.id];
+    return '<button class="seating-special-candidate" type="button" onclick="pickSeatingSpecialMember(\''+escAttr(member.id)+'\')"><span>'+escHtml(member.name)+' <small>'+escHtml(member.part+(member.subPart?' · '+member.subPart:''))+'</small></span><small>'+escHtml(seatingPlacementLabel(placement))+'</small></button>';
+  }).join('');
+}
+function pickSeatingSpecialMember(memberId){
+  moveSeatingMemberToSpecialSlot(memberId,seatingSpecialAssignmentType,seatingSpecialAssignmentIndex);
+}
+function moveSeatingMemberToSpecialSlot(memberId,type,index){
+  type=type==='accompanist'?'accompanist':'staff';
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  index=type==='accompanist'?0:parseInt(index,10);
+  if(type==='staff'&&(isNaN(index)||index<0||index>=seatingSpecialSlots.staff.length))return showToast('스태프 자리를 찾을 수 없습니다');
+  var member=seatingMembers.find(function(row){return row.id===memberId;});
+  if(!member)return showToast('단원을 찾을 수 없습니다');
+  if(!seatingAttendees[memberId])return showToast('참석 체크된 단원만 배치할 수 있습니다');
+  var assigned=seatingAssignedMap();
+  var source=assigned[memberId]||null;
+  var target=seatingGetSpecialSlot(type,index);
+  if(source&&source.specialType===type&&Number(source.specialIndex)===Number(index)){
+    seatingSelectedMemberId='';
+    closeModal('modalSeatingSpecialAssignment');
+    renderSeatingMemberList();
+    renderSeatingBoard();
+    return showToast('이미 이 역할 자리에 배치되어 있습니다');
+  }
+  if(target&&!source&&!confirm(target.name+'님이 있는 자리입니다.\n'+member.name+'님으로 바꾸고 '+target.name+'님을 미배치로 돌릴까요?'))return;
+  beginSeatingEdit();
+  seatingAutoFit=false;
+  if(source)seatingSetPlacementSeat(source,target);
+  removeSeatingMemberFromAllBoards(memberId);
+  seatingSetSpecialSlot(type,index,{memberId:member.id,name:member.name,part:member.part});
+  seatingSelectedMemberId='';
+  seatingSelectedSeat=null;
+  seatingInlineQuery='';
+  closeModal('modalSeatingSpecialAssignment');
+  if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=false;
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast(member.name+'님을 '+seatingSpecialRoleLabel(type,index)+' 자리로 배치했습니다');
+}
+function clearCurrentSeatingSpecialSlot(){
+  var type=seatingSpecialAssignmentType||'staff';
+  var index=seatingSpecialAssignmentIndex||0;
+  var current=seatingGetSpecialSlot(type,index);
+  if(!current)return;
+  if(!confirm(current.name+'님의 '+seatingSpecialRoleLabel(type,index)+' 자리를 비울까요?\n참석 상태는 유지되고 미배치 명단으로 이동합니다.'))return;
+  beginSeatingEdit();
+  seatingSetSpecialSlot(type,index,null);
+  closeModal('modalSeatingSpecialAssignment');
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast(current.name+'님의 역할 자리를 비웠습니다');
+}
+function cancelSeatingSpecialLongPress(){
+  clearTimeout(seatingSpecialPressTimer);
+  seatingSpecialPressTimer=null;
+}
+function startSeatingStaffLongPress(event,index){
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  cancelSeatingSpecialLongPress();
+  seatingSpecialPressTriggered=false;
+  seatingSpecialPressStartX=event.clientX;
+  seatingSpecialPressStartY=event.clientY;
+  seatingSpecialPressTimer=setTimeout(function(){
+    seatingSpecialPressTimer=null;
+    seatingSpecialPressTriggered=true;
+    seatingSpecialClickSuppressUntil=Date.now()+900;
+    if(navigator.vibrate)navigator.vibrate(25);
+    openSeatingStaffManage(index);
+  },560);
+}
+function moveSeatingStaffLongPress(event){
+  if(Math.abs(event.clientX-seatingSpecialPressStartX)>9||Math.abs(event.clientY-seatingSpecialPressStartY)>9)cancelSeatingSpecialLongPress();
+}
+function endSeatingStaffLongPress(){
+  cancelSeatingSpecialLongPress();
+}
+function openSeatingStaffManage(index){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  seatingStaffManageIndex=Math.max(0,Math.min(seatingSpecialSlots.staff.length-1,parseInt(index,10)||0));
+  renderSeatingStaffManage();
+  openModal('modalSeatingStaffManage');
+}
+function renderSeatingStaffManage(){
+  var current=seatingGetSpecialSlot('staff',seatingStaffManageIndex);
+  var box=document.getElementById('seatingStaffManageCurrent');
+  if(box)box.innerHTML='<span>'+escHtml(seatingSpecialRoleLabel('staff',seatingStaffManageIndex))+'</span><strong>'+escHtml(current?current.name+' · '+current.part:'비어 있음')+'</strong>';
+  var removeBtn=document.getElementById('seatingStaffRemoveBtn');
+  if(removeBtn){removeBtn.disabled=seatingSpecialSlots.staff.length<=1;removeBtn.title=removeBtn.disabled?'기본 빈 자리 하나는 유지됩니다':'';}
+}
+function addSeatingStaffSlot(){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  if(seatingSpecialSlots.staff.length>=12)return showToast('스태프 자리는 최대 12개까지 추가할 수 있습니다');
+  beginSeatingEdit();
+  seatingSpecialSlots.staff.splice(seatingStaffManageIndex+1,0,null);
+  seatingStaffManageIndex++;
+  renderSeatingBoard();
+  renderSeatingStaffManage();
+  showToast('스태프 자리를 추가했습니다');
+}
+function removeSeatingStaffSlot(){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  if(seatingSpecialSlots.staff.length<=1)return showToast('기본 빈 자리 하나는 유지됩니다');
+  var current=seatingGetSpecialSlot('staff',seatingStaffManageIndex);
+  if(current&&!confirm(current.name+'님의 스태프 자리를 제거할까요?\n참석 상태는 유지되고 미배치 명단으로 이동합니다.'))return;
+  beginSeatingEdit();
+  seatingSpecialSlots.staff.splice(seatingStaffManageIndex,1);
+  closeModal('modalSeatingStaffManage');
+  renderSeatingMemberList();
+  renderSeatingBoard();
+  showToast('스태프 자리를 제거했습니다');
+}
+function handleSeatingSpecialSlotClick(type,index){
+  if(Date.now()<seatingSpecialClickSuppressUntil||seatingSpecialPressTriggered){seatingSpecialPressTriggered=false;return;}
+  if(seatingSelectedMemberId){
+    moveSeatingMemberToSpecialSlot(seatingSelectedMemberId,type,index);
+    return;
+  }
+  openSeatingSpecialAssignment(type,index);
+}
+function handleSeatingStaffContextMenu(event,index){
+  event.preventDefault();
+  event.stopPropagation();
+  seatingSpecialClickSuppressUntil=Date.now()+600;
+  openSeatingStaffManage(index);
+}
+function renderSeatingSpecialArea(boardWidth,centerLeft){
+  seatingSpecialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
+  var accompanist=seatingSpecialSlots.accompanist;
+  var pianoLeft=Math.max(130,centerLeft-150);
+  var pianoReady=!accompanist&&seatingSelectedMemberId?' ready':'';
+  var html='<div class="seating-accompanist-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">반주</span>'
+    +'<button type="button" class="seating-piano-slot seating-special-slot '+(accompanist?'filled':'')+pianoReady+'" style="left:'+pianoLeft+'px" onclick="handleSeatingSpecialSlotClick(\'accompanist\',0)" title="반주자 자리 · 눌러 배치">'
+    +'<span class="seating-piano-scene" aria-hidden="true"><span class="seating-piano-player"></span><span class="seating-piano-body"><span class="seating-piano-keys"></span></span></span>'
+    +'<span class="seating-special-copy"><b>'+escHtml(accompanist?accompanist.name:'빈칸')+'</b><small>반주자</small></span></button></div>';
+  html+='<div class="seating-front" style="width:'+boardWidth+'px"><span class="seating-front-note">앞쪽 / 무대 아래</span><span class="seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  html+='<div class="seating-staff-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">스태프</span><div class="seating-staff-slots">';
+  seatingSpecialSlots.staff.forEach(function(seat,index){
+    var ready=!seat&&seatingSelectedMemberId?' ready':'';
+    html+='<button type="button" class="seating-staff-slot seating-special-slot '+(seat?'filled':'')+ready+'" onpointerdown="startSeatingStaffLongPress(event,'+index+')" onpointermove="moveSeatingStaffLongPress(event)" onpointerup="endSeatingStaffLongPress()" onpointercancel="endSeatingStaffLongPress()" onpointerleave="endSeatingStaffLongPress()" oncontextmenu="handleSeatingStaffContextMenu(event,'+index+')" onclick="handleSeatingSpecialSlotClick(\'staff\','+index+')" title="눌러 단원 배치 · 길게 눌러 자리 추가/제거"><span class="seating-staff-person" aria-hidden="true"></span><span class="seating-special-copy"><b>'+escHtml(seat?seat.name:'빈칸')+'</b><small>스태프 '+(index+1)+'</small></span></button>';
+  });
+  return html+'</div><span class="seating-special-hold-hint">길게 눌러 자리 관리</span></div>';
 }
 function clearSelectedSeat(){
   if(!seatingSelectedSeat)return showToast('비울 자리를 먼저 선택해주세요');
@@ -19073,10 +19552,10 @@ function toggleSeatingFullscreen(){
   if(on)maybeShowSeatingWorkspaceHelp();
 }
 function renderSeatingPublishBoardPreview(plan){
-  var boards=[{label:'합창',rows:normalizeSeatingRows(plan&&plan.rows)}];
+  var boards=[{label:'합창',key:'choir',rows:normalizeSeatingRows(plan&&plan.rows)}];
   var orchestraRows=normalizeOrchestraSeatingRows(plan&&plan.orchestraRows||[]);
   var orchestraPlaced=orchestraRows.some(function(row){return row.seats.some(function(seat){return !!seat;});});
-  if(orchestraPlaced)boards.push({label:'관현악',rows:orchestraRows});
+  if(orchestraPlaced)boards.push({label:'관현악',key:'orchestra',rows:orchestraRows});
   return boards.map(function(board){
     var rows=board.rows;
     var maxSeats=publicSeatingMaxSeatCount(rows);
@@ -19095,7 +19574,8 @@ function renderSeatingPublishBoardPreview(plan){
       });
       html+='</div></div>';
     });
-    html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+    if(board.key==='choir'&&publicSeatingSpecialSeatList(plan).length)html+=renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,'');
+    else html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
     return html+'</div></div>';
   }).join('');
 }
@@ -19142,11 +19622,12 @@ function buildPublishedSeatingPlanData(){
     rows:cloneSeatingValue(seatingRows),
     orchestraRows:cloneSeatingValue(seatingOrchestraRows),
     micSlots:cloneSeatingValue(normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount(seatingRows))),
+    specialSlots:cloneSeatingValue(normalizeSeatingSpecialSlots(seatingSpecialSlots)),
     stats:{attended:stats.attended,placed:stats.placedUnique,unplaced:stats.unplaced,duplicate:stats.dup,capacity:stats.capacity,shortage:stats.shortage,empty:stats.empty},
     publishedAt:now,
     publishedBy:currentActorName(),
     publishedById:currentActorId(),
-    version:2
+    version:3
   };
 }
 function publishSeatingPlan(previewData){
@@ -19295,8 +19776,9 @@ function saveSeatingPlan(options){
     rows:cloneSeatingValue(seatingRows),
     orchestraRows:cloneSeatingValue(seatingOrchestraRows),
     micSlots:cloneSeatingValue(seatingMicSlots),
+    specialSlots:cloneSeatingValue(normalizeSeatingSpecialSlots(seatingSpecialSlots)),
     history:[historyEntry].concat(Array.isArray(previousHistory)?previousHistory:[]).slice(0,20),
-    storageVersion:3,
+    storageVersion:4,
     createdAt:(existingPlan&&!forceNew&&existingPlan.createdAt)||now,
     createdBy:(existingPlan&&!forceNew&&existingPlan.createdBy)||actor,
     updatedAt:now,
