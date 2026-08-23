@@ -451,7 +451,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   .seating-tool{grid-template-columns:1fr}
   .seating-member-list{max-height:260px}
 }
-.seating-fullscreen-bar,.seating-workspace-nav,.seating-placement-status,.seating-mode-actions,.seating-panel-toggle,.seating-settings-actions,.seating-attendance-batchbar{display:none}
+.seating-fullscreen-bar,.seating-workspace-nav,.seating-placement-status,.seating-mode-actions,.seating-panel-dock-toggle,.seating-settings-actions,.seating-attendance-batchbar{display:none}
 .seating-fullscreen-bar{align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--sf);box-shadow:var(--sh)}
 .seating-fullscreen-title{min-width:0;display:flex;align-items:center;gap:8px}
 .seating-fullscreen-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:950;color:var(--tx)}
@@ -459,25 +459,28 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .seating-save-state.dirty{background:#FFF0C9;color:#7A5200}
 .dark .seating-save-state.dirty{background:#3A2D18;color:#E9C574}
 .seating-fullscreen-actions{display:flex;align-items:center;gap:5px;flex:none}
-.seating-workspace-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--bd);border-radius:10px;background:var(--sf)}
+.seating-workspace-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border:1px solid var(--bd);border-radius:10px;background:var(--sf)}
 .seating-workspace-tab{border:0;border-radius:7px;background:transparent;color:var(--ts);padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer}
 .seating-workspace-tab.on{background:var(--p);color:#fff;box-shadow:0 2px 8px rgba(65,76,40,.16)}
 .seating-settings-actions{align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 7px;padding:7px;border:1px solid var(--bd);border-radius:10px;background:var(--sf)}
 .seating-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .seating-panel-title{font-size:14px;font-weight:950;color:var(--tx)}
 .seating-panel-head-actions{display:flex;align-items:center;gap:5px}
-.seating-panel-toggle{border:1px solid var(--bd);background:var(--bg);color:var(--ts);width:32px;height:32px;border-radius:7px;font-size:16px;font-weight:900;cursor:pointer;align-items:center;justify-content:center}
+.seating-panel-dock-toggle{flex:0 0 32px;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--pd);font-size:21px;font-weight:900;line-height:1;cursor:pointer}
 .seating-member-panel-body{min-height:0}
 .seating-placement-status{align-items:center;justify-content:space-between;gap:8px;min-height:40px;margin:0 0 7px;padding:8px 10px;border:1px solid #C8D2B8;border-radius:8px;background:#F1F5E8;color:#44522F;font-size:12px;font-weight:850;line-height:1.35}
+.seating-placement-status.idle{display:none!important}
 .seating-placement-status.active{border-color:var(--p);background:var(--pl);color:var(--pd)}
 .seating-placement-status-main{display:flex;align-items:center;gap:8px;min-width:0}
 .seating-placement-status-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seating-placement-status-dot{width:8px;height:8px;border-radius:50%;background:var(--p);box-shadow:0 0 0 4px rgba(111,130,78,.14);flex:none}
 .seating-placement-status-actions{display:flex;align-items:center;gap:4px;flex:none}
 .dark .seating-placement-status{border-color:#526044;background:#283120;color:#DCE8CE}
-.seating-mode-actions{align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 7px}
+.seating-mode-actions{align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin:0 0 7px;padding-bottom:2px}
+.seating-mode-actions>*{flex:0 0 auto}
 .seating-mode-actions .btn{padding:7px 9px;font-size:11px}
-.seating-queue-actions,.seating-edit-actions{display:none;align-items:center;gap:5px;flex-wrap:wrap}
+.seating-mode-place-actions,.seating-queue-actions,.seating-edit-actions{display:none;align-items:center;gap:5px;flex-wrap:nowrap;flex:0 0 auto}
+.seating-edit-actions{padding-left:6px;border-left:1px solid var(--bd)}
 .seating-attendance-batchbar{align-items:center;justify-content:space-between;gap:6px;margin:0 0 7px;padding:7px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--sf)}
 .seating-attendance-batchbar-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .seating-attendance-batch-count{font-size:11px;font-weight:900;color:var(--ts);white-space:nowrap}
@@ -511,7 +514,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-tool{display:grid;grid-template-columns:minmax(250px,29%) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:7px;min-height:0;overflow:hidden}
 #subSeatingPlan.seating-fullscreen .seating-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:8px;box-shadow:none}
 #subSeatingPlan.seating-fullscreen .seating-panel>div:first-child{display:flex!important}
-#subSeatingPlan.seating-fullscreen .seating-panel-toggle{display:none}
+#subSeatingPlan.seating-fullscreen .seating-panel-dock-toggle{display:inline-flex}
 #subSeatingPlan.seating-fullscreen .seating-member-panel-body{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 #subSeatingPlan.seating-fullscreen .seating-member-search,#subSeatingPlan.seating-fullscreen .seating-part-filter,#subSeatingPlan.seating-fullscreen .seating-filter-result,#subSeatingPlan.seating-fullscreen .seating-attendance-batchbar,#subSeatingPlan.seating-fullscreen .seating-paint-status{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-help-note{display:none}
@@ -522,16 +525,15 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-member{min-height:42px;padding:8px 9px;border-right:0}
 #subSeatingPlan.seating-fullscreen .seating-filter-result{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:2;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:8px;box-shadow:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-panel{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-stage-card{grid-column:1/-1}
+#subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{display:none}
+#subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-stage-card{grid-column:1/-1}
 #subSeatingPlan.seating-fullscreen .seating-placement-status{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-mode-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-mode-place-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-queue-actions{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-edit-actions{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-mode-actions{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-mode-place-actions,#subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-queue-actions{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-edit-actions{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-edit-actions{display:flex}
+#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-mode-place-actions,#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-queue-actions{display:none}
+#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-edit-actions{padding-left:0;border-left:0}
 #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-attendance-batchbar{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-direct-attendance-actions{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{display:flex;flex:0 0 auto;margin-bottom:5px}
@@ -549,11 +551,6 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
   #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:1;grid-row:1}
   #subSeatingPlan.seating-fullscreen .seating-panel{grid-column:1;grid-row:2;max-height:var(--seating-member-panel-height,32dvh)}
-  #subSeatingPlan.seating-fullscreen .seating-panel-toggle{display:inline-flex}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-panel-toggle{display:none}
-  #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{max-height:48px}
-  #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-member-panel-body{display:none}
-  #subSeatingPlan.seating-fullscreen.seating-mode-edit .seating-stage-card{grid-column:1;grid-row:1/-1}
   #subSeatingPlan.seating-fullscreen .seating-board-size-control input,#subSeatingPlan.seating-fullscreen .seating-zoom-control input{width:min(22vw,110px)}
 }
 @media(max-width:520px){
@@ -576,6 +573,9 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-stage-card{grid-row:1;min-height:0}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-panel{grid-row:2;min-height:0;max-height:none}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-board-scroll{touch-action:pan-y}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed{overflow:hidden;grid-template-rows:auto auto minmax(0,1fr)}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-tool{height:auto;grid-template-rows:minmax(0,1fr);min-height:0;overflow:hidden}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-board-scroll{touch-action:none}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -3053,7 +3053,6 @@ body{font-weight:500}
     <div class="seating-workspace-nav" role="tablist" aria-label="자리배치 작업 모드">
       <button class="seating-workspace-tab on" type="button" id="seatingModePlaceBtn" onclick="setSeatingWorkspaceMode('place')">배치</button>
       <button class="seating-workspace-tab" type="button" id="seatingModeAttendanceBtn" onclick="setSeatingWorkspaceMode('attendance')">참석</button>
-      <button class="seating-workspace-tab" type="button" id="seatingModeEditBtn" onclick="setSeatingWorkspaceMode('edit')">편집</button>
     </div>
     <div class="seating-plan-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">저장된 배치</label><select class="form-sel" id="seatingPlanSelect" onchange="selectSeatingPlan(this.value)"><option value="">새 배치 만들기</option></select></div>
@@ -3076,7 +3075,7 @@ body{font-weight:500}
       <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
     </div>
     <div class="seating-tool">
-      <aside class="seating-panel">
+      <aside class="seating-panel" id="seatingMemberPanel">
         <div class="seating-panel-head">
           <div class="seating-panel-title" id="seatingMemberPanelTitle">참석 단원</div>
           <div class="seating-panel-head-actions">
@@ -3084,7 +3083,6 @@ body{font-weight:500}
             <button class="btn btn-sm" id="seatingMarkAllBtn" style="background:var(--pl);color:var(--pd)" onclick="markAllSeatingAttendees(true)">전체</button>
             <button class="btn btn-sm" id="seatingClearAllBtn" style="background:var(--bg);color:var(--ts)" onclick="markAllSeatingAttendees(false)">해제</button>
             </div>
-            <button class="seating-panel-toggle" type="button" id="seatingPanelToggleBtn" onclick="toggleSeatingMemberPanel()" aria-label="명단 접기">⌄</button>
           </div>
         </div>
         <div class="seating-member-panel-body">
@@ -3119,6 +3117,7 @@ body{font-weight:500}
           <button type="button" class="seating-board-tab" id="seatingBoardTabOrchestra" onclick="setSeatingBoardTab('orchestra')">관현악<span class="seating-board-tab-count" id="seatingBoardTabOrchestraCount"></span></button>
         </div>
         <div class="seating-stage-head">
+          <button class="seating-panel-dock-toggle" type="button" id="seatingPanelDockToggleBtn" onclick="toggleSeatingMemberPanel()" aria-controls="seatingMemberPanel" aria-expanded="true" aria-label="왼쪽 명단 접기" title="왼쪽 명단 접기">‹</button>
           <div class="seating-stage-title">
             <div class="seating-board-title" id="seatingBoardTitle">전체 합창 배치도</div>
             <div class="seating-stage-subtitle">빈칸 선택 후 이름을 검색해 누르거나, 단원을 먼저 누른 뒤 셀을 선택하세요.</div>
@@ -3739,11 +3738,11 @@ body{font-weight:500}
 <div class="modal-overlay modal-center seating-workspace-help-modal" id="modalSeatingWorkspaceHelp">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">자리배치 시작하기</span><button class="modal-close" onclick="closeModal('modalSeatingWorkspaceHelp')">✕</button></div>
-    <p class="seating-help-lead">상단의 작업 모드를 고르면 필요한 기능만 표시됩니다.</p>
-    <div class="seating-help-step"><b class="seating-help-index">1</b><div><strong>배치</strong><span>명단에서 단원을 누르고 배치도의 빈칸을 누릅니다.</span></div></div>
-    <div class="seating-help-step"><b class="seating-help-index">2</b><div><strong>참석</strong><span>여러 명을 선택해 참석 또는 미참석을 한 번에 적용합니다.</span></div></div>
-    <div class="seating-help-step"><b class="seating-help-index">3</b><div><strong>편집</strong><span>칸이나 줄을 선택해 추가, 제거, 이동합니다.</span></div></div>
-    <div class="seating-help-tip">여러 명을 연속 배치하려면 배치 모드의 <b>여러 명 선택</b>을 사용하세요.</div>
+    <p class="seating-help-lead">배치와 참석을 오가며 같은 배치도에서 바로 작업합니다.</p>
+    <div class="seating-help-step"><b class="seating-help-index">1</b><div><strong>배치</strong><span>명단에서 단원을 누르거나 빈칸을 눌러 바로 배치합니다.</span></div></div>
+    <div class="seating-help-step"><b class="seating-help-index">2</b><div><strong>참석</strong><span>여러 명의 참석 여부를 정리하면서 필요한 자리도 함께 조정합니다.</span></div></div>
+    <div class="seating-help-step"><b class="seating-help-index">3</b><div><strong>공통 도구</strong><span>칸이나 줄을 선택한 뒤 추가, 제거, 이동 도구를 사용합니다.</span></div></div>
+    <div class="seating-help-tip">왼쪽 명단은 배치도 제목 옆의 화살표로 접고 펼칠 수 있습니다.</div>
     <button class="btn btn-p btn-bl" type="button" onclick="closeModal('modalSeatingWorkspaceHelp')">배치 시작</button>
   </div>
 </div>
@@ -4203,7 +4202,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.4';
+var APP_RELEASE_VERSION='26.08.23.5';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18056,6 +18055,7 @@ function isSeatingFullscreenWorkspace(){
 function seatingUsesPortraitAttendanceScroll(){
   return isSeatingFullscreenWorkspace()
     &&seatingWorkspaceMode==='attendance'
+    &&!seatingMemberPanelCollapsed
     &&!!(window.matchMedia&&window.matchMedia('(max-width:520px) and (orientation:portrait)').matches);
 }
 function seatingUsesStackedWorkspace(){
@@ -18076,7 +18076,8 @@ function seatingWorkspacePlanTitle(){
 }
 function renderSeatingWorkspaceShell(){
   var sub=document.getElementById('subSeatingPlan');if(!sub)return;
-  ['place','attendance','edit'].forEach(function(mode){
+  if(['place','attendance'].indexOf(seatingWorkspaceMode)===-1)seatingWorkspaceMode='place';
+  ['place','attendance'].forEach(function(mode){
     sub.classList.toggle('seating-mode-'+mode,seatingWorkspaceMode===mode);
     var btn=document.getElementById('seatingMode'+mode.charAt(0).toUpperCase()+mode.slice(1)+'Btn');
     if(btn)btn.classList.toggle('on',seatingWorkspaceMode===mode);
@@ -18091,17 +18092,19 @@ function renderSeatingWorkspaceShell(){
   if(settingsBtn)settingsBtn.textContent=seatingSettingsOpen?'설정 닫기':'설정';
   var panelTitle=document.getElementById('seatingMemberPanelTitle');
   if(panelTitle)panelTitle.textContent=seatingWorkspaceMode==='attendance'?'참석 명단':'배치할 단원';
-  var panelBtn=document.getElementById('seatingPanelToggleBtn');
+  var panelBtn=document.getElementById('seatingPanelDockToggleBtn');
   if(panelBtn){
-    panelBtn.textContent=seatingMemberPanelCollapsed?'⌃':'⌄';
-    panelBtn.setAttribute('aria-label',seatingMemberPanelCollapsed?'명단 펼치기':'명단 접기');
+    panelBtn.textContent=seatingMemberPanelCollapsed?'›':'‹';
+    panelBtn.setAttribute('aria-expanded',String(!seatingMemberPanelCollapsed));
+    panelBtn.setAttribute('aria-label',seatingMemberPanelCollapsed?'왼쪽 명단 펼치기':'왼쪽 명단 접기');
+    panelBtn.title=seatingMemberPanelCollapsed?'왼쪽 명단 펼치기':'왼쪽 명단 접기';
   }
   renderSeatingAttendanceBatchBar();
   renderSeatingQueueControls();
   renderSeatingPlacementStatus();
 }
 function setSeatingWorkspaceMode(mode){
-  if(['place','attendance','edit'].indexOf(mode)===-1)return;
+  if(['place','attendance'].indexOf(mode)===-1)return;
   if(mode!==seatingWorkspaceMode){
     if(seatingPlacementQueueSelecting||seatingPlacementQueueActive||seatingPlacementQueueCompleted.length)stopSeatingPlacementQueue(true);
     seatingAttendanceBatchSelected={};
@@ -18137,11 +18140,11 @@ function toggleSeatingMemberPanel(){
 }
 function showSeatingWorkspaceHelp(auto){
   openModal('modalSeatingWorkspaceHelp');
-  if(auto){try{localStorage.setItem('choir_seating_workspace_help_v1','1');}catch(e){}}
+  if(auto){try{localStorage.setItem('choir_seating_workspace_help_v2','1');}catch(e){}}
 }
 function maybeShowSeatingWorkspaceHelp(){
   try{
-    if(localStorage.getItem('choir_seating_workspace_help_v1')==='1')return;
+    if(localStorage.getItem('choir_seating_workspace_help_v2')==='1')return;
     setTimeout(function(){showSeatingWorkspaceHelp(true);},250);
   }catch(e){}
 }
@@ -18157,15 +18160,11 @@ function renderSeatingPlacementStatus(){
   var box=document.getElementById('seatingPlacementStatus');if(!box)return;
   var text='', active=false, actions='';
   if(seatingWorkspaceMode==='attendance'){
-    text='명단에서 여러 명을 선택한 뒤 참석 또는 미참석을 적용하세요.';
-  }else if(seatingWorkspaceMode==='edit'){
-    if(seatingSelectedSeat){
-      var editRows=seatingActiveRows(), editRow=editRows[seatingSelectedSeat.row];
-      text=(editRow?editRow.label:'선택한 줄')+' · '+(seatingSelectedSeat.col+1)+'번째 칸 선택됨';
-      active=true;
-      actions='<button class="btn seating-btn-soft" type="button" onclick="cancelSeatingWorkspaceSelection()">선택 취소</button>';
-    }else text='수정할 칸을 먼저 누른 뒤 아래 편집 도구를 사용하세요.';
-  }else if(seatingPlacementQueueSelecting){
+    box.classList.add('idle');
+    box.innerHTML='';
+    return;
+  }
+  if(seatingPlacementQueueSelecting){
     text='배치할 단원을 원하는 순서대로 선택하세요 · '+seatingPlacementQueue.length+'명';
     active=seatingPlacementQueue.length>0;
   }else if(seatingPlacementQueueActive){
@@ -18187,9 +18186,9 @@ function renderSeatingPlacementStatus(){
     text=seat?(seat.name+' 자리 선택됨 · 옮길 자리를 누르세요.'):'빈칸 선택됨 · 명단에서 단원을 선택하세요.';
     active=true;
     actions='<button class="btn seating-btn-soft" type="button" onclick="cancelSeatingWorkspaceSelection()">취소</button>';
-  }else{
-    text='명단에서 단원을 선택한 뒤 배치도의 빈칸을 누르세요.';
   }
+  box.classList.toggle('idle',!text);
+  if(!text){box.innerHTML='';return;}
   box.classList.toggle('active',active);
   box.innerHTML='<span class="seating-placement-status-main"><span class="seating-placement-status-dot"></span><strong>'+escHtml(text)+'</strong></span>'+(actions?'<span class="seating-placement-status-actions">'+actions+'</span>':'');
 }
