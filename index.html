@@ -562,6 +562,13 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen .seating-mode-actions>*{flex:0 0 auto}
   .seating-placement-status{font-size:11px;padding:7px 8px}
 }
+@media(max-width:520px) and (orientation:portrait){
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance{overflow-y:auto;grid-template-rows:auto auto auto}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-tool{grid-template-rows:clamp(320px,52dvh,520px) clamp(480px,68dvh,680px);min-height:auto;overflow:visible}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-stage-card{grid-row:1;min-height:0}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-panel{grid-row:2;min-height:0;max-height:none}
+  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-board-scroll{touch-action:pan-y}
+}
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .handbook-extra summary::-webkit-details-marker{display:none}
@@ -4183,7 +4190,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.22.4';
+var APP_RELEASE_VERSION='26.08.23.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18033,6 +18040,11 @@ function isSeatingFullscreenWorkspace(){
   var sub=document.getElementById('subSeatingPlan');
   return !!(sub&&sub.classList.contains('seating-fullscreen'));
 }
+function seatingUsesPortraitAttendanceScroll(){
+  return isSeatingFullscreenWorkspace()
+    &&seatingWorkspaceMode==='attendance'
+    &&!!(window.matchMedia&&window.matchMedia('(max-width:520px) and (orientation:portrait)').matches);
+}
 function seatingUsesStackedWorkspace(){
   return isSeatingFullscreenWorkspace()&&!!(window.matchMedia&&window.matchMedia('(max-width:899px)').matches);
 }
@@ -18945,6 +18957,13 @@ function setupSeatingBoardGestures(){
   scroller.setAttribute('tabindex','0');
   scroller.addEventListener('touchstart',function(e){
     if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
+    if(seatingUsesPortraitAttendanceScroll()&&e.touches.length===1){
+      var attendanceSub=document.getElementById('subSeatingPlan');
+      seatingTouchPanning=true;
+      seatingPanStartY=e.touches[0].clientY;
+      seatingPanScrollTop=attendanceSub?attendanceSub.scrollTop:0;
+      return;
+    }
     if(e.touches.length===1){
       seatingTouchPanning=true;
       seatingPanStartX=e.touches[0].clientX;
@@ -18960,6 +18979,12 @@ function setupSeatingBoardGestures(){
   },{passive:false});
   scroller.addEventListener('touchmove',function(e){
     if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
+    if(seatingUsesPortraitAttendanceScroll()&&e.touches.length===1&&seatingTouchPanning){
+      var attendanceSub=document.getElementById('subSeatingPlan');
+      e.preventDefault();
+      if(attendanceSub)attendanceSub.scrollTop=seatingPanScrollTop+(seatingPanStartY-e.touches[0].clientY);
+      return;
+    }
     if(e.touches.length===2&&seatingPinchStartDist>0){
       e.preventDefault();
       var next=seatingPinchStartZoom*(seatingTouchDistance(e.touches)/seatingPinchStartDist);
