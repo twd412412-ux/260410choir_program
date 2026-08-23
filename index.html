@@ -368,8 +368,7 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-seat.part-T1{background:#8FC27C}
 .seating-seat.part-T2{background:#EDB34B}
 .seating-seat.part-etc{background:#D8CDB8}
-.seating-seat.highlighted{border-color:#875A08;box-shadow:inset 0 0 0 3px #FFF2A8,0 0 0 2px rgba(135,90,8,.58)}
-.seating-seat.highlighted::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#875A08;box-shadow:0 0 0 2px rgba(255,253,248,.82)}
+.seating-seat.highlighted{z-index:2;background:#FFF06A!important;color:#202018!important;border:2px solid #4F5D34;box-shadow:0 0 0 3px rgba(255,214,46,.48),0 4px 10px rgba(79,93,52,.22);transform:translateY(-1px)}
 .seating-seat.selected{outline:3px solid var(--p);outline-offset:1px}
 .seating-seat.multi-selected{outline:3px solid #2563EB;outline-offset:1px}
 .seating-seat.multi-selected::before{content:'✓';position:absolute;top:1px;left:2px;color:#1D4ED8;font-size:9px;font-weight:950;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.9)}
@@ -2596,8 +2595,9 @@ body{font-weight:500}
 .public-seating-seat.part-T1{background:#8FC27C}
 .public-seating-seat.part-T2{background:#EDB34B}
 .public-seating-seat.part-etc{background:#D8CDB8}
-.public-seating-seat.highlighted{border-color:#875A08;box-shadow:inset 0 0 0 3px #FFF2A8,0 0 0 2px rgba(135,90,8,.58)}
-.public-seating-seat.highlighted::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#875A08;box-shadow:0 0 0 2px rgba(255,253,248,.82)}
+.public-seating-seat.highlighted{z-index:2;background:#FFF06A!important;color:#202018!important;border:2px solid #4F5D34;box-shadow:0 0 0 3px rgba(255,214,46,.5),0 4px 10px rgba(79,93,52,.2);transform:translateY(-1px)}
+.public-seating-highlight-note{display:flex;align-items:center;gap:7px;margin:-2px 0 10px;color:#5C5225;font-size:11px;font-weight:850}
+.public-seating-highlight-swatch{width:17px;height:13px;border:2px solid #4F5D34;border-radius:3px;background:#FFF06A;box-shadow:0 0 0 2px rgba(255,214,46,.35);flex:none}
 .public-seating-seat.dim{opacity:.26}
 .public-seating-seat.match{outline:3px solid #7C571E;outline-offset:1px}
 .public-seating-seat.mine{outline:3px solid #2563EB;outline-offset:1px;box-shadow:0 0 0 5px rgba(37,99,235,.14)}
@@ -4306,7 +4306,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.10';
+var APP_RELEASE_VERSION='26.08.23.11';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7706,6 +7706,7 @@ function renderPublicSeatingModalBody(){
     else if(publicSeatingBoardTab==='orchestra'&&!orchestraMatch&&choirMatch)publicSeatingBoardTab='choir';
   }
   var rows=publicSeatingBoardTab==='orchestra'?(Array.isArray(plan.orchestraRows)?plan.orchestraRows:[]):(Array.isArray(plan.rows)?plan.rows:[]);
+  var highlightedCount=rows.reduce(function(total,row){return total+(row.seats||[]).filter(function(seat){return !!(seat&&seat.highlight);}).length;},0);
   var mine=findPublicSeatingMine(plan);
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var centerLeft=seatingLeadWidth()+(maxSeats*seatingSeatPitch()/2);
@@ -7726,7 +7727,8 @@ function renderPublicSeatingModalBody(){
     +'<span class="public-seating-pill">배치 '+stats.placed+'명</span>'
     +'</div>'
     +(publishedText?'<div class="public-seating-published">최신 공개본 · '+escHtml(publishedText)+' 공개</div>':'')
-    +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
+    +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
+    +(highlightedCount?'<div class="public-seating-highlight-note"><span class="public-seating-highlight-swatch" aria-hidden="true"></span>금색 좌석은 강조 표시된 자리입니다.</div>':'');
   if(stats.boards.orchestra.placed){
     html+='<div class="public-seating-board-tabs" aria-label="배치도 선택">'
       +'<button type="button" class="public-seating-board-tab '+(publicSeatingBoardTab==='choir'?'on':'')+'" onclick="setPublicSeatingBoardTab(\'choir\')">합창 '+stats.boards.choir.placed+'명</button>'
@@ -18019,17 +18021,11 @@ function downloadSeatingImage(includeSpecial){
     row.seats.forEach(function(seat,c){
       var x=leftPad+labelW+countW+offset+c*(seatW+gap);
       seatingDrawRoundRect(ctx,x,y,seatW,seatH,7);
-      ctx.fillStyle=seat?seatingPartFillColor(seat.part):'#FFFDF8';
+      ctx.fillStyle=seat?(seat.highlight?'#FFF06A':seatingPartFillColor(seat.part)):'#FFFDF8';
       ctx.fill();
-      ctx.strokeStyle=seat&&seat.highlight?'#875A08':'#B7B09E';
+      ctx.strokeStyle=seat&&seat.highlight?'#4F5D34':'#B7B09E';
       ctx.lineWidth=seat&&seat.highlight?3:1;
       ctx.stroke();
-      if(seat&&seat.highlight){
-        ctx.beginPath();
-        ctx.arc(x+seatW-8,y+8,4,0,Math.PI*2);
-        ctx.fillStyle='#875A08';
-        ctx.fill();
-      }
       ctx.fillStyle=seat?'#202018':'#B7B09E';
       ctx.font='900 16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign='center';
