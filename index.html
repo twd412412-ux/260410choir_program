@@ -2562,11 +2562,23 @@ body{font-weight:500}
   .rehearsal-current{min-height:300px;padding:22px 16px}
   .rehearsal-current-title{font-size:27px}
 }
-.home-seating-card{cursor:pointer}
+.home-seating-card{cursor:default}
+.home-seating-primary{display:block;width:100%;border:0;background:transparent;color:inherit;padding:0;text-align:left;font:inherit;cursor:pointer}
 .home-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .home-seating-pill{font-size:11px;font-weight:750;background:#EAEFDF;color:#4E5A35;border:1px solid #C8D0B9;border-radius:999px;padding:4px 8px}
 .home-seating-published{display:flex;align-items:center;gap:6px;margin-top:9px;color:#687052;font-size:10.5px;font-weight:800}
 .home-seating-published:before{content:'';width:6px;height:6px;border-radius:50%;background:#74864B;box-shadow:0 0 0 3px rgba(116,134,75,.12)}
+.home-seating-stack{margin-top:12px;border-top:1px solid var(--bd)}
+.home-seating-stack summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 1px 2px;list-style:none;color:var(--pd);font-size:12px;font-weight:900;cursor:pointer}
+.home-seating-stack summary::-webkit-details-marker{display:none}
+.home-seating-stack summary:after{content:'펼치기 〉';font-size:10.5px;color:var(--ts)}
+.home-seating-stack[open] summary:after{content:'접기 ﹀'}
+.home-seating-stack-list{display:grid;gap:6px;margin-top:9px}
+.home-seating-stack-item{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);padding:10px 11px;text-align:left;font:inherit;cursor:pointer}
+.home-seating-stack-copy{min-width:0}
+.home-seating-stack-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:900}
+.home-seating-stack-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;color:var(--ts);font-size:10.5px;font-weight:700}
+.home-seating-stack-time{color:var(--ts);font-size:10px;font-weight:800;white-space:nowrap}
 .public-seating-modal .modal-content{max-width:min(1120px,96vw);max-height:92vh}
 .public-seating-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .public-seating-search{width:100%;border:1.5px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:14px;font-weight:760;padding:11px 12px;outline:none;min-width:0}
@@ -2575,7 +2587,20 @@ body{font-weight:500}
 .public-seating-zoom-label{min-width:42px;text-align:center;font-size:12px;font-weight:900;color:var(--ts)}
 .public-seating-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .public-seating-pill{font-size:11px;font-weight:850;background:var(--bg);border:1px solid var(--bd);border-radius:999px;color:var(--ts);padding:5px 8px}
-.public-seating-published{display:flex;align-items:center;gap:6px;margin:-2px 0 10px;padding:8px 10px;border-left:3px solid var(--p);background:var(--pl);color:var(--pd);font-size:11px;font-weight:850}
+.public-seating-published{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 10px;padding:8px 10px;border-left:3px solid var(--p);background:var(--pl);color:var(--pd);font-size:11px;font-weight:850}
+.public-seating-unpublish{border:0;border-radius:7px;background:#F3E2DE;color:#9A4C45;padding:5px 8px;font:inherit;font-size:10.5px;font-weight:900;white-space:nowrap;cursor:pointer}
+.dark .public-seating-unpublish{background:#4A2A27;color:#F2C7C1}
+.public-seating-plan-stack{margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);overflow:hidden}
+.public-seating-plan-stack summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;list-style:none;color:var(--tx);font-size:12px;font-weight:900;cursor:pointer}
+.public-seating-plan-stack summary::-webkit-details-marker{display:none}
+.public-seating-plan-stack summary span:last-child{color:var(--pd);font-size:10.5px;white-space:nowrap}
+.public-seating-plan-list{display:grid;gap:1px;border-top:1px solid var(--bd);background:var(--bd)}
+.public-seating-plan-item{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:0;background:var(--sf);color:var(--tx);padding:10px 11px;text-align:left;font:inherit;cursor:pointer}
+.public-seating-plan-item.active{background:var(--pl);color:var(--pd)}
+.public-seating-plan-item-copy{min-width:0}
+.public-seating-plan-item-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:900}
+.public-seating-plan-item-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;color:var(--ts);font-size:10px;font-weight:750}
+.public-seating-plan-item-time{color:var(--ts);font-size:10px;font-weight:800;white-space:nowrap}
 .public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
 .public-seating-board-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
 .public-seating-board-tab{border:0;border-radius:7px;background:transparent;color:var(--ts);padding:9px 10px;font-size:12px;font-weight:900;cursor:pointer}
@@ -2642,6 +2667,8 @@ body{font-weight:500}
   .home-part-session{font-size:11px}
   .public-seating-tools{align-items:stretch;flex-direction:column}
   .public-seating-zoom{justify-content:flex-end}
+  .home-seating-stack-item,.public-seating-plan-item{grid-template-columns:minmax(0,1fr)}
+  .home-seating-stack-time,.public-seating-plan-item-time{white-space:normal}
 }
 .att-summary-card{background:#FFFDF8;border:1px solid #D8D0BE;border-radius:14px;padding:14px;margin:0 0 12px;box-shadow:0 5px 16px rgba(49,54,35,.055)}
 .att-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -4270,7 +4297,9 @@ var NOTICE_CACHE_TTL_MS=6*60*60*1000;
 var PUBLISHED_SEATING_CACHE_KEY='choir_published_seating';
 var PUBLISHED_SEATING_ACTIVE_TTL_MS=2*60*1000;
 var PUBLISHED_SEATING_EMPTY_TTL_MS=10*60*1000;
-var publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSearch='', publicSeatingZoom=1.18, publicSeatingBoardTab='choir';
+var PUBLISHED_SEATING_MAX_PLANS=8;
+var PUBLISHED_SEATING_MAX_BYTES=600000;
+var publishedSeatingPlans=[], publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSelectedPlanId='', publicSeatingSearch='', publicSeatingZoom=1.18, publicSeatingBoardTab='choir';
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
@@ -4306,7 +4335,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.11';
+var APP_RELEASE_VERSION='26.08.23.12';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7409,12 +7438,71 @@ function refreshHomeAccessState(){
 function canViewPublishedSeating(){
   return !!(firebaseAuthReady&&(isMemberLoggedIn()||adminRole==='admin'||adminRole==='chongmu'));
 }
+function publishedSeatingPlanId(plan,index){
+  if(!plan)return '';
+  if(plan.publicId)return String(plan.publicId);
+  if(plan.sourcePlanId)return 'plan:'+String(plan.sourcePlanId);
+  return 'legacy:'+[
+    String(plan.name||''),String(plan.title||''),String(plan.date||''),String(plan.program||''),String(index||0)
+  ].join('|');
+}
+function normalizePublishedSeatingPlan(plan,index){
+  if(!plan||!Array.isArray(plan.rows))return null;
+  var copy=cloneSeatingValue(plan);
+  copy.rows=normalizeSeatingRows(copy.rows);
+  copy.orchestraRows=normalizeOrchestraSeatingRows(copy.orchestraRows||[]);
+  copy.micSlots=normalizeSeatingMicSlots(copy.micSlots||[],publicSeatingMaxSeatCount(copy.rows));
+  copy.specialSlots=normalizeSeatingSpecialSlots(copy.specialSlots||{});
+  copy.publicId=publishedSeatingPlanId(copy,index);
+  return copy;
+}
+function normalizePublishedSeatingPlans(payload){
+  var source=payload&&Array.isArray(payload.plans)?payload.plans:(payload&&Array.isArray(payload.rows)?[payload]:[]);
+  var seen={};
+  return source.map(function(plan,index){return normalizePublishedSeatingPlan(plan,index);}).filter(function(plan){
+    if(!plan||seen[plan.publicId])return false;
+    seen[plan.publicId]=true;
+    return true;
+  }).sort(function(a,b){
+    return String(b.publishedAt||'').localeCompare(String(a.publishedAt||''));
+  });
+}
+function publishedSeatingPayloadBytes(value){
+  var json=JSON.stringify(value||{});
+  try{return new Blob([json]).size}catch(e){return json.length*2}
+}
+function trimPublishedSeatingPlans(plans){
+  var result=[];
+  (Array.isArray(plans)?plans:[]).slice(0,PUBLISHED_SEATING_MAX_PLANS).forEach(function(plan){
+    var next=result.concat([plan]);
+    if(result.length&&publishedSeatingPayloadBytes({schemaVersion:2,plans:next})>PUBLISHED_SEATING_MAX_BYTES)return;
+    result=next;
+  });
+  return result;
+}
+function publishedSeatingDocumentData(plans){
+  var trimmed=trimPublishedSeatingPlans(plans);
+  var legacyLatest=trimmed.length?cloneSeatingValue(trimmed[0]):{};
+  return Object.assign(legacyLatest,{schemaVersion:2,plans:trimmed,updatedAt:new Date().toISOString(),updatedBy:currentActorName()});
+}
+function setPublishedSeatingState(plans,preferredId){
+  publishedSeatingPlans=trimPublishedSeatingPlans(normalizePublishedSeatingPlans({plans:plans||[]}));
+  var wanted=String(preferredId||publicSeatingSelectedPlanId||'');
+  publishedSeatingPlan=publishedSeatingPlans.find(function(plan){return plan.publicId===wanted;})||publishedSeatingPlans[0]||null;
+  publicSeatingSelectedPlanId=publishedSeatingPlan?publishedSeatingPlan.publicId:'';
+  return publishedSeatingPlan;
+}
+function savePublishedSeatingCache(){
+  saveCache(PUBLISHED_SEATING_CACHE_KEY,{schemaVersion:2,plans:publishedSeatingPlans});
+}
 function publishedSeatingCacheTtl(){
-  return publishedSeatingPlan?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
+  return publishedSeatingPlans.length?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
 }
 function invalidatePublishedSeatingCache(clearStored){
   publishedSeatingRequestId++;
+  publishedSeatingPlans=[];
   publishedSeatingPlan=null;
+  publicSeatingSelectedPlanId='';
   publishedSeatingLoaded=false;
   publishedSeatingPromise=null;
   publishedSeatingLastCheckedAt=0;
@@ -7425,7 +7513,7 @@ function invalidatePublishedSeatingCache(clearStored){
 function getPublishedSeatingPlan(force){
   if(!firebaseAuthReady)return Promise.resolve(null);
   if(!canViewPublishedSeating()){
-    if(publishedSeatingPlan||!publishedSeatingLoaded)invalidatePublishedSeatingCache(true);
+    if(publishedSeatingPlans.length||!publishedSeatingLoaded)invalidatePublishedSeatingCache(true);
     publishedSeatingLoaded=true;
     return Promise.resolve(null);
   }
@@ -7435,17 +7523,11 @@ function getPublishedSeatingPlan(force){
   if(!force){
     var cached=loadCacheEntry(PUBLISHED_SEATING_CACHE_KEY,PUBLISHED_SEATING_EMPTY_TTL_MS);
     if(cached.hit){
-      var cachedHasPlan=!!(cached.data&&cached.data.rows);
+      var cachedPlans=normalizePublishedSeatingPlans(cached.data);
+      var cachedHasPlan=cachedPlans.length>0;
       var cachedTtl=cachedHasPlan?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
       if(cached.age<cachedTtl){
-        var cachedData=cachedHasPlan?cached.data:null;
-        if(cachedData){
-          cachedData.rows=normalizeSeatingRows(cachedData.rows);
-          cachedData.orchestraRows=normalizeOrchestraSeatingRows(cachedData.orchestraRows||[]);
-          cachedData.micSlots=normalizeSeatingMicSlots(cachedData.micSlots||[],publicSeatingMaxSeatCount(cachedData.rows));
-          cachedData.specialSlots=normalizeSeatingSpecialSlots(cachedData.specialSlots||{});
-        }
-        publishedSeatingPlan=cachedData;
+        setPublishedSeatingState(cachedPlans);
         publishedSeatingLoaded=true;
         publishedSeatingLastCheckedAt=cached.ts;
         return Promise.resolve(publishedSeatingPlan);
@@ -7460,19 +7542,11 @@ function getPublishedSeatingPlan(force){
       return null;
     }
     var data=doc.exists?(doc.data()||{}):null;
-    if(data&&data.rows){
-      data.rows=normalizeSeatingRows(data.rows);
-      data.orchestraRows=normalizeOrchestraSeatingRows(data.orchestraRows||[]);
-      data.micSlots=normalizeSeatingMicSlots(data.micSlots||[],publicSeatingMaxSeatCount(data.rows));
-      data.specialSlots=normalizeSeatingSpecialSlots(data.specialSlots||{});
-      publishedSeatingPlan=data;
-    }else{
-      publishedSeatingPlan=null;
-    }
+    setPublishedSeatingState(normalizePublishedSeatingPlans(data));
     publishedSeatingLoaded=true;
     publishedSeatingLastCheckedAt=Date.now();
     publishedSeatingPromise=null;
-    saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
+    savePublishedSeatingCache();
     return publishedSeatingPlan;
   }).catch(function(err){
     if(requestId===publishedSeatingRequestId)publishedSeatingPromise=null;
@@ -7656,30 +7730,62 @@ function renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,query){
   }
   return html;
 }
+function publicSeatingPlanTitle(plan){
+  return String(plan&&plan.name||plan&&plan.program||plan&&plan.title||'자리배치');
+}
+function publicSeatingPlanMeta(plan){
+  return [plan&&plan.title,plan&&plan.date,plan&&plan.program].filter(Boolean).filter(function(value,index,list){return list.indexOf(value)===index;}).join(' · ');
+}
+function renderHomePublishedSeatingStack(plans){
+  var rest=(plans||[]).slice(1);
+  if(!rest.length)return '';
+  return '<details class="home-seating-stack"><summary><span>다른 공개 배치</span><span>'+rest.length+'개</span></summary>'
+    +'<div class="home-seating-stack-list">'+rest.map(function(plan){
+      return '<button type="button" class="home-seating-stack-item" onclick="openPublicSeatingModal(\''+escAttr(plan.publicId)+'\')">'
+        +'<span class="home-seating-stack-copy"><span class="home-seating-stack-title">'+escHtml(publicSeatingPlanTitle(plan))+'</span><span class="home-seating-stack-meta">'+escHtml(publicSeatingPlanMeta(plan))+'</span></span>'
+        +'<span class="home-seating-stack-time">'+escHtml(seatingPublishedTime(plan.publishedAt))+' 공개</span>'
+        +'</button>';
+    }).join('')+'</div></details>';
+}
 function renderPublicSeatingHomeCard(plan,pending){
   if(!canViewPublishedSeating()||pending||!plan)return '';
+  var plans=publishedSeatingPlans.length?publishedSeatingPlans:[plan];
+  plan=plans[0];
   var stats=publicSeatingStats(plan);
   var mine=findPublicSeatingMine(plan);
   var mineText=mine.length?'내 자리 '+mine.map(function(x){return x.label;}).join(', '):'이름 검색 가능';
   var publishedText=seatingPublishedTime(plan.publishedAt);
-  return '<div class="home-card home-seating-card" onclick="openPublicSeatingModal()">'
+  return '<div class="home-card home-seating-card">'
     +'<div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🎚️</span><span>찬양의밤 자리배치</span></div><button class="home-view-link" onclick="event.stopPropagation();openPublicSeatingModal()">보기 ›</button></div>'
-    +'<div class="home-row-main">'+escHtml(plan.title||'찬양의밤')+'</div>'
-    +'<div class="home-main-sub" style="margin-top:5px">'+escHtml([plan.date||'',plan.program||''].filter(Boolean).join(' · '))+'</div>'
-    +'<div class="home-seating-meta"><span class="home-seating-pill">배치 '+stats.placed+'명</span><span class="home-seating-pill">'+escHtml(mineText)+'</span></div>'
-    +(publishedText?'<div class="home-seating-published">최신 공개본 · '+escHtml(publishedText)+' 공개</div>':'')
+    +'<button type="button" class="home-seating-primary" onclick="openPublicSeatingModal(\''+escAttr(plan.publicId)+'\')">'
+    +'<span class="home-row-main">'+escHtml(publicSeatingPlanTitle(plan))+'</span>'
+    +'<span class="home-main-sub" style="display:block;margin-top:5px">'+escHtml(publicSeatingPlanMeta(plan))+'</span>'
+    +'<span class="home-seating-meta"><span class="home-seating-pill">배치 '+stats.placed+'명</span><span class="home-seating-pill">'+escHtml(mineText)+'</span></span>'
+    +(publishedText?'<span class="home-seating-published">최근 공개 · '+escHtml(publishedText)+'</span>':'')
+    +'</button>'
+    +renderHomePublishedSeatingStack(plans)
     +'</div>';
 }
-function openPublicSeatingModal(){
+function selectPublicSeatingPlan(publicId){
+  var plan=publishedSeatingPlans.find(function(item){return item.publicId===String(publicId||'');});
+  if(!plan)return false;
+  publishedSeatingPlan=plan;
+  publicSeatingSelectedPlanId=plan.publicId;
+  var mine=findPublicSeatingMine(plan);
+  if(mine.length)publicSeatingBoardTab=mine[0].board;
+  else if(!publicSeatingStats(plan).boards.orchestra.placed)publicSeatingBoardTab='choir';
+  renderPublicSeatingModalBody();
+  setTimeout(applyPublicSeatingZoom,0);
+  return true;
+}
+function openPublicSeatingModal(publicId){
   if(!canViewPublishedSeating())return showToast('단원 로그인 후 자리배치를 볼 수 있습니다');
   getPublishedSeatingPlan(false).then(function(plan){
     if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
-    var mine=findPublicSeatingMine(plan);
-    if(mine.length)publicSeatingBoardTab=mine[0].board;
-    else if(!publicSeatingStats(plan).boards.orchestra.placed)publicSeatingBoardTab='choir';
+    var target=publicId||publishedSeatingPlans[0].publicId;
+    selectPublicSeatingPlan(target);
     var input=document.getElementById('publicSeatingSearch');
     if(input)input.value=publicSeatingSearch||'';
-    renderPublicSeatingModalBody();
     openModal('modalPublicSeating');
     setTimeout(applyPublicSeatingZoom,0);
   }).catch(function(err){
@@ -7691,6 +7797,18 @@ function setPublicSeatingBoardTab(tab){
   publicSeatingBoardTab=tab==='orchestra'?'orchestra':'choir';
   publicSeatingZoom=1.18;
   renderPublicSeatingModalBody();
+}
+function renderPublicSeatingPlanStack(){
+  if(publishedSeatingPlans.length<2)return '';
+  var selected=publishedSeatingPlan||publishedSeatingPlans[0];
+  return '<details class="public-seating-plan-stack"><summary><span>'+escHtml(publicSeatingPlanTitle(selected))+'</span><span>공개 배치 '+publishedSeatingPlans.length+'개 · 펼치기</span></summary>'
+    +'<div class="public-seating-plan-list">'+publishedSeatingPlans.map(function(plan){
+      var active=plan.publicId===selected.publicId;
+      return '<button type="button" class="public-seating-plan-item'+(active?' active':'')+'" onclick="selectPublicSeatingPlan(\''+escAttr(plan.publicId)+'\')">'
+        +'<span class="public-seating-plan-item-copy"><span class="public-seating-plan-item-title">'+escHtml(publicSeatingPlanTitle(plan))+'</span><span class="public-seating-plan-item-meta">'+escHtml(publicSeatingPlanMeta(plan))+'</span></span>'
+        +'<span class="public-seating-plan-item-time">'+escHtml(seatingPublishedTime(plan.publishedAt))+' 공개</span>'
+        +'</button>';
+    }).join('')+'</div></details>';
 }
 function renderPublicSeatingModalBody(){
   var box=document.getElementById('publicSeatingBody');if(!box)return;
@@ -7720,13 +7838,15 @@ function renderPublicSeatingModalBody(){
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '이름 검색으로 배치된 자리를 확인해 주세요.';
   var publishedText=seatingPublishedTime(plan.publishedAt);
-  var html='<div class="public-seating-meta">'
-    +'<span class="public-seating-pill">'+escHtml(plan.title||'찬양의밤')+'</span>'
+  var html=renderPublicSeatingPlanStack()
+    +'<div class="public-seating-meta">'
+    +'<span class="public-seating-pill">'+escHtml(publicSeatingPlanTitle(plan))+'</span>'
+    +(plan.title&&plan.title!==publicSeatingPlanTitle(plan)?'<span class="public-seating-pill">'+escHtml(plan.title)+'</span>':'')
     +(plan.date?'<span class="public-seating-pill">'+escHtml(plan.date)+'</span>':'')
     +(plan.program?'<span class="public-seating-pill">'+escHtml(plan.program)+'</span>':'')
     +'<span class="public-seating-pill">배치 '+stats.placed+'명</span>'
     +'</div>'
-    +(publishedText?'<div class="public-seating-published">최신 공개본 · '+escHtml(publishedText)+' 공개</div>':'')
+    +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
     +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
     +(highlightedCount?'<div class="public-seating-highlight-note"><span class="public-seating-highlight-swatch" aria-hidden="true"></span>금색 좌석은 강조 표시된 자리입니다.</div>':'');
   if(stats.boards.orchestra.placed){
@@ -19748,47 +19868,108 @@ function buildPublishedSeatingPlanData(){
     version:5
   };
 }
+function publishedSeatingSamePlan(existing,incoming){
+  if(!existing||!incoming)return false;
+  if(existing.publicId&&incoming.publicId&&existing.publicId===incoming.publicId)return true;
+  if(existing.sourcePlanId&&incoming.sourcePlanId)return String(existing.sourcePlanId)===String(incoming.sourcePlanId);
+  return String(existing.name||'').trim()===String(incoming.name||'').trim()
+    &&String(existing.date||'')===String(incoming.date||'')
+    &&String(existing.program||'').trim()===String(incoming.program||'').trim()
+    &&String(existing.title||'').trim()===String(incoming.title||'').trim();
+}
+function createPublishedSeatingPublicId(data){
+  if(data&&data.sourcePlanId)return 'plan:'+String(data.sourcePlanId);
+  return 'public_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+}
+function currentEditorPublishedSeatingIndex(plans){
+  var rawProgram=String((document.getElementById('seatingProgram')||{}).value||'').trim()||'전체 합창';
+  var descriptor={
+    sourcePlanId:seatingPlanId||'',
+    name:String((document.getElementById('seatingPlanName')||{}).value||'').trim()||seatingDefaultPlanName(seatingProgramTemplateName(rawProgram)),
+    title:String((document.getElementById('seatingTitle')||{}).value||'').trim()||'찬양의밤',
+    date:String((document.getElementById('seatingDate')||{}).value||'')||getTodayInputDate(),
+    program:rawProgram
+  };
+  return (plans||[]).findIndex(function(plan){return publishedSeatingSamePlan(plan,descriptor);});
+}
 function publishSeatingPlan(previewData){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
   if(!seatingRows.length)return showToast('공개할 배치가 없습니다');
   var data=previewData||buildPublishedSeatingPlanData();
+  var nextPlans=[];
+  var replaced=false;
+  var ref=db.collection('settings').doc('publishedSeatingPlan');
   showToast('자리배치를 공개하는 중...');
-  db.collection('settings').doc('publishedSeatingPlan').set(data).then(function(){
+  db.runTransaction(function(transaction){
+    return transaction.get(ref).then(function(doc){
+      var existingPlans=normalizePublishedSeatingPlans(doc.exists?(doc.data()||{}):null);
+      var existingIndex=existingPlans.findIndex(function(plan){return publishedSeatingSamePlan(plan,data);});
+      if(existingIndex>-1){
+        data.publicId=existingPlans[existingIndex].publicId;
+        replaced=true;
+      }else{
+        data.publicId=createPublishedSeatingPublicId(data);
+      }
+      nextPlans=trimPublishedSeatingPlans([data].concat(existingPlans.filter(function(_,index){return index!==existingIndex;})));
+      transaction.set(ref,publishedSeatingDocumentData(nextPlans));
+    });
+  }).then(function(){
     publishedSeatingRequestId++;
-    publishedSeatingPlan=cloneSeatingValue(data);
+    setPublishedSeatingState(nextPlans,data.publicId);
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
     publishedSeatingLastCheckedAt=Date.now();
-    saveCache(PUBLISHED_SEATING_CACHE_KEY,publishedSeatingPlan);
+    savePublishedSeatingCache();
     seatingPublishPreviewData=null;
     publicSeatingSearch='';
-    writeLog('찬양의밤 자리배치 공개',data.date+' '+data.program+' 배치 공개');
+    writeLog('찬양의밤 자리배치 공개',data.date+' '+data.program+' 배치 '+(replaced?'갱신':'추가 공개'));
     requestHomeRender();
-    showToast('단원에게 자리배치를 공개했습니다');
+    showToast(replaced?'공개된 배치를 최신 내용으로 갱신했습니다':'단원에게 자리배치를 추가 공개했습니다');
   }).catch(function(err){
     console.error(err);
     showToast('공개 중 오류가 발생했습니다');
   });
 }
-function unpublishSeatingPlan(){
+function unpublishSeatingPlan(publicId){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
-  if(!confirm('단원에게 공개된 찬양의밤 자리배치를 취소할까요?\n취소하면 홈 화면에서 자리배치 카드가 사라집니다.'))return;
+  var requestedId=String(publicId||'');
+  var localTarget=requestedId?publishedSeatingPlans.find(function(plan){return plan.publicId===requestedId;}):null;
+  var targetLabel=localTarget?publicSeatingPlanTitle(localTarget):String((document.getElementById('seatingPlanName')||{}).value||'현재 배치');
+  if(!confirm('「'+targetLabel+'」 공개를 취소할까요?\n다른 공개 배치는 그대로 유지됩니다.'))return;
+  var ref=db.collection('settings').doc('publishedSeatingPlan');
+  var nextPlans=[];
+  var removedPlan=null;
   showToast('자리배치 공개를 취소하는 중...');
-  db.collection('settings').doc('publishedSeatingPlan').delete().then(function(){
+  db.runTransaction(function(transaction){
+    return transaction.get(ref).then(function(doc){
+      var plans=normalizePublishedSeatingPlans(doc.exists?(doc.data()||{}):null);
+      var targetIndex=requestedId?plans.findIndex(function(plan){return plan.publicId===requestedId;}):currentEditorPublishedSeatingIndex(plans);
+      if(targetIndex<0){
+        var error=new Error('published-seating-not-found');
+        error.code='published-seating-not-found';
+        throw error;
+      }
+      removedPlan=plans[targetIndex];
+      nextPlans=plans.filter(function(_,index){return index!==targetIndex;});
+      if(nextPlans.length)transaction.set(ref,publishedSeatingDocumentData(nextPlans));
+      else transaction.delete(ref);
+    });
+  }).then(function(){
     publishedSeatingRequestId++;
-    publishedSeatingPlan=null;
+    setPublishedSeatingState(nextPlans);
     publishedSeatingLoaded=true;
     publishedSeatingPromise=null;
     publishedSeatingLastCheckedAt=Date.now();
-    saveCache(PUBLISHED_SEATING_CACHE_KEY,null);
+    savePublishedSeatingCache();
     publicSeatingSearch='';
-    closeModal('modalPublicSeating');
-    writeLog('찬양의밤 자리배치 공개 취소','단원 홈 자리배치 공개 취소');
+    if(publishedSeatingPlan)renderPublicSeatingModalBody();
+    else closeModal('modalPublicSeating');
+    writeLog('찬양의밤 자리배치 공개 취소',(removedPlan?publicSeatingPlanTitle(removedPlan):targetLabel)+' 공개 취소');
     requestHomeRender();
-    showToast('자리배치 공개를 취소했습니다');
+    showToast('선택한 자리배치 공개를 취소했습니다');
   }).catch(function(err){
     console.error(err);
-    showToast('공개 취소 중 오류가 발생했습니다');
+    showToast(err&&err.code==='published-seating-not-found'?'현재 배치와 일치하는 공개본이 없습니다':'공개 취소 중 오류가 발생했습니다');
   });
 }
 function upsertLocalSeatingPlan(data){
