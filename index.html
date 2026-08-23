@@ -371,6 +371,8 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-seat.highlighted{border-color:#875A08;box-shadow:inset 0 0 0 3px #FFF2A8,0 0 0 2px rgba(135,90,8,.58)}
 .seating-seat.highlighted::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:#875A08;box-shadow:0 0 0 2px rgba(255,253,248,.82)}
 .seating-seat.selected{outline:3px solid var(--p);outline-offset:1px}
+.seating-seat.multi-selected{outline:3px solid #2563EB;outline-offset:1px}
+.seating-seat.multi-selected::before{content:'✓';position:absolute;top:1px;left:2px;color:#1D4ED8;font-size:9px;font-weight:950;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.9)}
 .seating-highlight-action[aria-pressed=true]{background:#875A08!important;border-color:#875A08!important;color:#fff!important}
 .seating-inline-picker{position:absolute;z-index:6;width:190px;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:8px;box-shadow:0 12px 28px rgba(47,41,31,.18)}
 .seating-inline-picker input{width:100%;border:1px solid var(--bd);border-radius:9px;background:var(--bg);color:var(--tx);font-size:12px;font-weight:800;padding:8px;outline:none}
@@ -3198,7 +3200,9 @@ body{font-weight:500}
           </div>
           <div class="seating-queue-actions" id="seatingQueueActions">
             <span class="seating-queue-progress" id="seatingQueueProgress"></span>
-            <button class="btn btn-p" type="button" id="seatingQueueStartBtn" onclick="startSeatingPlacementQueue()">배치 시작</button>
+            <button class="btn seating-btn-soft" type="button" id="seatingQueueHighlightBtn" onclick="applySeatingQueueHighlight(true)">강조</button>
+            <button class="btn seating-btn-soft" type="button" id="seatingQueueUnhighlightBtn" onclick="applySeatingQueueHighlight(false)">강조 해제</button>
+            <button class="btn btn-p" type="button" id="seatingQueueStartBtn" onclick="startSeatingPlacementQueue()">옮기기·배치</button>
             <button class="btn seating-btn-soft" type="button" id="seatingQueueUndoBtn" onclick="undoSeatingPlacementQueueStep()">직전 취소</button>
             <button class="btn seating-btn-soft" type="button" id="seatingQueueStopBtn" onclick="stopSeatingPlacementQueue()">종료</button>
           </div>
@@ -3836,10 +3840,11 @@ body{font-weight:500}
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">자리배치 시작하기</span><button class="modal-close" onclick="closeModal('modalSeatingWorkspaceHelp')">✕</button></div>
     <p class="seating-help-lead">배치와 참석을 오가며 같은 배치도에서 바로 작업합니다.</p>
-    <div class="seating-help-step"><b class="seating-help-index">1</b><div><strong>배치</strong><span>명단에서 단원을 누르거나 빈칸을 눌러 바로 배치합니다.</span></div></div>
+    <div class="seating-help-step"><b class="seating-help-index">1</b><div><strong>배치</strong><span>명단에서 단원을 누른 뒤 빈칸을 눌러 바로 배치합니다.</span></div></div>
     <div class="seating-help-step"><b class="seating-help-index">2</b><div><strong>참석</strong><span>여러 명의 참석 여부를 정리하면서 필요한 자리도 함께 조정합니다.</span></div></div>
-    <div class="seating-help-step"><b class="seating-help-index">3</b><div><strong>공통 도구</strong><span>칸이나 줄을 선택한 뒤 추가, 제거, 이동 도구를 사용합니다.</span></div></div>
-    <div class="seating-help-tip">왼쪽 명단은 배치도 제목 옆의 화살표로 접고 펼칠 수 있습니다. 지휘·반주·스태프 자리는 눌러 배치하고, 스태프 자리는 길게 눌러 추가하거나 제거합니다.</div>
+    <div class="seating-help-step"><b class="seating-help-index">3</b><div><strong>여러 명 선택</strong><span>명단이나 배치도의 단원을 차례로 선택해 한꺼번에 강조하거나, 선택 순서대로 빈칸에 옮깁니다.</span></div></div>
+    <div class="seating-help-step"><b class="seating-help-index">4</b><div><strong>공통 도구</strong><span>칸이나 줄을 선택한 뒤 추가, 제거, 이동 도구를 사용합니다.</span></div></div>
+    <div class="seating-help-tip">왼쪽 명단은 배치도 제목 옆의 화살표로 접고 펼칠 수 있습니다. 여러 명을 옮길 때는 옮기기·배치를 누른 뒤 빈칸을 순서대로 누르세요. 지휘·반주·스태프 자리는 눌러 배치하고, 스태프 자리는 길게 눌러 추가하거나 제거합니다.</div>
     <button class="btn btn-p btn-bl" type="button" onclick="closeModal('modalSeatingWorkspaceHelp')">배치 시작</button>
   </div>
 </div>
@@ -4301,7 +4306,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.9';
+var APP_RELEASE_VERSION='26.08.23.10';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18497,7 +18502,7 @@ function renderSeatingPlacementStatus(){
     return;
   }
   if(seatingPlacementQueueSelecting){
-    text='배치할 단원을 원하는 순서대로 선택하세요 · '+seatingPlacementQueue.length+'명';
+    text='명단 또는 배치도에서 단원을 원하는 순서대로 선택하세요 · '+seatingPlacementQueue.length+'명';
     active=seatingPlacementQueue.length>0;
   }else if(seatingPlacementQueueActive){
     var nextId=seatingPlacementQueue[0];
@@ -18655,7 +18660,20 @@ function toggleSeatingPlacementQueueMember(id){
   if(index>-1)seatingPlacementQueue.splice(index,1);
   else seatingPlacementQueue.push(id);
   renderSeatingMemberList();
-  renderSeatingWorkspaceShell();
+  renderSeatingBoard();
+}
+function applySeatingQueueHighlight(highlight){
+  if(!seatingPlacementQueueSelecting||!seatingPlacementQueue.length)return showToast('먼저 강조할 단원을 선택해주세요');
+  var assigned=seatingAssignedMap();
+  var placed=seatingPlacementQueue.map(function(id){return {id:id,placement:assigned[id]||null};}).filter(function(item){return !!item.placement;});
+  if(!placed.length)return showToast('배치된 단원을 선택해야 강조할 수 있습니다');
+  var changed=placed.filter(function(item){var seat=seatingPlacementSeat(item.placement);return !!seat&&!!seat.highlight!==!!highlight;});
+  if(!changed.length)return showToast(highlight?'선택한 배치 단원이 이미 강조되어 있습니다':'선택한 배치 단원은 강조되어 있지 않습니다');
+  beginSeatingEdit();
+  changed.forEach(function(item){var seat=seatingPlacementSeat(item.placement);if(seat)seat.highlight=!!highlight;});
+  renderSeatingBoard();
+  var skipped=seatingPlacementQueue.length-placed.length;
+  showToast((highlight?'강조 ':'강조 해제 ')+changed.length+'명 적용'+(skipped?' · 미배치 '+skipped+'명 제외':''));
 }
 function startSeatingPlacementQueue(){
   if(!seatingPlacementQueue.length)return showToast('배치할 단원을 먼저 선택해주세요');
@@ -18667,7 +18685,7 @@ function startSeatingPlacementQueue(){
   seatingMemberPanelCollapsed=true;
   renderSeatingMemberList();
   renderSeatingBoard();
-  showToast('첫 번째 단원의 빈칸을 눌러주세요');
+  showToast('첫 번째 단원이 이동할 빈칸을 눌러주세요');
 }
 function placeNextSeatingQueueMember(row,col){
   if(!seatingPlacementQueueActive||!seatingPlacementQueue.length)return false;
@@ -18739,6 +18757,10 @@ function renderSeatingQueueControls(){
   if(progress)progress.textContent=seatingPlacementQueueSelecting?('선택 '+seatingPlacementQueue.length+'명'):('배치 '+seatingPlacementQueueCompleted.length+'/'+total+'명');
   var start=document.getElementById('seatingQueueStartBtn');
   if(start){start.style.display=seatingPlacementQueueSelecting?'':'none';start.disabled=!seatingPlacementQueue.length;}
+  var highlight=document.getElementById('seatingQueueHighlightBtn');
+  if(highlight){highlight.style.display=seatingPlacementQueueSelecting?'':'none';highlight.disabled=!seatingPlacementQueue.length;}
+  var unhighlight=document.getElementById('seatingQueueUnhighlightBtn');
+  if(unhighlight){unhighlight.style.display=seatingPlacementQueueSelecting?'':'none';unhighlight.disabled=!seatingPlacementQueue.length;}
   var undo=document.getElementById('seatingQueueUndoBtn');
   if(undo){undo.style.display=seatingPlacementQueueCompleted.length?'':'none';undo.disabled=!seatingPlacementQueueCompleted.length;}
   var stop=document.getElementById('seatingQueueStopBtn');
@@ -18984,8 +19006,9 @@ function renderSeatingBoard(){
     row.seats.forEach(function(seat,c){
       var selected=seatingSelectedSeat&&seatingSelectedSeat.row===r&&seatingSelectedSeat.col===c;
       var dragging=seatingDragSeat&&seatingDragSeat.row===r&&seatingDragSeat.col===c;
+      var multiSelected=!!(seat&&seatingPlacementQueueSelecting&&seatingPlacementQueue.indexOf(seat.memberId)>-1);
       var ready=!seat&&seatingSelectedMemberId?'ready ':'';
-      var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+(seat&&seat.highlight?'highlighted ':'')+ready;
+      var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+(multiSelected?'multi-selected ':'')+(seat&&seat.highlight?'highlighted ':'')+ready;
       var dropAttrs=' ondragover="handleSeatingDragOver(event)" ondrop="handleSeatingDrop(event,'+r+','+c+')"';
       if(seat){
         html+='<button class="seating-seat '+partClass(seat.part)+' '+stateClass+'" draggable="true" ondragstart="handleSeatingDragStart(event,'+r+','+c+')" ondragend="handleSeatingDragEnd(event)"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name+(seat.highlight?' · 강조':''))+'">'+seatingSeatNameHtml(seat.name)+'</button>';
@@ -19071,6 +19094,13 @@ function focusSeatingMemberSearchForSeat(){
 function handleSeatingSeatClick(row,col){
   var rows=seatingActiveRows();
   if(placeNextSeatingQueueMember(row,col))return;
+  if(seatingPlacementQueueSelecting){
+    var queueRow=rows[row];
+    var queueSeat=queueRow&&queueRow.seats[col];
+    if(!queueSeat)return showToast('배치된 단원을 눌러 여러 명을 선택해주세요');
+    toggleSeatingPlacementQueueMember(queueSeat.memberId);
+    return;
+  }
   if(seatingSelectedMemberId){
     moveSeatingMemberToSeat(seatingSelectedMemberId,row,col);
     return;
