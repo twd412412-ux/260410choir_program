@@ -283,6 +283,13 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .dark .seating-part-chip.warn{background:#352C1B;border-color:#7A5A22;color:#E4C06E}
 .seating-filter-result{display:flex;align-items:center;min-height:25px;margin:0 0 7px;padding:5px 8px;border-radius:7px;background:var(--pl);color:var(--pd);font-size:11px;font-weight:900;line-height:1.35}
 .dark .seating-filter-result{background:#29301F;color:#DDE6C8}
+.seating-submission-details{flex:0 0 auto;margin:0 0 8px;border:1px solid var(--bd);border-radius:9px;background:var(--bg);overflow:hidden}
+.seating-submission-details>summary{display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 9px;list-style:none;cursor:pointer;color:var(--tx);font-size:11px;font-weight:900}
+.seating-submission-details>summary::-webkit-details-marker{display:none}
+.seating-submission-summary-meta{margin-left:auto;color:var(--ts);font-size:10px;font-weight:800}
+.seating-submission-chevron{width:7px;height:7px;border-right:2px solid var(--ts);border-bottom:2px solid var(--ts);transform:rotate(45deg);transition:transform .16s ease}
+.seating-submission-details[open] .seating-submission-chevron{transform:rotate(225deg)}
+.seating-submission-details-body{padding:0 8px 8px}
 .seating-submission-bar{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px}
 .seating-submit-chip{border:1px solid var(--bd);background:var(--bg);color:var(--ts);border-radius:999px;padding:5px 8px;font-size:10px;font-weight:850;cursor:pointer}
 .seating-submit-chip.done{background:var(--p);border-color:var(--p);color:#fff}
@@ -508,8 +515,9 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-member-panel-body{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 #subSeatingPlan.seating-fullscreen .seating-member-search,#subSeatingPlan.seating-fullscreen .seating-part-filter,#subSeatingPlan.seating-fullscreen .seating-filter-result,#subSeatingPlan.seating-fullscreen .seating-attendance-batchbar,#subSeatingPlan.seating-fullscreen .seating-paint-status{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-help-note{display:none}
-#subSeatingPlan.seating-fullscreen .seating-submission-bar,#subSeatingPlan.seating-fullscreen .seating-lock-row{display:none}
-#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-bar,#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-lock-row{display:flex;flex:0 0 auto}
+#subSeatingPlan.seating-fullscreen .seating-submission-details{display:none}
+#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-details{display:block;flex:0 0 auto}
+#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-details[open] .seating-help-note{display:block;margin:0}
 #subSeatingPlan.seating-fullscreen .seating-member-list{display:block;flex:1 1 auto;height:auto;min-height:100px;max-height:none;overflow-y:auto}
 #subSeatingPlan.seating-fullscreen .seating-member{min-height:42px;padding:8px 9px;border-right:0}
 #subSeatingPlan.seating-fullscreen .seating-filter-result{flex:0 0 auto}
@@ -3080,9 +3088,14 @@ body{font-weight:500}
           </div>
         </div>
         <div class="seating-member-panel-body">
-        <div class="seating-submission-bar" id="seatingSubmissionBar"></div>
-        <div class="seating-lock-row" id="seatingLockRow"></div>
-        <div class="seating-help-note"><b>미제출</b>은 파트 참석 확인 전 상태입니다. <b>제출완료</b>는 파트 담당자가 확인을 마쳐 그 파트 명단을 잠글 때, <b>고정</b>은 자리배치 권한자가 모든 파트 확인 후 최종 잠글 때 사용합니다.</div>
+        <details class="seating-submission-details" id="seatingSubmissionDetails">
+          <summary><span>파트 제출 관리</span><span class="seating-submission-summary-meta" id="seatingSubmissionSummaryMeta">0/5 완료</span><span class="seating-submission-chevron" aria-hidden="true"></span></summary>
+          <div class="seating-submission-details-body">
+            <div class="seating-submission-bar" id="seatingSubmissionBar"></div>
+            <div class="seating-lock-row" id="seatingLockRow"></div>
+            <div class="seating-help-note"><b>미제출</b>은 파트 참석 확인 전 상태입니다. <b>제출완료</b>는 파트 담당자가 확인을 마쳐 그 파트 명단을 잠글 때, <b>고정</b>은 자리배치 권한자가 모든 파트 확인 후 최종 잠글 때 사용합니다.</div>
+          </div>
+        </details>
         <input class="form-input seating-member-search" id="seatingMemberSearch" placeholder="이름/파트 검색" oninput="renderSeatingMemberList()">
         <div class="seating-part-filter" id="seatingPartFilter"></div>
         <div class="seating-filter-result" id="seatingFilterResult" aria-live="polite">전체 명단을 표시합니다.</div>
@@ -4190,7 +4203,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.2';
+var APP_RELEASE_VERSION='26.08.23.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18433,9 +18446,12 @@ function renderSeatingPartFilter(){
 }
 function renderSeatingSubmissionState(){
   seatingPartSubmissions=normalizeSeatingPartSubmissions(seatingPartSubmissions);
+  var submissionParts=seatingPartOrder();
+  var summaryMeta=document.getElementById('seatingSubmissionSummaryMeta');
+  if(summaryMeta)summaryMeta.textContent=seatingSubmissionCompleteCount()+'/'+submissionParts.length+' 완료';
   var bar=document.getElementById('seatingSubmissionBar');
   if(bar){
-    bar.innerHTML=seatingPartOrder().map(function(part){
+    bar.innerHTML=submissionParts.map(function(part){
       var info=seatingPartSubmissions[part]||{};
       var count=seatingPartAttendeeCount(part);
       var total=seatingPartMemberCount(part);
@@ -18449,7 +18465,7 @@ function renderSeatingSubmissionState(){
     var adminLockButton=canUseSeatingPlan()
       ? '<button class="btn btn-sm" style="background:'+(seatingAttendeesLocked?'var(--bg)':'var(--p)')+';color:'+(seatingAttendeesLocked?'var(--ts)':'#fff')+'" onclick="toggleSeatingAttendeesLocked()">'+(seatingAttendeesLocked?'고정 해제':'명단 고정')+'</button>'
       : '<span class="seating-lock-note">고정은 자리배치 권한자용</span>';
-    row.innerHTML='<span>파트 제출 '+seatingSubmissionCompleteCount()+'/'+seatingPartOrder().length+' · '+(seatingAttendeesLocked?'전체 명단 고정 중':'전체 명단 수정 가능')+'</span>'
+    row.innerHTML='<span>파트 제출 '+seatingSubmissionCompleteCount()+'/'+submissionParts.length+' · '+(seatingAttendeesLocked?'전체 명단 고정 중':'전체 명단 수정 가능')+'</span>'
       +'<div class="seating-lock-actions"><button class="seating-info-btn" onclick="showSeatingSubmissionInfo()" title="제출/미제출/명단 고정 설명">i</button>'
       +adminLockButton+'</div>';
     var scopedLabel=canUseSeatingPlan()||seatingSubmissionScopeParts().length===seatingPartOrder().length;
