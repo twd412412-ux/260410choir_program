@@ -4297,7 +4297,6 @@ var PUBLISHED_SEATING_EMPTY_TTL_MS=10*60*1000;
 var PUBLISHED_SEATING_MAX_PLANS=8;
 var PUBLISHED_SEATING_MAX_BYTES=600000;
 var publishedSeatingPlans=[], publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSelectedPlanId='', publicSeatingSearch='', publicSeatingZoom=1, publicSeatingAutoFit=true, publicSeatingFitTimer=null, publicSeatingBoardTab='choir', publicSeatingView='member';
-try{var savedPublicSeatingView=localStorage.getItem('choir_public_seating_view');if(savedPublicSeatingView==='audience'||savedPublicSeatingView==='member')publicSeatingView=savedPublicSeatingView;}catch(e){}
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
@@ -4333,7 +4332,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.24.21';
+var APP_RELEASE_VERSION='26.08.24.22';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7809,6 +7808,7 @@ function openPublicSeatingModal(publicId){
   getPublishedSeatingPlan(false).then(function(plan){
     if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
     var target=publicId||publishedSeatingPlans[0].publicId;
+    publicSeatingView=canUseSeatingPlan()?'audience':'member';
     selectPublicSeatingPlan(target);
     var input=document.getElementById('publicSeatingSearch');
     if(input)input.value=publicSeatingSearch||'';
@@ -7826,7 +7826,6 @@ function setPublicSeatingBoardTab(tab){
 }
 function setPublicSeatingView(view){
   publicSeatingView=view==='member'?'member':'audience';
-  try{localStorage.setItem('choir_public_seating_view',publicSeatingView);}catch(e){}
   publicSeatingAutoFit=true;
   renderPublicSeatingModalBody();
 }
