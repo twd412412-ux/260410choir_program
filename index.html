@@ -2592,6 +2592,9 @@ body{font-weight:500}
 .public-seating-board-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
 .public-seating-board-tab{border:0;border-radius:7px;background:transparent;color:var(--ts);padding:9px 10px;font-size:12px;font-weight:900;cursor:pointer}
 .public-seating-board-tab.on{background:var(--p);color:#fff}
+.public-seating-view-toggle{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+.public-seating-view-btn{border:0;border-radius:7px;background:transparent;color:var(--ts);padding:8px 10px;font:inherit;font-size:11.5px;font-weight:900;cursor:pointer}
+.public-seating-view-btn.on{background:#465431;color:#fff;box-shadow:0 2px 7px rgba(51,61,38,.18)}
 .public-seating-board-scroll{max-height:64vh;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:22px 18px 48px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
 .public-seating-board-scale{position:relative;width:max-content}
 .public-seating-board{position:relative;width:max-content;min-width:100%}
@@ -2603,6 +2606,13 @@ body{font-weight:500}
 .public-seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px;color:#596354}
 .public-seating-line{display:flex;gap:4px}
 .public-seating-row.offset .public-seating-line{transform:translateX(26px)}
+.public-seating-board.member-view .public-seating-row-label{order:3}
+.public-seating-board.member-view .public-seating-row-count{order:2;margin-left:4px;margin-right:0}
+.public-seating-board.member-view .public-seating-line{order:1;transform:none}
+.public-seating-board.member-view .public-seating-center-line{bottom:0}
+.public-seating-board.member-view .public-seating-front>span:first-child{position:absolute;right:0}
+.public-seating-board.member-view .public-seating-staff-area{padding-left:0;padding-right:61px;justify-content:flex-end}
+.public-seating-board.member-view .public-seating-staff-area .seating-special-role-label,.public-seating-board.member-view .public-seating-accompanist-area .seating-special-role-label{left:auto;right:0}
 .public-seating-seat{position:relative;width:48px;height:36px;border:1px solid #B7B09E;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;line-height:1;overflow:hidden;white-space:nowrap;padding:0 1px;color:#202018}
 .public-seating-seat.empty{background:#FFFDF8;color:#B7B09E}
 .public-seating-seat.part-S1{background:#E8B9D5}
@@ -4288,7 +4298,8 @@ var PUBLISHED_SEATING_ACTIVE_TTL_MS=2*60*1000;
 var PUBLISHED_SEATING_EMPTY_TTL_MS=10*60*1000;
 var PUBLISHED_SEATING_MAX_PLANS=8;
 var PUBLISHED_SEATING_MAX_BYTES=600000;
-var publishedSeatingPlans=[], publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSelectedPlanId='', publicSeatingSearch='', publicSeatingZoom=1, publicSeatingAutoFit=true, publicSeatingFitTimer=null, publicSeatingBoardTab='choir';
+var publishedSeatingPlans=[], publishedSeatingPlan=null, publishedSeatingLoaded=false, publishedSeatingPromise=null, publishedSeatingLastCheckedAt=0, publishedSeatingRequestId=0, publicSeatingSelectedPlanId='', publicSeatingSearch='', publicSeatingZoom=1, publicSeatingAutoFit=true, publicSeatingFitTimer=null, publicSeatingBoardTab='choir', publicSeatingView='audience';
+try{if(localStorage.getItem('choir_public_seating_view')==='member')publicSeatingView='member';}catch(e){}
 var publicSeatingPinchStartDist=0, publicSeatingPinchStartZoom=0, publicSeatingTouchPanning=false, publicSeatingPanStartX=0, publicSeatingPanStartY=0, publicSeatingPanScrollLeft=0, publicSeatingPanScrollTop=0;
 var songMemberDirectory=[], songMemberDirectoryLoaded=false, songMemberDirectoryPromise=null;
 var memberLinkAuditFilter='unlinked', memberLinkAuditRows=[];
@@ -4324,7 +4335,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.24.18';
+var APP_RELEASE_VERSION='26.08.24.19';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7740,23 +7751,26 @@ function publicSeatingSpecialStateClass(seat,query){
   var match=publicSeatingMatches(seat,query);
   return (mine?' mine':'')+(match?' match':'')+(query&&seat&&!match&&!mine?' dim':'');
 }
-function renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,query){
+function renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,query,memberView){
   var slots=normalizeSeatingSpecialSlots(plan&&plan.specialSlots||{});
   var staff=slots.staff.map(function(seat,index){return {seat:seat,index:index};}).filter(function(item){return !!item.seat;});
-  var html='';
+  var sections=[];
   if(slots.accompanist){
-    var pianoLeft=Math.max(130,centerLeft-150);
-    html+='<div class="public-seating-accompanist-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">반주</span><div class="public-seating-piano-slot'+publicSeatingSpecialStateClass(slots.accompanist,query)+'" style="left:'+pianoLeft+'px" title="반주자 · '+escAttr(slots.accompanist.name)+'"><span class="seating-piano-scene" aria-hidden="true"><span class="seating-piano-player"></span><span class="seating-piano-body"><span class="seating-piano-keys"></span></span></span><span class="seating-special-copy"><b>'+escHtml(slots.accompanist.name)+'</b><small>반주자</small></span></div></div>';
+    var audiencePianoLeft=Math.max(130,centerLeft-150);
+    var pianoLeft=memberView?Math.max(72,Math.min(boardWidth-72,(centerLeft*2)-audiencePianoLeft)):audiencePianoLeft;
+    sections.push('<div class="public-seating-accompanist-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">반주</span><div class="public-seating-piano-slot'+publicSeatingSpecialStateClass(slots.accompanist,query)+'" style="left:'+pianoLeft+'px" title="반주자 · '+escAttr(slots.accompanist.name)+'"><span class="seating-piano-scene" aria-hidden="true"><span class="seating-piano-player"></span><span class="seating-piano-body"><span class="seating-piano-keys"></span></span></span><span class="seating-special-copy"><b>'+escHtml(slots.accompanist.name)+'</b><small>반주자</small></span></div></div>');
   }
-  html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor'+publicSeatingSpecialStateClass(slots.conductor,query)+'" style="left:'+centerLeft+'px">지휘'+(slots.conductor?'<small>('+escHtml(slots.conductor.name)+')</small>':'')+'</span></div>';
+  sections.push('<div class="public-seating-front" style="width:'+boardWidth+'px"><span>'+(memberView?'앞쪽 / 지휘자 방향':'앞쪽 / 무대 아래')+'</span><span class="public-seating-conductor'+publicSeatingSpecialStateClass(slots.conductor,query)+'" style="left:'+centerLeft+'px">지휘'+(slots.conductor?'<small>('+escHtml(slots.conductor.name)+')</small>':'')+'</span></div>');
   if(staff.length){
-    html+='<div class="public-seating-staff-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">스태프</span><div class="public-seating-staff-slots">';
+    if(memberView)staff.reverse();
+    var staffHtml='<div class="public-seating-staff-area" style="width:'+boardWidth+'px"><span class="seating-special-role-label">스태프</span><div class="public-seating-staff-slots">';
     staff.forEach(function(item){
-      html+='<div class="public-seating-staff-slot'+publicSeatingSpecialStateClass(item.seat,query)+'" title="스태프 · '+escAttr(item.seat.name)+'"><span class="seating-staff-person" aria-hidden="true"></span><span class="seating-special-copy"><b>'+escHtml(item.seat.name)+'</b><small>스태프 '+(item.index+1)+'</small></span></div>';
+      staffHtml+='<div class="public-seating-staff-slot'+publicSeatingSpecialStateClass(item.seat,query)+'" title="스태프 · '+escAttr(item.seat.name)+'"><span class="seating-staff-person" aria-hidden="true"></span><span class="seating-special-copy"><b>'+escHtml(item.seat.name)+'</b><small>스태프 '+(item.index+1)+'</small></span></div>';
     });
-    html+='</div></div>';
+    sections.push(staffHtml+'</div></div>');
   }
-  return html;
+  if(memberView)sections.reverse();
+  return sections.join('');
 }
 function publicSeatingPlanTitle(plan){
   return String(plan&&plan.name||plan&&plan.program||plan&&plan.title||'자리배치');
@@ -7819,6 +7833,12 @@ function setPublicSeatingBoardTab(tab){
   publicSeatingAutoFit=true;
   renderPublicSeatingModalBody();
 }
+function setPublicSeatingView(view){
+  publicSeatingView=view==='member'?'member':'audience';
+  try{localStorage.setItem('choir_public_seating_view',publicSeatingView);}catch(e){}
+  publicSeatingAutoFit=true;
+  renderPublicSeatingModalBody();
+}
 function renderPublicSeatingPlanStack(){
   if(publishedSeatingPlans.length<2)return '';
   var selected=publishedSeatingPlan||publishedSeatingPlans[0];
@@ -7843,10 +7863,14 @@ function renderPublicSeatingModalBody(){
     else if(publicSeatingBoardTab==='orchestra'&&!orchestraMatch&&choirMatch)publicSeatingBoardTab='choir';
   }
   var rows=publicSeatingBoardTab==='orchestra'?(Array.isArray(plan.orchestraRows)?plan.orchestraRows:[]):(Array.isArray(plan.rows)?plan.rows:[]);
+  var memberView=publicSeatingView==='member';
+  var displayRows=rows.map(function(row,index){return {row:row,index:index};});
+  if(memberView)displayRows.reverse();
   var mine=findPublicSeatingMine(plan);
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var centerLeft=seatingCenterLeftForSeatCount(maxSeats);
-  var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
+  var maxSeatWidth=(maxSeats*seatingSeatPitch())-4;
+  var boardWidth=memberView?(seatingLeadWidth()*2)+maxSeatWidth:seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var publicSpecialSlots=publicSeatingBoardTab==='choir'?normalizeSeatingSpecialSlots(plan.specialSlots||{}):defaultSeatingSpecialSlots();
   var specialCount=publicSeatingBoardTab==='choir'?publicSeatingSpecialSeatList(plan).length:0;
   var specialStaffCount=publicSpecialSlots.staff.filter(function(seat){return !!seat;}).length;
@@ -7858,21 +7882,38 @@ function renderPublicSeatingModalBody(){
   var publishedText=seatingPublishedTime(plan.publishedAt);
   var html=renderPublicSeatingPlanStack()
     +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
-    +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>';
+    +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
+    +'<div class="public-seating-view-toggle" aria-label="배치도 보는 방향">'
+      +'<button type="button" class="public-seating-view-btn '+(!memberView?'on':'')+'" aria-pressed="'+(!memberView?'true':'false')+'" title="객석에서 무대를 바라보는 방향" onclick="setPublicSeatingView(\'audience\')">객석 기준</button>'
+      +'<button type="button" class="public-seating-view-btn '+(memberView?'on':'')+'" aria-pressed="'+(memberView?'true':'false')+'" title="단원이 지휘자를 바라보는 방향" onclick="setPublicSeatingView(\'member\')">단원 기준</button>'
+    +'</div>';
   if(stats.boards.orchestra.placed){
     html+='<div class="public-seating-board-tabs" aria-label="배치도 선택">'
       +'<button type="button" class="public-seating-board-tab '+(publicSeatingBoardTab==='choir'?'on':'')+'" onclick="setPublicSeatingBoardTab(\'choir\')">합창 '+stats.boards.choir.placed+'명</button>'
       +'<button type="button" class="public-seating-board-tab '+(publicSeatingBoardTab==='orchestra'?'on':'')+'" onclick="setPublicSeatingBoardTab(\'orchestra\')">관현악 '+stats.boards.orchestra.placed+'명</button>'
       +'</div>';
   }
-  html+='<div class="public-seating-board-scroll"><div class="public-seating-board-scale" id="publicSeatingBoardScale"><div class="public-seating-board'+(specialCount?' has-specials':'')+'" id="publicSeatingBoard" data-board-width="'+boardWidth+'" data-board-height="'+boardHeight+'" style="min-width:'+boardWidth+'px">'
+  var frontHtml=publicSeatingBoardTab==='choir'&&specialCount
+    ?renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,q,memberView)
+    :'<div class="public-seating-front" style="width:'+boardWidth+'px"><span>'+(memberView?'앞쪽 / 지휘자 방향':'앞쪽 / 무대 아래')+'</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  html+='<div class="public-seating-board-scroll"><div class="public-seating-board-scale" id="publicSeatingBoardScale"><div class="public-seating-board'+(specialCount?' has-specials':'')+(memberView?' member-view':'')+'" id="publicSeatingBoard" data-board-width="'+boardWidth+'" data-board-height="'+boardHeight+'" style="min-width:'+boardWidth+'px">'
     +'<div class="public-seating-center-line" style="left:'+centerLeft+'px"></div><div class="public-seating-center-label" style="left:'+centerLeft+'px">센터</div>';
-  rows.forEach(function(row,r){
+  if(memberView)html+=frontHtml;
+  displayRows.forEach(function(entry){
+    var row=entry.row;
+    var r=entry.index;
+    var seats=(row.seats||[]).map(function(seat,index){return {seat:seat,index:index};});
+    if(memberView)seats.reverse();
+    var rowSeatWidth=Math.max(0,((row.seats||[]).length*seatingSeatPitch())-4);
+    var mirroredLeft=seatingLeadWidth()+(maxSeatWidth-rowSeatWidth)-(row.offset===0.5?seatingSeatOffset():0);
+    var lineStyle=memberView?' style="margin-left:'+Math.max(0,mirroredLeft)+'px"':'';
     html+='<div class="public-seating-row '+(row.offset===0.5?'offset':'')+'">'
       +'<div class="public-seating-row-label">'+escHtml(row.label||'')+'</div>'
       +'<div class="public-seating-row-count">'+(row.seats||[]).filter(function(s){return !!s;}).length+'</div>'
-      +'<div class="public-seating-line">';
-    (row.seats||[]).forEach(function(seat,c){
+      +'<div class="public-seating-line"'+lineStyle+'>';
+    seats.forEach(function(item){
+      var seat=item.seat;
+      var c=item.index;
       var mineClass=publicSeatingIsMine(seat)?' mine':'';
       var matchClass=publicSeatingMatches(seat,q)?' match':'';
       var dimClass=q&&seat&&!publicSeatingMatches(seat,q)&&!publicSeatingIsMine(seat)?' dim':'';
@@ -7885,8 +7926,7 @@ function renderPublicSeatingModalBody(){
     });
     html+='</div></div>';
   });
-  if(publicSeatingBoardTab==='choir'&&specialCount)html+=renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,q);
-  else html+='<div class="public-seating-front" style="width:'+boardWidth+'px"><span>앞쪽 / 무대 아래</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
+  if(!memberView)html+=frontHtml;
   html+='</div></div></div>';
   box.innerHTML=html;
   if(publicSeatingAutoFit)schedulePublicSeatingAutoFit();
