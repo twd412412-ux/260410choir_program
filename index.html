@@ -4335,7 +4335,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.24.13';
+var APP_RELEASE_VERSION='26.08.24.14';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5286,7 +5286,12 @@ function syncAccessShell(){
   if(navAdmin)navAdmin.classList.toggle('hidden',!canOpenAdminArea());
   if(navArchive)navArchive.classList.toggle('hidden',!hasArchiveView());
   if(navScores)navScores.classList.toggle('hidden',!canViewScores());
-  if(btnLock)btnLock.textContent=canOpenAdminArea()?'🔓':'🔒';
+  if(btnLock){
+    var elevatedMode=!!(secureElevatedSession&&(adminRole==='admin'||adminRole==='chongmu'))||(!currentUser&&!!adminRole);
+    btnLock.textContent=elevatedMode?'🔓':'🔒';
+    btnLock.title=elevatedMode?'관리자 모드 종료':'관리자 로그인';
+    btnLock.setAttribute('aria-label',btnLock.title);
+  }
   if(homeGlobalSearch)homeGlobalSearch.classList.toggle('hidden',!canUseGlobalSearch());
   if(!canUseGlobalSearch()&&document.getElementById('modalGlobalSearch').classList.contains('active'))closeModal('modalGlobalSearch');
   if(!canUseRehearsalCue()&&document.getElementById('modalRehearsalCue').classList.contains('active'))closeModal('modalRehearsalCue');
@@ -6513,27 +6518,12 @@ function openAdminPasswordModal(){
   setTimeout(function(){document.getElementById('adminPw').focus()},300);
 }
 function openAdminLogin(){
-  var userSessionRole=getSessionRoleForUser(currentUser);
-  if(adminRole&&(!currentUser||adminRole==='admin'||(adminRole==='chongmu'&&userSessionRole!=='chongmu'))){
+  var elevatedMode=!!(secureElevatedSession&&(adminRole==='admin'||adminRole==='chongmu'))||(!currentUser&&!!adminRole);
+  if(elevatedMode){
     exitAdminMode();
     return;
   }
-  if(currentUser&&canOpenAdminArea()){
-    switchTab('admin');
-    return;
-  }
-  if(currentUser&&firebaseAuthReady&&!firebaseAuthChecking){
-    showToast('계정 권한을 확인하는 중...');
-    refreshSecureAuthClaims(true).then(function(){
-      if(currentUser&&canOpenAdminArea()){
-        updateAdminTabs();
-        switchTab('admin');
-        return;
-      }
-      openAdminPasswordModal();
-    });
-    return;
-  }
+  if(firebaseAuthChecking)return showToast('자동 로그인을 확인하고 있습니다. 잠시 후 다시 눌러주세요');
   openAdminPasswordModal();
 }
 function setAdminLoginBusy(busy){
