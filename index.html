@@ -4335,7 +4335,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.23.12';
+var APP_RELEASE_VERSION='26.08.24.13';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7743,7 +7743,7 @@ function renderHomePublishedSeatingStack(plans){
     +'<div class="home-seating-stack-list">'+rest.map(function(plan){
       return '<button type="button" class="home-seating-stack-item" onclick="openPublicSeatingModal(\''+escAttr(plan.publicId)+'\')">'
         +'<span class="home-seating-stack-copy"><span class="home-seating-stack-title">'+escHtml(publicSeatingPlanTitle(plan))+'</span><span class="home-seating-stack-meta">'+escHtml(publicSeatingPlanMeta(plan))+'</span></span>'
-        +'<span class="home-seating-stack-time">'+escHtml(seatingPublishedTime(plan.publishedAt))+' 공개</span>'
+        +'<span class="home-seating-stack-time">공개 일시 · '+escHtml(seatingPublishedTime(plan.publishedAt))+'</span>'
         +'</button>';
     }).join('')+'</div></details>';
 }
@@ -7761,7 +7761,7 @@ function renderPublicSeatingHomeCard(plan,pending){
     +'<span class="home-row-main">'+escHtml(publicSeatingPlanTitle(plan))+'</span>'
     +'<span class="home-main-sub" style="display:block;margin-top:5px">'+escHtml(publicSeatingPlanMeta(plan))+'</span>'
     +'<span class="home-seating-meta"><span class="home-seating-pill">배치 '+stats.placed+'명</span><span class="home-seating-pill">'+escHtml(mineText)+'</span></span>'
-    +(publishedText?'<span class="home-seating-published">최근 공개 · '+escHtml(publishedText)+'</span>':'')
+    +(publishedText?'<span class="home-seating-published">공개 일시 · '+escHtml(publishedText)+'</span>':'')
     +'</button>'
     +renderHomePublishedSeatingStack(plans)
     +'</div>';
@@ -7806,7 +7806,7 @@ function renderPublicSeatingPlanStack(){
       var active=plan.publicId===selected.publicId;
       return '<button type="button" class="public-seating-plan-item'+(active?' active':'')+'" onclick="selectPublicSeatingPlan(\''+escAttr(plan.publicId)+'\')">'
         +'<span class="public-seating-plan-item-copy"><span class="public-seating-plan-item-title">'+escHtml(publicSeatingPlanTitle(plan))+'</span><span class="public-seating-plan-item-meta">'+escHtml(publicSeatingPlanMeta(plan))+'</span></span>'
-        +'<span class="public-seating-plan-item-time">'+escHtml(seatingPublishedTime(plan.publishedAt))+' 공개</span>'
+        +'<span class="public-seating-plan-item-time">공개 일시 · '+escHtml(seatingPublishedTime(plan.publishedAt))+'</span>'
         +'</button>';
     }).join('')+'</div></details>';
 }
@@ -18011,8 +18011,17 @@ function seatingPublishedTime(value){
   if(!value)return '';
   var d=new Date(value);
   if(isNaN(d.getTime()))return String(value);
-  function pad(n){return String(n).padStart(2,'0')}
-  return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  try{
+    var values={};
+    new Intl.DateTimeFormat('ko-KR',{
+      timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
+    }).formatToParts(d).forEach(function(part){if(part.type!=='literal')values[part.type]=part.value;});
+    return values.year+'.'+values.month+'.'+values.day+' '+values.hour+':'+values.minute+':'+values.second;
+  }catch(e){
+    function pad(n){return String(n).padStart(2,'0')}
+    return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  }
 }
 function renderSeatingHistory(){
   var box=document.getElementById('seatingHistoryPanel');if(!box)return;
