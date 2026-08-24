@@ -2563,15 +2563,13 @@ body{font-weight:500}
   .rehearsal-current-title{font-size:27px}
 }
 .home-seating-card{cursor:default}
-.home-seating-count{color:var(--ts);font-size:10.5px;font-weight:850;white-space:nowrap}
 .home-seating-list{display:grid;gap:7px;margin-top:11px}
 .home-seating-plan-button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);padding:10px 10px 10px 12px;text-align:left;font:inherit;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
 .home-seating-plan-button:hover{border-color:#AEBB98;background:var(--pl)}
 .home-seating-plan-button:active{transform:translateY(1px)}
 .home-seating-plan-copy{min-width:0}
 .home-seating-plan-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:950}
-.home-seating-plan-meta,.home-seating-plan-status{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;color:var(--ts);font-size:10.5px;font-weight:750}
-.home-seating-plan-status{font-size:9.5px}
+.home-seating-plan-status{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px;color:var(--ts);font-size:10px;font-weight:750}
 .home-seating-plan-action{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:84px;border-radius:7px;background:var(--p);color:#fff;padding:8px 9px;font-size:11px;font-weight:950;white-space:nowrap}
 .public-seating-modal .modal-content{max-width:min(1120px,96vw);max-height:92vh}
 .public-seating-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -4335,7 +4333,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.24.20';
+var APP_RELEASE_VERSION='26.08.24.21';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7775,19 +7773,12 @@ function renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,query,memberV
 function publicSeatingPlanTitle(plan){
   return String(plan&&plan.name||plan&&plan.program||plan&&plan.title||'자리배치');
 }
-function publicSeatingPlanMeta(plan){
-  return [plan&&plan.title,plan&&plan.date,plan&&plan.program].filter(Boolean).filter(function(value,index,list){return list.indexOf(value)===index;}).join(' · ');
-}
 function renderHomePublishedSeatingButtons(plans){
   return '<div class="home-seating-list">'+(plans||[]).map(function(plan){
-    var stats=publicSeatingStats(plan);
-    var mine=findPublicSeatingMine(plan);
-    var mineText=mine.length?'내 자리 '+mine.map(function(item){return item.label;}).join(', '):'이름 검색 가능';
     var publishedText=seatingPublishedTime(plan.publishedAt);
     return '<button type="button" class="home-seating-plan-button" onclick="openPublicSeatingModal(\''+escAttr(plan.publicId)+'\')">'
       +'<span class="home-seating-plan-copy"><span class="home-seating-plan-title">'+escHtml(publicSeatingPlanTitle(plan))+'</span>'
-      +'<span class="home-seating-plan-meta">'+escHtml(publicSeatingPlanMeta(plan))+'</span>'
-      +'<span class="home-seating-plan-status">배치 '+stats.placed+'명 · '+escHtml(mineText)+(publishedText?' · 공개 '+escHtml(publishedText):'')+'</span></span>'
+      +'<span class="home-seating-plan-status">'+(publishedText?'공개 일시 · '+escHtml(publishedText):'공개됨')+'</span></span>'
       +'<span class="home-seating-plan-action">자리배치도 <span aria-hidden="true">›</span></span>'
       +'</button>';
   }).join('')+'</div>';
@@ -7796,7 +7787,7 @@ function renderPublicSeatingHomeCard(plan,pending){
   if(!canViewPublishedSeating()||pending||!plan)return '';
   var plans=publishedSeatingPlans.length?publishedSeatingPlans:[plan];
   return '<div class="home-card home-seating-card">'
-    +'<div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🎚️</span><span>찬양의밤 자리배치</span></div><span class="home-seating-count">공개 '+plans.length+'개</span></div>'
+    +'<div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">🎚️</span><span>찬양의밤 자리배치</span></div></div>'
     +renderHomePublishedSeatingButtons(plans)
     +'</div>';
 }
