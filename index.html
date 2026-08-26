@@ -351,6 +351,7 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-board.has-specials .seating-center-line{bottom:124px}
 .seating-center-label{position:absolute;top:-18px;left:calc(50% - 18px);font-size:11px;font-weight:850;color:#8A7622}
 .seating-row{position:relative;display:flex;align-items:center;height:42px;margin-bottom:8px;z-index:1}
+.seating-row.offset .seating-line{transform:translateX(26px)}
 .seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px}
 .seating-line{display:flex;gap:4px}
@@ -2602,6 +2603,7 @@ body{font-weight:500}
 .public-seating-row-label{width:35px;font-size:10px;font-weight:850;color:var(--ts);flex:0 0 35px;white-space:nowrap}
 .public-seating-row-count{width:22px;height:24px;border:1px solid #BDB6A6;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:850;margin-right:4px;color:#596354}
 .public-seating-line{display:flex;gap:4px}
+.public-seating-row.offset .public-seating-line{transform:translateX(26px)}
 .public-seating-board.member-view .public-seating-row-label{order:3}
 .public-seating-board.member-view .public-seating-row-count{order:2;margin-left:4px;margin-right:0}
 .public-seating-board.member-view .public-seating-line{order:1;transform:none}
@@ -4330,7 +4332,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.26.1';
+var APP_RELEASE_VERSION='26.08.26.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7892,10 +7894,11 @@ function renderPublicSeatingModalBody(){
     var r=entry.index;
     var seats=(row.seats||[]).map(function(seat,index){return {seat:seat,index:index};});
     if(memberView)seats.reverse();
+    var stagger=seatingRowDisplayOffset(row,r,rows)===0.5;
     var rowLeft=seatingRowLeftForSeatCount((row.seats||[]).length,maxSeats);
-    var lineMargin=memberView?rowLeft:rowLeft-seatingLeadWidth();
+    var lineMargin=memberView?rowLeft-(stagger?seatingSeatPitch()/2:0):rowLeft-seatingLeadWidth();
     var lineStyle=' style="margin-left:'+Math.max(0,lineMargin)+'px"';
-    html+='<div class="public-seating-row">'
+    html+='<div class="public-seating-row '+(stagger?'offset':'')+'">'
       +'<div class="public-seating-row-label">'+escHtml(row.label||'')+'</div>'
       +'<div class="public-seating-row-count">'+(row.seats||[]).filter(function(s){return !!s;}).length+'</div>'
       +'<div class="public-seating-line"'+lineStyle+'>';
@@ -17211,6 +17214,19 @@ function normalizeSeatingRowLabel(label,index){
   if(!v||/줄$/.test(v))return seatingBaseRowLabel(index);
   return v;
 }
+function seatingRowStaggerOffset(row,index,rows){
+  var label=String(row&&row.label||'').trim();
+  var numbered=label.match(/^(\d+)\s*단$/);
+  if(numbered)return parseInt(numbered[1],10)%2?0.5:0;
+  rows=Array.isArray(rows)?rows:seatingActiveRows();
+  return ((Math.max(0,rows.length-1-index))%2)?0.5:0;
+}
+function seatingRowDisplayOffset(row,index,rows){
+  var wantsGapPhase=seatingRowStaggerOffset(row,index,rows)===0.5;
+  var seatCount=Array.isArray(row&&row.seats)?row.seats.length:0;
+  var alreadyGapPhase=seatCount%2===1;
+  return wantsGapPhase===alreadyGapPhase?0:0.5;
+}
 function seatingMaxSeatCount(rows){
   var max=0;
   (rows||seatingActiveRows()).forEach(function(row){if(row.seats&&row.seats.length>max)max=row.seats.length;});
@@ -17237,8 +17253,8 @@ function normalizeSeatingMicSlots(slots,count){
 function syncSeatingRowLabels(rows){
   rows=rows||seatingActiveRows();
   rows.forEach(function(row,i){
-    row.offset=i%2?0.5:0;
     if(!row.label)row.label=seatingBaseRowLabel(i);
+    row.offset=seatingRowStaggerOffset(row,i,rows);
   });
   if(seatingBoardTab==='choir')seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount(rows));
 }
@@ -17247,7 +17263,7 @@ function createSeatingRows(rowCount,seatCount){
   for(var r=0;r<rowCount;r++){
     var seats=[];
     for(var c=0;c<seatCount;c++)seats.push(null);
-    rows.push({label:seatingBaseRowLabel(r),offset:r%2?0.5:0,seats:seats});
+    rows.push({label:seatingBaseRowLabel(r),offset:(rowCount-1-r)%2?0.5:0,seats:seats});
   }
   return rows;
 }
@@ -17261,7 +17277,7 @@ function createSeatingRowsByTotal(rowCount,totalSeats){
     var count=base+(r<remainder?1:0);
     var seats=[];
     for(var c=0;c<count;c++)seats.push(null);
-    rows.push({label:seatingBaseRowLabel(r),offset:r%2?0.5:0,seats:seats});
+    rows.push({label:seatingBaseRowLabel(r),offset:(rowCount-1-r)%2?0.5:0,seats:seats});
   }
   return rows;
 }
@@ -17440,7 +17456,8 @@ function normalizeSeatingRows(rows){
   return rows.map(function(row,i){
     var seats=Array.isArray(row.seats)?row.seats.map(normalizeSeatingSeat):[];
     if(seats.length===0)while(seats.length<seatingDefaultSeatCount())seats.push(null);
-    return {label:normalizeSeatingRowLabel(row.label,i),offset:row.offset===0.5?0.5:(i%2?0.5:0),seats:seats};
+    var label=normalizeSeatingRowLabel(row.label,i);
+    return {label:label,offset:seatingRowStaggerOffset({label:label},i,rows),seats:seats};
   });
 }
 function normalizeOrchestraSeatingRows(rows){
@@ -17448,7 +17465,8 @@ function normalizeOrchestraSeatingRows(rows){
   return rows.map(function(row,i){
     var seats=Array.isArray(row.seats)?row.seats.map(normalizeSeatingSeat):[];
     if(seats.length===0)while(seats.length<4)seats.push(null);
-    return {label:String(row.label||((rows.length-i)+'열')),offset:row.offset===0.5?0.5:(i%2?0.5:0),seats:seats};
+    var label=String(row.label||((rows.length-i)+'열'));
+    return {label:label,offset:seatingRowStaggerOffset({label:label},i,rows),seats:seats};
   });
 }
 function normalizeSeatingBoardRows(choirRows,orchestraRows){
@@ -18182,7 +18200,7 @@ function downloadSeatingImage(includeSpecial){
   rows.forEach(function(row,r){
     var y=topPad+r*(seatH+rowGap);
     var rowWidth=(row.seats.length*seatW)+Math.max(0,row.seats.length-1)*gap;
-    var rowLeft=centerLeft-(rowWidth/2);
+    var rowLeft=centerLeft-(rowWidth/2)+(seatingRowDisplayOffset(row,r,rows)===0.5?(seatW+gap)/2:0);
     ctx.fillStyle='#596354';
     ctx.font='900 13px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
     ctx.textAlign='left';
@@ -19139,7 +19157,7 @@ function renderSeatingInlinePicker(){
   var rows=seatingActiveRows();
   var row=rows[seatingSelectedSeat.row];
   if(!row||row.seats[seatingSelectedSeat.col])return '';
-  var left=seatingRowLeftForSeatCount(row.seats.length,seatingMaxSeatCount(rows))+(seatingSelectedSeat.col*seatingSeatPitch());
+  var left=seatingRowLeftForSeatCount(row.seats.length,seatingMaxSeatCount(rows))+(seatingRowDisplayOffset(row,seatingSelectedSeat.row,rows)===0.5?seatingSeatPitch()/2:0)+(seatingSelectedSeat.col*seatingSeatPitch());
   var top=(seatingSelectedSeat.row*50)+38;
   return '<div class="seating-inline-picker" style="left:'+left+'px;top:'+top+'px" onclick="event.stopPropagation()">'
     +'<input id="seatingInlineSearch" value="'+escHtml(seatingInlineQuery)+'" placeholder="이름 검색" oninput="seatingInlineQuery=this.value;renderSeatingInlineList()" onkeydown="handleSeatingInlineKey(event)">'
@@ -19191,7 +19209,8 @@ function renderSeatingBoard(){
   var html='<div class="seating-center-line" style="left:'+centerLeft+'px"></div><div class="seating-center-label" style="left:'+(centerLeft-18)+'px">센터</div>';
   rows.forEach(function(row,r){
     var lineMargin=Math.max(0,seatingRowLeftForSeatCount(row.seats.length,maxSeats)-seatingLeadWidth());
-    html+='<div class="seating-row">'
+    var stagger=seatingRowDisplayOffset(row,r,rows)===0.5;
+    html+='<div class="seating-row '+(stagger?'offset':'')+'">'
       +'<div class="seating-row-label">'+escHtml(row.label)+'</div>'
       +'<div class="seating-row-count">'+row.seats.filter(function(s){return !!s;}).length+'</div>'
       +'<div class="seating-line" style="margin-left:'+lineMargin+'px">';
@@ -19879,9 +19898,10 @@ function renderSeatingPublishBoardPreview(plan){
     var html='<div style="font-size:12px;font-weight:900;color:var(--tx);margin:10px 0 6px">'+board.label+' 배치도</div>'
       +'<div class="public-seating-board-scroll" style="max-height:34vh"><div class="public-seating-board'+(specialCount?' has-specials':'')+'" style="min-width:'+boardWidth+'px">'
       +'<div class="public-seating-center-line" style="left:'+centerLeft+'px"></div><div class="public-seating-center-label" style="left:'+centerLeft+'px">센터</div>';
-    rows.forEach(function(row){
+    rows.forEach(function(row,rowIndex){
       var lineMargin=Math.max(0,seatingRowLeftForSeatCount((row.seats||[]).length,maxSeats)-seatingLeadWidth());
-      html+='<div class="public-seating-row">'
+      var stagger=seatingRowDisplayOffset(row,rowIndex,rows)===0.5;
+      html+='<div class="public-seating-row '+(stagger?'offset':'')+'">'
         +'<div class="public-seating-row-label">'+escHtml(row.label||'')+'</div>'
         +'<div class="public-seating-row-count">'+(row.seats||[]).filter(function(s){return !!s;}).length+'</div>'
         +'<div class="public-seating-line" style="margin-left:'+lineMargin+'px">';
