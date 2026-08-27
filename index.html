@@ -4331,7 +4331,7 @@ var seatingPlans=[], seatingPlanId='', seatingMembers=[], seatingAttendees={}, s
 var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingCenterOffset=0, seatingPartFilter='all', seatingBoardTab='choir';
 var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingAttendingOnly=false, seatingUnplacedOnly=false, seatingAbsentOnly=false, seatingAttendeesLocked=false, seatingAutoFit=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
-var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
+var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingPanOuterScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
 var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt='', seatingPublishPreviewData=null;
 var seatingAttendancePaint=null, seatingAttendancePaintListenersBound=false, seatingAttendancePaintSuppressClickUntil=0;
 var seatingWorkspaceMode='place', seatingSettingsOpen=false, seatingMemberPanelCollapsed=false, seatingAttendanceBatchSelected={};
@@ -4355,7 +4355,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.27.2';
+var APP_RELEASE_VERSION='26.08.27.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -19847,11 +19847,13 @@ function setupSeatingBoardGestures(){
       return;
     }
     if(e.touches.length===1){
+      var fullscreenSub=document.getElementById('subSeatingPlan');
       seatingTouchPanning=true;
       seatingPanStartX=e.touches[0].clientX;
       seatingPanStartY=e.touches[0].clientY;
       seatingPanScrollLeft=scroller.scrollLeft;
       seatingPanScrollTop=scroller.scrollTop;
+      seatingPanOuterScrollTop=fullscreenSub?fullscreenSub.scrollTop:0;
     }
     if(e.touches.length===2){
       seatingTouchPanning=false;
@@ -19874,8 +19876,18 @@ function setupSeatingBoardGestures(){
       updateSeatingZoom();
     }else if(e.touches.length===1&&seatingTouchPanning){
       e.preventDefault();
-      scroller.scrollLeft=seatingPanScrollLeft+(seatingPanStartX-e.touches[0].clientX);
-      scroller.scrollTop=seatingPanScrollTop+(seatingPanStartY-e.touches[0].clientY);
+      var panDeltaX=seatingPanStartX-e.touches[0].clientX;
+      var panDeltaY=seatingPanStartY-e.touches[0].clientY;
+      var desiredTop=seatingPanScrollTop+panDeltaY;
+      var maxTop=Math.max(0,scroller.scrollHeight-scroller.clientHeight);
+      var clampedTop=Math.max(0,Math.min(maxTop,desiredTop));
+      scroller.scrollLeft=seatingPanScrollLeft+panDeltaX;
+      scroller.scrollTop=clampedTop;
+      var overflowY=desiredTop-clampedTop;
+      var outerScroller=document.getElementById('subSeatingPlan');
+      if(outerScroller&&outerScroller.classList.contains('seating-fullscreen')&&Math.abs(panDeltaY)>Math.abs(panDeltaX)&&overflowY){
+        outerScroller.scrollTop=seatingPanOuterScrollTop+overflowY;
+      }
     }
   },{passive:false});
   scroller.addEventListener('touchend',function(e){
