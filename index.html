@@ -565,8 +565,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:2;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:8px;box-shadow:none}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{display:none}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-stage-card{grid-column:1/-1}
-#subSeatingPlan.seating-fullscreen .seating-placement-status{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-placement-status.idle{display:flex!important;visibility:hidden;pointer-events:none}
+#subSeatingPlan.seating-fullscreen .seating-placement-status{display:none!important}
 #subSeatingPlan.seating-fullscreen .seating-mode-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-mode-place-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-queue-actions{display:flex}
@@ -4356,7 +4355,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.27.1';
+var APP_RELEASE_VERSION='26.08.27.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
