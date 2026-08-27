@@ -349,7 +349,7 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-center-segments{display:grid;grid-template-columns:34px 44px 34px;padding:3px;border:1px solid var(--bd);border-radius:8px;background:var(--bg)}
 .seating-center-option{height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ts);font-family:inherit;font-size:11px;font-weight:900;cursor:pointer}
 .seating-center-option.on{background:var(--p);color:#fff;box-shadow:0 2px 6px rgba(65,76,40,.18)}
-.seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:none}
+.seating-board-scroll{height:500px;max-width:100%;overflow:auto;background:#FFFDF8;border:1px solid var(--bd);border-radius:14px;padding:24px 18px 70px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
 .seating-board-scroll:focus{outline:none}
 .seating-board{position:relative;min-width:0;width:max-content;transform-origin:top left}
 .seating-center-line{position:absolute;top:0;bottom:72px;left:50%;border-left:2px dashed #C6AD2E;z-index:0}
@@ -566,6 +566,7 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{display:none}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-stage-card{grid-column:1/-1}
 #subSeatingPlan.seating-fullscreen .seating-placement-status{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-placement-status.idle{display:flex!important;visibility:hidden;pointer-events:none}
 #subSeatingPlan.seating-fullscreen .seating-mode-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-mode-place-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-queue-actions{display:flex}
@@ -615,6 +616,14 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed{overflow:hidden;grid-template-rows:auto auto minmax(0,1fr)}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-tool{height:auto;grid-template-rows:minmax(0,1fr);min-height:0;overflow:hidden}
   #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-board-scroll{touch-action:none}
+}
+@media(max-width:899px) and (max-height:520px) and (orientation:landscape){
+  #subSeatingPlan.seating-fullscreen{display:block;overflow-y:auto}
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-bar,#subSeatingPlan.seating-fullscreen .seating-workspace-nav{margin-bottom:5px}
+  #subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;min-height:0;overflow:visible}
+  #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0;min-height:0;overflow:visible}
+  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:max(180px,var(--seating-board-height,60dvh))!important;min-height:max(180px,var(--seating-board-height,60dvh))!important;flex:0 0 max(180px,var(--seating-board-height,60dvh))}
+  #subSeatingPlan.seating-fullscreen .seating-panel{order:1;flex:0 0 clamp(180px,var(--seating-member-panel-height,32dvh),260px);max-height:clamp(180px,var(--seating-member-panel-height,32dvh),260px);margin-top:7px}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -4347,7 +4356,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.26.3';
+var APP_RELEASE_VERSION='26.08.27.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
