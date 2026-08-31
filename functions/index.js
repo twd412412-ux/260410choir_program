@@ -1488,11 +1488,10 @@ function scoreActor(request) {
 
 function safeScoreFilePath(path) {
   const value = cleanString(path, 1500);
-  return !value || (
-    value.startsWith("scores/") &&
-    !value.includes("..") &&
-    !value.includes("\\")
-  );
+  if (!value) return true;
+  if (!value.startsWith("scores/") || value.includes("\\")) return false;
+  const segments = value.split("/");
+  return segments.length >= 3 && segments.every((segment) => segment && segment !== "." && segment !== "..");
 }
 
 function validScoreFilePath(scoreId, path) {
@@ -1610,7 +1609,7 @@ function canEditStoredScore(request, score) {
 
 async function deleteScoreObject(path) {
   const value = cleanString(path, 1500);
-  if (!value || !value.startsWith("scores/") || value.includes("..")) return false;
+  if (!value || !safeScoreFilePath(value)) return false;
   try {
     await getStorage().bucket().file(value).delete({ignoreNotFound: true});
     return true;
@@ -1904,7 +1903,7 @@ async function cleanupUnusedScoreUploads(request) {
   requirePermission(request, "score.manage");
   const requested = Array.isArray(request.data && request.data.paths) ? request.data.paths.slice(0, 40) : [];
   const paths = requested.map((value) => cleanString(value, 1500)).filter((value) => (
-    value.startsWith("scores/") && value.includes("/uploads/") && !value.includes("..")
+    safeScoreFilePath(value) && value.includes("/uploads/")
   ));
   if (!paths.length) return {deleted: 0};
   const catalog = await readAllScoreCatalogItems();
@@ -2011,7 +2010,7 @@ async function openScoreFile(request) {
   }
 
   const filePath = cleanString(score.currentFilePath || score.filePath, 1500);
-  if (!filePath || !filePath.startsWith("scores/") || filePath.includes("..")) {
+  if (!filePath || !safeScoreFilePath(filePath)) {
     throw new HttpsError("not-found", "저장된 악보 파일을 찾을 수 없습니다.");
   }
   const fileName = safeScoreFileName(score.currentFileName || score.fileName, score);
