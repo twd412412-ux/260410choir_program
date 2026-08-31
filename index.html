@@ -4355,7 +4355,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.27.3';
+var APP_RELEASE_VERSION='26.08.31.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -9433,6 +9433,8 @@ function resetScoreUploadReplacementPlan(){
     ||scoreUploadReviewRows.some(function(row){return !!(row&&row.targetId);});
   if(hasPending)cleanupPendingScoreUploads();
   scoreUploadPendingResults=Object.create(null);
+  var fileEl=document.getElementById('scoreFile');
+  if(fileEl)delete fileEl.dataset.targetScoreId;
   scoreUploadReviewRows.forEach(function(row){
     row.targetId='';
     row.previousId='';
@@ -12243,6 +12245,14 @@ function saveScoreUpload(){
   targets.forEach(function(target){uploadTargetIds[target.id]=true;});
   var loggedLinkedSongIds=linkedSongIds.length?linkedSongIds.slice():(!scoreLinkSelectionTouched&&targetGroupBase?scoreLinkedIdsFromScore(targetGroupBase):[]);
   return uploadTargetsWithLimit().then(function(items){
+    var mismatchedItem=items.find(function(item){
+      var path=String(item&&item.currentFilePath||'');
+      return path&&path.indexOf('scores/'+item.id+'/')!==0;
+    });
+    if(mismatchedItem){
+      console.error('score_file_path_mismatch_before_save',{scoreId:mismatchedItem.id});
+      throw new Error('score_file_path_mismatch_before_save');
+    }
     if(btn)btn.textContent='목록에 반영 중...';
     var upsertItems=items.slice();
     if(targetGroupLinkChange||reactivateArchivedGroup){
@@ -12298,6 +12308,7 @@ function saveScoreUpload(){
     console.error(e);
     if(e&&e.code==='storage/unauthorized')showToast('악보 업로드 권한이 없습니다');
     else if(reviewActive&&scoreUploadReviewRows.some(function(row){return row.status==='error';}))showToast('실패한 파일을 확인한 뒤 다시 시도해주세요');
+    else if(e&&e.message==='score_file_path_mismatch_before_save')showToast('악보 연결을 다시 맞췄습니다. 파일을 다시 선택해 저장해주세요');
     else showToast(securityErrorMessage(e,'악보 저장 중 오류가 발생했습니다'));
   }).finally(function(){
     scoreReplacementConfirmed=false;

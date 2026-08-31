@@ -1486,13 +1486,25 @@ function scoreActor(request) {
   };
 }
 
-function validScoreFilePath(scoreId, path) {
+function safeScoreFilePath(path) {
   const value = cleanString(path, 1500);
   return !value || (
-    value.startsWith(`scores/${scoreId}/`) &&
+    value.startsWith("scores/") &&
     !value.includes("..") &&
     !value.includes("\\")
   );
+}
+
+function validScoreFilePath(scoreId, path) {
+  const value = cleanString(path, 1500);
+  return !value || (safeScoreFilePath(value) && value.startsWith(`scores/${scoreId}/`));
+}
+
+function scoreFilePathOwner(path) {
+  const value = cleanString(path, 1500);
+  if (!safeScoreFilePath(value)) return "";
+  const parts = value.split("/");
+  return parts.length > 2 && parts[0] === "scores" ? parts[1] : "";
 }
 
 function sanitizeScoreItem(raw, scoreId, existing, actor) {
@@ -1509,7 +1521,19 @@ function sanitizeScoreItem(raw, scoreId, existing, actor) {
     : "";
   const currentFilePath = cleanString(raw.currentFilePath || raw.filePath, 1500);
   const currentFileUrl = currentFilePath ? "" : cleanString(raw.currentFileUrl || raw.fileUrl, 2000);
-  if (!validScoreFilePath(scoreId, currentFilePath)) {
+  const existingFilePath = cleanString(existing && (existing.currentFilePath || existing.filePath), 1500);
+  const keepsSafeExistingFilePath = Boolean(
+    existingFilePath &&
+    currentFilePath === existingFilePath &&
+    safeScoreFilePath(currentFilePath)
+  );
+  if (!keepsSafeExistingFilePath && !validScoreFilePath(scoreId, currentFilePath)) {
+    console.error("score_file_path_mismatch", {
+      scoreId,
+      pathScoreId: scoreFilePathOwner(currentFilePath),
+      hasExisting: Boolean(existing),
+      reusedExistingPath: currentFilePath === existingFilePath,
+    });
     throw new HttpsError("invalid-argument", "악보 파일 경로가 올바르지 않습니다.");
   }
   if (currentFileUrl && !/^https?:\/\//i.test(currentFileUrl)) {
@@ -1524,7 +1548,7 @@ function sanitizeScoreItem(raw, scoreId, existing, actor) {
     linkedSongIds.unshift(linkedSongId);
   }
   const fileChanged = Boolean(existing) && (
-    cleanString(existing.currentFilePath || existing.filePath, 1500) !== currentFilePath ||
+    existingFilePath !== currentFilePath ||
     cleanString(existing.currentFileUrl || existing.fileUrl, 2000) !== currentFileUrl ||
     cleanString(existing.currentFileName || existing.fileName, 500) !== cleanString(raw.currentFileName || raw.fileName, 500)
   );
