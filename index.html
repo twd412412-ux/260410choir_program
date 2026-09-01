@@ -950,6 +950,7 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .special-plan-range-title{font-size:13px;font-weight:950;color:var(--tx)}
 .special-plan-range-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .special-plan-range-min,.special-plan-range-sort{width:auto;min-width:88px;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:7px 26px 7px 8px;font:inherit;font-size:10px;font-weight:850}
+.special-plan-range-all{border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--pd);padding:7px 9px;font:inherit;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}
 .special-plan-range-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
 .special-plan-range-field{min-width:0}
 .special-plan-range-field label{display:block;font-size:9.5px;color:var(--ts);font-weight:850;margin-bottom:4px}
@@ -4515,7 +4516,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.01.9';
+var APP_RELEASE_VERSION='26.09.01.10';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -21372,6 +21373,7 @@ function specialPlanAvailableWeeks(items){
   }
   (items||[]).forEach(function(item){add(item.date);});
   (specialPlanSavedRows||[]).forEach(function(row){add(row.date);});
+  (specialPlanHistorySongs||[]).forEach(function(song){if(!specialPlanIsSundaySong(song))add(specialPlanSongRecordDate(song));});
   return Object.keys(map).sort().map(function(key){return map[key];});
 }
 
@@ -21387,7 +21389,7 @@ function specialPlanRangeControlsHtml(items){
   if(keys.indexOf(specialPlanRangeFilter.end)===-1)specialPlanRangeFilter.end=currentKeys[currentKeys.length-1]||latestKey;
   if(specialPlanRangeFilter.start>specialPlanRangeFilter.end){var swap=specialPlanRangeFilter.start;specialPlanRangeFilter.start=specialPlanRangeFilter.end;specialPlanRangeFilter.end=swap;}
   function options(selected){return weeks.map(function(row){return '<option value="'+row.key+'"'+(row.key===selected?' selected':'')+'>'+escHtml(row.label)+'</option>';}).join('');}
-  return '<section class="special-plan-range"><div class="special-plan-range-head"><div class="special-plan-range-title">기간 배정 확인</div><div class="special-plan-range-actions"><select class="special-plan-range-min" id="specialPlanRangeMin" onchange="updateSpecialPlanRangeFilter()" aria-label="표시 기준"><option value="1"'+(Number(specialPlanRangeFilter.min)===1?' selected':'')+'>전체 보기</option><option value="2"'+(Number(specialPlanRangeFilter.min)===2?' selected':'')+'>2회 이상</option><option value="3"'+(Number(specialPlanRangeFilter.min)===3?' selected':'')+'>3회 이상</option><option value="4"'+(Number(specialPlanRangeFilter.min)===4?' selected':'')+'>4회 이상</option><option value="5"'+(Number(specialPlanRangeFilter.min)===5?' selected':'')+'>5회 이상</option></select><select class="special-plan-range-sort" id="specialPlanRangeSort" onchange="updateSpecialPlanRangeFilter()" aria-label="정렬 기준"><option value="desc"'+(specialPlanRangeFilter.sort==='desc'?' selected':'')+'>횟수 많은 순</option><option value="asc"'+(specialPlanRangeFilter.sort==='asc'?' selected':'')+'>횟수 적은 순</option><option value="name"'+(specialPlanRangeFilter.sort==='name'?' selected':'')+'>가나다순</option></select></div></div>'
+  return '<section class="special-plan-range"><div class="special-plan-range-head"><div class="special-plan-range-title">기간 배정 확인</div><div class="special-plan-range-actions"><button type="button" class="special-plan-range-all" onclick="setSpecialPlanFullRange()">전체 기간</button><select class="special-plan-range-min" id="specialPlanRangeMin" onchange="updateSpecialPlanRangeFilter()" aria-label="표시 기준"><option value="1"'+(Number(specialPlanRangeFilter.min)===1?' selected':'')+'>전체 보기</option><option value="2"'+(Number(specialPlanRangeFilter.min)===2?' selected':'')+'>2회 이상</option><option value="3"'+(Number(specialPlanRangeFilter.min)===3?' selected':'')+'>3회 이상</option><option value="4"'+(Number(specialPlanRangeFilter.min)===4?' selected':'')+'>4회 이상</option><option value="5"'+(Number(specialPlanRangeFilter.min)===5?' selected':'')+'>5회 이상</option></select><select class="special-plan-range-sort" id="specialPlanRangeSort" onchange="updateSpecialPlanRangeFilter()" aria-label="정렬 기준"><option value="desc"'+(specialPlanRangeFilter.sort==='desc'?' selected':'')+'>횟수 많은 순</option><option value="asc"'+(specialPlanRangeFilter.sort==='asc'?' selected':'')+'>횟수 적은 순</option><option value="name"'+(specialPlanRangeFilter.sort==='name'?' selected':'')+'>가나다순</option></select></div></div>'
     +'<div class="special-plan-range-grid"><div class="special-plan-range-field"><label for="specialPlanRangeStart">시작 주</label><select id="specialPlanRangeStart" onchange="updateSpecialPlanRangeFilter()">'+options(specialPlanRangeFilter.start)+'</select></div><div class="special-plan-range-field"><label for="specialPlanRangeEnd">종료 주</label><select id="specialPlanRangeEnd" onchange="updateSpecialPlanRangeFilter()">'+options(specialPlanRangeFilter.end)+'</select></div></div>'
     +'<div class="special-plan-range-search"><input id="specialPlanRangeSearch" type="search" value="'+escHtml(specialPlanRangeFilter.search||'')+'" placeholder="이름 검색 · 예: 박지효" aria-label="반주자 또는 싱어 이름 검색" oninput="updateSpecialPlanRangeSearch(this.value)"></div>'
     +'<div class="special-plan-range-result" id="specialPlanRangeResult"></div></section>';
@@ -21517,6 +21519,17 @@ function updateSpecialPlanRangeFilter(){
   renderSpecialPlanRangeSummary(specialPlanItems);
 }
 
+function setSpecialPlanFullRange(){
+  var weeks=specialPlanAvailableWeeks(specialPlanItems);
+  if(!weeks.length)return;
+  specialPlanRangeFilter.start=weeks[0].key;
+  specialPlanRangeFilter.end=weeks[weeks.length-1].key;
+  var start=document.getElementById('specialPlanRangeStart'),end=document.getElementById('specialPlanRangeEnd');
+  if(start)start.value=specialPlanRangeFilter.start;
+  if(end)end.value=specialPlanRangeFilter.end;
+  renderSpecialPlanRangeSummary(specialPlanItems);
+}
+
 function updateSpecialPlanRangeSearch(value){
   specialPlanRangeFilter.search=String(value||'');
   renderSpecialPlanRangeSummary(specialPlanItems);
@@ -21570,8 +21583,9 @@ function renderSpecialPlanEntry(item){
 
 function renderSpecialPlanResults(items){
   var el=document.getElementById('specialPlanResults');if(!el)return;
-  if(!items.length&&specialPlanSavedRows.length){
-    el.innerHTML='<div class="special-plan-saved-overview"><strong>저장된 일정 '+specialPlanSavedRows.length+'건</strong><span>확인할 주를 선택하면 반주자·싱어의 배정 횟수를 바로 계산합니다.</span></div>'+specialPlanRangeControlsHtml([]);
+  var registeredCount=(specialPlanHistorySongs||[]).filter(function(song){return !specialPlanIsSundaySong(song);}).length;
+  if(!items.length&&(specialPlanSavedRows.length||registeredCount)){
+    el.innerHTML='<div class="special-plan-saved-overview"><strong>저장 일정 '+specialPlanSavedRows.length+'건 · 등록 특송 '+registeredCount+'건</strong><span>시작 주와 종료 주를 넓혀 반주자·싱어의 배정 횟수를 확인합니다.</span></div>'+specialPlanRangeControlsHtml([]);
     renderSpecialPlanRangeSummary([]);
     return;
   }
@@ -21849,7 +21863,10 @@ function initSongRecommendTool(){
     if(specialInput){
       try{specialInput.value=localStorage.getItem(SPECIAL_PLAN_DRAFT_KEY)||'';}catch(e){}
     }
-    loadSpecialPlanSaved(false).catch(function(){});
+    Promise.all([
+      loadSpecialPlanSaved(false).catch(function(){return [];}),
+      loadSpecialPlanHistory(false).catch(function(){return [];})
+    ]).then(function(){if(!specialPlanItems.length)renderSpecialPlanResults([]);});
   }
   var dateEl=document.getElementById('recDate');
   if(dateEl&&!dateEl.value)dateEl.value=getTodayInputDate();
