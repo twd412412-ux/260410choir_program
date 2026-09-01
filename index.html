@@ -4486,7 +4486,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.01.6';
+var APP_RELEASE_VERSION='26.09.01.7';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -21129,6 +21129,23 @@ function specialPlanComparableSongName(name){
   return normalizeSearchText(String(name||'').replace(/\([^)]*\)|\[[^\]]*\]/g,' '));
 }
 
+function specialPlanComparableMembers(members){
+  var seen={};
+  return (members||[]).map(function(name){
+    return normalizeHistoryName(name)||normalizeSearchText(name);
+  }).filter(function(key){
+    if(!key||seen[key])return false;
+    seen[key]=true;
+    return true;
+  }).sort();
+}
+
+function specialPlanMemberDuplicateSignature(dateValue,songName,members){
+  var people=specialPlanComparableMembers(members);
+  if(!dateValue||!people.length)return '';
+  return [dateValue,people.join(',')].join('|');
+}
+
 function specialPlanAssignmentSignature(dateValue,songName,pianists){
   var people=(pianists||[]).map(function(name){return normalizeHistoryName(name)||String(name).toLowerCase();}).sort().join(',');
   return [dateValue,specialPlanComparableSongName(songName),people].join('|');
@@ -21158,14 +21175,17 @@ function specialPlanRecordMembers(song){
 }
 
 function buildSpecialPlanWeeks(items){
-  var weeks={},planSignatures={},planIdentities={};
+  var weeks={},planSignatures={},planIdentities={},memberSignatures={};
   (items||[]).forEach(function(item){
     if(!item.date)return;
     var info=specialPlanWeekInfo(item.date);
     if(!weeks[info.key])weeks[info.key]={info:info,items:[],existingCount:0,savedCount:0,pianists:{},members:{}};
+    var memberSignature=specialPlanMemberDuplicateSignature(item.dateValue,item.songName,item.members);
+    if(memberSignature&&memberSignatures[memberSignature])return;
     var week=weeks[info.key];week.items.push(item);
     var signature=specialPlanAssignmentSignature(item.dateValue,item.songName,item.pianists);
     planSignatures[signature]=true;
+    if(memberSignature)memberSignatures[memberSignature]=true;
     planIdentities[specialPlanIdentityKey(item)]=true;
     item.pianists.filter(specialPlanIsHumanPianist).forEach(function(name){specialPlanCountPerson(week.pianists,name,'plan',item.event+' · '+item.songName,signature+'|p|'+normalizeHistoryName(name));});
     item.members.forEach(function(name){specialPlanCountPerson(week.members,name,'plan',item.event+' · '+item.songName,signature+'|m|'+normalizeHistoryName(name));});
@@ -21174,8 +21194,10 @@ function buildSpecialPlanWeeks(items){
     if(!row.date||planIdentities[specialPlanIdentityKey(row)])return;
     var info=specialPlanWeekInfo(row.date),week=weeks[info.key];if(!week)return;
     var signature=specialPlanAssignmentSignature(row.dateValue,row.songName,row.pianists);
-    if(planSignatures[signature])return;
+    var memberSignature=specialPlanMemberDuplicateSignature(row.dateValue,row.songName,row.members);
+    if(planSignatures[signature]||(memberSignature&&memberSignatures[memberSignature]))return;
     planSignatures[signature]=true;
+    if(memberSignature)memberSignatures[memberSignature]=true;
     week.savedCount++;
     (row.pianists||[]).filter(specialPlanIsHumanPianist).forEach(function(name){specialPlanCountPerson(week.pianists,name,'existing','저장 일정 · '+(row.event||row.songName),signature+'|p|'+normalizeHistoryName(name));});
     (row.members||[]).forEach(function(name){specialPlanCountPerson(week.members,name,'existing','저장 일정 · '+(row.event||row.songName),signature+'|m|'+normalizeHistoryName(name));});
@@ -21185,12 +21207,15 @@ function buildSpecialPlanWeeks(items){
     var info=specialPlanWeekInfo(date),week=weeks[info.key];if(!week)return;
     var dateValue=specialPlanDateValue(date);
     var pianists=splitSongRecommendPeople(song.pianist||'').filter(specialPlanIsHumanPianist);
+    var members=specialPlanRecordMembers(song);
     var signature=specialPlanAssignmentSignature(dateValue,song.songName,pianists);
-    if(planSignatures[signature])return;
+    var memberSignature=specialPlanMemberDuplicateSignature(dateValue,song.songName,members);
+    if(planSignatures[signature]||(memberSignature&&memberSignatures[memberSignature]))return;
     planSignatures[signature]=true;
+    if(memberSignature)memberSignatures[memberSignature]=true;
     week.existingCount++;
     pianists.forEach(function(name){specialPlanCountPerson(week.pianists,name,'existing',(song.category||'등록 곡')+' · '+(song.songName||''),signature+'|p|'+normalizeHistoryName(name));});
-    specialPlanRecordMembers(song).forEach(function(name){specialPlanCountPerson(week.members,name,'existing',(song.category||'등록 곡')+' · '+(song.songName||''),signature+'|m|'+normalizeHistoryName(name));});
+    members.forEach(function(name){specialPlanCountPerson(week.members,name,'existing',(song.category||'등록 곡')+' · '+(song.songName||''),signature+'|m|'+normalizeHistoryName(name));});
   });
   return Object.keys(weeks).sort().map(function(key){return weeks[key];});
 }
@@ -21248,15 +21273,17 @@ function specialPlanRangeAssignmentLabel(item){
 }
 
 function buildSpecialPlanRangePeople(items,startKey,endKey){
-  var result={pianists:{},members:{},inputCount:0,savedCount:0,songCount:0},currentIdentities={},exactSignatures={},looseSignatures={};
+  var result={pianists:{},members:{},inputCount:0,savedCount:0,songCount:0},currentIdentities={},exactSignatures={},looseSignatures={},memberSignatures={};
   function pianistKey(list){return (list||[]).filter(specialPlanIsHumanPianist).map(function(name){return normalizeHistoryName(name)||String(name).toLowerCase();}).sort().join(',');}
   function exactSignature(item){return specialPlanIdentityKey(item)+'|'+pianistKey(item.pianists);}
   function looseSignature(dateValue,songName,pianists){return [dateValue,specialPlanComparableSongName(songName),pianistKey(pianists)].join('|');}
   function addItem(item,source){
     if(!item.date||!specialPlanInWeekRange(item.date,startKey,endKey))return false;
     var signature=exactSignature(item);
-    if(exactSignatures[signature])return false;
+    var memberSignature=specialPlanMemberDuplicateSignature(item.dateValue,item.songName,item.members);
+    if(exactSignatures[signature]||(memberSignature&&memberSignatures[memberSignature]))return false;
     exactSignatures[signature]=true;
+    if(memberSignature)memberSignatures[memberSignature]=true;
     looseSignatures[looseSignature(item.dateValue,item.songName,item.pianists)]=true;
     var label=specialPlanRangeAssignmentLabel(item);
     (item.pianists||[]).filter(specialPlanIsHumanPianist).forEach(function(name){specialPlanCountPerson(result.pianists,name,source,label,signature+'|p|'+normalizeHistoryName(name));});
@@ -21275,12 +21302,16 @@ function buildSpecialPlanRangePeople(items,startKey,endKey){
   (specialPlanHistorySongs.length?specialPlanHistorySongs:(allSongs||[])).forEach(function(song){
     var date=specialPlanSongRecordDate(song);if(!date||!specialPlanInWeekRange(date,startKey,endKey))return;
     var pianists=splitSongRecommendPeople(song.pianist||'').filter(specialPlanIsHumanPianist);
-    var loose=looseSignature(specialPlanDateValue(date),song.songName,pianists);if(looseSignatures[loose])return;
+    var members=specialPlanRecordMembers(song);
+    var dateValue=specialPlanDateValue(date);
+    var memberSignature=specialPlanMemberDuplicateSignature(dateValue,song.songName,members);
+    var loose=looseSignature(dateValue,song.songName,pianists);if(looseSignatures[loose]||(memberSignature&&memberSignatures[memberSignature]))return;
     looseSignatures[loose]=true;
+    if(memberSignature)memberSignatures[memberSignature]=true;
     var eventLabel=[song.category||'등록 곡',song.subCategory||''].filter(Boolean).join(' · ');
     var label=(date.getMonth()+1)+'.'+date.getDate()+' · '+eventLabel+' · '+(song.songName||'곡명 미확인');
     pianists.forEach(function(name){specialPlanCountPerson(result.pianists,name,'existing',label,loose+'|p|'+normalizeHistoryName(name));});
-    specialPlanRecordMembers(song).forEach(function(name){specialPlanCountPerson(result.members,name,'existing',label,loose+'|m|'+normalizeHistoryName(name));});
+    members.forEach(function(name){specialPlanCountPerson(result.members,name,'existing',label,loose+'|m|'+normalizeHistoryName(name));});
     result.songCount++;
   });
   return result;
