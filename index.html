@@ -931,6 +931,53 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .member-audit-mini.warn{background:#F4E7CC;color:#7C571E}
 .member-audit-mini.no{background:#F0DFDB;color:#8D4B45}
 .member-audit-empty{background:#FFFDF8;border:1px solid #D8CAB7;border-radius:12px;padding:24px 12px;text-align:center;color:var(--ts);font-size:13px;font-weight:700}
+.special-plan-tool{margin-bottom:18px;border:1px solid var(--bd);background:var(--sf);border-radius:12px;padding:14px;box-shadow:0 5px 18px rgba(49,54,35,.055)}
+.special-plan-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:11px}
+.special-plan-title{font-size:15px;font-weight:900;color:var(--tx);line-height:1.25}
+.special-plan-subtitle{font-size:11px;color:var(--ts);line-height:1.45;margin-top:4px}
+.special-plan-admin-badge{flex:0 0 auto;border:1px solid #C8D5B7;background:#EEF3E6;color:#4D6039;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900}
+.special-plan-input{width:100%;min-height:220px;resize:vertical;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);padding:12px;font:inherit;font-size:13px;line-height:1.55;letter-spacing:0;outline:none}
+.special-plan-input:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(111,125,78,.12)}
+.special-plan-actions{display:flex;gap:8px;align-items:center;margin-top:9px}
+.special-plan-actions .btn:first-child{flex:1}
+.special-plan-draft-note{font-size:10px;color:var(--ts);font-weight:750;margin-top:7px}
+.special-plan-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.special-plan-stat{border:1px solid var(--bd);background:var(--bg);border-radius:9px;padding:9px 8px;min-width:0}
+.special-plan-stat strong{display:block;color:var(--pd);font-size:18px;line-height:1;font-weight:950}
+.special-plan-stat span{display:block;color:var(--ts);font-size:10px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.special-plan-week-list{display:grid;gap:10px}
+.special-plan-week{border:1px solid var(--bd);border-radius:10px;background:var(--bg);overflow:hidden}
+.special-plan-week-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 11px;border-bottom:1px solid var(--bd)}
+.special-plan-week-title{font-size:13px;font-weight:900;color:var(--tx)}
+.special-plan-week-count{font-size:10px;color:var(--ts);font-weight:800;white-space:nowrap}
+.special-plan-week-body{padding:10px 11px}
+.special-plan-section-label{font-size:10px;color:var(--ts);font-weight:900;margin-bottom:7px}
+.special-plan-people{display:flex;gap:6px;flex-wrap:wrap}
+.special-plan-person{border:1px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:8px;padding:6px 8px;font-size:11px;font-weight:800;line-height:1.2}
+.special-plan-person b{color:var(--pd);margin-left:3px}
+.special-plan-person.repeat{border-color:#D9B66D;background:#FFF4D9;color:#73501E}
+.special-plan-person small{display:block;font-size:9px;color:var(--ts);font-weight:700;margin-top:3px}
+.special-plan-members{margin-top:10px;border-top:1px solid var(--bd);padding-top:8px}
+.special-plan-members summary{cursor:pointer;color:var(--pd);font-size:11px;font-weight:900;list-style:none}
+.special-plan-members summary::-webkit-details-marker{display:none}
+.special-plan-members summary::after{content:' 펼치기';color:var(--ts);font-size:9px}
+.special-plan-members[open] summary::after{content:' 접기'}
+.special-plan-members .special-plan-people{margin-top:8px}
+.special-plan-entry-list{display:grid;gap:8px;margin-top:12px}
+.special-plan-entry{border:1px solid var(--bd);background:var(--sf);border-radius:10px;padding:10px}
+.special-plan-entry.warn{border-color:#D9B66D}
+.special-plan-entry-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start}
+.special-plan-entry-date{font-size:10px;color:var(--pd);font-weight:900;margin-bottom:3px}
+.special-plan-entry-title{font-size:13px;color:var(--tx);font-weight:900;line-height:1.35}
+.special-plan-entry-song{font-size:12px;color:var(--tx);font-weight:800;margin-top:6px}
+.special-plan-entry-meta{font-size:10.5px;color:var(--ts);line-height:1.55;margin-top:5px;overflow-wrap:anywhere}
+.special-plan-warning-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.special-plan-warning{border-radius:999px;padding:3px 7px;background:#F4E7CC;color:#7C571E;font-size:9.5px;font-weight:900}
+.special-plan-ok{border-radius:999px;padding:3px 7px;background:#EAEFDF;color:#4E5A35;font-size:9.5px;font-weight:900}
+.special-plan-apply{border:0;background:var(--p);color:#fff;border-radius:8px;padding:7px 9px;font-family:inherit;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}
+.song-recommend-divider{display:flex;align-items:center;gap:9px;margin:18px 0 12px;color:var(--pd);font-size:12px;font-weight:900}
+.song-recommend-divider::before,.song-recommend-divider::after{content:'';height:1px;background:var(--bd);flex:1}
+@media(max-width:390px){.special-plan-tool{padding:12px}.special-plan-entry-head{grid-template-columns:1fr}.special-plan-apply{width:100%}}
 .archive-top{padding:12px 16px 0}
 .archive-top p{font-size:13px;color:var(--ts);margin-top:6px;line-height:1.5}
 .archive-upload-card,.archive-filter-card,.archive-card{background:var(--sf);border-radius:var(--r);box-shadow:var(--sh)}
@@ -3097,6 +3144,24 @@ body{font-weight:500}
   </div>
   <div class="admin-sub hidden" id="subSongRecommend">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">🎼 선곡 도우미</h3>
+    <section class="special-plan-tool hidden" id="specialPlanTool">
+      <div class="special-plan-head">
+        <div>
+          <div class="special-plan-title">특송 일정 분석</div>
+          <div class="special-plan-subtitle">받은 내용을 그대로 붙여넣고 주간 배정을 확인합니다.</div>
+        </div>
+        <span class="special-plan-admin-badge">관리자</span>
+      </div>
+      <textarea class="special-plan-input" id="specialPlanInput" aria-label="특송 일정 원문" oninput="saveSpecialPlanDraft()" placeholder="예)&#10;&lt;교구 집회&gt;&#10;일: 9/9(수)&#10;곡: 왕이신 나의 하나님&#10;-표지현, 윤하은 / 박규식"></textarea>
+      <div class="special-plan-actions">
+        <button type="button" class="btn btn-p" onclick="runSpecialPlanAnalysis()">일정 분석</button>
+        <button type="button" class="btn" style="background:var(--pl);color:var(--pd)" onclick="clearSpecialPlanDraft()">비우기</button>
+      </div>
+      <div class="special-plan-draft-note">작성 내용은 현재 기기에만 임시 저장됩니다.</div>
+      <div id="specialPlanStatus" class="member-audit-status hidden" style="margin-top:12px" aria-live="polite"></div>
+      <div id="specialPlanResults"></div>
+    </section>
+    <div class="song-recommend-divider" id="songRecommendDivider"><span>곡 추천</span></div>
     <div class="member-audit-intro">
       날짜, 요일, 카테고리, 참여 단원, 최근 사용 이력과 반주자 로테이션을 기준으로 선곡 후보를 추천합니다. 추천은 기존 곡 기록만 분석하며 저장 데이터는 변경하지 않습니다.
     </div>
@@ -4223,6 +4288,8 @@ var scoreSeenStateCache={key:'',items:{}};
 var scorePickerSongId='', scorePickerActiveOnly=false, scorePickerOrchestraOpen=false;
 var scoreInfoScoreId='', scoreInfoTarget=null, scoreInfoLookupToken=0;
 var songRecommendCache=[];
+var SPECIAL_PLAN_DRAFT_KEY='choir_special_plan_draft_v1';
+var specialPlanItems=[],specialPlanHistorySongs=[],specialPlanInitialized=false;
 var scoreReplacementConfirmed=false, scoreBatchReplacementConfirmed=false, scorePendingReplacementInfo=null, scoreLocalPreviewUrl='';
 var scoreLinkSelectionTouched=false, scoreTargetGroupKey='';
 var scoreTitleComposing=false, scoreTitleSuggestionIndex=-1, scoreTitleSuggestionBlurTimer=null;
@@ -4355,7 +4422,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.08.31.2';
+var APP_RELEASE_VERSION='26.09.01.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -20727,6 +20794,426 @@ function buildCatOptions(){
   });
 }
 
+function setSpecialPlanStatus(message,state){
+  var el=document.getElementById('specialPlanStatus');
+  if(!el)return;
+  el.classList.remove('hidden','warn','no');
+  if(!message){el.classList.add('hidden');el.textContent='';return;}
+  el.textContent=message;
+  if(state)el.classList.add(state);
+}
+
+function saveSpecialPlanDraft(){
+  if(adminRole!=='admin')return;
+  var input=document.getElementById('specialPlanInput');
+  if(!input)return;
+  try{localStorage.setItem(SPECIAL_PLAN_DRAFT_KEY,input.value||'');}catch(e){}
+}
+
+function clearSpecialPlanDraft(){
+  if(adminRole!=='admin')return;
+  var input=document.getElementById('specialPlanInput');
+  if(input&&input.value&&!confirm('붙여넣은 내용을 비울까요?'))return;
+  if(input)input.value='';
+  try{localStorage.removeItem(SPECIAL_PLAN_DRAFT_KEY);}catch(e){}
+  specialPlanItems=[];
+  var results=document.getElementById('specialPlanResults');
+  if(results)results.innerHTML='';
+  setSpecialPlanStatus('');
+}
+
+function specialPlanPad(value){return String(value).padStart(2,'0');}
+
+function specialPlanDateValue(date){
+  if(!(date instanceof Date)||isNaN(date.getTime()))return '';
+  return date.getFullYear()+'-'+specialPlanPad(date.getMonth()+1)+'-'+specialPlanPad(date.getDate());
+}
+
+function specialPlanInferYear(month,day){
+  var now=new Date(),bestYear=now.getFullYear(),bestDiff=Infinity;
+  [now.getFullYear()-1,now.getFullYear(),now.getFullYear()+1].forEach(function(year){
+    var candidate=new Date(year,month-1,day);
+    var diff=Math.abs(candidate.getTime()-now.getTime());
+    if(diff<bestDiff){bestDiff=diff;bestYear=year;}
+  });
+  return bestYear;
+}
+
+function specialPlanParseTime(text){
+  var raw=String(text||'');
+  var colon=raw.match(/(\d{1,2})\s*:\s*(\d{2})\s*(am|pm)?/i);
+  var hour=0,minute=0,label='',matched='';
+  if(colon){
+    hour=Number(colon[1]);minute=Number(colon[2]);
+    var ap=String(colon[3]||'').toLowerCase();
+    if(ap==='pm'&&hour<12)hour+=12;
+    if(ap==='am'&&hour===12)hour=0;
+    matched=colon[0];
+  }else{
+    var korean=raw.match(/(오전|오후)\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분?)?/);
+    if(korean){
+      hour=Number(korean[2]);minute=Number(korean[3]||0);
+      if(korean[1]==='오후'&&hour<12)hour+=12;
+      if(korean[1]==='오전'&&hour===12)hour=0;
+      matched=korean[0];
+    }else return {value:'',label:'',raw:''};
+  }
+  if(hour>23||minute>59)return {value:'',label:'',raw:''};
+  label=(hour<12?'오전 ':'오후 ')+((hour%12)||12)+':'+specialPlanPad(minute);
+  return {value:specialPlanPad(hour)+':'+specialPlanPad(minute),label:label,raw:matched};
+}
+
+function specialPlanParseDateText(text){
+  text=String(text||'').replace(/_/g,' ');
+  var match=text.match(/(?:(20\d{2})\s*(?:[.\-/년]\s*))?(\d{1,2})\s*(?:[.\-/월]\s*)(\d{1,2})\s*일?/);
+  if(!match)return null;
+  var month=Number(match[2]),day=Number(match[3]);
+  var year=match[1]?Number(match[1]):specialPlanInferYear(month,day);
+  var date=new Date(year,month-1,day);
+  if(date.getFullYear()!==year||date.getMonth()!==month-1||date.getDate()!==day)return null;
+  var weekdayMatch=text.match(/\((월|화|수|목|금|토|일|주일)(?:요일)?\)/);
+  var inputDow=weekdayMatch?(weekdayMatch[1]==='주일'?'일':weekdayMatch[1]):'';
+  var actualDow=DOW_NAMES[date.getDay()];
+  var time=specialPlanParseTime(text);
+  return {
+    date:date,
+    dateValue:specialPlanDateValue(date),
+    year:year,month:month,day:day,
+    actualDow:actualDow,inputDow:inputDow,
+    weekdayMismatch:!!(inputDow&&inputDow!==actualDow),
+    raw:match[0],index:match.index,
+    weekdayRaw:weekdayMatch?weekdayMatch[0]:'',
+    timeValue:time.value,timeLabel:time.label,timeRaw:time.raw
+  };
+}
+
+function specialPlanCleanEventTail(line,dateInfo){
+  var tail=String(line||'').replace(/_/g,' ');
+  if(dateInfo&&dateInfo.raw)tail=tail.replace(dateInfo.raw,'');
+  if(dateInfo&&dateInfo.weekdayRaw)tail=tail.replace(dateInfo.weekdayRaw,'');
+  if(dateInfo&&dateInfo.timeRaw)tail=tail.replace(dateInfo.timeRaw,'');
+  tail=tail.replace(/^\s*(?:일시?|날짜)\s*[:：]?\s*/,'').replace(/^[\s:：·\-]+|[\s:：·\-]+$/g,'');
+  var angle=tail.match(/<\s*([^>]+?)\s*>/);
+  if(angle)return angle[1].trim();
+  return tail.replace(/[<>]/g,'').trim();
+}
+
+function specialPlanSplitPeople(value){
+  var seen={};
+  return String(value||'')
+    .replace(/^[\-–—•\s]+/,'')
+    .split(/[,，、;；/／\n\r\s]+/)
+    .map(function(name){return name.trim().replace(/^[\-–—•]+|[.]+$/g,'');})
+    .filter(function(name){
+      var key=normalizeHistoryName(name)||name.toLowerCase();
+      if(!name||seen[key])return false;
+      seen[key]=true;return true;
+    });
+}
+
+function specialPlanNewItem(group){
+  return {group:group||'',event:group||'',songName:'',location:'',date:null,dateValue:'',timeValue:'',timeLabel:'',inputDow:'',actualDow:'',weekdayMismatch:false,rolePeople:{},pianists:[],members:[],rawLines:[]};
+}
+
+function specialPlanRoleLabel(role){
+  if(role==='소프'||role==='소프라노')return '소프라노';
+  if(role==='싱어'||role==='팀원'||role==='참여단원')return '싱어';
+  return role;
+}
+
+function specialPlanAddRolePeople(item,role,value){
+  role=specialPlanRoleLabel(role);
+  if(!item.rolePeople[role])item.rolePeople[role]=[];
+  specialPlanSplitPeople(value).forEach(function(name){
+    if(item.rolePeople[role].indexOf(name)===-1)item.rolePeople[role].push(name);
+  });
+}
+
+function specialPlanFinalizeItem(item,items){
+  if(!item)return;
+  var memberMap={};
+  Object.keys(item.rolePeople).forEach(function(role){
+    item.rolePeople[role].forEach(function(name){
+      var key=normalizeHistoryName(name)||name.toLowerCase();
+      if(!memberMap[key])memberMap[key]=name;
+    });
+  });
+  item.members=Object.keys(memberMap).map(function(key){return memberMap[key];});
+  var pianistMap={};
+  item.pianists.forEach(function(name){
+    var key=normalizeHistoryName(name)||name.toLowerCase();
+    if(name&&!pianistMap[key])pianistMap[key]=name;
+  });
+  item.pianists=Object.keys(pianistMap).map(function(key){return pianistMap[key];});
+  if(!item.event)item.event=item.group||'특송';
+  if(item.dateValue||item.songName||item.members.length||item.pianists.length)items.push(item);
+}
+
+function parseSpecialPlanText(value){
+  var lines=String(value||'').replace(/\r/g,'').split('\n');
+  var items=[],current=null,group='';
+  lines.forEach(function(original){
+    var line=String(original||'').replace(/\u00a0/g,' ').replace(/_/g,' ').trim();
+    if(!line)return;
+    var header=line.match(/^<\s*([^>]+?)\s*>$/);
+    if(header){
+      specialPlanFinalizeItem(current,items);current=null;group=header[1].trim();return;
+    }
+    var dateInfo=specialPlanParseDateText(line);
+    var isDateLine=!!(dateInfo&&(/^(?:일시?|날짜)\s*[:：]/.test(line)||dateInfo.index===0));
+    if(isDateLine){
+      specialPlanFinalizeItem(current,items);
+      current=specialPlanNewItem(group);
+      current.date=dateInfo.date;
+      current.dateValue=dateInfo.dateValue;
+      current.timeValue=dateInfo.timeValue;
+      current.timeLabel=dateInfo.timeLabel;
+      current.inputDow=dateInfo.inputDow;
+      current.actualDow=dateInfo.actualDow;
+      current.weekdayMismatch=dateInfo.weekdayMismatch;
+      current.event=specialPlanCleanEventTail(line,dateInfo)||group||'특송';
+      current.rawLines.push(original);
+      return;
+    }
+    if(!current)current=specialPlanNewItem(group);
+    current.rawLines.push(original);
+    var field=line.match(/^(곡명|곡|장소|반주자?|싱어|팀원|참여단원|소프라노|소프|알토|테너|베이스)\s*[:：]\s*(.*)$/);
+    if(field){
+      var key=field[1],fieldValue=field[2].trim();
+      if(key==='곡'||key==='곡명')current.songName=fieldValue;
+      else if(key==='장소')current.location=fieldValue;
+      else if(key==='반주'||key==='반주자')current.pianists=current.pianists.concat(specialPlanSplitPeople(fieldValue));
+      else specialPlanAddRolePeople(current,key,fieldValue);
+      return;
+    }
+    if(/^\//.test(line)){
+      current.pianists=current.pianists.concat(specialPlanSplitPeople(line.replace(/^\/+/,'')));
+      return;
+    }
+    if(/^[\-–—•]/.test(line)){
+      var body=line.replace(/^[\-–—•\s]+/,'');
+      var slash=body.search(/[\/／]/);
+      if(slash>-1){
+        specialPlanAddRolePeople(current,'싱어',body.slice(0,slash));
+        current.pianists=current.pianists.concat(specialPlanSplitPeople(body.slice(slash+1)));
+      }else specialPlanAddRolePeople(current,'싱어',body);
+      return;
+    }
+    if(/^미정(?:\s|$)/.test(line)&&!current.songName)current.songName='미정';
+  });
+  specialPlanFinalizeItem(current,items);
+  return items.map(function(item,index){item.index=index;return item;});
+}
+
+function specialPlanDirectoryChecks(names){
+  return (names||[]).map(function(name){
+    var key=normalizeHistoryName(name);
+    var matches=songMemberDirectory.filter(function(member){return normalizeHistoryName(member.name)===key;});
+    return {name:name,key:key,matches:matches,state:matches.length===1?'ok':(matches.length>1?'ambiguous':'missing')};
+  });
+}
+
+function enrichSpecialPlanItems(items){
+  (items||[]).forEach(function(item){
+    item.memberChecks=specialPlanDirectoryChecks(item.members);
+    item.pianistChecks=specialPlanDirectoryChecks(item.pianists.filter(function(name){return !/^(mr|미정)$/i.test(name);}));
+  });
+  return items;
+}
+
+function specialPlanWeekInfo(date){
+  var start=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+  start.setDate(start.getDate()-((start.getDay()+6)%7));
+  var end=new Date(start.getFullYear(),start.getMonth(),start.getDate()+6);
+  return {
+    key:specialPlanDateValue(start),start:start,end:end,
+    label:(start.getMonth()+1)+'.'+start.getDate()+' - '+(end.getMonth()+1)+'.'+end.getDate()
+  };
+}
+
+function specialPlanAssignmentSignature(dateValue,songName,pianists){
+  var people=(pianists||[]).map(function(name){return normalizeHistoryName(name)||String(name).toLowerCase();}).sort().join(',');
+  return [dateValue,normalizeSearchText(songName||''),people].join('|');
+}
+
+function specialPlanCountPerson(map,name,source,label,signature){
+  var key=normalizeHistoryName(name)||String(name||'').toLowerCase();
+  if(!key)return;
+  if(!map[key])map[key]={name:name,plan:0,existing:0,assignments:{}};
+  if(map[key].assignments[signature])return;
+  map[key].assignments[signature]=label;
+  map[key][source]=(map[key][source]||0)+1;
+}
+
+function specialPlanSongRecordDate(song){
+  var year=Number(song&&song.year),month=Number(song&&song.month),day=Number(song&&song.day);
+  if(!year||!month||!day)return null;
+  var date=new Date(year,month-1,day);
+  return date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day?date:null;
+}
+
+function specialPlanRecordMembers(song){
+  return splitParticipantEntries(song&&song.members||'').map(function(entry){
+    var info=participantEntryInfo(entry);
+    return info.isGeneric?'':(info.lookupName||entry);
+  }).filter(Boolean);
+}
+
+function buildSpecialPlanWeeks(items){
+  var weeks={},planSignatures={};
+  (items||[]).forEach(function(item){
+    if(!item.date)return;
+    var info=specialPlanWeekInfo(item.date);
+    if(!weeks[info.key])weeks[info.key]={info:info,items:[],existingCount:0,pianists:{},members:{}};
+    var week=weeks[info.key];week.items.push(item);
+    var signature=specialPlanAssignmentSignature(item.dateValue,item.songName,item.pianists);
+    planSignatures[signature]=true;
+    item.pianists.forEach(function(name){specialPlanCountPerson(week.pianists,name,'plan',item.event+' · '+item.songName,signature+'|p|'+normalizeHistoryName(name));});
+    item.members.forEach(function(name){specialPlanCountPerson(week.members,name,'plan',item.event+' · '+item.songName,signature+'|m|'+normalizeHistoryName(name));});
+  });
+  (specialPlanHistorySongs.length?specialPlanHistorySongs:(allSongs||[])).forEach(function(song){
+    var date=specialPlanSongRecordDate(song);if(!date)return;
+    var info=specialPlanWeekInfo(date),week=weeks[info.key];if(!week)return;
+    var dateValue=specialPlanDateValue(date);
+    var pianists=splitSongRecommendPeople(song.pianist||'');
+    var signature=specialPlanAssignmentSignature(dateValue,song.songName,pianists);
+    if(planSignatures[signature])return;
+    week.existingCount++;
+    pianists.forEach(function(name){specialPlanCountPerson(week.pianists,name,'existing',(song.category||'등록 곡')+' · '+(song.songName||''),signature+'|p|'+normalizeHistoryName(name));});
+    specialPlanRecordMembers(song).forEach(function(name){specialPlanCountPerson(week.members,name,'existing',(song.category||'등록 곡')+' · '+(song.songName||''),signature+'|m|'+normalizeHistoryName(name));});
+  });
+  return Object.keys(weeks).sort().map(function(key){return weeks[key];});
+}
+
+function specialPlanPeopleRows(map){
+  return Object.keys(map||{}).map(function(key){
+    var row=map[key];row.total=Number(row.plan||0)+Number(row.existing||0);return row;
+  }).sort(function(a,b){return b.total-a.total||a.name.localeCompare(b.name,'ko');});
+}
+
+function specialPlanWarnings(item){
+  var warnings=[];
+  if(!item.dateValue)warnings.push('날짜 확인 필요');
+  if(item.weekdayMismatch)warnings.push('요일 불일치: 입력 '+item.inputDow+' · 실제 '+item.actualDow);
+  if(!item.songName||item.songName==='미정')warnings.push('곡 미정');
+  if(!item.pianists.length||item.pianists.some(function(name){return name==='미정';}))warnings.push('반주 미정');
+  var missing=(item.memberChecks||[]).filter(function(check){return check.state==='missing';}).map(function(check){return check.name;});
+  var ambiguous=(item.memberChecks||[]).filter(function(check){return check.state==='ambiguous';}).map(function(check){return check.name;});
+  var pianistMissing=(item.pianistChecks||[]).filter(function(check){return check.state==='missing';}).map(function(check){return check.name;});
+  if(missing.length)warnings.push('명부 미확인: '+missing.join(', '));
+  if(ambiguous.length)warnings.push('동명이인 확인: '+ambiguous.join(', '));
+  if(pianistMissing.length)warnings.push('반주자 명부 미확인: '+pianistMissing.join(', '));
+  return warnings;
+}
+
+function renderSpecialPlanPersonRows(rows){
+  if(!rows.length)return '<span class="special-plan-entry-meta">배정 없음</span>';
+  return rows.map(function(row){
+    var source=[];
+    if(row.plan)source.push('새 '+row.plan);
+    if(row.existing)source.push('기존 '+row.existing);
+    return '<span class="special-plan-person'+(row.total>=2?' repeat':'')+'">'+escHtml(row.name)+' <b>'+row.total+'회</b><small>'+escHtml(source.join(' · '))+'</small></span>';
+  }).join('');
+}
+
+function renderSpecialPlanEntry(item){
+  var warnings=specialPlanWarnings(item);
+  item.warnings=warnings;
+  var roleText=Object.keys(item.rolePeople).map(function(role){return role+' '+item.rolePeople[role].join(', ');}).join(' · ');
+  var matched=(item.memberChecks||[]).filter(function(check){return check.state==='ok';}).length;
+  var dateText=item.dateValue?(item.date.getMonth()+1)+'.'+item.date.getDate()+' ('+item.actualDow+')':'';
+  if(item.timeLabel)dateText+=' · '+item.timeLabel;
+  var badges=warnings.length
+    ?warnings.map(function(w){return '<span class="special-plan-warning">'+escHtml(w)+'</span>';}).join('')
+    :'<span class="special-plan-ok">확인 완료</span>';
+  var applyButton=item.dateValue&&item.songName&&item.songName!=='미정'
+    ?'<button type="button" class="special-plan-apply" onclick="applySpecialPlanItem('+item.index+')">곡 추가에 넣기</button>'
+    :'';
+  return '<div class="special-plan-entry'+(warnings.length?' warn':'')+'">'
+    +'<div class="special-plan-entry-head"><div><div class="special-plan-entry-date">'+escHtml(dateText||'날짜 미확인')+'</div><div class="special-plan-entry-title">'+escHtml(item.event||item.group||'특송')+'</div></div>'+applyButton+'</div>'
+    +'<div class="special-plan-entry-song">'+escHtml(item.songName||'곡명 미확인')+'</div>'
+    +(roleText?'<div class="special-plan-entry-meta">단원 · '+escHtml(roleText)+' · 명부 '+matched+'/'+item.members.length+'</div>':'')
+    +'<div class="special-plan-entry-meta">반주 · '+escHtml(item.pianists.join(', ')||'미정')+(item.location?' · 장소 '+escHtml(item.location):'')+'</div>'
+    +'<div class="special-plan-warning-row">'+badges+'</div></div>';
+}
+
+function renderSpecialPlanResults(items){
+  var el=document.getElementById('specialPlanResults');if(!el)return;
+  var weeks=buildSpecialPlanWeeks(items);
+  var warningCount=items.reduce(function(sum,item){return sum+specialPlanWarnings(item).length;},0);
+  var repeatPianists={};
+  weeks.forEach(function(week){specialPlanPeopleRows(week.pianists).forEach(function(row){if(row.total>=2)repeatPianists[normalizeHistoryName(row.name)||row.name]=true;});});
+  var summary='<div class="special-plan-summary">'
+    +'<div class="special-plan-stat"><strong>'+items.length+'</strong><span>인식 일정</span></div>'
+    +'<div class="special-plan-stat"><strong>'+Object.keys(repeatPianists).length+'</strong><span>반주 중복</span></div>'
+    +'<div class="special-plan-stat"><strong>'+warningCount+'</strong><span>확인 항목</span></div></div>';
+  var weekHtml=weeks.map(function(week){
+    var pianistRows=specialPlanPeopleRows(week.pianists);
+    var memberRows=specialPlanPeopleRows(week.members);
+    var repeatMembers=memberRows.filter(function(row){return row.total>=2;}).length;
+    return '<section class="special-plan-week"><div class="special-plan-week-head"><div class="special-plan-week-title">'+escHtml(week.info.label)+'</div><div class="special-plan-week-count">새 '+week.items.length+' · 기존 '+week.existingCount+'</div></div>'
+      +'<div class="special-plan-week-body"><div class="special-plan-section-label">반주 배정</div><div class="special-plan-people">'+renderSpecialPlanPersonRows(pianistRows)+'</div>'
+      +'<details class="special-plan-members"><summary>단원 참여 '+memberRows.length+'명 · 2회 이상 '+repeatMembers+'명</summary><div class="special-plan-people">'+renderSpecialPlanPersonRows(memberRows)+'</div></details></div></section>';
+  }).join('');
+  var undated=items.filter(function(item){return !item.dateValue;});
+  if(undated.length)weekHtml+='<div class="member-audit-status warn" style="margin-top:10px">날짜를 인식하지 못한 일정 '+undated.length+'건이 있습니다.</div>';
+  var entries='<div class="special-plan-entry-list">'+items.map(renderSpecialPlanEntry).join('')+'</div>';
+  el.innerHTML=summary+'<div class="special-plan-week-list">'+weekHtml+'</div>'+entries;
+}
+
+function runSpecialPlanAnalysis(){
+  if(adminRole!=='admin')return showToast('관리자만 이용할 수 있습니다.');
+  var input=document.getElementById('specialPlanInput');
+  var text=input?input.value.trim():'';
+  if(!text)return showToast('분석할 일정을 붙여넣어주세요.');
+  saveSpecialPlanDraft();
+  setSpecialPlanStatus('일정과 단원 명부를 확인하는 중입니다.');
+  Promise.all([
+    loadSongMemberDirectory(),
+    getSongsForMemberLinkAudit(false).catch(function(error){console.warn('special_plan_history_load_failed',error);return allSongs||[];})
+  ]).then(function(results){
+    specialPlanHistorySongs=results[1]||allSongs||[];
+    specialPlanItems=enrichSpecialPlanItems(parseSpecialPlanText(text)).sort(function(a,b){
+      return String(a.dateValue||'9999-99-99').localeCompare(String(b.dateValue||'9999-99-99'))
+        ||String(a.timeValue||'99:99').localeCompare(String(b.timeValue||'99:99'))
+        ||a.index-b.index;
+    });
+    specialPlanItems.forEach(function(item,index){item.index=index;});
+    if(!specialPlanItems.length){
+      renderSpecialPlanResults([]);
+      setSpecialPlanStatus('날짜 또는 곡 정보를 인식하지 못했습니다. 형식을 확인해주세요.','warn');
+      return;
+    }
+    renderSpecialPlanResults(specialPlanItems);
+    var warningCount=specialPlanItems.reduce(function(sum,item){return sum+specialPlanWarnings(item).length;},0);
+    setSpecialPlanStatus('일정 '+specialPlanItems.length+'건을 인식했습니다.'+(warningCount?' 확인할 항목 '+warningCount+'개가 있습니다.':' 모든 항목을 확인했습니다.'),warningCount?'warn':'');
+  }).catch(function(error){
+    console.error(error);
+    setSpecialPlanStatus('일정 분석 중 오류가 발생했습니다.','no');
+  });
+}
+
+function applySpecialPlanItem(index){
+  if(adminRole!=='admin'||!canManageSongs())return showToast('관리자 곡 관리 권한이 필요합니다.');
+  var item=specialPlanItems[index];
+  if(!item||!item.dateValue||!item.songName||item.songName==='미정')return showToast('날짜와 곡명을 먼저 확인해주세요.');
+  switchAdminTab('addSong');
+  document.getElementById('addSongName').value=item.songName;
+  document.getElementById('addDate').value=item.dateValue;
+  calcDow('add');
+  setCategoryFieldValue('add',item.group||'특송');
+  document.getElementById('addSub').value=item.event&&item.event!==item.group?item.event:'';
+  document.getElementById('addLoc').value=item.location||'';
+  document.getElementById('addMem').value=item.members.join(', ');
+  document.getElementById('addPia').value=item.pianists.join(', ');
+  songMemberSelections.add={};
+  (item.memberChecks||[]).forEach(function(check){
+    if(check.state==='ok'&&check.matches[0])songMemberSelections.add[check.key]=memberRefFromMember(check.matches[0]);
+  });
+  renderSongMemberLinkPanel('add');
+  showToast('인식한 내용을 곡 추가 화면에 넣었습니다. 확인 후 저장해주세요.');
+}
+
 function setSongRecommendStatus(message,state){
   var el=document.getElementById('songRecommendStatus');
   if(!el)return;
@@ -20742,7 +21229,16 @@ function setSongRecommendStatus(message,state){
 }
 
 function initSongRecommendTool(){
+  var specialTool=document.getElementById('specialPlanTool');
+  if(specialTool)specialTool.classList.toggle('hidden',adminRole!=='admin');
   if(!canUseSongRecommend())return;
+  if(adminRole==='admin'&&!specialPlanInitialized){
+    specialPlanInitialized=true;
+    var specialInput=document.getElementById('specialPlanInput');
+    if(specialInput){
+      try{specialInput.value=localStorage.getItem(SPECIAL_PLAN_DRAFT_KEY)||'';}catch(e){}
+    }
+  }
   var dateEl=document.getElementById('recDate');
   if(dateEl&&!dateEl.value)dateEl.value=getTodayInputDate();
   updateSongRecommendDow();
