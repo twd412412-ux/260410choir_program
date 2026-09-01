@@ -946,13 +946,17 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .special-plan-stat strong{display:block;color:var(--pd);font-size:18px;line-height:1;font-weight:950}
 .special-plan-stat span{display:block;color:var(--ts);font-size:10px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .special-plan-range{border:1px solid #CFC5AF;background:#F4F0E6;border-radius:10px;padding:11px;margin:12px 0}
-.special-plan-range-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.special-plan-range-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px;flex-wrap:wrap}
 .special-plan-range-title{font-size:13px;font-weight:950;color:var(--tx)}
-.special-plan-range-min{width:auto;min-width:92px;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:7px 28px 7px 9px;font:inherit;font-size:10.5px;font-weight:850}
+.special-plan-range-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.special-plan-range-min,.special-plan-range-sort{width:auto;min-width:88px;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:7px 26px 7px 8px;font:inherit;font-size:10px;font-weight:850}
 .special-plan-range-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
 .special-plan-range-field{min-width:0}
 .special-plan-range-field label{display:block;font-size:9.5px;color:var(--ts);font-weight:850;margin-bottom:4px}
 .special-plan-range-field select{width:100%;min-width:0;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:8px 26px 8px 8px;font:inherit;font-size:10.5px;font-weight:850}
+.special-plan-range-search{position:relative;margin-top:8px}
+.special-plan-range-search input{width:100%;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);padding:9px 10px;font:inherit;font-size:11px;font-weight:750;outline:none}
+.special-plan-range-search input:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(111,125,78,.1)}
 .special-plan-range-result{margin-top:10px;padding-top:10px;border-top:1px solid #D8CFBD}
 .special-plan-range-period{font-size:10px;color:var(--pd);font-weight:900;margin-bottom:9px}
 .special-plan-range-group+.special-plan-range-group{margin-top:10px}
@@ -963,6 +967,10 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .special-plan-range-person-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--tx);font-size:11px;font-weight:900}
 .special-plan-range-person-head b{color:#8B5D17;font-size:10.5px}
 .special-plan-range-assignments{display:grid;gap:2px;margin-top:5px;color:var(--ts);font-size:9.5px;font-weight:700;line-height:1.4}
+.special-plan-search-result{border:1px solid #C9D3B6;background:#F7FAF1;border-radius:8px;padding:9px;margin-bottom:10px}
+.special-plan-search-title{font-size:10px;color:var(--pd);font-weight:950;margin-bottom:6px}
+.special-plan-search-role{display:inline-block;margin-left:5px;border-radius:999px;background:#E8EEDF;color:#52613C;padding:2px 5px;font-size:8.5px;font-weight:900}
+.special-plan-search-empty{font-size:10.5px;color:#7A674C;font-weight:800}
 .special-plan-saved-overview{border:1px solid var(--bd);background:var(--bg);border-radius:10px;padding:11px;margin:12px 0 0}
 .special-plan-saved-overview strong{display:block;color:var(--tx);font-size:13px;font-weight:950}
 .special-plan-saved-overview span{display:block;color:var(--ts);font-size:10.5px;font-weight:750;line-height:1.45;margin-top:3px}
@@ -4345,7 +4353,7 @@ var scoreInfoScoreId='', scoreInfoTarget=null, scoreInfoLookupToken=0;
 var songRecommendCache=[];
 var SPECIAL_PLAN_DRAFT_KEY='choir_special_plan_draft_v1';
 var specialPlanItems=[],specialPlanHistorySongs=[],specialPlanSavedRows=[],specialPlanInitialized=false,specialPlanSavedLoaded=false,specialPlanSavedLoading=false,specialPlanSavedPromise=null;
-var specialPlanRangeFilter={start:'',end:'',min:2};
+var specialPlanRangeFilter={start:'',end:'',min:1,sort:'desc',search:''};
 var scoreReplacementConfirmed=false, scoreBatchReplacementConfirmed=false, scorePendingReplacementInfo=null, scoreLocalPreviewUrl='';
 var scoreLinkSelectionTouched=false, scoreTargetGroupKey='';
 var scoreTitleComposing=false, scoreTitleSuggestionIndex=-1, scoreTitleSuggestionBlurTimer=null;
@@ -4478,7 +4486,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.01.4';
+var APP_RELEASE_VERSION='26.09.01.5';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -20876,7 +20884,7 @@ function clearSpecialPlanDraft(){
   var results=document.getElementById('specialPlanResults');
   var saveRow=document.getElementById('specialPlanSaveRow');
   if(saveRow)saveRow.classList.add('hidden');
-  specialPlanRangeFilter={start:'',end:'',min:2};
+  specialPlanRangeFilter={start:'',end:'',min:1,sort:'desc',search:''};
   if(results){
     if(specialPlanSavedRows.length)renderSpecialPlanResults([]);
     else results.innerHTML='';
@@ -21218,8 +21226,9 @@ function specialPlanRangeControlsHtml(items){
   if(keys.indexOf(specialPlanRangeFilter.end)===-1)specialPlanRangeFilter.end=currentKeys[currentKeys.length-1]||latestKey;
   if(specialPlanRangeFilter.start>specialPlanRangeFilter.end){var swap=specialPlanRangeFilter.start;specialPlanRangeFilter.start=specialPlanRangeFilter.end;specialPlanRangeFilter.end=swap;}
   function options(selected){return weeks.map(function(row){return '<option value="'+row.key+'"'+(row.key===selected?' selected':'')+'>'+escHtml(row.label)+'</option>';}).join('');}
-  return '<section class="special-plan-range"><div class="special-plan-range-head"><div class="special-plan-range-title">기간 중복 확인</div><select class="special-plan-range-min" id="specialPlanRangeMin" onchange="updateSpecialPlanRangeFilter()" aria-label="중복 기준"><option value="2"'+(Number(specialPlanRangeFilter.min)===2?' selected':'')+'>2회 이상</option><option value="3"'+(Number(specialPlanRangeFilter.min)===3?' selected':'')+'>3회 이상</option><option value="4"'+(Number(specialPlanRangeFilter.min)===4?' selected':'')+'>4회 이상</option><option value="5"'+(Number(specialPlanRangeFilter.min)===5?' selected':'')+'>5회 이상</option></select></div>'
+  return '<section class="special-plan-range"><div class="special-plan-range-head"><div class="special-plan-range-title">기간 배정 확인</div><div class="special-plan-range-actions"><select class="special-plan-range-min" id="specialPlanRangeMin" onchange="updateSpecialPlanRangeFilter()" aria-label="표시 기준"><option value="1"'+(Number(specialPlanRangeFilter.min)===1?' selected':'')+'>전체 보기</option><option value="2"'+(Number(specialPlanRangeFilter.min)===2?' selected':'')+'>2회 이상</option><option value="3"'+(Number(specialPlanRangeFilter.min)===3?' selected':'')+'>3회 이상</option><option value="4"'+(Number(specialPlanRangeFilter.min)===4?' selected':'')+'>4회 이상</option><option value="5"'+(Number(specialPlanRangeFilter.min)===5?' selected':'')+'>5회 이상</option></select><select class="special-plan-range-sort" id="specialPlanRangeSort" onchange="updateSpecialPlanRangeFilter()" aria-label="정렬 기준"><option value="desc"'+(specialPlanRangeFilter.sort==='desc'?' selected':'')+'>횟수 많은 순</option><option value="asc"'+(specialPlanRangeFilter.sort==='asc'?' selected':'')+'>횟수 적은 순</option><option value="name"'+(specialPlanRangeFilter.sort==='name'?' selected':'')+'>가나다순</option></select></div></div>'
     +'<div class="special-plan-range-grid"><div class="special-plan-range-field"><label for="specialPlanRangeStart">시작 주</label><select id="specialPlanRangeStart" onchange="updateSpecialPlanRangeFilter()">'+options(specialPlanRangeFilter.start)+'</select></div><div class="special-plan-range-field"><label for="specialPlanRangeEnd">종료 주</label><select id="specialPlanRangeEnd" onchange="updateSpecialPlanRangeFilter()">'+options(specialPlanRangeFilter.end)+'</select></div></div>'
+    +'<div class="special-plan-range-search"><input id="specialPlanRangeSearch" type="search" value="'+escHtml(specialPlanRangeFilter.search||'')+'" placeholder="이름 검색 · 예: 박지효" aria-label="반주자 또는 싱어 이름 검색" oninput="updateSpecialPlanRangeSearch(this.value)"></div>'
     +'<div class="special-plan-range-result" id="specialPlanRangeResult"></div></section>';
 }
 
@@ -21272,37 +21281,75 @@ function buildSpecialPlanRangePeople(items,startKey,endKey){
   return result;
 }
 
-function renderSpecialPlanRangePeople(rows,minCount){
-  rows=rows.filter(function(row){return row.total>=minCount;});
-  if(!rows.length)return '<div class="special-plan-none">해당 기준의 중복 없음</div>';
+function sortSpecialPlanRangeRows(rows,mode){
+  return (rows||[]).slice().sort(function(a,b){
+    if(mode==='asc')return a.total-b.total||a.name.localeCompare(b.name,'ko');
+    if(mode==='name')return a.name.localeCompare(b.name,'ko');
+    return b.total-a.total||a.name.localeCompare(b.name,'ko');
+  });
+}
+
+function renderSpecialPlanRangePeople(rows,emptyText){
+  if(!rows.length)return '<div class="special-plan-none">'+escHtml(emptyText||'배정 없음')+'</div>';
   return '<div class="special-plan-range-rows">'+rows.map(function(row){
     var assignments=Object.keys(row.assignments||{}).sort().map(function(key){return row.assignments[key];});
     return '<div class="special-plan-range-person"><div class="special-plan-range-person-head"><span>'+escHtml(row.name)+'</span><b>'+row.total+'회</b></div><div class="special-plan-range-assignments">'+assignments.map(function(label){return '<span>'+escHtml(label)+'</span>';}).join('')+'</div></div>';
   }).join('')+'</div>';
 }
 
+function renderSpecialPlanNameSearch(data,query){
+  query=String(query||'').trim();if(!query)return '';
+  var normalized=normalizeSearchText(query),map={};
+  function addRows(rows,role){
+    rows.forEach(function(row){
+      var key=normalizeHistoryName(row.name)||normalizeSearchText(row.name);
+      if(normalized&&normalizeSearchText(row.name).indexOf(normalized)===-1)return;
+      if(!map[key])map[key]={name:row.name,pianist:0,member:0,assignments:{}};
+      map[key][role]=row.total;
+      Object.keys(row.assignments||{}).forEach(function(signature){map[key].assignments[role+'|'+signature]=(role==='pianist'?'반주':'싱어')+' · '+row.assignments[signature];});
+    });
+  }
+  addRows(specialPlanPeopleRows(data.pianists),'pianist');
+  addRows(specialPlanPeopleRows(data.members),'member');
+  var rows=Object.keys(map).map(function(key){return map[key];}).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+  if(!rows.length)return '<div class="special-plan-search-result"><div class="special-plan-search-title">이름 검색</div><div class="special-plan-search-empty">‘'+escHtml(query)+'’ · 선택 기간 배정 없음</div></div>';
+  return '<div class="special-plan-search-result"><div class="special-plan-search-title">이름 검색 결과 '+rows.length+'명</div><div class="special-plan-range-rows">'+rows.map(function(row){
+    var roles=[];if(row.pianist)roles.push('<span class="special-plan-search-role">반주 '+row.pianist+'회</span>');if(row.member)roles.push('<span class="special-plan-search-role">싱어 '+row.member+'회</span>');
+    var assignments=Object.keys(row.assignments).sort().map(function(key){return row.assignments[key];});
+    return '<div class="special-plan-range-person"><div class="special-plan-range-person-head"><span>'+escHtml(row.name)+roles.join('')+'</span><b>'+(row.pianist+row.member)+'회</b></div><div class="special-plan-range-assignments">'+assignments.map(function(label){return '<span>'+escHtml(label)+'</span>';}).join('')+'</div></div>';
+  }).join('')+'</div></div>';
+}
+
 function renderSpecialPlanRangeSummary(items){
   var el=document.getElementById('specialPlanRangeResult');if(!el)return;
   var data=buildSpecialPlanRangePeople(items,specialPlanRangeFilter.start,specialPlanRangeFilter.end);
-  var minCount=Math.max(2,Number(specialPlanRangeFilter.min)||2);
-  var pianistRows=specialPlanPeopleRows(data.pianists).filter(function(row){return row.total>=minCount;});
-  var memberRows=specialPlanPeopleRows(data.members).filter(function(row){return row.total>=minCount;});
+  var minCount=Math.max(1,Number(specialPlanRangeFilter.min)||1),sortMode=specialPlanRangeFilter.sort||'desc';
+  var pianistRows=sortSpecialPlanRangeRows(specialPlanPeopleRows(data.pianists).filter(function(row){return row.total>=minCount;}),sortMode);
+  var memberRows=sortSpecialPlanRangeRows(specialPlanPeopleRows(data.members).filter(function(row){return row.total>=minCount;}),sortMode);
   var startInfo=specialPlanWeekInfo(new Date(Number(specialPlanRangeFilter.start.slice(0,4)),Number(specialPlanRangeFilter.start.slice(5,7))-1,Number(specialPlanRangeFilter.start.slice(8,10))));
   var endInfo=specialPlanWeekInfo(new Date(Number(specialPlanRangeFilter.end.slice(0,4)),Number(specialPlanRangeFilter.end.slice(5,7))-1,Number(specialPlanRangeFilter.end.slice(8,10))));
+  var criterion=minCount===1?'전체':minCount+'회 이상';
   el.innerHTML='<div class="special-plan-range-period">'+escHtml(specialPlanWeekRangeLabel(startInfo).split('~')[0]+'~'+specialPlanWeekRangeLabel(endInfo).split('~')[1])+' · 입력 '+data.inputCount+'건 · 저장 '+data.savedCount+'건 포함</div>'
-    +'<div class="special-plan-range-group"><div class="special-plan-range-group-head">반주자 중복 <span>'+pianistRows.length+'명</span></div>'+renderSpecialPlanRangePeople(pianistRows,minCount)+'</div>'
-    +'<div class="special-plan-range-group"><div class="special-plan-range-group-head">싱어 중복 <span>'+memberRows.length+'명</span></div>'+renderSpecialPlanRangePeople(memberRows,minCount)+'</div>';
+    +renderSpecialPlanNameSearch(data,specialPlanRangeFilter.search)
+    +'<div class="special-plan-range-group"><div class="special-plan-range-group-head">반주자 '+criterion+' <span>'+pianistRows.length+'명</span></div>'+renderSpecialPlanRangePeople(pianistRows,minCount===1?'반주 배정 없음':'해당 기준의 반주자 없음')+'</div>'
+    +'<div class="special-plan-range-group"><div class="special-plan-range-group-head">싱어 '+criterion+' <span>'+memberRows.length+'명</span></div>'+renderSpecialPlanRangePeople(memberRows,minCount===1?'싱어 배정 없음':'해당 기준의 싱어 없음')+'</div>';
 }
 
 function updateSpecialPlanRangeFilter(){
-  var start=document.getElementById('specialPlanRangeStart'),end=document.getElementById('specialPlanRangeEnd'),min=document.getElementById('specialPlanRangeMin');
+  var start=document.getElementById('specialPlanRangeStart'),end=document.getElementById('specialPlanRangeEnd'),min=document.getElementById('specialPlanRangeMin'),sort=document.getElementById('specialPlanRangeSort');
   if(start)specialPlanRangeFilter.start=start.value;
   if(end)specialPlanRangeFilter.end=end.value;
-  if(min)specialPlanRangeFilter.min=Number(min.value)||2;
+  if(min)specialPlanRangeFilter.min=Number(min.value)||1;
+  if(sort)specialPlanRangeFilter.sort=sort.value||'desc';
   if(specialPlanRangeFilter.start>specialPlanRangeFilter.end){
     var swap=specialPlanRangeFilter.start;specialPlanRangeFilter.start=specialPlanRangeFilter.end;specialPlanRangeFilter.end=swap;
     if(start)start.value=specialPlanRangeFilter.start;if(end)end.value=specialPlanRangeFilter.end;
   }
+  renderSpecialPlanRangeSummary(specialPlanItems);
+}
+
+function updateSpecialPlanRangeSearch(value){
+  specialPlanRangeFilter.search=String(value||'');
   renderSpecialPlanRangeSummary(specialPlanItems);
 }
 
@@ -21355,7 +21402,7 @@ function renderSpecialPlanEntry(item){
 function renderSpecialPlanResults(items){
   var el=document.getElementById('specialPlanResults');if(!el)return;
   if(!items.length&&specialPlanSavedRows.length){
-    el.innerHTML='<div class="special-plan-saved-overview"><strong>저장된 일정 '+specialPlanSavedRows.length+'건</strong><span>확인할 주를 선택하면 저장된 일정의 반주자·싱어 중복을 바로 계산합니다.</span></div>'+specialPlanRangeControlsHtml([]);
+    el.innerHTML='<div class="special-plan-saved-overview"><strong>저장된 일정 '+specialPlanSavedRows.length+'건</strong><span>확인할 주를 선택하면 반주자·싱어의 배정 횟수를 바로 계산합니다.</span></div>'+specialPlanRangeControlsHtml([]);
     renderSpecialPlanRangeSummary([]);
     return;
   }
