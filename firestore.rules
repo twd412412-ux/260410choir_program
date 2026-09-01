@@ -98,6 +98,10 @@ service cloud.firestore {
       allow write: if hasPermission('seating.manage');
     }
 
+    match /specialPerformancePlans/{planId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
     match /settings/seatingMemberDirectory {
       allow read: if hasPermission('seating.manage');
       allow write: if false;
