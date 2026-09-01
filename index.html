@@ -963,6 +963,9 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .special-plan-range-person-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--tx);font-size:11px;font-weight:900}
 .special-plan-range-person-head b{color:#8B5D17;font-size:10.5px}
 .special-plan-range-assignments{display:grid;gap:2px;margin-top:5px;color:var(--ts);font-size:9.5px;font-weight:700;line-height:1.4}
+.special-plan-saved-overview{border:1px solid var(--bd);background:var(--bg);border-radius:10px;padding:11px;margin:12px 0 0}
+.special-plan-saved-overview strong{display:block;color:var(--tx);font-size:13px;font-weight:950}
+.special-plan-saved-overview span{display:block;color:var(--ts);font-size:10.5px;font-weight:750;line-height:1.45;margin-top:3px}
 .special-plan-week-list{display:grid;gap:10px}
 .special-plan-week{border:1px solid var(--bd);border-radius:10px;background:var(--bg);overflow:hidden}
 .special-plan-week-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 11px;border-bottom:1px solid var(--bd)}
@@ -4475,7 +4478,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.01.3';
+var APP_RELEASE_VERSION='26.09.01.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -20871,10 +20874,13 @@ function clearSpecialPlanDraft(){
   try{localStorage.removeItem(SPECIAL_PLAN_DRAFT_KEY);}catch(e){}
   specialPlanItems=[];
   var results=document.getElementById('specialPlanResults');
-  if(results)results.innerHTML='';
   var saveRow=document.getElementById('specialPlanSaveRow');
   if(saveRow)saveRow.classList.add('hidden');
   specialPlanRangeFilter={start:'',end:'',min:2};
+  if(results){
+    if(specialPlanSavedRows.length)renderSpecialPlanResults([]);
+    else results.innerHTML='';
+  }
   setSpecialPlanStatus('');
 }
 
@@ -21207,8 +21213,9 @@ function specialPlanRangeControlsHtml(items){
   (items||[]).forEach(function(item){if(item.date)currentWeeks[specialPlanWeekInfo(item.date).key]=true;});
   var currentKeys=Object.keys(currentWeeks).sort();
   var keys=weeks.map(function(row){return row.key;});
-  if(keys.indexOf(specialPlanRangeFilter.start)===-1)specialPlanRangeFilter.start=currentKeys[0]||keys[0];
-  if(keys.indexOf(specialPlanRangeFilter.end)===-1)specialPlanRangeFilter.end=currentKeys[currentKeys.length-1]||keys[keys.length-1];
+  var latestKey=keys[keys.length-1];
+  if(keys.indexOf(specialPlanRangeFilter.start)===-1)specialPlanRangeFilter.start=currentKeys[0]||latestKey;
+  if(keys.indexOf(specialPlanRangeFilter.end)===-1)specialPlanRangeFilter.end=currentKeys[currentKeys.length-1]||latestKey;
   if(specialPlanRangeFilter.start>specialPlanRangeFilter.end){var swap=specialPlanRangeFilter.start;specialPlanRangeFilter.start=specialPlanRangeFilter.end;specialPlanRangeFilter.end=swap;}
   function options(selected){return weeks.map(function(row){return '<option value="'+row.key+'"'+(row.key===selected?' selected':'')+'>'+escHtml(row.label)+'</option>';}).join('');}
   return '<section class="special-plan-range"><div class="special-plan-range-head"><div class="special-plan-range-title">기간 중복 확인</div><select class="special-plan-range-min" id="specialPlanRangeMin" onchange="updateSpecialPlanRangeFilter()" aria-label="중복 기준"><option value="2"'+(Number(specialPlanRangeFilter.min)===2?' selected':'')+'>2회 이상</option><option value="3"'+(Number(specialPlanRangeFilter.min)===3?' selected':'')+'>3회 이상</option><option value="4"'+(Number(specialPlanRangeFilter.min)===4?' selected':'')+'>4회 이상</option><option value="5"'+(Number(specialPlanRangeFilter.min)===5?' selected':'')+'>5회 이상</option></select></div>'
@@ -21347,6 +21354,11 @@ function renderSpecialPlanEntry(item){
 
 function renderSpecialPlanResults(items){
   var el=document.getElementById('specialPlanResults');if(!el)return;
+  if(!items.length&&specialPlanSavedRows.length){
+    el.innerHTML='<div class="special-plan-saved-overview"><strong>저장된 일정 '+specialPlanSavedRows.length+'건</strong><span>확인할 주를 선택하면 저장된 일정의 반주자·싱어 중복을 바로 계산합니다.</span></div>'+specialPlanRangeControlsHtml([]);
+    renderSpecialPlanRangeSummary([]);
+    return;
+  }
   var weeks=buildSpecialPlanWeeks(items);
   var warningCount=items.reduce(function(sum,item){return sum+specialPlanWarnings(item).length;},0);
   var repeatPianists={},repeatMembers={};
@@ -21438,6 +21450,7 @@ function loadSpecialPlanSaved(force){
     specialPlanSavedRows=snapshot.docs.map(specialPlanStoredRow).sort(specialPlanSavedSort);
     specialPlanSavedLoaded=true;
     renderSpecialPlanSaved();
+    if(!specialPlanItems.length)renderSpecialPlanResults([]);
     return specialPlanSavedRows;
   }).catch(function(error){
     console.error('special_plan_saved_load_failed',error);
