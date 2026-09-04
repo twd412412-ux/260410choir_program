@@ -4535,7 +4535,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.05.1';
+var APP_RELEASE_VERSION='26.09.05.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8388,8 +8388,39 @@ function getFeaturedSunday(base){
   d.setDate(d.getDate()+(7-d.getDay()));
   return d;
 }
+function withLoadDeadline(promise,ms){
+  return new Promise(function(resolve,reject){
+    var timer=setTimeout(function(){reject(new Error('load-timeout'));},ms);
+    Promise.resolve(promise).then(function(value){clearTimeout(timer);resolve(value);},function(error){clearTimeout(timer);reject(error);});
+  });
+}
+
+var homeRenderGeneration=0;
 function renderHome(){
   var c=document.getElementById('homeContent');if(!c)return;
+  var generation=++homeRenderGeneration;
+  var actorKey=adminRole+'|'+(currentUser?currentUser.id:'');
+  var homeTasks={};
+  function isCurrentHomeRender(){
+    return generation===homeRenderGeneration&&actorKey===adminRole+'|'+(currentUser?currentUser.id:'');
+  }
+  function homeLoadIssue(key,state){
+    if(!state.errors||!state.errors[key])return '';
+    return '<div class="home-empty-row" role="alert">'+({songs:'찬송곡',schedules:'일정',scores:'악보',publicSeating:'자리배치',eventHub:'행사',attendance:'출결'})[key]+' 정보를 불러오지 못했습니다. <button type="button" class="home-view-link" data-home-retry="'+key+'">다시 불러오기</button></div>';
+  }
+  function updateHomeRegion(key,html){
+    var region=c.querySelector('[data-home-region="'+key+'"]');
+    if(!region){region=document.createElement('div');region.dataset.homeRegion=key;c.appendChild(region);}
+    if(region.innerHTML!==html){
+      var scrolls=Array.from(region.querySelectorAll('*')).filter(function(el){return el.scrollTop||el.scrollLeft;}).map(function(el){return {className:el.className,top:el.scrollTop,left:el.scrollLeft};});
+      region.innerHTML=html;
+      scrolls.forEach(function(saved){
+        var el=Array.from(region.querySelectorAll('*')).find(function(node){return node.className===saved.className;});
+        if(el){el.scrollTop=saved.top;el.scrollLeft=saved.left;}
+      });
+    }
+    region.querySelectorAll('[data-home-retry]').forEach(function(btn){btn.onclick=function(){runHomeTask(btn.dataset.homeRetry);};});
+  }
   var today=new Date();
 
   var currentSun=getSundayFrom(today,0);
@@ -8474,6 +8505,7 @@ function renderHome(){
       +'</div>';
   }
   function renderHomeShell(hymnSongs, weekSchedules, attendance, state){
+    if(!isCurrentHomeRender())return;
     state=state||{};
     hymnSongs=hymnSongs||[];
     weekSchedules=(weekSchedules||[])
@@ -8486,7 +8518,9 @@ function renderHome(){
     var attendanceReady=!!attendance&&!!members;
 
     var scheduleHtml='';
-    if(state.schedulesPending&&weekSchedules.length===0){
+    if(state.errors&&state.errors.schedules&&weekSchedules.length===0){
+      scheduleHtml='';
+    }else if(state.schedulesPending&&weekSchedules.length===0){
       scheduleHtml='<div class="home-empty-row">일정 정보를 불러오는 중입니다</div>';
     }else if(weekSchedules.length===0){
       scheduleHtml='<div class="home-empty-row">이번 주 등록된 일정이 없습니다</div>';
@@ -8498,6 +8532,7 @@ function renderHome(){
 
     var ringsHtml=homeRingLoading('오전')+homeRingLoading('오후');
     var partHtml='<div class="home-empty-row">출결 정보를 불러오는 중입니다</div>';
+    if(state.errors&&state.errors.attendance){ringsHtml='';partHtml='';}
     if(attendanceReady){
       var amSt=statusFor(am,members), pmSt=statusFor(pm,members);
       ringsHtml=homeRing('오전',amSt)+homeRing('오후',pmSt);
@@ -8531,14 +8566,15 @@ function renderHome(){
     }
 
     var attendanceSection=showHomeAttendance
-      ? '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div><div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>'
+      ? '<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📋</span><span>이번 주 출결 진행</span></div><button class="home-view-link" onclick="openHomeAttendanceDetail()">자세히 보기 ›</button></div>'+homeLoadIssue('attendance',state)+'<div class="home-attendance-rings">'+ringsHtml+'</div><div class="home-subsection-title">파트별 실시간 출석 현황</div>'+partHtml+'</div>'
       : '';
     var publicSeatingSection=renderPublicSeatingHomeCard(state.publicSeating||publishedSeatingPlan,state.publicSeatingPending);
     var eventHubSection=renderHomeEventHubCard(state.eventHub||null);
     var adminToolsSection=homeAdminTools(hymnSongs,state);
 
-    c.innerHTML=''
+    var dashboard=''
       +'<div class="home-dashboard">'
+        +homeLoadIssue('songs',state)+homeLoadIssue('scores',state)
         +'<div class="home-dashboard-feature-label">'+featuredLabel+' · '+homeDateStr(featuredSun)+'</div>'
         +'<div class="home-dashboard-top">'
           +'<div class="home-feature-copy"><div class="home-main-title">'+songsFor(hymnSongs,featuredSunStr,state.songsPending)+'</div></div>'
@@ -8548,12 +8584,14 @@ function renderHome(){
           +'<div class="home-dashboard-chip"><div class="home-row-label">지난 주일 '+homeDateStr(lastSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(lastSun),state.songsPending)+'</div></div>'
           +'<div class="home-dashboard-chip"><div class="home-row-label">그 다음 주일 '+homeDateStr(nextSun)+'</div><div class="home-row-main">'+songsFor(hymnSongs,homeInputDate(nextSun),state.songsPending)+'</div></div>'
         +'</div>'
-      +'</div>'
-      +eventHubSection
-      +publicSeatingSection
-      +'<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+scheduleHtml+'</div>'
-      +adminToolsSection
-      +attendanceSection;
+      +'</div>';
+    if(!c.querySelector('[data-home-region]'))c.innerHTML='';
+    updateHomeRegion('songs',dashboard);
+    updateHomeRegion('eventHub',homeLoadIssue('eventHub',state)+eventHubSection);
+    updateHomeRegion('publicSeating',homeLoadIssue('publicSeating',state)+publicSeatingSection);
+    updateHomeRegion('schedules','<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+homeLoadIssue('schedules',state)+scheduleHtml+'</div>');
+    updateHomeRegion('tools',adminToolsSection);
+    updateHomeRegion('attendance',attendanceSection);
   }
 
   var songCache=canShowHomeSongs?(allSongs.length>0?allSongs:loadCache('choir_songs',600000)):null;
@@ -8567,6 +8605,7 @@ function renderHome(){
   var cachedSchedules=Array.isArray(scheduleCache)?scheduleCache:[];
   var shellState={songsPending:canShowHomeSongs&&!songsLoaded&&!songCache,schedulesPending:!schedulesLoaded&&!scheduleCache,publicSeatingPending:!publishedSeatingLoaded,scoresPending:canLoadHomeScores&&!scoresLoaded&&!scoreCache,eventHub:selectHomeEventSchedule(homeEventSchedules)};
   var currentHomeAttendance=null;
+  shellState.errors={};
   function latestHomeSongs(){
     return allSongs.length>0?allSongs:cachedSongs;
   }
@@ -8582,40 +8621,47 @@ function renderHome(){
   }
   renderHomeShell(cachedSongs,latestHomeSchedules(),null,shellState);
 
-  var songPromise=!canShowHomeSongs
+  function refreshHomeSections(){
+    if(!isCurrentHomeRender())return;
+    shellState.publicSeating=latestPublicSeating();
+    shellState.eventHub=latestHomeEvent();
+    renderHomeShell(latestHomeSongs(),latestHomeSchedules(),currentHomeAttendance,shellState);
+  }
+  function runHomeTask(key,initial){
+    var task=homeTasks[key];
+    if(!task||task.running||!isCurrentHomeRender())return;
+    task.running=true;
+    delete shellState.errors[key];
+    shellState[key+'Pending']=true;
+    if(!initial)refreshHomeSections();
+    return withLoadDeadline(Promise.resolve().then(task.load),20000).then(function(value){
+      if(!isCurrentHomeRender())return;
+      if(task.ready&&!task.ready())throw new Error(key+'-load-failed');
+      if(task.apply)task.apply(value);
+    }).catch(function(error){
+      if(!isCurrentHomeRender())return;
+      console.error(error);
+      shellState.errors[key]=true;
+    }).then(function(){
+      task.running=false;
+      if(!isCurrentHomeRender())return;
+      shellState[key+'Pending']=false;
+      refreshHomeSections();
+    });
+  }
+  homeTasks.songs={load:function(){return !canShowHomeSongs
     ? Promise.resolve([])
-    : allSongs.length>0
+    : songsLoaded||allSongs.length>0
     ? Promise.resolve(allSongs)
     : songsLoadPromise
       ? songsLoadPromise
-    : initSongs(false);
-  var schedulePromise=ensureScheduleRange(weekStartStr,weekEndStr,false);
-  var publicSeatingPromise=getPublishedSeatingPlan(false).catch(function(e){
-    console.error(e);
-    return null;
-  });
-  var eventHubPromise=canShowHomeEventHub()?loadHomeEventSchedules(false).catch(function(e){
-    console.error(e);
-    return homeEventSchedules;
-  }):Promise.resolve([]);
-  var scorePromise=canLoadHomeScores?loadScores(false,false).catch(function(e){
-    console.error(e);
-    return allScores;
-  }):Promise.resolve([]);
-
-  Promise.all([songPromise,schedulePromise,publicSeatingPromise,scorePromise,eventHubPromise]).then(function(res){
-    renderHomeShell(res[0],res[1],currentHomeAttendance,{publicSeating:res[2],eventHub:selectHomeEventSchedule(res[4])});
-  }).catch(function(e){console.error(e)});
-
-  if(showHomeAttendance){
-    getHomeAttendanceData(currentSunStr).then(function(attendance){
-      currentHomeAttendance=attendance;
-      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),attendance,{publicSeating:latestPublicSeating(),publicSeatingPending:!publishedSeatingLoaded,eventHub:latestHomeEvent()});
-    }).catch(function(e){
-      console.error(e);
-      renderHomeShell(latestHomeSongs(),latestHomeSchedules(),null,Object.assign({},shellState,{publicSeating:latestPublicSeating(),publicSeatingPending:!publishedSeatingLoaded,eventHub:latestHomeEvent()}));
-    });
-  }
+    : initSongs(false);},ready:function(){return !canShowHomeSongs||songsLoaded||allSongs.length>0;}};
+  homeTasks.schedules={load:function(){return ensureScheduleRange(weekStartStr,weekEndStr,false);}};
+  homeTasks.publicSeating={load:function(){return getPublishedSeatingPlan(false);}};
+  homeTasks.eventHub={load:function(){return canShowHomeEventHub()?loadHomeEventSchedules(false):Promise.resolve([]);},ready:function(){return !canShowHomeEventHub()||homeEventSchedulesLoaded;}};
+  homeTasks.scores={load:function(){return canLoadHomeScores?loadScores(false,false):Promise.resolve([]);},ready:function(){return !canLoadHomeScores||scoresLoaded;}};
+  if(showHomeAttendance)homeTasks.attendance={load:function(){return getHomeAttendanceData(currentSunStr);},apply:function(value){currentHomeAttendance=value;}};
+  Object.keys(homeTasks).forEach(function(key){runHomeTask(key,true);});
 }
 
 function openHomeAttendanceDetail(){
@@ -17792,7 +17838,7 @@ function mergeSeatingPlanLists(primary,legacy){
   });
   (Array.isArray(primary)?primary:[]).forEach(function(plan){
     var p=normalizeStoredSeatingPlan(plan,plan&&plan.id);
-    byId[p.id]=p;
+    if(!byId[p.id]||seatingPlanVersion(p)>=seatingPlanVersion(byId[p.id]))byId[p.id]=p;
   });
   return seatingSortPlans(Object.keys(byId).map(function(id){return byId[id];}));
 }
@@ -17999,11 +18045,7 @@ function applyLoadedSeatingPlans(list){
   renderSeatingDraftBar();
 }
 function loadSeatingPlans(){
-  var docsFailed=false, legacyFailed=false;
-  var docsPromise=loadSeatingPlanDocs().catch(function(err){console.error(err);docsFailed=true;return [];});
-  var legacyPromise=loadLegacySeatingPlans().catch(function(err){console.error(err);legacyFailed=true;return [];});
-  return Promise.all([docsPromise,legacyPromise]).then(function(res){
-    if(docsFailed&&legacyFailed)throw new Error('자리배치 저장소를 불러오지 못했습니다');
+  return Promise.all([loadSeatingPlanDocs(),loadLegacySeatingPlans()]).then(function(res){
     applyLoadedSeatingPlans(mergeSeatingPlanLists(res[0],res[1]));
   });
 }
@@ -20386,54 +20428,37 @@ function upsertLocalSeatingPlan(data){
   if(copy.id)seatingPlanLoadedVersions[copy.id]=seatingPlanVersion(copy);
   return copy;
 }
-function seatingPlansWithRecord(data){
-  var list=seatingPlans.map(function(plan){return normalizeStoredSeatingPlan(plan,plan&&plan.id);});
-  var copy=normalizeStoredSeatingPlan(data,data&&data.id);
-  var existingIndex=list.findIndex(function(p){return p.id===copy.id;});
-  if(existingIndex>-1)list[existingIndex]=copy;
-  else list.unshift(copy);
-  return seatingSortPlans(list);
-}
-function syncLegacySeatingPlans(listOverride){
-  var source=Array.isArray(listOverride)?listOverride:seatingPlans;
-  var legacyPlans=cloneSeatingValue(seatingSortPlans(source.slice()).slice(0,30));
-  return db.collection('settings').doc(SEATING_PLAN_LEGACY_DOC).set({plans:legacyPlans,updatedAt:new Date().toISOString(),updatedBy:currentActorName()},{merge:true});
-}
 function seatingConflictError(latestPlan){
   var err=new Error('seating_plan_conflict');
   err.code='seating_plan_conflict';
   err.latestPlan=latestPlan;
   return err;
 }
-function saveSeatingPlanDoc(data,expectedVersion,overwrite){
-  var ref=db.collection(SEATING_PLAN_COLLECTION).doc(data.id);
-  if(!expectedVersion||overwrite)return ref.set(data).then(function(){return 'doc';});
+function mutateSeatingPlanRecord(id,data,expectedVersion,overwrite){
+  var ref=db.collection(SEATING_PLAN_COLLECTION).doc(id);
+  var legacyRef=db.collection('settings').doc(SEATING_PLAN_LEGACY_DOC);
   return db.runTransaction(function(tx){
-    return tx.get(ref).then(function(doc){
-      if(doc.exists){
-        var latest=normalizeStoredSeatingPlan(doc.data()||{},doc.id);
-        var latestVersion=seatingPlanVersion(latest);
-        if(latestVersion&&latestVersion!==expectedVersion)throw seatingConflictError(latest);
+    return Promise.all([tx.get(ref),tx.get(legacyRef)]).then(function(docs){
+      var legacyData=docs[1].exists?docs[1].data():{};
+      var plans=Array.isArray(legacyData.plans)?legacyData.plans:[];
+      var legacyPlan=plans.find(function(plan){return plan.id===id;});
+      var latest=mergeSeatingPlanLists(docs[0].exists?[Object.assign({},docs[0].data(),{id:id})]:[],legacyPlan?[legacyPlan]:[])[0];
+      if(!overwrite&&((latest&&seatingPlanVersion(latest)!==(expectedVersion||''))||(!latest&&expectedVersion))){
+        throw seatingConflictError(latest||{name:'삭제된 배치'});
       }
-      tx.set(ref,data);
+      // Migrate only this plan atomically; never rewrite other plans from a stale local list.
+      if(data)tx.set(ref,data);
+      else tx.delete(ref);
+      if(legacyPlan)tx.set(legacyRef,{plans:plans.filter(function(plan){return plan.id!==id;}),updatedAt:new Date().toISOString(),updatedBy:currentActorName()},{merge:true});
       return 'doc';
     });
   });
 }
 function saveSeatingPlanRecord(data,expectedVersion,overwrite){
-  var legacyList=seatingPlansWithRecord(data);
-  return saveSeatingPlanDoc(data,expectedVersion,overwrite).then(function(){
-    return syncLegacySeatingPlans(legacyList).catch(function(err){console.error(err);}).then(function(){return 'doc';});
-  }).catch(function(err){
-    if(err&&err.code==='seating_plan_conflict')throw err;
-    console.error(err);
-    return syncLegacySeatingPlans(legacyList).then(function(){return 'legacy';});
-  });
+  return mutateSeatingPlanRecord(data.id,data,expectedVersion,overwrite);
 }
 function deleteSeatingPlanRecord(id){
-  return syncLegacySeatingPlans().then(function(){
-    return db.collection(SEATING_PLAN_COLLECTION).doc(id).delete().catch(function(err){console.error(err);});
-  });
+  return mutateSeatingPlanRecord(id,null,seatingPlanLoadedVersions[id]||'',false);
 }
 function saveSeatingPlan(options){
   options=options||{};
@@ -20499,7 +20524,11 @@ function saveSeatingPlan(options){
     clearSeatingDirty();
     clearSeatingDraft();
     renderSeatingHistory();
-    var reloadPromise=loadSeatingPlans();
+    var reloadPromise=loadSeatingPlans().catch(function(err){
+      console.error(err);
+      showToast('저장은 완료됐지만 배치 목록을 다시 불러오지 못했습니다');
+      return seatingPlans;
+    });
     if(forceNew)return reloadPromise;
     var publicSyncPromise=syncPublishedSeatingPlanAfterSave(data,existingPlan).then(function(updated){
       if(updated)showToast('저장된 내용으로 공개 자리배치도도 업데이트했습니다');
@@ -20554,9 +20583,9 @@ function deleteSeatingPlan(){
   var label=plan?(plan.name||plan.planName||plan.title||'선택한 배치'):'선택한 배치';
   if(!confirm(label+'을 삭제할까요?\n삭제 후에는 저장된 배치를 되돌릴 수 없습니다.'))return;
   var deletedId=seatingPlanId;
-  seatingPlans=seatingPlans.filter(function(p){return p.id!==deletedId;});
   showToast('저장 배치 삭제 중...');
   deleteSeatingPlanRecord(deletedId).then(function(){
+    seatingPlans=seatingPlans.filter(function(p){return p.id!==deletedId;});
     writeLog('찬양의밤 자리배치 삭제',label+' 삭제');
     seatingPlanId='';
     clearSeatingDirty();
@@ -20567,8 +20596,7 @@ function deleteSeatingPlan(){
     showToast('저장 배치를 삭제했습니다');
   }).catch(function(err){
     console.error(err);
-    showToast('삭제 중 오류가 발생했습니다');
-    loadSeatingPlans();
+    showToast(err&&err.code==='seating_plan_conflict'?'다른 사람이 배치를 변경했습니다. 최신 배치를 확인한 뒤 삭제해주세요.':'삭제하지 못했습니다. 현재 배치는 유지됩니다.');
   });
 }
 
@@ -22832,6 +22860,8 @@ var attMembersLoadedFor='';
 var attLoadSeq=0;
 var attRenderSeq=0;
 var attLoading=false;
+var attLoadError=false, attSaving=false, attLoadedDate='';
+var attBaselines={};
 var currentAttReasonId='';
 var currentAttReasonPreset='';
 var pendingLateAttId='';
@@ -22872,18 +22902,22 @@ function updateAttSessionButtons(){
 }
 
 function applyCurrentAttendanceSession(){
+  if(attLoadError||attLoading)return;
   if(attSession==='오전'){
-    attData=attAmData?attAmData.records||{}:{};
-    attReasons=attAmData?attAmData.reasons||{}:{};
+    if(!attAmData)attAmData={records:{},reasons:{}};
+    attData=attAmData.records||(attAmData.records={});
+    attReasons=attAmData.reasons||(attAmData.reasons={});
   }else{
-    attData=attPmData?attPmData.records||{}:{};
-    attReasons=attPmData?attPmData.reasons||{}:{};
+    if(!attPmData)attPmData={records:{},reasons:{}};
+    attData=attPmData.records||(attPmData.records={});
+    attReasons=attPmData.reasons||(attPmData.reasons={});
   }
   syncAttExcludeControl();
   renderAttList();
 }
 
 function setAttSession(s){
+  if(attSaving)return showToast('출결 저장이 끝난 뒤 변경해주세요');
   if(attSession===s)return;
   attSession=s;
   updateAttSessionButtons();
@@ -22938,13 +22972,13 @@ function loadAttMembers(callback,dateKey){
   }
   if(attMembersLoaded&&attMembersLoadedFor===targetDate){
     if(callback)callback();
-    return;
+    return Promise.resolve();
   }
   if(attMembersSourceLoaded){
     applyLoadedMembers();
-    return;
+    return Promise.resolve();
   }
-  loadSharedMembers(false).then(function(rows){
+  return loadSharedMembers(false).then(function(rows){
     attAllMembers=[];
     rows.forEach(function(d){
       if(isAttendanceTargetMember(d))attAllMembers.push({id:d.id,name:d.name||'',part:normalizePartName(d.part),subPart:normalizePartName(d.subPart),phone:d.phone||'',group:d.group||'',district:d.district||'',attendanceStartDate:memberAttendanceStartDate(d)});
@@ -22956,6 +22990,8 @@ function loadAttMembers(callback,dateKey){
 
 function setAttendanceLoading(isLoading,message){
   attLoading=!!isLoading;
+  var saveBtn=document.getElementById('attSaveBtn');
+  if(saveBtn)saveBtn.disabled=attLoading||attLoadError||attSaving;
   var list=document.getElementById('attList');
   var count=document.getElementById('attCount');
   if(isLoading){
@@ -22966,8 +23002,24 @@ function setAttendanceLoading(isLoading,message){
   }
 }
 
+function renderAttendanceLoadError(){
+  var list=document.getElementById('attList');
+  var count=document.getElementById('attCount');
+  if(count)count.textContent='출결 조회 실패';
+  if(list)list.innerHTML='<div class="home-empty-row" role="alert">출결을 불러오지 못했습니다. 기존 기록은 변경되지 않았습니다. <button type="button" class="btn btn-sm" onclick="loadAttendance()">다시 불러오기</button></div>';
+}
+
+function canEditLoadedAttendance(){
+  return !attLoading&&!attLoadError&&!attSaving&&attLoadedDate===(document.getElementById('attDate')||{}).value&&!!attBaselines[getAttDocId()];
+}
+
 function loadAttendance(){
   if(!canViewAttendance())return showToast('출결 권한이 필요합니다');
+  if(attSaving){
+    document.getElementById('attDate').value=attLoadedDate;
+    updateAttDateDisplay();
+    return showToast('출결 저장이 끝난 뒤 변경해주세요');
+  }
   var docId=getAttDocId();
   if(!docId)return;
   updateAttDateDisplay();
@@ -22975,12 +23027,10 @@ function loadAttendance(){
   var seq=++attLoadSeq;
   var date=document.getElementById('attDate').value;
   clearAttRealtimeListeners();
-  attData={};
-  attReasons={};
-  attAmData=null;
-  attPmData=null;
+  attLoadError=false;
+  ++attRenderSeq;
   setAttendanceLoading(true,'불러오는 중...');
-  loadAttMembers(function(){
+  return withLoadDeadline(loadAttMembers(null,date).then(function(){
     if(seq!==attLoadSeq)return;
     var parts=getAttendanceAllowedParts();
     var pf=document.getElementById('attPartFilter');
@@ -22991,23 +23041,30 @@ function loadAttendance(){
     }).join('');
 
 
-    Promise.all([
+    return Promise.all([
       db.collection('attendance').doc(date+'_오전').get(),
       db.collection('attendance').doc(date+'_오후').get()
-    ]).then(function(docs){
-      if(seq!==attLoadSeq)return;
-      attAmData=docs[0].exists?docs[0].data():null;
-      attPmData=docs[1].exists?docs[1].data():null;
-      setAttendanceLoading(false);
-      applyCurrentAttendanceSession();
-    }).catch(function(){
-      if(seq!==attLoadSeq)return;
-      attData={};attReasons={};attAmData=null;attPmData=null;
-      syncAttExcludeControl();
-      setAttendanceLoading(false);
-      renderAttList();
-    });
-  },date);
+    ]);
+  }),20000).then(function(docs){
+    if(seq!==attLoadSeq)return;
+    attMembers=filterAttendanceMembersForDate(attAllMembers,date);
+    attMembersLoadedFor=date;
+    attAmData=docs[0].exists?docs[0].data():null;
+    attPmData=docs[1].exists?docs[1].data():null;
+    attLoadedDate=date;
+    attBaselines={};
+    attBaselines[date+'_오전']=JSON.parse(JSON.stringify(attAmData||{}));
+    attBaselines[date+'_오후']=JSON.parse(JSON.stringify(attPmData||{}));
+    setAttendanceLoading(false);
+    applyCurrentAttendanceSession();
+  }).catch(function(error){
+    if(seq!==attLoadSeq)return;
+    console.error(error);
+    ++attLoadSeq;
+    attLoadError=true;
+    setAttendanceLoading(false);
+    renderAttendanceLoadError();
+  });
 }
 
 function clearAttRealtimeListeners(){
@@ -23147,6 +23204,8 @@ function renderAttGuideCard(){
 
 function renderAttList(){
   var renderSeq=++attRenderSeq;
+  if(attLoadError)return renderAttendanceLoadError();
+  if(attLoading)return;
   renderAttGuideCard();
   var c=document.getElementById('attList');
   var saveWrap=document.querySelector('.att-save-float');
@@ -23262,6 +23321,7 @@ function closeLateAttendanceModal(){
 }
 
 function chooseLateAttendance(choice){
+  if(!canEditLoadedAttendance())return closeLateAttendanceModal();
   var id=pendingLateAttId;
   if(!id)return closeLateAttendanceModal();
   if(choice==='late'){
@@ -23294,6 +23354,7 @@ function shouldStopForLateAttendancePrompt(id,status,currentStatus){
 
 function setAtt(id,status){
   if(!canCheckAttendance())return showToast('출결 체크/수정 권한이 필요합니다');
+  if(!canEditLoadedAttendance())return showToast('출결을 먼저 불러와주세요');
   var currentStatus=attData[id]||'';
 
   if(currentStatus===status){
@@ -23388,6 +23449,7 @@ function closeAttReasonModal(){
 }
 
 function confirmAttReason(){
+  if(!canEditLoadedAttendance())return closeAttReasonModal();
   if(!currentAttReasonId)return closeAttReasonModal();
 
   var detail=document.getElementById('attReasonText').value.trim();
@@ -23413,13 +23475,57 @@ function confirmAttReason(){
 }
 
 
+function attendanceChanges(baseline,records,reasons,members){
+  return members.filter(function(m){
+    return ((baseline.records||{})[m.id]||'')!==(records[m.id]||'')||((baseline.reasons||{})[m.id]||'')!==(reasons[m.id]||'');
+  }).map(function(m){return {id:m.id,name:m.name,status:records[m.id]||'',reason:reasons[m.id]||''};});
+}
+
+function mergeAttendanceChanges(latest,baseline,changes,metadata,reportChange){
+  var records=Object.assign({},latest.records||{}), reasons=Object.assign({},latest.reasons||{});
+  changes.forEach(function(change){
+    var id=change.id;
+    var changedElsewhere=(records[id]||'')!==((baseline.records||{})[id]||'')||(reasons[id]||'')!==((baseline.reasons||{})[id]||'');
+    if(changedElsewhere&&((records[id]||'')!==change.status||(reasons[id]||'')!==change.reason)){
+      var error=new Error(change.name+'님의 출결을 다른 사람이 변경했습니다.');
+      error.code='attendance-conflict';
+      throw error;
+    }
+    if(change.status)records[id]=change.status;
+    else delete records[id];
+    if(change.reason)reasons[id]=change.reason;
+    else delete reasons[id];
+  });
+  var result=Object.assign({},latest,metadata,{records:records,reasons:reasons});
+  if(reportChange){
+    if((!!latest.excludeFromReport!==!!baseline.excludeFromReport||(latest.excludeReason||'')!==(baseline.excludeReason||''))&&
+      (!!latest.excludeFromReport!==reportChange.excludeFromReport||(latest.excludeReason||'')!==reportChange.excludeReason)){
+      var error=new Error('보고서 제외 설정을 다른 사람이 변경했습니다.');
+      error.code='attendance-conflict';
+      throw error;
+    }
+    Object.assign(result,reportChange);
+  }
+  return result;
+}
+
+function saveAttendanceChanges(docId,baseline,changes,metadata,reportChange){
+  var ref=db.collection('attendance').doc(docId);
+  return db.runTransaction(function(tx){
+    return tx.get(ref).then(function(doc){
+      tx.set(ref,mergeAttendanceChanges(doc.exists?doc.data():{},baseline,changes,metadata,reportChange));
+    });
+  });
+}
+
 function saveAttendance(){
   if(!canCheckAttendance())return showToast('출결 체크/수정 권한이 필요합니다');
+  if(!canEditLoadedAttendance())return showToast('출결 조회가 완료된 뒤 저장해주세요');
   ensureAttDate();
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 선택해주세요');
   var date=document.getElementById('attDate').value;
-  var scopeMembers=attMembers.slice();
+  var scopeMembers=attMembers.filter(isMemberInAttendanceScope);
   if(attPartFilter!=='all')scopeMembers=scopeMembers.filter(function(m){return m.part===attPartFilter||m.subPart===attPartFilter});
   var uncheckedNames=scopeMembers.filter(function(m){return !attData[m.id]}).map(function(m){return m.name});
   if(uncheckedNames.length>0){
@@ -23439,6 +23545,14 @@ function saveAttendance(){
     return;
   }
 
+  var baseline=attBaselines[docId];
+  var changes=attendanceChanges(baseline,attData,attReasons,attMembers.filter(isMemberInAttendanceScope));
+  var reportChange=null;
+  if(canManageAttendanceReportExclusion()&&(excludeChecked!==!!baseline.excludeFromReport||(excludeChecked?excludeReason:'')!==(baseline.excludeReason||''))){
+    reportChange={excludeFromReport:excludeChecked,excludeReason:excludeChecked?excludeReason:''};
+  }
+  if(!changes.length&&!reportChange)return showToast('변경된 출결이 없습니다');
+  var savedSession=attSession;
   var saveBtn=document.getElementById('attSaveBtn');
   if(saveBtn){
     if(saveBtn.disabled)return;
@@ -23448,42 +23562,15 @@ function saveAttendance(){
     saveBtn.style.cursor='default';
   }
 
-  var saveData={date:date,session:attSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
-  db.collection('attendance').doc(docId).get().then(function(doc){
-    var existingData=doc.exists?doc.data():{};
-    var existingRecords=doc.exists&&doc.data().records?doc.data().records:{};
-    var existingReasons=doc.exists&&doc.data().reasons?doc.data().reasons:{};
-    saveData.excludeFromReport=canManageAttendanceReportExclusion()?excludeChecked:!!(existingData&&existingData.excludeFromReport);
-    saveData.excludeReason=saveData.excludeFromReport?(canManageAttendanceReportExclusion()?excludeReason:(existingData.excludeReason||'')):'';
-    if(getAttendanceAllowedParts().indexOf('all')!==-1){
-      saveData.records=attData;
-      saveData.reasons=attReasons;
-    }else{
-      attMembers.forEach(function(m){
-        if((attPartFilter==='all'&&isMemberInAttendanceScope(m))||m.part===attPartFilter||m.subPart===attPartFilter){
-          if(attData[m.id])existingRecords[m.id]=attData[m.id];
-          else delete existingRecords[m.id];
-          if(attReasons[m.id])existingReasons[m.id]=attReasons[m.id];
-          else delete existingReasons[m.id];
-        }
-      });
-      saveData.records=existingRecords;
-      saveData.reasons=existingReasons;
-    }
-    return db.collection('attendance').doc(docId).set(saveData);
-  }).then(function(){
-    // 현재 선택된 파트 기준으로만 로그 숫자를 계산
-    var scopedMembers = attMembers.slice();
-    if(attPartFilter!=='all'){
-      scopedMembers = scopedMembers.filter(function(m){
-        return m.part===attPartFilter || m.subPart===attPartFilter;
-      });
-    }
+  attSaving=true;
+  var saveData={date:date,session:savedSession,updatedAt:new Date().toISOString(),updatedBy:adminRole==='admin'?'관리자':adminRole==='chongmu'?'총무부':(currentUser?currentUser.name:'')};
+  return saveAttendanceChanges(docId,baseline,changes,saveData,reportChange).then(function(){
+    var scopedMembers=changes;
   
     var presentCnt = 0, lateCnt = 0, excusedCnt = 0, absentCnt = 0, uncheckedCnt = 0;
     
     scopedMembers.forEach(function(m){
-      var st = attData[m.id] || '';
+      var st = m.status;
       if(st === '출석') presentCnt++;
       else if(st === '지각') lateCnt++;
       else if(st === '사유결석') excusedCnt++;
@@ -23491,8 +23578,7 @@ function saveAttendance(){
       else uncheckedCnt++;
     });
     
-    var partLabel = (attPartFilter === 'all' ? '전체' : attPartFilter);
-    var detailMsg = `${date} ${attSession} [${partLabel}] 저장 완료\n출석 ${presentCnt} / 지각 ${lateCnt} / 사유 ${excusedCnt} / 무단 ${absentCnt} / 미체크 ${uncheckedCnt}`;
+    var detailMsg = `${date} ${savedSession} 변경 ${changes.length}명 저장 완료\n출석 ${presentCnt} / 지각 ${lateCnt} / 사유 ${excusedCnt} / 무단 ${absentCnt} / 미체크 ${uncheckedCnt}`;
     
     writeLog('출석 저장', detailMsg);
 
@@ -23503,10 +23589,12 @@ function saveAttendance(){
       saveBtn.style.cursor='';
     }
 
-    showToast(date+' '+attSession+' 출석이 저장되었습니다!');
+    attSaving=false;
+    showToast(date+' '+savedSession+' 출석이 저장되었습니다!');
     invalidateHomeAttendanceCache();
-    loadAttendance();
+    return loadAttendance();
   }).catch(function(e){
+    attSaving=false;
     if(saveBtn){
       saveBtn.disabled=false;
       saveBtn.textContent='출석 저장';
@@ -23514,7 +23602,10 @@ function saveAttendance(){
       saveBtn.style.cursor='';
     }
     console.error(e);
-    showToast('저장 중 오류 발생');
+    if(e&&e.code==='attendance-conflict'){
+      showToast(e.message+' 저장하지 않았습니다.');
+      if(confirm(e.message+'\n현재 입력을 버리고 최신 출결을 다시 불러올까요?'))return loadAttendance();
+    }else showToast('출결을 저장하지 못했습니다. 입력 내용은 유지됩니다.');
   });
 
 
@@ -24067,6 +24158,7 @@ function getMemHistoryRangeInfo(){
 // [신규] 잘못 만든 날짜의 출석 기록을 통째로 날려버리는 기능
 function deleteAttendance(){
   if(!canDeleteAttendanceRecord())return showToast('출결 삭제/초기화 권한이 없습니다');
+  if(!canEditLoadedAttendance())return showToast('출결 조회가 완료된 뒤 변경해주세요');
   var docId=getAttDocId();
   if(!docId)return showToast('날짜를 먼저 선택해주세요');
   var date=document.getElementById('attDate').value;
@@ -24091,19 +24183,22 @@ function deleteAttendance(){
     var scopeLabel=attPartFilter==='all'?'담당 범위':attPartFilter;
     if(scopeMembers.length===0)return showToast('초기화할 담당 범위가 없습니다');
     if(!confirm(date+' '+attSession+' '+scopeLabel+' 출석 기록 '+scopeMembers.length+'명을 초기화할까요?'))return;
-    db.collection('attendance').doc(docId).get().then(function(doc){
-      if(!doc.exists)return showToast('초기화할 출석 기록이 없습니다');
-      var data=doc.data()||{};
-      var records=Object.assign({},data.records||{});
-      var reasons=Object.assign({},data.reasons||{});
-      scopeMembers.forEach(function(m){delete records[m.id];delete reasons[m.id];});
-      return db.collection('attendance').doc(docId).set(Object.assign({},data,{records:records,reasons:reasons,updatedAt:new Date().toISOString(),updatedBy:currentActorName()}));
+    var ref=db.collection('attendance').doc(docId);
+    var baseline=attBaselines[docId];
+    var changes=scopeMembers.map(function(m){return {id:m.id,name:m.name,status:'',reason:''};});
+    attSaving=true;
+    db.runTransaction(function(tx){
+      return tx.get(ref).then(function(doc){
+        if(!doc.exists)return;
+        tx.set(ref,mergeAttendanceChanges(doc.data()||{},baseline,changes,{updatedAt:new Date().toISOString(),updatedBy:currentActorName()},null));
+      });
     }).then(function(){
+      attSaving=false;
       showToast(scopeLabel+' 기록이 초기화되었습니다');
       invalidateHomeAttendanceCache();
       writeLog('출석 초기화',date+' '+attSession+' ['+scopeLabel+'] 기록 초기화');
       loadAttendance();
-    }).catch(function(e){console.error(e);showToast('초기화 중 오류 발생')});
+    }).catch(function(e){attSaving=false;console.error(e);showToast(e&&e.code==='attendance-conflict'?e.message+' 초기화하지 않았습니다.':'초기화 중 오류 발생')});
   },date);
 }
 
