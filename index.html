@@ -75,6 +75,19 @@ body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:2000;justify-content:center;align-items:flex-end}
 .modal-overlay.active{display:flex}
 .modal-center{align-items:center}
+.profile-photo-guide{background:none;overflow:hidden;touch-action:none}
+.profile-photo-spotlight{position:fixed;background:transparent;border:2px solid #fff;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.64);cursor:pointer}
+.profile-photo-spotlight:focus-visible{outline:3px solid #DDBD78;outline-offset:3px}
+.profile-photo-guide-panel{position:fixed;width:min(300px,calc(100% - 32px));padding:20px;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:8px;box-shadow:0 12px 36px rgba(0,0,0,.22);overflow:auto;touch-action:pan-y}
+.profile-photo-guide-panel h2{font-size:18px;line-height:1.4;margin-bottom:7px}
+.profile-photo-guide-panel p{font-size:13px;color:var(--ts);line-height:1.5}
+.profile-photo-guide-actions{display:flex;gap:8px;align-items:center;margin-top:18px}
+.profile-photo-guide-actions .btn{flex:1;min-width:0;min-height:44px;font-size:14px}
+.profile-photo-guide-actions .btn-p{background:var(--pd);color:var(--sf)}
+.profile-photo-guide-later{background:transparent;color:var(--ts)}
+.my-profile-photo-panel.is-missing{border-color:var(--p)!important;background:var(--pl)!important}
+.my-profile-photo-panel.is-missing #myProfilePhotoSelectBtn{background:var(--p)!important;color:var(--sf)!important;min-height:44px;padding:10px 22px;font-size:14px}
+.my-profile-photo-empty{font-size:14px;font-weight:700;margin:6px 0 14px;color:var(--pd)}
 .modal-content{background:var(--sf);width:100%;max-width:500px;max-height:85vh;border-radius:20px 20px 0 0;padding:20px;overflow-y:auto;animation:slideUp .3s}
 .modal-center .modal-content{border-radius:20px;max-height:70vh}
 body.modal-open{overflow:hidden}
@@ -2886,9 +2899,21 @@ body{font-weight:500}
   <div class="header-title">광주교회 찬양대</div>
   <div class="header-actions">
     <button class="icon-btn notification-bell-btn hidden" id="notificationBellBtn" type="button" title="새 소식" aria-label="새 소식" onclick="openAppNotificationCenter()"><span class="notification-bell-icon" aria-hidden="true">🔔</span><span class="notification-bell-dot hidden" id="notificationBellDot" aria-hidden="true"></span></button>
-    <button class="icon-btn" type="button" title="내 정보" aria-label="내 정보" onclick="openUserModal()">👤</button>
+    <button class="icon-btn" id="profileButton" type="button" title="프로필" aria-label="프로필" onclick="openUserModal()">👤</button>
     <button class="icon-btn" id="btnDark" type="button" title="화면 모드" aria-label="화면 모드" onclick="toggleDark()">🌙</button>
     <button class="icon-btn" id="btnLock" type="button" title="관리" aria-label="관리" onclick="openAdminLogin()">🔒</button>
+  </div>
+</div>
+
+<div class="modal-overlay profile-photo-guide" id="modalProfilePhotoGuide" role="dialog" aria-modal="true" aria-labelledby="profilePhotoGuideTitle" aria-describedby="profilePhotoGuideDescription" onkeydown="handleProfilePhotoGuideKey(event)">
+  <button class="profile-photo-spotlight" id="profilePhotoSpotlight" type="button" aria-label="프로필에서 사진 등록" onclick="startProfilePhotoRegistration()"></button>
+  <div class="profile-photo-guide-panel" id="profilePhotoGuidePanel">
+    <h2 id="profilePhotoGuideTitle">프로필 사진을 등록해주세요</h2>
+    <p id="profilePhotoGuideDescription">아직 등록된 사진이 없어요.</p>
+    <div class="profile-photo-guide-actions">
+      <button class="btn profile-photo-guide-later" type="button" onclick="closeModal('modalProfilePhotoGuide')">나중에</button>
+      <button class="btn btn-p" type="button" onclick="startProfilePhotoRegistration()">사진 등록</button>
+    </div>
   </div>
 </div>
 
@@ -4439,6 +4464,8 @@ var adminResetVerified=false;
 var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
 var myProfilePhotoSavePromise=null;
+var profilePhotoGuide={key:'',member:null,handled:false,timer:null};
+var myProfilePhotoRegistration=false;
 var forceFreshDataOnInit=(function(){
   try{
     var url=new URL(window.location.href);
@@ -4535,7 +4562,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.06.1';
+var APP_RELEASE_VERSION='26.09.06.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5092,10 +5119,12 @@ function syncLayoutState(){
   document.body.classList.toggle('admin-tab-active',currentTab==='admin');
   document.body.classList.toggle('modal-open',!!document.querySelector('.modal-overlay.active'));
   document.body.classList.toggle('member-add-open',isMemberAddOpen());
+  scheduleProfilePhotoGuide();
 }
 function openModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id!=='modalProfilePhotoGuide'&&document.getElementById('modalProfilePhotoGuide').classList.contains('active'))closeModal('modalProfilePhotoGuide');
   modal.classList.add('active');
   syncLayoutState();
   if(id==='modalMemberEdit'){
@@ -5108,10 +5137,15 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalProfilePhotoGuide'){
+    profilePhotoGuide.handled=true;
+    document.getElementById('profileButton').focus({preventScroll:true});
+  }
   if(id==='modalScheduleEditor')restoreScheduleEditorMount();
   if(id==='modalRehearsalCue')teardownRehearsalCue();
   if(id==='modalMemberEdit')cleanupUnsavedPhotoUpload('editHbPhotoUrl');
   if(id==='modalUser'&&myProfilePhotoSavePromise)return showToast('프로필 사진을 저장하는 중입니다');
+  if(id==='modalUser')myProfilePhotoRegistration=false;
   if(id==='modalUser')cleanupUnsavedPhotoUpload('myProfilePhotoUrl');
   if(id==='modalAdminReset')clearAdminPasswordResetState();
   if(id==='modalPhotoCrop'&&photoCropState){
@@ -6790,6 +6824,75 @@ function saveLastLoginHint(user){
     localStorage.setItem(LAST_LOGIN_HINT_KEY,JSON.stringify({id:user.id||'',name:user.name,part:accountPartDisplayLabel(user)||''}));
   }catch(e){}
 }
+function syncProfilePhotoGuideSession(){
+  var key=isMemberLoggedIn()&&currentUser.memberId?currentUser.id+'|'+currentUser.memberId:'';
+  if(profilePhotoGuide.key===key)return;
+  clearTimeout(profilePhotoGuide.timer);
+  document.getElementById('modalProfilePhotoGuide').classList.remove('active');
+  profilePhotoGuide={key:key,member:null,handled:false,timer:null};
+  myProfilePhotoRegistration=false;
+  document.body.classList.toggle('modal-open',!!document.querySelector('.modal-overlay.active'));
+}
+function rememberProfilePhotoMember(user,member){
+  if(!currentUser||user.id!==currentUser.id||user.memberId!==currentUser.memberId)return;
+  syncProfilePhotoGuideSession();
+  profilePhotoGuide.member=member||null;
+  if((!member||isHandbookExcludedMember(member)||String(member.photo||'').trim())&&document.getElementById('modalProfilePhotoGuide').classList.contains('active'))closeModal('modalProfilePhotoGuide');
+  scheduleProfilePhotoGuide();
+}
+function needsProfilePhotoGuide(){
+  var member=profilePhotoGuide.member;
+  return isMemberLoggedIn()&&!firebaseAuthChecking&&currentUser.memberId
+    &&profilePhotoGuide.key===currentUser.id+'|'+currentUser.memberId
+    &&member&&!isHandbookExcludedMember(member)&&!String(member.photo||'').trim();
+}
+function scheduleProfilePhotoGuide(){
+  if(!profilePhotoGuide)return;
+  clearTimeout(profilePhotoGuide.timer);
+  if(!needsProfilePhotoGuide()||profilePhotoGuide.handled)return;
+  profilePhotoGuide.timer=setTimeout(function(){
+    if(!needsProfilePhotoGuide()||profilePhotoGuide.handled||document.visibilityState==='hidden')return;
+    if(document.querySelector('.modal-overlay.active,.seating-fullscreen'))return;
+    openModal('modalProfilePhotoGuide');
+    positionProfilePhotoGuide();
+    document.getElementById('profilePhotoSpotlight').focus({preventScroll:true});
+  },700);
+}
+function positionProfilePhotoGuide(){
+  var modal=document.getElementById('modalProfilePhotoGuide');
+  if(!modal.classList.contains('active'))return;
+  var rect=document.getElementById('profileButton').getBoundingClientRect();
+  var spotlight=document.getElementById('profilePhotoSpotlight');
+  var panel=document.getElementById('profilePhotoGuidePanel');
+  var viewport=window.visualViewport;
+  var width=viewport?viewport.width:window.innerWidth;
+  var height=viewport?viewport.height:window.innerHeight;
+  spotlight.style.left=(rect.left-5)+'px';
+  spotlight.style.top=(rect.top-5)+'px';
+  spotlight.style.width=(rect.width+10)+'px';
+  spotlight.style.height=(rect.height+10)+'px';
+  panel.style.left=Math.max(16,Math.min(rect.right-panel.offsetWidth,width-panel.offsetWidth-16))+'px';
+  panel.style.top=(rect.bottom+22)+'px';
+  panel.style.maxHeight=Math.max(44,height-rect.bottom-38)+'px';
+}
+function handleProfilePhotoGuideKey(event){
+  if(event.key==='Escape'){
+    event.preventDefault();event.stopPropagation();closeModal('modalProfilePhotoGuide');return;
+  }
+  if(event.key!=='Tab')return;
+  var buttons=Array.from(document.querySelectorAll('#modalProfilePhotoGuide button'));
+  var index=buttons.indexOf(document.activeElement);
+  event.preventDefault();
+  buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length].focus({preventScroll:true});
+}
+function startProfilePhotoRegistration(){
+  closeModal('modalProfilePhotoGuide');
+  openUserModal(true);
+}
+window.addEventListener('resize',positionProfilePhotoGuide);
+window.addEventListener('scroll',positionProfilePhotoGuide,{passive:true});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',positionProfilePhotoGuide);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')scheduleProfilePhotoGuide();});
 function renderUserModalBody(){
   var b=document.getElementById('userModalBody');
   if(!b)return;
@@ -6798,6 +6901,10 @@ function renderUserModalBody(){
     b.innerHTML='<div style="padding:30px 12px;text-align:center"><div class="spinner" style="margin:0 auto 14px"></div><div style="font-size:15px;font-weight:850">자동 로그인 확인 중</div><div style="font-size:12px;color:var(--ts);margin-top:6px">잠시만 기다려주세요.</div></div>';
   }else if(isMemberLoggedIn()){
     b.dataset.userView='profile';
+    if(myProfilePhotoRegistration&&needsProfilePhotoGuide()){
+      renderCurrentUserProfile(profilePhotoGuide.member,'ready');
+      return;
+    }
     renderCurrentUserProfile(null,'loading');
     loadCurrentUserLinkedMember();
   }else{
@@ -6807,7 +6914,8 @@ function renderUserModalBody(){
     b.innerHTML='<p style="font-size:14px;color:var(--ts);margin-bottom:16px">단원 계정으로 로그인하면 곡목록, 악보, 즐겨찾기 동기화를 이용할 수 있습니다.</p><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="userNameInput" type="text" autocomplete="username" value="'+escHtml(name)+'" placeholder="이름 입력"></div><div class="form-group"><label class="form-label">PIN (4자리)</label><input class="form-input" id="userPinInput" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="4" placeholder="PIN 입력" onkeypress="if(event.key===\'Enter\')loginUser()"></div><button class="btn btn-p btn-bl" onclick="loginUser()">로그인</button><p style="font-size:12px;color:var(--ts);margin-top:12px;text-align:center">* 곡목록과 악보는 로그인 후 이용합니다.</p>';
   }
 }
-function openUserModal(){
+function openUserModal(photoRegistration){
+  myProfilePhotoRegistration=photoRegistration===true;
   renderUserModalBody();
   openModal('modalUser');
   if(!firebaseAuthChecking&&!isMemberLoggedIn())setTimeout(function(){
@@ -6889,17 +6997,26 @@ function renderCurrentUserProfile(member,state){
     memberBox='<div style="padding:12px;background:#F4E7CC;border:1px solid #E5C88F;border-radius:12px;font-size:12px;color:#7C571E;line-height:1.5;margin-top:14px">연결된 명부가 현재 비활성 상태입니다. 사진 업로드는 사용할 수 없습니다.</div>';
   }else if(member){
     var photo=member.photo||'';
+    if(needsProfilePhotoGuide())profilePhotoGuide.handled=true;
     var preview='<img id="myProfilePhotoPreview" src="'+escHtml(photo)+'" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--pl);margin:0 auto 10px;display:'+(photo?'block':'none')+'">';
-    memberBox='<div style="margin-top:14px;padding:12px;background:var(--sf);border:1px solid var(--bd);border-radius:12px">'
+    memberBox='<div class="my-profile-photo-panel'+(!photo?' is-missing':'')+'" style="margin-top:14px;padding:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px">'
       +preview
+      +(!photo?'<div class="my-profile-photo-empty">아직 프로필 사진이 없어요</div>':'')
       +'<div style="font-size:13px;font-weight:850;margin-bottom:2px">'+escHtml(member.name||currentUser.name)+'</div>'
       +'<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+escHtml(accountLinkMemberLabel(member))+'</div>'
-      +'<div style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="display:none"><button class="btn btn-sm" id="myProfilePhotoSelectBtn" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="selectPhotoForUpload(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">사진첩에서 선택</button></div>'
+      +'<div style="display:flex;gap:8px;align-items:center;justify-content:center"><input type="file" id="myProfilePhotoFile" accept="image/*" style="display:none"><button class="btn btn-sm" id="myProfilePhotoSelectBtn" style="background:var(--pl);color:var(--pd);white-space:nowrap" onclick="selectPhotoForUpload(\'myProfilePhotoFile\',\'myProfilePhotoUrl\')">'+(photo?'사진 변경':'사진 등록')+'</button></div>'
       +'<input class="form-input hidden" id="myProfilePhotoUrl" readonly data-saved-url="'+escHtml(photo)+'" value="'+escHtml(photo)+'">'
-      +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" id="myProfilePhotoSaveBtn" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" id="myProfilePhotoRemoveBtn" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
+      +'<div id="myProfilePhotoActions" class="'+(photo?'':'hidden')+'" style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" id="myProfilePhotoSaveBtn" style="flex:1" onclick="saveMyProfilePhoto()">사진 저장</button><button class="btn btn-d" id="myProfilePhotoRemoveBtn" style="flex:1" onclick="removeMyProfilePhoto()">사진 제거</button></div>'
       +'</div>';
   }
   b.innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">👤</div><div style="font-size:20px;font-weight:700">'+escHtml(currentUser.name)+'</div><div style="font-size:14px;color:var(--ts);margin-top:4px">'+escHtml(accountPartDisplayLabel(currentUser))+'</div><div style="font-size:13px;color:var(--ts);margin-top:12px">즐겨찾기 '+favorites.length+'곡</div>'+memberBox+renderMyScorePartSettings()+'<button class="btn btn-d" style="margin-top:20px" onclick="logoutUser()">로그아웃</button></div>';
+  if(myProfilePhotoRegistration&&state==='ready'&&member&&!member.photo)setTimeout(function(){
+    var button=document.getElementById('myProfilePhotoSelectBtn');
+    if(button&&document.getElementById('modalUser').classList.contains('active')){
+      button.scrollIntoView({block:'center'});
+      button.focus({preventScroll:true});
+    }
+  },0);
 }
 
 function updateIssueReportCount(){
@@ -7252,9 +7369,10 @@ function deleteIssueReport(id){
 
 function loadCurrentUserLinkedMember(){
   if(!currentUser||!currentUser.memberId)return Promise.resolve(null);
+  var user=currentUser;
   return db.collection('members').doc(currentUser.memberId).get().then(function(doc){
-    if(!currentUser||currentUser.memberId!==doc.id)return;
-    if(!doc.exists)return renderCurrentUserProfile(null,'missing');
+    if(!currentUser||currentUser.id!==user.id||currentUser.memberId!==doc.id)return;
+    if(!doc.exists){rememberProfilePhotoMember(user,null);return renderCurrentUserProfile(null,'missing');}
     var member=Object.assign({id:doc.id},doc.data());
     applyLinkedMemberToUserSession(currentUser,member);
     localStorage.setItem('choir_user',JSON.stringify(currentUser));
@@ -7263,6 +7381,8 @@ function loadCurrentUserLinkedMember(){
     renderCurrentUserProfile(member,'ready');
     return member;
   }).catch(function(){
+    if(!currentUser||currentUser.id!==user.id||currentUser.memberId!==user.memberId)return null;
+    rememberProfilePhotoMember(user,null);
     renderCurrentUserProfile(null,'missing');
     return null;
   });
@@ -7300,6 +7420,8 @@ function saveMyProfilePhoto(){
   var previousPhoto='';
   var savedMember=null;
   var photoUpdatedAt=new Date().toISOString();
+  var actions=document.getElementById('myProfilePhotoActions');
+  if(actions)actions.classList.remove('hidden');
   setMyProfilePhotoSaving(true);
   myProfilePhotoSavePromise=db.collection('members').doc(currentUser.memberId).get().then(function(doc){
     if(!doc.exists)throw new Error('missing');
@@ -7363,18 +7485,21 @@ function applyLinkedMemberToUserSession(user,member){
   user.linkedPart=normalizePartName(member.part)||'';
   user.linkedSubPart=normalizePartName(member.subPart)||'';
   user.linkedMemberStatus=member.status||'active';
+  rememberProfilePhotoMember(user,member);
   return user;
 }
 function hydrateUserLinkedMember(user){
   if(!(user&&user.memberId))return Promise.resolve(user);
   return db.collection('members').doc(user.memberId).get().then(function(doc){
     if(doc.exists)return applyLinkedMemberToUserSession(user,doc.data()||{});
+    rememberProfilePhotoMember(user,null);
     user.linkedPart='';
     user.linkedSubPart='';
     user.linkedMemberStatus='missing';
     return user;
   }).catch(function(e){
     console.error(e);
+    rememberProfilePhotoMember(user,null);
     return user;
   });
 }
@@ -7443,6 +7568,7 @@ function logoutUser(){
   showToast('로그아웃 되었습니다');
 }
 function updateUserBar(){
+  syncProfilePhotoGuideSession();
   var bar=document.getElementById('userBar');
   var logout=bar&&bar.querySelector('button');
   if(currentUser){bar.classList.remove('hidden');document.getElementById('userBarName').textContent=currentUser.name+' ('+accountPartDisplayLabel(currentUser)+')';if(logout)logout.classList.remove('hidden')}
