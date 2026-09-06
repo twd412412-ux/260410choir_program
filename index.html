@@ -3557,7 +3557,7 @@ body{font-weight:500}
         </div>
         <input class="form-input hidden" id="hbPhotoUrl" readonly data-saved-url="" placeholder="업로드 성공 시 주소가 자동 입력됩니다">
       </div>
-      <button class="btn btn-p btn-bl" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
+      <button class="btn btn-p btn-bl" id="handbookRegisterBtn" onclick="addHandbookMember()" style="margin-top:10px">명부에 추가하기</button>
       </div>
     </details>
   
@@ -3572,7 +3572,7 @@ body{font-weight:500}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="memName" placeholder="홍길동"></div><div class="form-group"><label class="form-label">파트 *</label><select class="form-sel" id="memPart"><option value="">선택</option><option>지휘</option><option>파트장</option><option>총무</option><option>임원</option><option>S1</option><option>S2</option><option>T1</option><option>T2</option><option>반주</option><option>관현악</option></select></div></div>
       <div class="form-group"><label class="form-label">PIN (4자리) *</label><input class="form-input" id="memPin" type="password" inputmode="numeric" maxlength="4" placeholder="1234"><div class="account-member-count">동명이인은 서로 다른 PIN으로 자동 구분됩니다.</div></div>
       <div class="form-group"><label class="form-label">명부 연결</label><div class="account-member-picker"><input class="form-input account-member-search" id="memMemberSearch" placeholder="명부 이름 검색" autocomplete="off" onfocus="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" oninput="filterAccountMemberSelect('memMemberSearch','memMemberId',true)" onblur="hideAccountMemberResultsSoon('memMemberId')"><select class="form-sel account-member-select-hidden" id="memMemberId"><option value="">명부 연결 안 함</option></select><div class="account-member-results hidden" id="memMemberIdResults"></div></div><div class="account-member-count" id="memMemberIdCount" data-default-note="비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.">비워두면 계정 이름과 같은 명부가 1명일 때 자동 연결됩니다.</div></div>
-      <button class="btn btn-p btn-bl" onclick="addMember()">단원 등록</button>
+      <button class="btn btn-p btn-bl" id="accountRegisterBtn" onclick="addMember()">계정 등록</button>
       <details class="account-bulk-panel" id="accountBulkPanel">
         <summary>단체 계정등록</summary>
         <div class="account-bulk-body">
@@ -4535,7 +4535,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.05.2';
+var APP_RELEASE_VERSION='26.09.06.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -6400,6 +6400,28 @@ function authGateway(action,data,app){
 }
 function accountAdminCall(action,data){
   return callSecureFunction('accountAdmin',Object.assign({action:action},data||{}));
+}
+var registrationBusy={}, registrationAttempts={};
+function startRegistration(kind,buttonId){
+  if(registrationBusy[kind])return false;
+  registrationBusy[kind]=true;
+  var btn=document.getElementById(buttonId);
+  if(btn){btn.dataset.registrationLabel=btn.textContent;btn.disabled=true;btn.textContent='등록 중...';}
+  return true;
+}
+function finishRegistration(kind,buttonId){
+  registrationBusy[kind]=false;
+  var btn=document.getElementById(buttonId);
+  if(btn){btn.disabled=false;btn.textContent=btn.dataset.registrationLabel||'등록';}
+}
+function registrationRequestId(kind,payload){
+  var signature=JSON.stringify([adminRole,currentUser&&currentUser.id,payload]);
+  var previous=registrationAttempts[kind];
+  if(!previous||previous.signature!==signature){
+    var values=new Uint32Array(4);window.crypto.getRandomValues(values);
+    registrationAttempts[kind]={signature:signature,id:Array.from(values,function(n){return n.toString(16).padStart(8,'0');}).join('')};
+  }
+  return registrationAttempts[kind].id;
 }
 function scoreAdminCall(action,data){
   return callSecureFunction('scoreAdmin',Object.assign({action:action},data||{}));
@@ -13757,14 +13779,17 @@ function previewBulkAccounts(){
 }
 
 function commitBulkAccountRows(rows){
-  return accountAdminCall('bulkCreate',{rows:rows.map(function(row){
+  var payload={rows:rows.map(function(row){
     return {name:row.name,part:row.part,pin:row.pin,memberId:row.memberId||''};
-  })});
+  })};
+  payload.requestId=registrationRequestId('bulkAccounts',payload);
+  return accountAdminCall('bulkCreate',payload);
 }
 
 function saveBulkAccounts(){
   if(!canManageLoginAccounts())return showToast('계정 등록 및 수정 권한이 없습니다');
   var btn=document.getElementById('accountBulkSaveBtn');
+  if(btn&&btn.disabled)return;
   if(btn)btn.disabled=true;
   loadAccountLinkMembers().then(function(){
     var plan=parseAccountBulkRows();
@@ -13782,10 +13807,11 @@ function saveBulkAccounts(){
       var created=Array.isArray(result&&result.accounts)?result.accounts:[];
       created.forEach(function(account,index){
         upsertLocalAccount(account);
-        cacheAccountPin(account.id,(plan.rows[index]||{}).pin);
+        if(!result.replayed)cacheAccountPin(account.id,(plan.rows[index]||{}).pin);
       });
       showToast('계정 '+plan.rows.length+'명 일괄 등록 완료');
-      writeLog('계정 일괄 등록','로그인 계정 '+plan.rows.length+'명 생성 · 명부 자동연결 '+linked+'명');
+      if(!result.replayed)writeLog('계정 일괄 등록','로그인 계정 '+plan.rows.length+'명 생성 · 명부 자동연결 '+linked+'명');
+      delete registrationAttempts.bulkAccounts;
       var text=document.getElementById('accountBulkText');
       if(text)text.value='';
       renderAccountBulkResult({rows:[],errors:[],total:0});
@@ -13808,7 +13834,8 @@ function addMember(){
   var sameNameCount=allMembers.filter(function(m){return normalizeAccountLinkName(m.name)===normalizeAccountLinkName(name);}).length;
   if(!name||!part||!pin) return showToast('이름, 파트, PIN 모두 입력해주세요');
   if(pin.length!==4) return showToast('PIN은 4자리여야 합니다');
-  loadAccountLinkMembers().then(function(){
+  if(!startRegistration('account','accountRegisterBtn'))return;
+  return loadAccountLinkMembers().then(function(){
     var autoLink={status:'manual',memberId:memberId};
     if(!memberId){
       autoLink=findAutoAccountMemberLink(name,'');
@@ -13818,9 +13845,11 @@ function addMember(){
     var linkedAccount=accountMemberLinkConflict(memberId,'');
     if(linkedAccount)return showToast('이미 '+linkedAccount.name+' 계정에 연결된 명부입니다');
 
-    accountAdminCall('create',{name:name,part:part,pin:pin,memberId:memberId}).then(function(result){
+    var payload={name:name,part:part,pin:pin,memberId:memberId};
+    payload.requestId=registrationRequestId('account',payload);
+    return accountAdminCall('create',payload).then(function(result){
       var created=result&&result.account;
-      if(created){upsertLocalAccount(created);cacheAccountPin(created.id,pin);}
+      if(created){upsertLocalAccount(created);if(!result.replayed)cacheAccountPin(created.id,pin);}
       var msg=name+'님 로그인 계정 생성 완료';
       if(sameNameCount)msg+=' · 동명이인 PIN 자동 구분';
       if(autoLink.status==='matched')msg+=' · 명부 자동 연결';
@@ -13833,12 +13862,13 @@ function addMember(){
       if(document.getElementById('memMemberSearch'))document.getElementById('memMemberSearch').value='';
       populateAccountMemberSelect('memMemberId','','');
       renderCachedAccountManagement();
-      writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
+      if(!result.replayed)writeLog('계정 발급', name + '님 로그인 계정 생성' + (memberId?' · 명부 자동/수동 연결':''));
+      delete registrationAttempts.account;
     }).catch(function(e){ console.error(e); showToast(securityErrorMessage(e,'등록 중 오류가 발생했습니다')); });
   }).catch(function(e){
     console.error(e);
     showToast('명부 확인 중 오류 발생');
-  });
+  }).finally(function(){finishRegistration('account','accountRegisterBtn');});
 }
 
 function buildExistingAccountAutoLinkPlan(){
@@ -15355,8 +15385,21 @@ function addHandbookMember(){
     createdAt: new Date().toISOString()
   };
   Object.assign(data, readHandbookProfileFields('add'));
-  
-  db.collection('members').add(data).then(function(){ 
+  if(!startRegistration('member','handbookRegisterBtn'))return;
+  delete data.createdAt;
+  var payload={member:data};
+  payload.requestId=registrationRequestId('member',payload);
+  return accountAdminCall('createMember',payload).catch(function(error){
+    if(error&&error.details&&error.details.kind==='member-same-name'){
+      var parts=(error.details.parts||[]).join(', ');
+      if(confirm(name+' 이름의 명부가 이미 있습니다'+(parts?' ('+parts+')':'')+'.\n기존 단원이 아닌, 다른 동명이인이 맞나요?')){
+        return accountAdminCall('createMember',Object.assign({},payload,{allowSameName:true}));
+      }
+      return null;
+    }
+    throw error;
+  }).then(function(result){
+    if(!result)return;
     showToast(name + '님 명부 등록 완료');
     var distInfo = data.district ? `${data.district}교구` : '교구 미입력';
     ['hbName','hbPhone','hbBirth','hbDist','hbArea','hbJob'].forEach(id => document.getElementById(id).value = '');
@@ -15380,8 +15423,12 @@ function addHandbookMember(){
     syncMemberAddOpen();
     invalidateSharedMembers();
     loadHandbook();
-    writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 📅 입단: ${data.joinDate} | 🏠 ${distInfo}`);
-  });
+    if(!result.replayed)writeLog('명부 추가', `👤 [${name}] 단원 신규 등록\n👉 파트: ${part}${subPart?' · '+subPart:''} | 📅 입단: ${data.joinDate} | 🏠 ${distInfo}`);
+    delete registrationAttempts.member;
+  }).catch(function(error){
+    console.error(error);
+    showToast(securityErrorMessage(error,'명부를 등록하지 못했습니다. 입력 내용은 유지됩니다.'));
+  }).finally(function(){finishRegistration('member','handbookRegisterBtn');});
 }
 
 function deleteHandbookMember(id, name){

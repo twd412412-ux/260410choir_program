@@ -468,16 +468,16 @@ async function accountForName(name) {
   return {nameKey, rows: snap.docs};
 }
 
-async function accountSecret(accountDoc) {
+async function accountSecret(accountDoc, reader) {
   const ref = db.collection("authSecrets").doc(accountDoc.id);
-  const secretSnap = await ref.get();
+  const secretSnap = reader ? await reader.get(ref) : await ref.get();
   if (secretSnap.exists) return {ref, secret: secretSnap.data(), legacyPin: ""};
   const account = accountDoc.data() || {};
   return {ref, secret: null, legacyPin: cleanString(account.pin, 20)};
 }
 
-async function accountPinMatch(accountDoc, pin) {
-  const secretInfo = await accountSecret(accountDoc);
+async function accountPinMatch(accountDoc, pin, reader) {
+  const secretInfo = await accountSecret(accountDoc, reader);
   const valid = secretInfo.secret
     ? await verifyPassword(pin, secretInfo.secret)
     : Boolean(secretInfo.legacyPin && secretInfo.legacyPin === pin);
@@ -490,20 +490,21 @@ async function sameNameAccountRows(nameKey) {
   return snap.docs;
 }
 
-async function assertPinAvailableForName(nameKey, pin, excludeId, knownRows) {
+async function assertPinAvailableForName(nameKey, pin, excludeId, knownRows, reader) {
   const rows = (knownRows || await sameNameAccountRows(nameKey)).filter((doc) => doc.id !== excludeId);
   if (!rows.length) return;
-  const checks = await mapLimit(rows, 4, (doc) => accountPinMatch(doc, pin));
+  const checks = await mapLimit(rows, 4, (doc) => accountPinMatch(doc, pin, reader));
   if (checks.some((check) => check.valid)) {
     throw new HttpsError("already-exists", "동명이인은 서로 다른 PIN을 사용해야 합니다.");
   }
 }
 
-async function assertMemberLinkValid(memberId, accountName, excludeAccountId) {
+async function assertMemberLinkValid(memberId, accountName, excludeAccountId, reader) {
   if (!memberId) return;
+  const read = (ref) => reader ? reader.get(ref) : ref.get();
   const [memberSnap, linkedSnap] = await Promise.all([
-    db.collection("members").doc(memberId).get(),
-    db.collection("accounts").where("memberId", "==", memberId).limit(2).get(),
+    read(db.collection("members").doc(memberId)),
+    read(db.collection("accounts").where("memberId", "==", memberId).limit(2)),
   ]);
   if (!memberSnap.exists) throw new HttpsError("not-found", "연결할 단원 명부를 찾을 수 없습니다.");
   if (normalizeName((memberSnap.data() || {}).name) !== normalizeName(accountName)) {
@@ -693,19 +694,131 @@ async function adminCreateAccount(request) {
   const pin = cleanString(request.data && request.data.pin, 12);
   if (!ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "PIN은 숫자 4자리여야 합니다.");
   const data = accountCreateData(request.data || {}, cleanString(request.auth.token.choirName, 60) || "관리자");
-  const sameNameRows = await sameNameAccountRows(data.nameKey);
-  await Promise.all([
-    assertPinAvailableForName(data.nameKey, pin, "", sameNameRows),
-    assertMemberLinkValid(data.memberId, data.name, ""),
-  ]);
-  const ref = db.collection("accounts").doc();
-  const secret = await buildAccountPinSecret(ref.id, pin);
-  const batch = db.batch();
-  batch.set(ref, data);
-  batch.set(db.collection("authSecrets").doc(ref.id), secret);
-  setAccountPinDirectoryEntries(batch, {[ref.id]: secret});
-  await batch.commit();
-  return {account: safeProfile(ref.id, data)};
+  const result = await commitAccountRegistrations(request, [{data, pin}], "account", request.data.requestId);
+  return {account: result.accounts[0], replayed: result.replayed};
+}
+
+function registrationOperation(request, kind, requestId, payload) {
+  const fingerprint = crypto.createHmac("sha256", accountPinEncryptionKey()).update(JSON.stringify(payload)).digest("hex");
+  const key = cleanString(requestId, 120) || fingerprint;
+  if (!/^[a-zA-Z0-9_-]{8,120}$/.test(key)) throw new HttpsError("invalid-argument", "등록 요청 정보가 올바르지 않습니다. 화면을 새로 열어주세요.");
+  const id = crypto.createHash("sha256").update(request.auth.uid + "|" + kind + "|" + key).digest("hex");
+  return {ref: db.collection("registrationRequests").doc(id), fingerprint};
+}
+
+async function registrationReplay(tx, operation, collection) {
+  const snap = await tx.get(operation.ref);
+  if (!snap.exists) return null;
+  const previous = snap.data();
+  if (previous.fingerprint !== operation.fingerprint) throw new HttpsError("failed-precondition", "등록 내용이 변경되었습니다. 화면을 새로 열어 다시 등록해주세요.");
+  const docs = await Promise.all(previous.ids.map((id) => tx.get(db.collection(collection).doc(id))));
+  if (docs.some((doc) => !doc.exists)) throw new HttpsError("failed-precondition", "이 요청으로 등록한 항목이 삭제되었습니다. 화면을 새로 열어주세요.");
+  return docs;
+}
+
+async function readRegistrationLocks(tx, kind, keys) {
+  const refs = [...new Set(keys)].sort().map((key) => db.collection("registrationLocks")
+    .doc(crypto.createHash("sha256").update(kind + "|" + key).digest("hex")));
+  return Promise.all(refs.map(async (ref) => {
+    const snap = await tx.get(ref);
+    return {ref, revision: snap.exists ? Number(snap.data().revision || 0) + 1 : 1};
+  }));
+}
+
+async function commitAccountRegistrations(request, rows, kind, requestId) {
+  const operation = registrationOperation(request, kind, requestId, rows.map(({data, pin}) => [data.name, data.part, data.memberId, pin]));
+  const prepared = await mapLimit(rows, 4, async (row) => {
+    const ref = db.collection("accounts").doc();
+    return {...row, ref, secret: await buildAccountPinSecret(ref.id, row.pin)};
+  });
+  return db.runTransaction(async (tx) => {
+    const replay = await registrationReplay(tx, operation, "accounts");
+    if (replay) return {accounts: replay.map((doc) => safeProfile(doc.id, doc.data())), replayed: true};
+    const locks = await readRegistrationLocks(tx, "account", prepared.flatMap(({data}) =>
+      ["name:" + data.nameKey].concat(data.memberId ? ["member:" + data.memberId] : [])));
+    const byName = new Map();
+    for (const item of prepared) {
+      if (!byName.has(item.data.nameKey)) {
+        const matches = await Promise.all([
+          tx.get(db.collection("accounts").where("nameKey", "==", item.data.nameKey).limit(MAX_SAME_NAME_ACCOUNTS)),
+          tx.get(db.collection("accounts").where("name", "==", item.data.name).limit(MAX_SAME_NAME_ACCOUNTS)),
+        ]);
+        byName.set(item.data.nameKey, [...new Map(matches.flatMap((snap) => snap.docs).map((doc) => [doc.id, doc])).values()]);
+      }
+      await assertPinAvailableForName(item.data.nameKey, item.pin, "", byName.get(item.data.nameKey), tx);
+      await assertMemberLinkValid(item.data.memberId, item.data.name, "", tx);
+    }
+    const secrets = {};
+    // All duplicate checks are transaction reads; concurrent registrations force a retry.
+    prepared.forEach((item) => {
+      tx.set(item.ref, item.data);
+      tx.set(db.collection("authSecrets").doc(item.ref.id), item.secret);
+      secrets[item.ref.id] = item.secret;
+    });
+    setAccountPinDirectoryEntries(tx, secrets);
+    locks.forEach(({ref, revision}) => tx.set(ref, {revision}));
+    tx.set(operation.ref, {fingerprint: operation.fingerprint, ids: prepared.map((item) => item.ref.id), createdAt: nowIso()});
+    return {accounts: prepared.map((item) => safeProfile(item.ref.id, item.data)), replayed: false};
+  });
+}
+
+function handbookRegistrationData(input, actor) {
+  const data = {};
+  const fields = ["name", "part", "subPart", "phone", "birthday", "district", "area", "job", "group", "joinDate", "address", "email", "salvationDate", "gender", "guideName", "guideRelation", "homePhone", "workplace", "workPhone"];
+  fields.forEach((key) => { data[key] = cleanString(input[key], key === "address" ? 500 : 120); });
+  data.photo = cleanString(input.photo, 4096);
+  if (!data.name || !data.part || ["준단원", "신입단원"].includes(data.part)) throw new HttpsError("invalid-argument", "이름과 주 파트를 확인해주세요.");
+  data.nameKey = normalizeName(data.name);
+  data.noAtt = input.noAtt === true;
+  data.status = data.part === "명단제외" ? "inactive" : "active";
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  data.joinDate = /^\d{4}-\d{2}-\d{2}$/.test(data.joinDate) ? data.joinDate : today;
+  data.attendanceStartDate = today;
+  data.createdAt = nowIso();
+  data.createdBy = actor;
+  return data;
+}
+
+function sameHandbookPerson(a, b) {
+  if (normalizeName(a.name) !== normalizeName(b.name)) return false;
+  const phoneA = String(a.phone || "").replace(/\D/g, ""), phoneB = String(b.phone || "").replace(/\D/g, "");
+  const birthA = cleanString(a.birthday, 20), birthB = cleanString(b.birthday, 20);
+  if (phoneA && phoneB && phoneA !== phoneB) return false;
+  if (birthA && birthB && birthA !== birthB) return false;
+  return Boolean((phoneA && phoneA === phoneB) || (birthA && birthA === birthB));
+}
+
+async function adminCreateHandbookMember(request) {
+  requirePermission(request, "member.manage");
+  const input = request.data.member || {};
+  const data = handbookRegistrationData(input, cleanString(request.auth.token.choirName, 60) || "관리자");
+  const payload = {...data};
+  delete payload.createdAt;
+  delete payload.attendanceStartDate;
+  delete payload.createdBy;
+  const operation = registrationOperation(request, "member", request.data.requestId, payload);
+  const ref = db.collection("members").doc();
+  return db.runTransaction(async (tx) => {
+    const replay = await registrationReplay(tx, operation, "members");
+    if (replay) return {memberId: replay[0].id, replayed: true};
+    const locks = await readRegistrationLocks(tx, "member", [data.nameKey]);
+    const matches = await Promise.all([
+      tx.get(db.collection("members").where("nameKey", "==", data.nameKey)),
+      tx.get(db.collection("members").where("name", "==", data.name)),
+    ]);
+    const docs = [...new Map(matches.flatMap((snap) => snap.docs).map((doc) => [doc.id, doc])).values()]
+      .filter((doc) => normalizeName(doc.data().name) === data.nameKey);
+    if (docs.some((doc) => sameHandbookPerson(data, doc.data()))) {
+      throw new HttpsError("already-exists", "같은 이름과 연락처 또는 생년월일의 명부가 있습니다. 기존 단원 정보를 확인해주세요.");
+    }
+    if (docs.length && request.data.allowSameName !== true) {
+      throw new HttpsError("failed-precondition", "같은 이름의 단원이 명부에 있습니다.", {kind: "member-same-name", parts: [...new Set(docs.map((doc) => cleanString(doc.data().part, 30)))]});
+    }
+    tx.set(ref, data);
+    locks.forEach(({ref: lockRef, revision}) => tx.set(lockRef, {revision}));
+    tx.set(operation.ref, {fingerprint: operation.fingerprint, ids: [ref.id], createdAt: nowIso()});
+    return {memberId: ref.id, replayed: false};
+  });
 }
 
 async function mapLimit(items, limit, mapper) {
@@ -1048,17 +1161,6 @@ async function adminBulkCreateAccounts(request) {
   const rows = Array.isArray(request.data && request.data.rows) ? request.data.rows.slice(0, 250) : [];
   if (!rows.length) throw new HttpsError("invalid-argument", "등록할 계정이 없습니다.");
   const actor = cleanString(request.auth.token.choirName, 60) || "관리자";
-  const existing = await db.collection("accounts").get();
-  const existingByName = new Map();
-  const linkedMemberIds = new Set();
-  existing.docs.forEach((doc) => {
-    const data = doc.data() || {};
-    const nameKey = normalizeName(data.name);
-    if (!existingByName.has(nameKey)) existingByName.set(nameKey, []);
-    existingByName.get(nameKey).push(doc);
-    const memberId = cleanString(data.memberId, 80);
-    if (memberId) linkedMemberIds.add(memberId);
-  });
   const incomingPinsByName = new Map();
   const incomingMemberIds = new Set();
   const prepared = [];
@@ -1071,45 +1173,20 @@ async function adminBulkCreateAccounts(request) {
       throw new HttpsError("already-exists", data.name + " 동명이인은 서로 다른 PIN을 사용해야 합니다.");
     }
     incomingPinsByName.get(data.nameKey).add(pin);
-    if (data.memberId && (linkedMemberIds.has(data.memberId) || incomingMemberIds.has(data.memberId))) {
+    if (data.memberId && incomingMemberIds.has(data.memberId)) {
       throw new HttpsError("already-exists", data.name + "님의 명부는 이미 다른 계정에 연결되어 있습니다.");
     }
     if (data.memberId) incomingMemberIds.add(data.memberId);
-    prepared.push({ref: db.collection("accounts").doc(), data, pin});
+    prepared.push({data, pin});
   }
-  const memberIds = Array.from(incomingMemberIds);
-  if (memberIds.length) {
-    const memberSnaps = await db.getAll(...memberIds.map((id) => db.collection("members").doc(id)));
-    const memberById = new Map(memberSnaps.map((snap) => [snap.id, snap]));
-    prepared.forEach((item) => {
-      if (!item.data.memberId) return;
-      const memberSnap = memberById.get(item.data.memberId);
-      if (!memberSnap || !memberSnap.exists) throw new HttpsError("not-found", item.data.name + "님의 단원 명부를 찾을 수 없습니다.");
-      if (normalizeName((memberSnap.data() || {}).name) !== item.data.nameKey) {
-        throw new HttpsError("invalid-argument", item.data.name + " 계정과 연결할 명부의 이름이 다릅니다.");
-      }
-    });
+  const accounts = [];
+  let replayed = true;
+  for (let start = 0; start < prepared.length; start += 100) {
+    const result = await commitAccountRegistrations(request, prepared.slice(start, start + 100), "bulk-account-" + start, request.data.requestId);
+    accounts.push(...result.accounts);
+    replayed = replayed && result.replayed;
   }
-  await mapLimit(prepared, 3, (item) => assertPinAvailableForName(
-    item.data.nameKey,
-    item.pin,
-    "",
-    existingByName.get(item.data.nameKey) || [],
-  ));
-  const secrets = await mapLimit(prepared, 4, async (item) => buildAccountPinSecret(item.ref.id, item.pin));
-  for (let start = 0; start < prepared.length; start += 200) {
-    const batch = db.batch();
-    const directorySecrets = {};
-    prepared.slice(start, start + 200).forEach((item, offset) => {
-      const secret = secrets[start + offset];
-      batch.set(item.ref, item.data);
-      batch.set(db.collection("authSecrets").doc(item.ref.id), secret);
-      directorySecrets[item.ref.id] = secret;
-    });
-    setAccountPinDirectoryEntries(batch, directorySecrets);
-    await batch.commit();
-  }
-  return {created: prepared.length, accounts: prepared.map((item) => safeProfile(item.ref.id, item.data))};
+  return {created: accounts.length, accounts, replayed};
 }
 
 async function adminUpdateAccount(request) {
@@ -2133,6 +2210,7 @@ exports.authGateway = onCall({secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (req
 
 exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [ACCOUNT_PIN_ENCRYPTION_KEY]}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
+  if (action === "createMember") return adminCreateHandbookMember(request);
   if (action === "create") return adminCreateAccount(request);
   if (action === "bulkCreate") return adminBulkCreateAccounts(request);
   if (action === "update") return adminUpdateAccount(request);

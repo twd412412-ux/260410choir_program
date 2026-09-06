@@ -151,7 +151,8 @@ service cloud.firestore {
         || hasPermission('attendance.delete')
         || hasPermission('account.manage')
         || hasPermission('song.manage');
-      allow create: if isAdmin() || hasPermission('member.manage');
+      // Creation goes through accountAdmin/createMember for duplicate and retry checks.
+      allow create: if false;
       allow update: if isAdmin()
         || hasPermission('member.manage')
         || (ownMember(memberId)
@@ -362,6 +363,14 @@ service cloud.firestore {
     }
 
     match /authSecrets/{secretId} {
+      allow read, write: if false;
+    }
+
+    match /registrationRequests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /registrationLocks/{lockId} {
       allow read, write: if false;
     }
 
