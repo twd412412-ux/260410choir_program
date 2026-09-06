@@ -3208,11 +3208,11 @@ body{font-weight:500}
         <details class="score-link-picker" id="scoreSongCandidateBox">
           <summary><div class="score-link-picker-head"><div class="score-link-picker-copy"><div class="score-link-picker-title">곡목록 연결 <small>선택</small></div><div class="score-link-picker-summary" id="scoreLinkSummary">연결하지 않아도 등록됩니다</div></div><div class="score-link-count" id="scoreSongCandidateCount">연결 0개</div></div></summary>
           <div class="score-link-picker-body">
-            <div class="score-link-help">주일찬송이나 등록된 곡에서 정확히 찾아야 할 때만 연결하세요. 행사 프로그램은 곡명이 같으면 자동으로 악보가 표시됩니다.</div>
+            <div class="form-group"><label class="form-label" for="scoreSongSearch">연결할 곡 검색</label><input class="form-input" id="scoreSongSearch" type="search" placeholder="곡명 검색" oninput="renderScoreSongCandidates()"></div>
             <div class="score-linked-note empty" id="scoreLinkedSongNote">연결 없음 · 악보 목록에는 정상 등록됩니다.</div>
             <div class="score-link-candidates" id="scoreSongCandidates"><div class="score-link-empty">곡명을 입력하면 연결할 수 있는 곡이 표시됩니다.</div></div>
             <div class="score-link-actions">
-              <button type="button" class="score-light-btn" onclick="applySelectedScoreSongCandidates()">선택 항목 연결</button>
+              <button type="button" class="score-light-btn" id="scoreLinkApplyBtn" onclick="applySelectedScoreSongCandidates()">선택 적용</button>
               <button type="button" class="score-light-btn" onclick="linkSameTitleScoreSongs()">같은 곡명 모두 선택</button>
               <button type="button" class="score-light-btn" onclick="clearScoreSongCandidateSelection()">선택 초기화</button>
               <button type="button" class="score-light-btn" id="scoreLinkClearBtn" onclick="clearScoreLinkedSongs()">연결 해제</button>
@@ -4576,7 +4576,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.06.5';
+var APP_RELEASE_VERSION='26.09.06.6';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5845,7 +5845,8 @@ function scoreCandidateMatchLabel(score){
 }
 function scoreCandidateRows(){
   var titleEl=document.getElementById('scoreTitle');
-  var q=(titleEl&&titleEl.value||'').trim();
+  var searchEl=document.getElementById('scoreSongSearch');
+  var q=(searchEl&&searchEl.value||'').trim()||(titleEl&&titleEl.value||'').trim();
   var qKey=scoreSearchKey(q);
   if(!qKey)return [];
   return allSongs.map(function(song){
@@ -5867,7 +5868,7 @@ function renderScoreSongCandidates(){
   var box=document.getElementById('scoreSongCandidates');
   if(!box)return;
   if(!allSongs.length){
-    box.innerHTML='<div class="score-link-empty">곡 목록을 불러오는 중입니다.</div>';
+    box.innerHTML='<div class="score-link-empty">'+(songsLoaded?'등록된 곡이 없습니다.':'곡 목록을 불러오는 중입니다.')+'</div>';
     if(!songsLoaded){
       if(typeof initSongs==='function')initSongs();
       if(songsLoadPromise)songsLoadPromise.then(function(){renderScoreSongCandidates();});
@@ -5876,14 +5877,21 @@ function renderScoreSongCandidates(){
   }
   var rows=scoreCandidateRows();
   var selected=selectedScoreCandidateIds();
+  var apply=document.getElementById('scoreLinkApplyBtn');
+  if(apply){apply.textContent=selected.length?'선택 적용 ('+selected.length+')':'선택 적용';apply.disabled=!selected.length;}
+  // Keep selections visible when searching for another date or a differently named song.
+  var selectedRows=selected.map(function(id){
+    return rows.find(function(row){return row.song.id===id;})||{song:allSongs.find(function(song){return song.id===id;})};
+  }).filter(function(row){return !!row.song;});
+  rows=selectedRows.concat(rows.filter(function(row){return selected.indexOf(row.song.id)===-1;}));
   if(!rows.length){
-    box.innerHTML='<div class="score-link-empty">연결할 곡을 찾지 못했습니다. 곡명을 더 입력하거나 악보만 등록할 수 있습니다.</div>';
+    box.innerHTML='<div class="score-link-empty">검색된 곡이 없습니다.</div>';
     return;
   }
   box.innerHTML=rows.map(function(item){
     var song=item.song;
     var on=selected.indexOf(song.id)>-1;
-    var meta=[scoreSongLinkLabel(song),scoreCandidateMatchLabel(item.score)].filter(Boolean).join(' · ');
+    var meta=[scoreSongLinkLabel(song),typeof item.score==='number'?scoreCandidateMatchLabel(item.score):''].filter(Boolean).join(' · ');
     return '<button type="button" class="score-link-candidate '+(on?'selected':'')+'" onclick="toggleScoreSongCandidate(\''+escAttr(song.id)+'\')">'
       +'<div class="score-link-candidate-main"><span>'+escHtml(song.songName||'곡명 없음')+'</span><span>'+(on?'선택됨':'선택')+'</span></div>'
       +'<div class="score-link-candidate-meta">'+escHtml(meta)+'</div>'
@@ -5906,7 +5914,7 @@ function applySelectedScoreSongCandidates(){
   var songs=ids.map(function(id){return allSongs.find(function(song){return song.id===id});}).filter(Boolean);
   setScoreLinkedSongs(ids,songs[0]?(songs[0].songName||''):'',true);
   renderScoreSongCandidates();
-  showToast('악보를 곡 '+ids.length+'개에 연결했습니다');
+  showToast('연결 대상 '+ids.length+'개를 선택했습니다');
 }
 function clearScoreSongCandidateSelection(){
   scoreCandidateSelectedIds=[];
@@ -5970,19 +5978,19 @@ function linkSameTitleScoreSongs(){
   setScoreCandidatePanelOpen(true);
   var titleEl=document.getElementById('scoreTitle');
   var nameEl=document.getElementById('scoreLinkedSongName');
-  var key=scoreSearchKey((titleEl&&titleEl.value)|| (nameEl&&nameEl.value)||'');
+  var title=(titleEl&&titleEl.value)|| (nameEl&&nameEl.value)||'';
+  var key=scoreSearchKey(title);
   if(!key)return showToast('먼저 곡명을 입력해주세요');
-  var matches=allSongs.filter(function(song){return scoreSearchKey(song.songName)===key;}).sort(function(a,b){return songScheduleRankValue(a)-songScheduleRankValue(b);});
+  var matches=allSongs.filter(function(song){return scoreTitlesMatch(song.songName,title);}).sort(function(a,b){return songScheduleRankValue(a)-songScheduleRankValue(b);});
   if(!matches.length)return showToast('곡명이 일치하는 항목이 없습니다');
   scoreCandidateSelectedIds=matches.map(function(song){return song.id;});
   renderScoreSongCandidates();
-  showToast('곡명이 일치하는 항목 '+matches.length+'개를 선택했습니다. 연결하려면 선택한 곡에 연결을 누르세요');
+  showToast('같은 곡명 '+matches.length+'개를 선택했습니다');
 }
 
 function handleScoreTitleChanged(event){
   if(scoreTitleComposing||(event&&event.isComposing))return;
   renderScoreTitleOptions();
-  scoreCandidateSelectedIds=[];
   scoreTargetGroupKey='';
   resetScoreUploadReplacementPlan();
   renderScoreSongCandidates();
@@ -12431,7 +12439,7 @@ function resetScoreForm(saved){
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
   scoreUploadPendingResults=Object.create(null);
-  ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['scoreEditId','scoreTitle','scoreLabel','scoreUrl','scoreLinkedSongId','scoreLinkedSongIds','scoreLinkedSongName','scoreSongSearch'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var file=document.getElementById('scoreFile');
   if(file){file.value='';delete file.dataset.targetScoreId;delete file.dataset.singerPartConfirmedFor;}
   setScoreFormKind('singer');
@@ -12820,6 +12828,7 @@ function editScoreUpload(id){
   scoreUploadReviewRows=[];
   scoreUploadReviewConfirmed=false;
   document.getElementById('scoreEditId').value=score.id;
+  document.getElementById('scoreSongSearch').value='';
   setScoreFormKind(score.scoreKind||'singer');
   scoreTargetGroupKey=scoreFolderKey(score);
   setScoreInstrumentSelection(normalizeScoreKind(score.scoreKind)==='orchestra'?(score.instrument||score.instrumentLabel||''):'');
