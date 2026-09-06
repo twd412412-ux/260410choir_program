@@ -35,11 +35,29 @@ const { chromium } = require('playwright');
       window.photoSaveFails = false;
       window.photoMember = { name: '테스트 단원', part: 'S1', status: 'active', photo: '' };
       window.photoReadMode = 'ok';
+      window.photoReadDelay = 0;
+      window.photoAuthAccount = 'manual-account';
+      window.photoAuthReject = false;
+      const fakeAuthUser = () => ({
+        uid: photoAuthAccount,
+        getIdTokenResult: async () => ({ claims: { account: true, choirName: '테스트 단원', choirPart: 'S1', memberId: 'member-a' } })
+      });
+      authGateway = async action => {
+        if (action !== 'loginWithPin') throw new Error('Unexpected auth action: ' + action);
+        if (photoAuthReject) throw new Error('Test login failure');
+        return { token: 'test-only-token' };
+      };
+      ensureFirebaseAuth = async () => ({
+        currentUser: null,
+        signInWithCustomToken: async () => ({ user: fakeAuthUser() }),
+        onAuthStateChanged: callback => { setTimeout(() => callback(fakeAuthUser()), 0); return () => {}; }
+      });
       db = { collection: name => {
         if (name !== 'members') throw new Error('Unexpected collection: ' + name);
         return { doc: id => ({
           get: async () => {
             photoReads++;
+            if (photoReadDelay) await new Promise(resolve => setTimeout(resolve, photoReadDelay));
             if (photoReadMode === 'failure') throw new Error('Test offline');
             return { id, exists: photoReadMode !== 'missing', data: () => ({ ...photoMember }) };
           },
@@ -57,6 +75,64 @@ const { chromium } = require('playwright');
       };
     });
     const guide = page.locator('#modalProfilePhotoGuide');
+    for (const delay of [0, 250]) {
+      await page.evaluate(delay => {
+        currentUser = null; updateUserBar();
+        photoReadDelay = delay; photoReads = 0; photoAuthAccount = 'manual-account-' + delay;
+        openUserModal();
+      }, delay);
+      await page.locator('#userNameInput').fill('테스트 단원');
+      await page.locator('#userPinInput').fill('1234');
+      await page.locator('#userModalBody button[onclick="loginUser()"]').click();
+      await page.waitForFunction(() => !document.getElementById('modalUser').classList.contains('active'));
+      await page.waitForTimeout(delay + 900);
+      const loginState = await page.evaluate(() => ({
+        eligible: !!needsProfilePhotoGuide(), handled: profilePhotoGuide.handled,
+        visible: document.getElementById('modalProfilePhotoGuide').classList.contains('active'), reads: photoReads
+      }));
+      assert.ok(loginState.visible, 'real PIN login must display guide: ' + JSON.stringify(loginState));
+      assert.equal(loginState.reads, 1, 'PIN login should not load a hidden profile a second time');
+      await page.keyboard.press('Escape');
+    }
+    await page.evaluate(async () => {
+      currentUser = null; updateUserBar(); photoReads = 0; photoReadDelay = 0;
+      photoAuthAccount = 'restored-account'; firebaseAuthReadyPromise = null; firebaseAuthChecking = false;
+      localStorage.setItem('choir_user', JSON.stringify({ id: photoAuthAccount, name: '테스트 단원', memberId: 'member-a', part: 'S1' }));
+      await restoreUser();
+    });
+    await guide.waitFor({ state: 'visible', timeout: 3000 });
+    assert.equal(await page.evaluate(() => photoReads), 1, 'restored login reuses member read');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => {
+      profilePhotoGuide.handled = false;
+      renderCurrentUserProfile(photoMember, 'ready');
+      return profilePhotoGuide.handled;
+    }), false, 'rendering a hidden profile is not a user acknowledgement');
+    await page.evaluate(() => openUserModal());
+    await page.locator('#myProfilePhotoSelectBtn').waitFor({ state: 'visible' });
+    await page.evaluate(() => closeModal('modalUser'));
+    await page.waitForTimeout(800);
+    assert.equal(await guide.isVisible(), false, 'explicitly opening profile suppresses another prompt this session');
+    await page.evaluate(async () => {
+      currentUser = null; updateUserBar(); photoReadDelay = 250;
+      photoAuthAccount = 'restored-with-dialog'; firebaseAuthReadyPromise = null; firebaseAuthChecking = true;
+      localStorage.setItem('choir_user', JSON.stringify({ id: photoAuthAccount, name: '테스트 단원', memberId: 'member-a', part: 'S1' }));
+      openUserModal();
+      await restoreUser();
+      closeModal('modalUser');
+    });
+    await guide.waitFor({ state: 'visible', timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      currentUser = null; updateUserBar(); photoReadDelay = 0; photoAuthReject = true; openUserModal();
+    });
+    await page.locator('#userNameInput').fill('테스트 단원');
+    await page.locator('#userPinInput').fill('1234');
+    await page.locator('#userModalBody button[onclick="loginUser()"]').click();
+    await page.waitForTimeout(800);
+    assert.equal(await guide.isVisible(), false, 'failed authentication must not display guide');
+    assert.equal(await page.locator('#userModalBody button[onclick="loginUser()"]').isEnabled(), true);
+    await page.evaluate(() => { photoAuthReject = false; closeModal('modalUser'); photoReads = 0; });
     await page.evaluate(() => photoLogin());
     await guide.waitFor({ state: 'visible' });
     assert.equal(await page.evaluate(() => photoReads), 1, 'reuse the existing login member read');
@@ -170,7 +246,7 @@ const { chromium } = require('playwright');
     await page.waitForTimeout(800);
     assert.equal(await guide.isVisible(), false, 'late old-account reads cannot trigger new-account guide');
     assert.deepEqual(errors, [], 'no uncaught browser errors');
-    console.log('PASS: photo guide eligibility, existing login read reuse, responsive spotlight, keyboard, picker/crop, save, dismissal, account isolation, deferred dialogs');
+    console.log('PASS: real PIN login (fast/slow), restored login (with/without dialog), rejected login, explicit profile acknowledgement, read reuse, responsive spotlight, picker/crop, save, dismissal, account isolation');
     console.log('Screenshots: ' + screenshotDir);
   } finally {
     if (browser) await browser.close();

@@ -4463,6 +4463,7 @@ var recoveryFirebaseApp=null;
 var adminResetVerified=false;
 var adminResetAuth=null;
 var currentUser=null, currentDetailSong=null, pendingTabAfterLogin='';
+var userLoginBusy=false;
 var myProfilePhotoSavePromise=null;
 var profilePhotoGuide={key:'',member:null,handled:false,timer:null};
 var myProfilePhotoRegistration=false;
@@ -4562,7 +4563,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.06.2';
+var APP_RELEASE_VERSION='26.09.06.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -6915,6 +6916,10 @@ function renderUserModalBody(){
   }
 }
 function openUserModal(photoRegistration){
+  if(isMemberLoggedIn()&&!firebaseAuthChecking){
+    syncProfilePhotoGuideSession();
+    profilePhotoGuide.handled=true;
+  }
   myProfilePhotoRegistration=photoRegistration===true;
   renderUserModalBody();
   openModal('modalUser');
@@ -6997,7 +7002,6 @@ function renderCurrentUserProfile(member,state){
     memberBox='<div style="padding:12px;background:#F4E7CC;border:1px solid #E5C88F;border-radius:12px;font-size:12px;color:#7C571E;line-height:1.5;margin-top:14px">연결된 명부가 현재 비활성 상태입니다. 사진 업로드는 사용할 수 없습니다.</div>';
   }else if(member){
     var photo=member.photo||'';
-    if(needsProfilePhotoGuide())profilePhotoGuide.handled=true;
     var preview='<img id="myProfilePhotoPreview" src="'+escHtml(photo)+'" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--pl);margin:0 auto 10px;display:'+(photo?'block':'none')+'">';
     memberBox='<div class="my-profile-photo-panel'+(!photo?' is-missing':'')+'" style="margin-top:14px;padding:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px">'
       +preview
@@ -7504,6 +7508,7 @@ function hydrateUserLinkedMember(user){
   });
 }
 function loginUser(){
+  if(userLoginBusy)return;
   var nameInput=document.getElementById('userNameInput');
   var pin=document.getElementById('userPinInput');
   if(!nameInput||!nameInput.value.trim())return showToast('이름을 입력해주세요');
@@ -7511,8 +7516,9 @@ function loginUser(){
   var inputName=nameInput.value.trim();
   var pinValue=pin.value;
   var button=document.querySelector('#userModalBody button[onclick="loginUser()"]');
+  userLoginBusy=true;
   if(button){button.disabled=true;button.textContent='로그인 중...';}
-  authGateway('loginWithPin',{name:inputName,pin:pinValue}).then(signInWithSecureToken).then(function(){
+  return authGateway('loginWithPin',{name:inputName,pin:pinValue}).then(signInWithSecureToken).then(function(){
     pin.value='';
     closeModal('modalUser');
     showToast(currentUser.name+'님 환영합니다!');
@@ -7529,6 +7535,7 @@ function loginUser(){
     console.error(e);
     showToast(securityErrorMessage(e,'이름 또는 PIN을 확인해주세요'));
   }).finally(function(){
+    userLoginBusy=false;
     if(button){button.disabled=false;button.textContent='로그인';}
   });
 }
@@ -7578,7 +7585,8 @@ function updateUserBar(){
   var userModal=document.getElementById('modalUser');
   var userModalBody=document.getElementById('userModalBody');
   var expectedView=firebaseAuthChecking?'checking':(currentUser?'profile':'login');
-  if(userModal&&userModalBody&&userModal.classList.contains('active')&&userModalBody.dataset.userView!==expectedView)renderUserModalBody();
+  // A PIN login closes this dialog; do not load a transient profile before it closes.
+  if(!userLoginBusy&&userModal&&userModalBody&&userModal.classList.contains('active')&&userModalBody.dataset.userView!==expectedView)renderUserModalBody();
   setTimeout(routePushTarget,0);
 }
 function showCachedUserChecking(user){
