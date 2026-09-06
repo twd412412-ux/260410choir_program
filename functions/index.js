@@ -1763,12 +1763,51 @@ function scoreCatalogMetaUpdate(meta, summary, actor, now) {
   };
 }
 
+function scoreGroupMetadataItems(group, states, request) {
+  const ids = Array.isArray(group.ids) ? group.ids : [];
+  const title = cleanString(group.title, 160);
+  if (!title || !ids.length || ids.length > 100 || new Set(ids).size !== ids.length || ids.some((id) => !isValidDocumentId(id))) {
+    throw new HttpsError("invalid-argument", "수정할 곡명과 악보 묶음을 확인해주세요.");
+  }
+  const current = ids.map((id) => scoreCatalogFindItem(states, id).item);
+  if (current.some((item) => !item || item.scoreKind !== "orchestra")) {
+    throw new HttpsError("failed-precondition", "악보 묶음이 변경되었습니다. 목록을 새로 불러온 뒤 다시 수정해주세요.");
+  }
+  if (current.some((item) => !canEditStoredScore(request, item))) {
+    throw new HttpsError("permission-denied", "이 악보 묶음 전체를 수정할 권한이 필요합니다.");
+  }
+  const key = scoreArchiveGroupKey(current[0]);
+  const allItems = Object.values(states).flatMap((state) => Object.values(state.items));
+  const members = allItems.filter((item) => item.scoreKind === "orchestra" && scoreArchiveGroupKey(item) === key);
+  if (key !== group.expectedKey || members.length !== ids.length || current.some((item) => scoreArchiveGroupKey(item) !== key)) {
+    throw new HttpsError("failed-precondition", "악보 묶음이 변경되었습니다. 목록을 새로 불러온 뒤 다시 수정해주세요.");
+  }
+  const linkedSongIds = normalizeScoreLinkedSongIds(group.linkedSongIds);
+  const patch = {
+    title,
+    searchKey: title.toLowerCase().replace(/[\s\u00a0]+/g, "").replace(/[·ㆍ.,，、;:/|\\\-_*+~!?\"'`‘’“”()[\]{}<>《》「」『』]/g, ""),
+    linkedSongId: linkedSongIds[0] || "",
+    linkedSongIds,
+    linkedSongName: linkedSongIds.length ? cleanString(group.linkedSongName, 160) : "",
+  };
+  const nextKey = scoreArchiveGroupKey(patch);
+  if (allItems.some((item) => item.scoreKind === "orchestra" && !ids.includes(item.id) && scoreArchiveGroupKey(item) === nextKey)) {
+    throw new HttpsError("already-exists", "같은 곡명과 연결을 가진 다른 악보 묶음이 있습니다. 기존 묶음을 먼저 확인해주세요.");
+  }
+  // Merge only metadata into the transaction's latest files, never the client's older copies.
+  return current.map((item) => Object.assign({}, item, patch));
+}
+
 async function upsertScores(request) {
   requirePermission(request, "score.manage");
-  const requested = Array.isArray(request.data && request.data.items)
+  const groupEdit = request.data && request.data.action === "updateGroup" ? request.data.group : null;
+  if (request.data && request.data.action === "updateGroup" && (!groupEdit || typeof groupEdit !== "object")) {
+    throw new HttpsError("invalid-argument", "수정할 악보 묶음을 확인해주세요.");
+  }
+  let requested = Array.isArray(request.data && request.data.items)
     ? request.data.items.slice(0, 30)
     : [];
-  if (!requested.length) throw new HttpsError("invalid-argument", "저장할 악보가 없습니다.");
+  if (!requested.length && !groupEdit) throw new HttpsError("invalid-argument", "저장할 악보가 없습니다.");
   const ids = new Set();
   requested.forEach((raw) => {
     const id = cleanString(raw && raw.id, 180);
@@ -1796,6 +1835,7 @@ async function upsertScores(request) {
       throw new HttpsError("failed-precondition", "악보 목록 전환을 먼저 완료해주세요.");
     }
     const states = scoreCatalogTransactionState(catalogSnaps);
+    if (groupEdit) requested = scoreGroupMetadataItems(groupEdit, states, request);
     const legacyData = legacySnap.exists ? legacySnap.data() || {} : {};
     const legacyItems = Object.assign({}, scoreItemsById(legacyData));
     const changes = [];
@@ -1811,7 +1851,9 @@ async function upsertScores(request) {
       if (existing && !canEditStoredScore(request, existing)) {
         throw new HttpsError("permission-denied", "다른 사람이 등록한 악보를 수정할 권한이 없습니다.");
       }
-      const sanitized = sanitizeScoreItem(raw, id, existing, actor);
+      const sanitized = groupEdit
+        ? {next: Object.assign({}, raw, {updatedAt: nowIso(), updatedById: actor.id, updatedByName: actor.name}), fileChanged: false}
+        : sanitizeScoreItem(raw, id, existing, actor);
       if (existing && existing.archived === true && sanitized.fileChanged && sanitized.next.scoreKind === "orchestra") {
         restoreGroupKeys.add(scoreArchiveGroupKey(existing));
       }
@@ -1901,7 +1943,7 @@ async function upsertScores(request) {
         updatedByName: actor.name,
       }, {merge: true});
     }
-    tx.set(changeRef, {
+    if (!groupEdit) tx.set(changeRef, {
       changes,
       createdAt: now,
       updatedById: actor.id,
@@ -2225,6 +2267,7 @@ exports.accountAdmin = onCall({timeoutSeconds: 120, memory: "512MiB", secrets: [
 exports.scoreAdmin = onCall({timeoutSeconds: 120, memory: "512MiB"}, async (request) => {
   const action = cleanString(request.data && request.data.action, 40);
   if (action === "upsert") return upsertScores(request);
+  if (action === "updateGroup") return upsertScores(request);
   if (action === "delete") return deleteStoredScore(request);
   if (action === "cleanupUploads") return cleanupUnusedScoreUploads(request);
   throw new HttpsError("invalid-argument", "지원하지 않는 악보 관리 요청입니다.");

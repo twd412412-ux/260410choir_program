@@ -3947,6 +3947,19 @@ body{font-weight:500}
   </div>
 </div>
 
+<div class="modal-overlay modal-center" id="modalScoreGroupEdit">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">곡명 · 연결 수정</span><button class="modal-close" onclick="closeModal('modalScoreGroupEdit')">✕</button></div>
+    <div class="form-group"><label class="form-label" for="scoreGroupEditTitle">관현악 곡명</label><input class="form-input" id="scoreGroupEditTitle" maxlength="160"></div>
+    <div class="form-group"><label class="form-label" for="scoreGroupEditSearch">곡목록 연결</label><input class="form-input" id="scoreGroupEditSearch" type="search" placeholder="곡명 검색" oninput="renderScoreGroupEditSongs()"></div>
+    <div id="scoreGroupEditSongs" style="max-height:35dvh;overflow-y:auto;min-width:0"></div>
+    <div class="score-part-edit-actions">
+      <button class="btn" onclick="closeModal('modalScoreGroupEdit')">취소</button>
+      <button class="btn btn-p" id="scoreGroupEditSaveBtn" onclick="saveScoreGroupEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 관현악 파트 변경 -->
 <div class="modal-overlay modal-center" id="modalScorePartEdit">
   <div class="modal-content">
@@ -4563,7 +4576,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.06.3';
+var APP_RELEASE_VERSION='26.09.06.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -9769,6 +9782,24 @@ function initSongs(force){
 function scoreSearchKey(value){
   return normalizeSearchText(value||'');
 }
+function scoreTitleMatchKeys(value){
+  var title=String(value||'').trim();
+  var keys=[scoreSearchKey(title)].filter(Boolean);
+  // Only a complete bilingual parenthetical title is an alias, never a substring or part label.
+  var pair=title.match(/^([^()]+)\s*\(([^()]+)\)$/);
+  if(!pair)return keys;
+  var left=pair[1].trim(),right=pair[2].trim();
+  function korean(text){return /[가-힣]{2}/.test(text)&&!/[A-Za-z0-9]/.test(text);}
+  function english(text){return /^[A-Za-z][A-Za-z\s'’!?,.-]*$/.test(text)&&scoreSearchKey(text).length>=4&&!/^(SATB|SSAATTBB|SSA|TTBB|MR|PDF|FULL\s*SCORE|SCORE|PART|SINGER|CHOIR|ORCHESTRA|PIANO|SYNTH|FLUTE|OBOE|CLARINET|BASSOON|HORN|TRUMPET|TROMBONE|TUBA|TIMPANI|PERCUSSION|VIOLIN|VIOLA|CELLO|BASS)$/i.test(text);}
+  if((korean(left)&&english(right))||(english(left)&&korean(right))){
+    [left,right].forEach(function(part){var key=scoreSearchKey(part);if(keys.indexOf(key)===-1)keys.push(key);});
+  }
+  return keys;
+}
+function scoreTitlesMatch(left,right){
+  var keys=scoreTitleMatchKeys(left);
+  return scoreTitleMatchKeys(right).some(function(key){return keys.indexOf(key)!==-1;});
+}
 var SCORE_KINDS=[
   {key:'singer',label:'싱어'},
   {key:'orchestra',label:'관현악'}
@@ -10966,7 +10997,11 @@ function isScoreFolderUnread(rows){
   if(!scoreSeenStorageKey()||!rows.length)return false;
   var folderId=scoreFolderSeenId(rows);
   var version=scoreFolderVersionToken(rows);
-  return !!(folderId&&version&&getScoreSeenState()[folderId]!==version);
+  var seen=getScoreSeenState();
+  if(seen[folderId]===version)return false;
+  // A metadata-only rename/relink changes the folder key, not the files already read.
+  if(Object.keys(seen).some(function(id){return id.indexOf('folder:')===0&&seen[id]===version;}))return false;
+  return !!(folderId&&version);
 }
 function markScoreFolderRead(score){
   var key=scoreSeenStorageKey();
@@ -11071,8 +11106,8 @@ function findScoresForSong(song, includePrivate){
     if(song.scoreId&&score.id===song.scoreId)return true;
     if(score.linkedSongId&&score.linkedSongId===song.id)return true;
     if(Array.isArray(score.linkedSongIds)&&score.linkedSongIds.indexOf(song.id)!==-1)return true;
-    if(score.linkedSongName&&scoreSearchKey(score.linkedSongName)===key)return true;
-    return scoreSearchKey(score.title)===key;
+    if(scoreTitlesMatch(score.linkedSongName,song.songName))return true;
+    return scoreTitlesMatch(score.title,song.songName);
   });
   var seen={};
   return sortScores(rows).filter(function(score){
@@ -11115,8 +11150,8 @@ function findSongForScore(score){
     if(score.id&&song.scoreId&&song.scoreId===score.id)candidates.push(song);
     else if(Array.isArray(score.linkedSongIds)&&score.linkedSongIds.indexOf(song.id)!==-1)candidates.push(song);
     else if(score.linkedSongId&&song.id===score.linkedSongId)candidates.push(song);
-    else if(linkedKey&&scoreSearchKey(song.songName)===linkedKey)candidates.push(song);
-    else if(titleKey&&scoreSearchKey(song.songName)===titleKey)candidates.push(song);
+    else if(linkedKey&&scoreTitlesMatch(song.songName,score.linkedSongName))candidates.push(song);
+    else if(titleKey&&scoreTitlesMatch(song.songName,score.title))candidates.push(song);
   });
   candidates=candidates.filter(function(song,idx){
     return candidates.findIndex(function(s){return s.id===song.id;})===idx;
@@ -11159,7 +11194,7 @@ function scoreScheduleMatchRank(schedule,score){
   var scoreKey=scoreSearchKey(score&&score.title);
   if(!scoreKey)return 0;
   var keys=scoreScheduleCandidateTitles(schedule).map(scoreSearchKey).filter(Boolean);
-  if(keys.indexOf(scoreKey)!==-1)return 3;
+  if(scoreScheduleCandidateTitles(schedule).some(function(title){return scoreTitlesMatch(title,score.title)||scoreTitlesMatch(title,score.linkedSongName);}))return 3;
   if(scoreKey.length<6)return 0;
   return keys.some(function(key){return key.length>=4&&(key.indexOf(scoreKey)>-1||scoreKey.indexOf(key)>-1);})?1:0;
 }
@@ -11888,6 +11923,63 @@ function saveScorePartEdit(){
     if(btn){btn.disabled=false;btn.textContent='파트 저장';}
   });
 }
+var scoreGroupEditState=null;
+function openScoreGroupEdit(groupKey){
+  if(scoreGroupEditState&&scoreGroupEditState.busy)return;
+  var group=scoreFolderGroups(allScores.filter(function(score){return normalizeScoreKind(score.scoreKind)==='orchestra';})).find(function(row){return row.key===groupKey;});
+  if(!group||!canManageScores()||!group.scores.every(canEditScoreItem))return showToast('이 악보 묶음 전체를 수정할 권한이 필요합니다');
+  scoreGroupEditState={key:group.key,ids:group.scores.map(function(score){return score.id;}),linkedIds:scoreGroupLinkedIds(group),busy:false};
+  document.getElementById('scoreGroupEditTitle').value=group.title;
+  document.getElementById('scoreGroupEditSearch').value='';
+  openModal('modalScoreGroupEdit');
+  renderScoreGroupEditSongs();
+  if(!songsLoaded)initSongs().then(renderScoreGroupEditSongs).catch(function(){showToast('곡목록을 불러오지 못했습니다');});
+}
+function renderScoreGroupEditSongs(){
+  var state=scoreGroupEditState,box=document.getElementById('scoreGroupEditSongs');
+  if(!state||!box)return;
+  var query=scoreSearchKey(document.getElementById('scoreGroupEditSearch').value);
+  var rows=(allSongs||[]).filter(function(song){return state.linkedIds.indexOf(song.id)!==-1||!query||scoreSearchKey(song.songName).indexOf(query)!==-1;}).sort(function(a,b){
+    return Number(state.linkedIds.indexOf(b.id)!==-1)-Number(state.linkedIds.indexOf(a.id)!==-1)||songScheduleRankValue(a)-songScheduleRankValue(b);
+  }).slice(0,40);
+  var known=rows.map(function(song){return song.id;});
+  state.linkedIds.forEach(function(id){if(known.indexOf(id)===-1)rows.unshift({id:id,songName:'기존 연결 곡'});});
+  box.innerHTML=rows.map(function(song){
+    return '<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);min-width:0">'
+      +'<input type="checkbox" '+(state.linkedIds.indexOf(song.id)!==-1?'checked ':'')+(state.busy?'disabled ':'')+'onchange="toggleScoreGroupEditSong(\''+escAttr(song.id)+'\',this.checked)">'
+      +'<span style="min-width:0;overflow-wrap:anywhere">'+escHtml(song.songName)+'<small style="display:block;color:var(--ts)">'+escHtml([song.year&&song.month&&song.day?[song.year,song.month,song.day].join('.'):'',song.category||''].filter(Boolean).join(' · '))+'</small></span></label>';
+  }).join('')||'<div class="score-empty">검색된 곡이 없습니다.</div>';
+}
+function toggleScoreGroupEditSong(id,checked){
+  if(!scoreGroupEditState||scoreGroupEditState.busy)return;
+  scoreGroupEditState.linkedIds=scoreGroupEditState.linkedIds.filter(function(value){return value!==id;});
+  if(checked)scoreGroupEditState.linkedIds.push(id);
+}
+function saveScoreGroupEdit(){
+  var state=scoreGroupEditState;
+  if(!state||state.busy)return;
+  var title=document.getElementById('scoreGroupEditTitle').value.trim();
+  if(!title)return showToast('곡명을 입력해주세요');
+  if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
+  var linkedIds=state.linkedIds.slice();
+  var linkedSong=(allSongs||[]).find(function(song){return song.id===linkedIds[0];});
+  var base=allScores.find(function(score){return score.id===state.ids[0];});
+  var linkedName=linkedSong?linkedSong.songName:(linkedIds.length&&base?base.linkedSongName:'');
+  state.busy=true;
+  var btn=document.getElementById('scoreGroupEditSaveBtn');btn.disabled=true;btn.textContent='저장 중...';
+  renderScoreGroupEditSongs();
+  return scoreAdminCall('updateGroup',{group:{ids:state.ids,expectedKey:state.key,title:title,linkedSongIds:linkedIds,linkedSongName:linkedName||''}}).then(function(result){
+    (result.items||[]).forEach(function(item){upsertScoreLocal(scoreRowFromSettingsItem(item.id,item));});
+    var saved=allScores.find(function(score){return score.id===state.ids[0];});
+    if(scoreAdminFocusGroupKey===state.key&&saved)scoreAdminFocusGroupKey=scoreFolderKey(saved);
+    var search=document.getElementById('scoreAdminSearch');if(search)search.value=title;
+    closeModal('modalScoreGroupEdit');
+    renderScoreManage();if(currentTab==='scores')renderScoresPage();requestHomeRender();
+    showToast('곡명과 연결을 수정했습니다');
+  }).catch(function(error){showToast(securityErrorMessage(error,'곡명과 연결을 저장하지 못했습니다'));}).finally(function(){
+    state.busy=false;btn.disabled=false;btn.textContent='저장';renderScoreGroupEditSongs();
+  });
+}
 function scoreFolderGroups(rows){
   var groups=[], map={};
   (rows||[]).forEach(function(score){
@@ -11968,6 +12060,7 @@ function renderScoreFolderCard(group, adminMode){
   var organizeCheck=organizeRows.length?'<label class="score-organize-check '+(canOrganizeGroup?'':'disabled')+'" title="'+(canOrganizeGroup?'이 관현악 묶음 전체 선택':'이 묶음 전체를 정리할 권한이 없습니다')+'">'
     +'<input class="score-organize-input" type="checkbox" data-score-group-key="'+escAttr(group.key)+'" aria-label="'+escAttr((group.title||'관현악 악보')+' 묶음 선택')+'" '+(organizeSelected?'checked ':'')+(canOrganizeGroup?'':'disabled ')+'onchange="toggleScoreOrganizeGroup(\''+escAttr(group.key)+'\',this.checked)"></label>':'';
   var manageShortcut=!adminMode&&canManageScores()?'<button type="button" class="score-folder-manage-btn" onclick="openScoreGroupAdmin(\''+escAttr(group.key)+'\')">관리</button>':'';
+  if(adminMode&&canManageScores()&&scores.every(canEditScoreItem))manageShortcut='<button type="button" class="score-folder-manage-btn" onclick="openScoreGroupEdit(\''+escAttr(group.key)+'\')">곡명 · 연결 수정</button>';
   var headActions='<div class="score-folder-head-actions">'+organizeCheck+'<div class="score-folder-count">'+scores.length+'개</div>'+manageShortcut+'</div>';
   var groupAction=adminMode&&canManageScores()?'<div class="score-admin-actions"><button class="score-light-btn" onclick="openQuickScoreManageForGroup(\''+escAttr(group.key)+'\')">＋ 파트보 추가</button>'
     +(scores.every(canEditScoreItem)?'<button class="score-light-btn" onclick="setScoreGroupArchived(\''+escAttr(group.key)+'\','+(!groupArchived)+')">'+(groupArchived?'다시 사용':'지난 악보로')+'</button>':'')
