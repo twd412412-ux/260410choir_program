@@ -4495,6 +4495,7 @@ var forceFreshDataOnInit=(function(){
 var calYear, calMonth, selectedCalDate='', allSchedules=[], allMembers=[];
 var calendarSwipeLocked=false, calendarSwipeSuppressClickUntil=0;
 var scheduleLoadedMonths=Object.create(null), scheduleMonthPromises=Object.create(null), scheduleMonthIds=Object.create(null), scheduleAdminWindowLoaded=false, scheduleAdminWindowPromise=null;
+var scheduleMonthErrors=Object.create(null), scheduleMonthRequestTokens=Object.create(null);
 var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
 var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
@@ -4576,7 +4577,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.1';
+var APP_RELEASE_VERSION='26.09.07.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -16243,29 +16244,38 @@ function saveLoadedScheduleMonthCaches(){
 function loadScheduleMonth(key,force){
   key=scheduleMonthKey(key);
   if(!key)return Promise.resolve([]);
+  if(!force&&scheduleMonthPromises[key])return scheduleMonthPromises[key];
   if(!force&&scheduleLoadedMonths[key]){
     return Promise.resolve(allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;}));
   }
-  if(!force&&scheduleMonthPromises[key])return scheduleMonthPromises[key];
+  if(!force&&scheduleMonthErrors[key])return Promise.resolve(allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;}));
   var cached=force?null:loadCache(scheduleMonthCacheKey(key),600000);
   if(Array.isArray(cached)){
     mergeScheduleMonthRows(key,cached);
     schedulesLoaded=true;
     return Promise.resolve(cached);
   }
-  scheduleMonthPromises[key]=db.collection('schedules').where('monthKeys','array-contains',key).limit(200).get().then(function(snap){
+  var token={};
+  scheduleMonthRequestTokens[key]=token;
+  delete scheduleMonthErrors[key];
+  scheduleMonthPromises[key]=Promise.resolve().then(function(){
+    return withLoadDeadline(db.collection('schedules').where('monthKeys','array-contains',key).limit(200).get(),15000);
+  }).then(function(snap){
+    if(scheduleMonthRequestTokens[key]!==token)return [];
     var rows=[];
     snap.forEach(function(doc){rows.push(scheduleRowFromDoc(doc));});
     mergeScheduleMonthRows(key,rows);
     saveCache(scheduleMonthCacheKey(key),rows);
     schedulesLoaded=true;
-    delete scheduleMonthPromises[key];
     return rows;
   }).catch(function(e){
     console.error(e);
-    scheduleLoadedMonths[key]=true;
-    delete scheduleMonthPromises[key];
+    if(scheduleMonthRequestTokens[key]===token){
+      scheduleMonthErrors[key]=e&&e.message==='load-timeout'?'일정을 불러오는 시간이 길어지고 있습니다.':'일정을 불러오지 못했습니다.';
+    }
     return allSchedules.filter(function(row){return scheduleRowMonthKeys(row).indexOf(key)!==-1;});
+  }).finally(function(){
+    if(scheduleMonthRequestTokens[key]===token)delete scheduleMonthPromises[key];
   });
   return scheduleMonthPromises[key];
 }
@@ -16279,6 +16289,8 @@ function initSchedules(force){
   force=!!force;
   if(force){
     scheduleLoadedMonths=Object.create(null);
+    scheduleMonthErrors=Object.create(null);
+    scheduleMonthRequestTokens=Object.create(null);
     scheduleMonthPromises=Object.create(null);
     scheduleMonthIds=Object.create(null);
     scheduleAdminWindowLoaded=false;
@@ -16331,6 +16343,7 @@ function toggleScheduleBriefing(){
 }
 
 function addSchedule(){
+  if(registrationBusy.schedule)return;
   var editingSchedule=null;
   if(scheduleEditId){
     editingSchedule=allSchedules.find(function(s){return s.id===scheduleEditId});
@@ -16350,14 +16363,29 @@ function addSchedule(){
   var actorId=currentActorId();
   var directEdit=scheduleDirectEditActive;
   var directReturnDate=scheduleDirectEditReturnDate;
+  var editingId=scheduleEditId;
+  var formState=scheduleFormState();
   var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,showInSundayScores:showInSundayScores,showEventHub:showEventHub,program:useBriefing?document.getElementById('schProgram').value.trim():'',programItems:useBriefing?getScheduleProgramItemsFromForm():[],dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
-  var write=scheduleEditId
-    ? db.collection('schedules').doc(scheduleEditId).update(scheduleData).then(function(){return {id:scheduleEditId,updated:true};})
-    : db.collection('schedules').add(Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName})).then(function(docRef){return {id:docRef.id,updated:false};});
-  write.then(function(result){
-    var row=Object.assign({id:result.id,createdAt:now,createdById:actorId,createdByName:actorName},scheduleData);
+  if(!startRegistration('schedule','schSaveBtn'))return;
+  return Promise.resolve().then(function(){
+    if(editingId)return db.collection('schedules').doc(editingId).update(scheduleData).then(function(){return {id:editingId,updated:true};});
+    var signature=Object.assign({},scheduleData);
+    delete signature.updatedAt;delete signature.updatedBy;
+    var id='schedule_'+registrationRequestId('schedule',signature);
+    var ref=db.collection('schedules').doc(id);
+    return db.runTransaction(function(tx){
+      return tx.get(ref).then(function(doc){
+        if(doc.exists)return {id:id,updated:false,replayed:true,data:doc.data()};
+        var data=Object.assign({},scheduleData,{createdAt:now,createdById:actorId,createdByName:actorName});
+        tx.set(ref,data);
+        return {id:id,updated:false,data:data};
+      });
+    });
+  }).then(function(result){
+    var savedData=result.data||scheduleData;
+    var row=Object.assign({id:result.id,createdAt:now,createdById:actorId,createdByName:actorName},savedData);
     var idx=allSchedules.findIndex(function(x){return x.id===result.id});
-    if(idx>-1)allSchedules[idx]=Object.assign({},allSchedules[idx],scheduleData,{id:result.id});
+    if(idx>-1)allSchedules[idx]=Object.assign({},allSchedules[idx],savedData,{id:result.id});
     else allSchedules.push(row);
     rehearsalUpcomingLoaded=false;
     rehearsalPastSchedules=[];
@@ -16369,16 +16397,31 @@ function addSchedule(){
     var logBrief = useBriefing ? '\n📋 프로그램 브리핑 사용' : '';
     var logSundayScore = showInSundayScores ? '\n🎵 주일찬송곡 악보에 표시' : '';
     var logHomeEvent = showEventHub ? '\n🏠 단원 홈 행사 표시' : '';
-    writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}${logSundayScore}${logHomeEvent}`);
-    resetScheduleForm(getTodayInputDate());
+    if(!result.replayed)writeLog(result.updated?'일정 수정':'일정 추가', `📅 [${title}]\n👉 일시: ${scheduleDateRangeLabel(scheduleData)}${logTime}${logLoc}${logBrief}${logSundayScore}${logHomeEvent}`);
+    var unchanged=scheduleFormState()===formState;
+    if(unchanged)resetScheduleForm(getTodayInputDate());
+    delete registrationAttempts.schedule;
     loadSchAdmin();
     if(currentTab==='calendar'){
       renderCal();
       if(directReturnDate)showCalDay(directReturnDate,calDateKeyDay(directReturnDate));
     }
-    if(directEdit)closeModal('modalScheduleEditor');
-    showToast(result.updated?'일정 수정 완료':'일정 추가 완료');
+    if(directEdit&&unchanged)closeModal('modalScheduleEditor');
+    showToast(unchanged?(result.updated?'일정 수정 완료':'일정 추가 완료'):'일정을 저장했습니다. 추가로 입력한 내용은 유지됩니다');
+  }).catch(function(error){
+    console.error(error);
+    showToast(securityErrorMessage(error,'일정을 저장하지 못했습니다. 입력 내용은 유지되며 다시 저장할 수 있습니다'));
+  }).finally(function(){
+    finishRegistration('schedule','schSaveBtn');
+    var btn=document.getElementById('schSaveBtn');
+    if(btn)btn.textContent=scheduleEditId?'일정 수정 저장':'일정 추가';
   });
+}
+function scheduleFormState(){
+  return JSON.stringify([scheduleEditId,selColor,scheduleProgramTypeDraft,
+    ['schDate','schEndDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo','schUseBriefing','schShowInSundayScores','schShowEventHub'].map(function(id){
+      var el=document.getElementById(id);return el?[el.value,el.checked]:null;
+    })]);
 }
 function loadScheduleAdminWindow(force){
   if(!canManageSchedules())return Promise.resolve([]);
@@ -16655,6 +16698,12 @@ function renderCalStackMonth(fd,ld,todayStr){
   return html;
 }
 
+function retryCalendarMonth(){
+  var key=calYear+'-'+String(calMonth+1).padStart(2,'0');
+  if(scheduleMonthPromises[key])return;
+  loadScheduleMonth(key,true);
+  renderCal();
+}
 function renderCal(){
   selectedCalDate='';
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
@@ -16662,7 +16711,11 @@ function renderCal(){
   syncQuickCreateActions();
   var g=document.getElementById('calGrid');
   var targetMonth=calYear+'-'+String(calMonth+1).padStart(2,'0');
-  if(!scheduleLoadedMonths[targetMonth]){
+  if(scheduleMonthErrors[targetMonth]){
+    g.innerHTML='<div class="loading" style="grid-column:1/-1;padding:36px 12px" role="status">'+escHtml(scheduleMonthErrors[targetMonth])+'<br><button class="btn btn-p" type="button" onclick="retryCalendarMonth()">다시 시도</button></div>';
+    return;
+  }
+  if(!scheduleLoadedMonths[targetMonth]||scheduleMonthPromises[targetMonth]){
     g.classList.toggle('stack-mode',calViewMode==='stack');
     g.innerHTML='<div class="loading" style="grid-column:1/-1;padding:36px 12px"><div class="spinner"></div>이 달의 일정 불러오는 중...</div>';
     loadScheduleMonth(targetMonth,false).then(function(){
@@ -18238,6 +18291,7 @@ function seatingSnapshot(){
   };
 }
 function applySeatingSnapshot(snap,keepDirty){
+  if((snap.planId||'')!==seatingPlanId)seatingEditorEpoch++;
   seatingPlanId=snap.planId||'';
   seatingAttendees=cloneSeatingValue(snap.attendees||{});
   seatingAttendeesLocked=!!snap.attendeesLocked;
@@ -18379,6 +18433,7 @@ function selectSeatingPlan(id){
 }
 function createNewSeatingPlan(silent,skipConfirm){
   if(!silent&&!skipConfirm&&!confirmSeatingDiscardChanges())return;
+  seatingEditorEpoch++;
   seatingPlanId='';
   seatingRows=defaultSeatingRows();
   seatingOrchestraRows=defaultOrchestraSeatingRows();
@@ -18418,6 +18473,7 @@ function createNewSeatingPlan(silent,skipConfirm){
   if(!silent)showToast('새 배치를 시작합니다');
 }
 function applySeatingPlan(plan){
+  seatingEditorEpoch++;
   seatingPlanId=plan.id||'';
   var boards=normalizeSeatingBoardRows(plan.rows,plan.orchestraRows);
   seatingRows=boards.choir;
@@ -20641,9 +20697,9 @@ function buildPublishedSeatingPlanDataFromSavedPlan(plan){
   data.centerOffset=normalizeSeatingCenterOffset(plan&&plan.centerOffset);
   return data;
 }
-function syncPublishedSeatingPlanAfterSave(savedPlan,previousPlan){
+function syncPublishedSeatingPlanAfterSave(savedPlan,previousPlan,publication){
   if(!savedPlan||!savedPlan.id)return Promise.resolve(false);
-  var data=buildPublishedSeatingPlanDataFromSavedPlan(savedPlan);
+  var data=publication||buildPublishedSeatingPlanDataFromSavedPlan(savedPlan);
   var previousData=previousPlan?buildPublishedSeatingPlanDataFromSavedPlan(previousPlan):null;
   var nextPlans=[];
   var updated=false;
@@ -20756,8 +20812,14 @@ function saveSeatingPlanRecord(data,expectedVersion,overwrite){
 function deleteSeatingPlanRecord(id){
   return mutateSeatingPlanRecord(id,null,seatingPlanLoadedVersions[id]||'',false);
 }
+var seatingSaveBusy=false, seatingEditorEpoch=0;
+function seatingSaveFingerprint(){
+  var snap=seatingSnapshot();
+  return JSON.stringify(['planId','planName','title','date','program','attendees','attendeesLocked','autoFit','partSubmissions','rows','orchestraRows','micSlots','specialSlots','centerOffset'].map(function(key){return snap[key];}));
+}
 function saveSeatingPlan(options){
   options=options||{};
+  if(seatingSaveBusy)return showToast('자리배치를 저장 중입니다');
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
   var forceNew=!!options.forceNew;
   if(forceNew)seatingPlanId='';
@@ -20810,31 +20872,42 @@ function saveSeatingPlan(options){
     updatedAt:now,
     updatedBy:actor
   };
+  var sourcePlanId=seatingPlanId;
+  var sourceEpoch=seatingEditorEpoch;
+  var fingerprint=seatingSaveFingerprint();
+  var publication=buildPublishedSeatingPlanData();
+  publication.sourcePlanId=data.id;
   function finishSave(mode){
-    seatingPlanId=data.id;
-    seatingPlanHistory=data.history;
+    var samePlan=seatingPlanId===sourcePlanId&&seatingEditorEpoch===sourceEpoch;
+    var unchanged=samePlan&&seatingSaveFingerprint()===fingerprint;
+    if(samePlan){
+      seatingPlanId=data.id;seatingPlanHistory=data.history;
+      if(!sourcePlanId){
+        seatingUndoStack.concat(seatingRedoStack).forEach(function(snap){if(!snap.planId)snap.planId=data.id;});
+      }
+    }
     upsertLocalSeatingPlan(data);
     renderSeatingPlanSelect();
     showToast(forceNew?'새 이름으로 저장되었습니다':'자리배치가 저장되었습니다');
     writeLog(forceNew?'찬양의밤 자리배치 다른 이름 저장':'찬양의밤 자리배치 저장',data.date+' '+data.program+' 배치 저장'+(mode==='legacy'?'(호환 저장)':''));
-    clearSeatingDirty();
-    clearSeatingDraft();
+    if(unchanged){
+      clearSeatingDirty();
+      clearSeatingDraft();
+    }else if(samePlan){
+      markSeatingDirty();
+      saveSeatingDraftNow();
+      showToast('저장 완료 · 이후 수정한 내용은 미저장 초안으로 유지됩니다');
+    }
     renderSeatingHistory();
-    var reloadPromise=loadSeatingPlans().catch(function(err){
-      console.error(err);
-      showToast('저장은 완료됐지만 배치 목록을 다시 불러오지 못했습니다');
-      return seatingPlans;
-    });
-    if(forceNew)return reloadPromise;
-    var publicSyncPromise=syncPublishedSeatingPlanAfterSave(data,existingPlan).then(function(updated){
-      if(updated)showToast('저장된 내용으로 공개 자리배치도도 업데이트했습니다');
+    if(forceNew)return Promise.resolve(seatingPlans);
+    return syncPublishedSeatingPlanAfterSave(data,existingPlan,publication).then(function(updated){
+      if(updated&&samePlan&&!seatingDirty)showToast('저장된 내용으로 공개 자리배치도도 업데이트했습니다');
       return updated;
     }).catch(function(err){
       console.error('published_seating_auto_sync_failed',err);
       showToast('저장은 완료됐지만 공개 자리배치도 갱신에 실패했습니다');
       return false;
-    });
-    return Promise.all([reloadPromise,publicSyncPromise]).then(function(){return seatingPlans;});
+    }).then(function(){return seatingPlans;});
   }
   function handleSaveError(err){
     if(err&&err.code==='seating_plan_conflict'){
@@ -20858,7 +20931,8 @@ function saveSeatingPlan(options){
     showToast('저장 중 오류가 발생했습니다');
   }
   showToast('자리배치 저장 중...');
-  saveSeatingPlanRecord(data,expectedVersion,false).then(finishSave).catch(handleSaveError);
+  seatingSaveBusy=true;
+  return Promise.resolve().then(function(){return saveSeatingPlanRecord(data,expectedVersion,false);}).then(finishSave).catch(handleSaveError).finally(function(){seatingSaveBusy=false;});
 }
 function saveSeatingPlanAs(){
   if(!canUseSeatingPlan())return showToast('찬양의밤 자리배치 권한이 필요합니다.');
