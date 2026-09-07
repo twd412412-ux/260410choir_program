@@ -72,11 +72,13 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
     assert.equal(form.normalized.calendarKind, 'event'); assert.equal(form.normalized.colorMode, 'auto');
     assert.equal(form.resetKind, 'other'); assert.equal(form.resetColor, '');
     fs.mkdirSync(path.join(root, 'tmp/calendar-kind'), { recursive: true });
-    for (const width of [390, 820]) {
+    for (const width of [320, 390, 820]) {
       await page.setViewportSize({ width, height: 1000 });
       for (const dark of [false, true]) {
         await page.evaluate(dark => { document.documentElement.classList.toggle('dark', dark); setCalendarKindFilter('all'); showCalDay('2026-09-13', 13); }, dark);
         assert.ok(await page.locator('#calKindFilters').evaluate(el => el.scrollWidth <= el.clientWidth));
+        assert.deepEqual(await page.locator('#calKindFilters button').allTextContents(), ['전체', '주일찬송', '특송', '연습']);
+        assert.ok(await page.locator('#calKindFilters button').evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth && getComputedStyle(el).whiteSpace === 'nowrap')));
         await page.screenshot({ path: path.join(root, `tmp/calendar-kind/${width}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
       }
     }

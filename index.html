@@ -777,9 +777,8 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .cal-bar{display:block;padding:1px 3px;margin:1px 0;border-radius:3px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .cal-dot{display:inline-block;width:5px;height:5px;background:var(--p);border-radius:50%;margin:0 1px}
 .cal-view-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 16px 8px}
-.cal-kind-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 16px 12px}
-@media(min-width:520px){.cal-kind-filters{grid-template-columns:repeat(6,minmax(0,1fr))}}
-.cal-kind-filters button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:34px;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);font:inherit;font-size:12px;cursor:pointer}
+.cal-kind-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:0 16px 12px}
+.cal-kind-filters button{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:36px;padding:5px 3px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);font:inherit;font-size:12px;white-space:nowrap;word-break:keep-all;cursor:pointer}
 .cal-kind-filters button[aria-pressed="true"]{border-color:var(--p);box-shadow:inset 0 0 0 1px var(--p);font-weight:700}
 .cal-kind-filters button span{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .cal-view-label{font-size:12px;color:var(--ts);font-weight:600}
@@ -4624,7 +4623,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.6';
+var APP_RELEASE_VERSION='26.09.07.7';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -11675,7 +11674,8 @@ function openScorePickerForSong(songId, activeOnly){
   var rows=activeOnly?getActiveModeScoresForSong(song):findVisibleScoresForSong(song);
   openScorePickerRows(song.songName||'악보',rows,songId,activeOnly);
 }
-function renderScorePickerRows(rows){
+function renderScorePickerRows(rows,options){
+  options=options||{};
   rows=sortScorePartsForCurrentUser(rows).filter(canOpenScoreItem);
   if(!rows.length)return '<div class="score-empty">볼 수 있는 악보가 없습니다.</div>';
   var singerRows=rows.filter(function(score){return normalizeScoreKind(score&&score.scoreKind)!=='orchestra';});
@@ -11692,7 +11692,7 @@ function renderScorePickerRows(rows){
     });
   }
   if(orchestraRows.length){
-    html+='<div class="score-picker-section">관현악 악보</div>';
+    if(!options.hideHeading)html+='<div class="score-picker-section">관현악 악보</div>';
     var mineCount=orchestraRows.filter(isMyScorePart).length;
     var folderUpdated=scoreGroupUpdatedText(orchestraRows);
     var folderMeta=['파트보 '+orchestraRows.length+'개',mineCount?'내 파트 '+mineCount+'개':'',folderUpdated?'최종 업데이트 '+folderUpdated:''].filter(Boolean).join(' · ');
@@ -11703,8 +11703,8 @@ function renderScorePickerRows(rows){
         +'<span class="score-part-side">'+renderScorePartVersionMeta(score)+(myPart?'<span class="score-my-part-dot">내 파트</span>':'')+'</span>'
         +'</button>';
     }).join('');
-    html+='<details class="score-picker-folder" '+(scorePickerOrchestraOpen?'open':'')+' ontoggle="scorePickerOrchestraOpen=this.open">'
-      +'<summary><div><div class="score-picker-folder-title"><span>관현악 파트보</span>'+renderScoreRowsNewBadge(orchestraRows,'group')+renderScoreFolderVersionBadge(orchestraRows)+'</div><div class="score-picker-folder-meta">'+escHtml(folderMeta)+'</div></div><span class="score-picker-folder-toggle" aria-hidden="true"></span></summary>'
+    html+='<details class="score-picker-folder" '+(options.scheduleGroup?'':(scorePickerOrchestraOpen?'open ':'')+'ontoggle="scorePickerOrchestraOpen=this.open"')+'>'
+      +'<summary><div><div class="score-picker-folder-title"><span>'+escHtml(options.folderTitle||'관현악 파트보')+'</span>'+renderScoreRowsNewBadge(orchestraRows,'group')+renderScoreFolderVersionBadge(orchestraRows)+'</div><div class="score-picker-folder-meta">'+escHtml(folderMeta)+'</div></div><span class="score-picker-folder-toggle" aria-hidden="true"></span></summary>'
       +'<div class="score-picker-parts">'+partButtons+'</div>'
       +'</details>';
   }
@@ -16619,7 +16619,7 @@ function setCalendarKindFilter(kind){
   if(date)showCalDay(date,calDateKeyDay(date));
 }
 function renderCalendarKindFilters(){
-  document.getElementById('calKindFilters').innerHTML=['all'].concat(Object.keys(CAL_KINDS)).map(function(kind){
+  document.getElementById('calKindFilters').innerHTML=['all','hymn','special','practice'].map(function(kind){
     var meta=CAL_KINDS[kind];
     return '<button type="button" aria-pressed="'+(calKindFilter===kind)+'" onclick="setCalendarKindFilter(\''+kind+'\')">'+(meta?'<span style="background:'+meta.color+'" aria-hidden="true"></span>':'')+(meta?meta.label:'전체')+'</button>';
   }).join('');
@@ -16951,10 +16951,11 @@ function renderScheduleScoreSection(schedule,allowLoad){
   if(!rows.length){
     return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">연습곡 또는 프로그램 순서에서 기존 곡/악보와 일치하는 항목을 찾지 못했습니다.</div></div>';
   }
-  var orchestraBadge=renderScoreRowsNewBadge(rows.map(function(row){return row.score;}).filter(function(score){
+  var orchestraRows=rows.map(function(row){return row.score;}).filter(function(score){
     return score&&normalizeScoreKind(score.scoreKind)==='orchestra';
-  }),'group');
-  var html=rows.map(function(row){
+  });
+  var singerRows=rows.filter(function(row){return !row.score||normalizeScoreKind(row.score.scoreKind)!=='orchestra';});
+  var html=singerRows.map(function(row){
     var song=row.song, matchedSong=row.matchedSong||song, score=row.score;
     var name=song?(song.songName||'곡명 없음'):(score&&score.title||(matchedSong&&matchedSong.songName)||'악보');
     var meta=[];
@@ -16970,7 +16971,11 @@ function renderScheduleScoreSection(schedule,allowLoad){
         : '<button class="score-action-btn empty" disabled>악보 없음</button>';
     return '<div class="score-week-row"><div class="score-week-date">악보</div><div class="score-week-song" '+(song?'onclick="openDetail(\''+escAttr(song.id)+'\')"':'')+'>'+escHtml(name)+'<div class="score-meta">'+(meta.length?meta.map(function(v){return '<span>'+escHtml(v)+'</span>';}).join('<span>·</span>'):'<span>프로그램 자동 매칭</span>')+'</div></div><div>'+action+'</div></div>';
   }).join('');
-  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보'+orchestraBadge+'</div><div class="score-week-card" style="margin:0;padding:12px;box-shadow:none"><div class="score-week-grid">'+html+'</div></div></div>';
+  var singerSection=html?'<div class="score-picker-section">싱어 악보</div><div class="score-week-grid">'+html+'</div>':'';
+  var orchestraSection=orchestraRows.length?'<div class="score-picker-section">관현악 악보</div>'+scoreFolderGroups(orchestraRows).map(function(group){
+    return renderScorePickerRows(group.scores,{scheduleGroup:true,hideHeading:true,folderTitle:group.title});
+  }).join(''):'';
+  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div>'+singerSection+orchestraSection+'</div>';
 }
 
 function renderScheduleProgramDetail(schedule){
