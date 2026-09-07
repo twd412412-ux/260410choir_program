@@ -12,7 +12,7 @@ const context = vm.createContext({
   renderSeatingBoard() {}, renderSeatingMemberList() {}, showToast() {}, confirm: () => true,
   normalizeSeatingSeat: seat => seat
 });
-for (const name of ['seatingLeadWidth', 'seatingSeatPitch', 'seatingRowWidthForSeatCount', 'seatingCenterLeftForSeatCount', 'seatingRowLeftForSeatCount', 'seatingDefaultSeatCount', 'seatingRowsForBoard', 'seatingActiveRows', 'seatingBaseRowLabel', 'seatingInsertedRowLabel', 'seatingFrontInsertIndex', 'normalizeSeatingRowLabel', 'seatingRowStaggerOffset', 'seatingRowDisplayOffset', 'seatingMaxSeatCount', 'normalizeSeatingMicSlots', 'syncSeatingRowLabels', 'createSeatingRows', 'normalizeSeatingRows', 'normalizeOrchestraSeatingRows', 'addSeatingRow', 'removeSelectedSeatingRow']) {
+for (const name of ['seatingLeadWidth', 'seatingSeatPitch', 'seatingRowWidthForSeatCount', 'seatingCenterLeftForSeatCount', 'seatingRowLeftForSeatCount', 'seatingDefaultSeatCount', 'seatingRowsForBoard', 'seatingActiveRows', 'seatingBaseRowLabel', 'seatingInsertedRowLabel', 'seatingFrontInsertIndex', 'normalizeSeatingRowLabel', 'seatingRowStaggerOffset', 'seatingRowDisplayOffset', 'seatingMaxSeatCount', 'normalizeSeatingMicSlots', 'syncSeatingRowLabels', 'createSeatingRows', 'normalizeSeatingRows', 'normalizeOrchestraSeatingRows', 'addSeatingRow', 'seatingBlockLockedRowChanges', 'removeSelectedSeatingRow']) {
   const source = html.match(new RegExp('^function ' + name + '\\([^]*?^}', 'm'));
   assert.ok(source, name); vm.runInContext(source[0], context);
 }
