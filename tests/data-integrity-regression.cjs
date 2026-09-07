@@ -223,7 +223,7 @@ const { chromium } = require('playwright');
         homeFixture.counts.songs++;
         return new Promise(resolve => { homeFixture.finishSongs = () => {
           const date = getFeaturedSunday(new Date());
-          allSongs = [{ id: 'fixture', songName: '먼저 도착한 찬송곡', year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() }];
+          allSongs = [{ id: 'fixture', songName: '먼저 도착한 찬송곡', category: '주일찬송', year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() }];
           songsLoaded = true; resolve(allSongs);
         }; });
       };

@@ -4612,7 +4612,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.3';
+var APP_RELEASE_VERSION='26.09.07.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8653,7 +8653,7 @@ function renderHome(){
     if(songsPending)return '<span style="color:var(--ts)">찬송곡 불러오는 중...</span>';
     var parts=date.split('-');
     var y=Number(parts[0]), m=Number(parts[1]), d=Number(parts[2]);
-    var rows=(hymnSongs||[]).filter(function(s){return s.year===y&&s.month===m&&s.day===d});
+    var rows=(hymnSongs||[]).filter(function(s){return isSundayHymnSong(s)&&Number(s.year)===y&&Number(s.month)===m&&Number(s.day)===d;});
     if(rows.length===0)return '<span style="color:var(--ts)">등록된 찬송곡 없음</span>';
     return rows.map(function(s){
       var scoreRows=findVisibleScoresForSong(s);
@@ -12146,6 +12146,9 @@ function renderScoreFolderCard(group, adminMode){
     +'</div>';
 }
 var scoreWeekScheduleRangeKey='', scoreWeekSchedulePromise=null;
+function isSundayHymnSong(song){
+  return scoreSearchKey(song&&song.category)===scoreSearchKey('주일찬송');
+}
 function scoreWeekScheduleNames(schedule){
   var names=[];
   function add(value){
@@ -12235,12 +12238,7 @@ function renderScoreWeekPanel(){
     var y=Number(song&&song.year),m=Number(song&&song.month),d=Number(song&&song.day);
     if(!y||!m||!d)return;
     var date=new Date(y,m-1,d);
-    if(isNaN(date.getTime())||date<=lastBaseDate)return;
-    var category=scoreSearchKey(song&&song.category);
-    var isSundaySong=category
-      ? category.indexOf(scoreSearchKey('주일찬송'))>-1
-      : date.getDay()===0;
-    if(!isSundaySong)return;
+    if(isNaN(date.getTime())||date.getDay()!==0||date<=lastBaseDate||!isSundayHymnSong(song))return;
     extraDates[homeInputDate(date)]=date;
   });
   Object.keys(extraDates).sort().forEach(function(key){
@@ -12260,7 +12258,7 @@ function renderScoreWeekPanel(){
     var key=homeInputDate(w.date);
     var parts=key.split('-');
     var y=Number(parts[0]),m=Number(parts[1]),d=Number(parts[2]);
-    var rows=allSongs.filter(function(s){return Number(s.year)===y&&Number(s.month)===m&&Number(s.day)===d;});
+    var rows=allSongs.filter(function(s){return isSundayHymnSong(s)&&Number(s.year)===y&&Number(s.month)===m&&Number(s.day)===d;});
     var usedTitles={};
     rows.forEach(function(song){usedTitles[scoreSearchKey(song.songName)]=true;});
     var scheduleRows=scoreWeekScheduleRows(key).filter(function(row){
