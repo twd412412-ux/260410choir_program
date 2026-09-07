@@ -777,6 +777,11 @@ input.form-input[type="date"]::-webkit-calendar-picker-indicator,input.form-inpu
 .cal-bar{display:block;padding:1px 3px;margin:1px 0;border-radius:3px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .cal-dot{display:inline-block;width:5px;height:5px;background:var(--p);border-radius:50%;margin:0 1px}
 .cal-view-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 16px 8px}
+.cal-kind-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 16px 12px}
+@media(min-width:520px){.cal-kind-filters{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.cal-kind-filters button{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:34px;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);color:var(--tx);font:inherit;font-size:12px;cursor:pointer}
+.cal-kind-filters button[aria-pressed="true"]{border-color:var(--p);box-shadow:inset 0 0 0 1px var(--p);font-weight:700}
+.cal-kind-filters button span{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .cal-view-label{font-size:12px;color:var(--ts);font-weight:600}
 .cal-view-select{border:1px solid var(--bd);border-radius:10px;background:var(--sf);color:var(--tx);padding:7px 10px;font-size:12px;font-weight:700}
 .cal-cell.stack{min-height:76px}
@@ -3048,6 +3053,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
   <div class="cal-nav"><button onclick="calPrev()">◀</button><span class="cal-nav-title" id="calTitle"></span><button onclick="calNext()">▶</button></div>
   <div class="cal-view-row"><span class="cal-view-label">보기</span><select class="cal-view-select" id="calViewSel" onchange="setCalViewMode(this.value)"><option value="stack">스택형</option><option value="default">기본 · 점+밴드</option></select></div>
   <div class="quick-manage-row hidden" id="calendarQuickActions" style="padding:0 16px 10px;margin-top:0"><button type="button" class="quick-manage-btn primary" id="calendarQuickScheduleBtn" onclick="openQuickAddSchedule()">+ 일정 추가</button><button type="button" class="quick-manage-btn" id="calendarQuickSongBtn" onclick="openQuickAddSong(getQuickCreateDate())">+ 곡 추가</button></div>
+  <div class="cal-kind-filters" id="calKindFilters" aria-label="일정 종류"></div>
   <div class="cal-grid" id="calGrid"></div>
   <div style="padding:12px 16px"><div class="cal-selected-head"><h3 id="calEvtTitle">일정</h3></div><div id="calEvtList"><div style="font-size:13px;color:var(--ts)">날짜를 선택하세요</div></div></div>
 </div>
@@ -3699,6 +3705,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
       <div class="form-group"><label class="form-label">종료일</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display" id="schEndDateDisplay" tabindex="-1">날짜 선택</button><input class="schedule-native-input" id="schEndDate" type="date" aria-label="종료일" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleDisplays()" onchange="syncScheduleDisplays()"></div></div>
     </div>
     <div class="form-group"><label class="form-label">일정 제목 *</label><input class="form-input" id="schTitle" placeholder="예: 정기 연습"></div>
+    <div class="form-group"><label class="form-label" for="schKind">일정 종류</label><select class="form-select" id="schKind" onchange="initColorPicker()"><option value="other">기타</option><option value="practice">연습</option><option value="event">행사</option></select></div>
     <div class="schedule-inline-row schedule-time-row" style="display:flex;gap:8px"><div class="form-group"><label class="form-label">시간</label><div class="schedule-picker-wrap"><button type="button" class="schedule-picker-display empty" id="schTimeDisplay" tabindex="-1">시간 선택</button><input class="schedule-native-input" id="schTime" type="time" aria-label="시간" onfocus="openDatePicker(this)" onclick="openDatePicker(this)" oninput="syncScheduleDisplays()" onchange="syncScheduleDisplays()"></div></div><div class="form-group"><label class="form-label">장소</label><input class="form-input" id="schLoc" placeholder="장소"></div></div>
     <div class="form-group"><label class="form-label">연습곡</label><input class="form-input" id="schSongs" placeholder="곡명 (쉼표 구분)"></div>
     <div class="schedule-sunday-score-option">
@@ -4561,7 +4568,9 @@ var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
 var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
 var activeDays=[];
 var COLORS=['#6F826E','#A26F42','#8E86A8','#C66B6B','#C79A45','#6E8792','#7D8A58','#9A6F63','#5F7F68','#B8794F'];
-var selColor=COLORS[0];
+var selColor='';
+var calKindFilter='all';
+var CAL_KINDS={hymn:{label:'주일찬송',color:'#557448'},special:{label:'특송',color:'#80618F'},practice:{label:'연습',color:'#337D83'},event:{label:'행사',color:'#936D2B'},other:{label:'기타',color:'#707578'}};
 var toastTimer=null;
 var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
@@ -4615,7 +4624,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.5';
+var APP_RELEASE_VERSION='26.09.07.6';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5819,8 +5828,9 @@ function resetScheduleForm(defaultDate){
   var showEvent=document.getElementById('schShowEventHub');
   if(showEvent)showEvent.checked=false;
   toggleScheduleBriefing();
-  selColor=COLORS[0];
-  document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
+  document.getElementById('schKind').value='other';
+  selColor='';
+  initColorPicker();
   var btn=document.getElementById('schSaveBtn');
   if(btn)btn.textContent='일정 추가';
   syncScheduleDisplays();
@@ -16359,13 +16369,13 @@ function initSchedules(force){
 }
 function scheduleRowFromDoc(doc){
   var d=doc.data()||{};
-  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||COLORS[0],useBriefing:!!d.useBriefing,showInSundayScores:!!d.showInSundayScores,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
+  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||'',colorMode:d.colorMode||'custom',calendarKind:d.calendarKind||'',useBriefing:!!d.useBriefing,showInSundayScores:!!d.showInSundayScores,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
-  c.innerHTML=COLORS.map(function(co,i){return '<div class="color-dot'+(i===0?' sel':'')+'" style="background:'+co+'" onclick="pickColor(\''+co+'\',this)"></div>'}).join('');
+  c.innerHTML='<button type="button" class="btn btn-sm" aria-pressed="'+(!selColor)+'" onclick="pickColor(\'\')">기본 색상'+(!selColor?' ✓':'')+'</button>'+COLORS.map(function(co){return '<button type="button" aria-label="색상 '+co+'" aria-pressed="'+(selColor===co)+'" class="color-dot'+(selColor===co?' sel':'')+'" style="background:'+co+'" onclick="pickColor(\''+co+'\')"></button>'}).join('');
 }
-function pickColor(co,el){selColor=co;document.querySelectorAll('.color-dot').forEach(function(d){d.classList.remove('sel')});el.classList.add('sel')}
+function pickColor(co){selColor=co;initColorPicker()}
 function toggleScheduleBriefing(){
   var on=!!document.getElementById('schUseBriefing').checked;
   var wrap=document.getElementById('schBriefingWrap');
@@ -16401,7 +16411,7 @@ function addSchedule(){
   var directReturnDate=scheduleDirectEditReturnDate;
   var editingId=scheduleEditId;
   var formState=scheduleFormState();
-  var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor,useBriefing:useBriefing,showInSundayScores:showInSundayScores,showEventHub:showEventHub,program:useBriefing?document.getElementById('schProgram').value.trim():'',programItems:useBriefing?getScheduleProgramItemsFromForm():[],dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
+  var scheduleData={date:date,endDate:endDate,monthKeys:scheduleMonthKeysForRange(date,endDate),title:title,time:document.getElementById('schTime').value||'',location:document.getElementById('schLoc').value.trim(),songs:document.getElementById('schSongs').value.trim(),memo:document.getElementById('schMemo').value.trim(),color:selColor||CAL_KINDS[showInSundayScores?'hymn':document.getElementById('schKind').value].color,colorMode:selColor?'custom':'auto',calendarKind:document.getElementById('schKind').value,useBriefing:useBriefing,showInSundayScores:showInSundayScores,showEventHub:showEventHub,program:useBriefing?document.getElementById('schProgram').value.trim():'',programItems:useBriefing?getScheduleProgramItemsFromForm():[],dress:useBriefing?document.getElementById('schDress').value.trim():'',briefingMemo:useBriefing?document.getElementById('schBriefingMemo').value.trim():'',updatedAt:now,updatedBy:actorName};
   if(!startRegistration('schedule','schSaveBtn'))return;
   return Promise.resolve().then(function(){
     if(editingId)return db.collection('schedules').doc(editingId).update(scheduleData).then(function(){return {id:editingId,updated:true};});
@@ -16455,7 +16465,7 @@ function addSchedule(){
 }
 function scheduleFormState(){
   return JSON.stringify([scheduleEditId,selColor,scheduleProgramTypeDraft,
-    ['schDate','schEndDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo','schUseBriefing','schShowInSundayScores','schShowEventHub'].map(function(id){
+    ['schKind','schDate','schEndDate','schTitle','schTime','schLoc','schSongs','schMemo','schProgram','schDress','schBriefingMemo','schUseBriefing','schShowInSundayScores','schShowEventHub'].map(function(id){
       var el=document.getElementById(id);return el?[el.value,el.checked]:null;
     })]);
 }
@@ -16529,8 +16539,9 @@ function editSchedule(id,options){
   document.getElementById('schBriefingMemo').value=s.briefingMemo||'';
   toggleScheduleBriefing();
   syncScheduleDisplays();
-  selColor=s.color||COLORS[0];
-  document.querySelectorAll('.color-dot').forEach(function(d){d.classList.toggle('sel',d.style.background===selColor)});
+  document.getElementById('schKind').value=['practice','event','other'].includes(s.calendarKind)?s.calendarKind:(s.useBriefing?'event':s.title==='정기 연습'?'practice':'other');
+  selColor=s.colorMode==='auto'?'':s.color||'';
+  initColorPicker();
   var btn=document.getElementById('schSaveBtn');if(btn)btn.textContent='일정 수정 저장';
   if(options.scroll!==false)document.getElementById('schTitle').scrollIntoView({block:'center',behavior:'smooth'});
   showToast('수정할 내용을 확인한 뒤 저장해주세요');
@@ -16590,6 +16601,29 @@ function delSchedule(id,title){
 }
 
 // ==================== 캘린더 ====================
+function calendarKind(item,isSong){
+  if(isSong)return isSundayHymnSong(item)?'hymn':'special';
+  if(item.showInSundayScores)return 'hymn';
+  if(CAL_KINDS[item.calendarKind]&&['practice','event','other'].includes(item.calendarKind))return item.calendarKind;
+  if(item.useBriefing)return 'event';
+  return item.title==='정기 연습'?'practice':'other';
+}
+function calendarColor(item,isSong){
+  return item.color&&item.colorMode!=='auto'?safeColor(item.color):CAL_KINDS[calendarKind(item,isSong)].color;
+}
+function calendarMatches(item,isSong){return calKindFilter==='all'||calendarKind(item,isSong)===calKindFilter;}
+function setCalendarKindFilter(kind){
+  if(kind!=='all'&&!CAL_KINDS[kind])return;
+  var date=selectedCalDate;
+  calKindFilter=kind;renderCal();
+  if(date)showCalDay(date,calDateKeyDay(date));
+}
+function renderCalendarKindFilters(){
+  document.getElementById('calKindFilters').innerHTML=['all'].concat(Object.keys(CAL_KINDS)).map(function(kind){
+    var meta=CAL_KINDS[kind];
+    return '<button type="button" aria-pressed="'+(calKindFilter===kind)+'" onclick="setCalendarKindFilter(\''+kind+'\')">'+(meta?'<span style="background:'+meta.color+'" aria-hidden="true"></span>':'')+(meta?meta.label:'전체')+'</button>';
+  }).join('');
+}
 function initCal(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
 function animateCalendarMonthSwipe(delta){
   var grid=document.getElementById('calGrid');
@@ -16651,6 +16685,7 @@ function calSongMatchesDate(song,dateKey){
 function calStackWeekData(weekDates,todayStr){
   var items=[];
   allSchedules.forEach(function(s){
+    if(!calendarMatches(s,false))return;
     var start=-1,end=-1;
     weekDates.forEach(function(ds,i){
       if(ds&&scheduleOccursOnDate(s,ds)){
@@ -16663,7 +16698,7 @@ function calStackWeekData(weekDates,todayStr){
         kind:'schedule',
         id:s.id,
         title:s.title||'일정',
-        color:safeColor(s.color),
+        color:calendarColor(s,false),
         start:start,
         end:end,
         realStart:scheduleStartDate(s)===weekDates[start],
@@ -16674,12 +16709,12 @@ function calStackWeekData(weekDates,todayStr){
   });
   weekDates.forEach(function(ds,i){
     if(!ds)return;
-    allSongs.filter(function(song){return calSongMatchesDate(song,ds);}).forEach(function(song){
+    allSongs.filter(function(song){return calSongMatchesDate(song,ds)&&calendarMatches(song,true);}).forEach(function(song){
       items.push({
         kind:'song',
         id:song.id,
         title:song.songName||'찬양곡',
-        color:'#64748B',
+        color:calendarColor(song,true),
         start:i,
         end:i,
         realStart:true,
@@ -16741,6 +16776,7 @@ function retryCalendarMonth(){
   renderCal();
 }
 function renderCal(){
+  renderCalendarKindFilters();
   selectedCalDate='';
   document.getElementById('calTitle').textContent=calYear+'년 '+(calMonth+1)+'월';
   var viewSel=document.getElementById('calViewSel');if(viewSel)viewSel.value=calViewMode;
@@ -16778,20 +16814,20 @@ function renderCal(){
   for(var d=1;d<=ld;d++){
     var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isT=ds===todayStr;
-    var evts=allSchedules.filter(function(s){return scheduleOccursOnDate(s,ds)});
-    var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d});
+    var evts=allSchedules.filter(function(s){return scheduleOccursOnDate(s,ds)&&calendarMatches(s,false)});
+    var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===d&&calendarMatches(s,true)});
     var cls='cal-cell'+(isT?' today':'')+(calViewMode==='stack'?' stack':'');
     var inner='<div class="cal-date">'+d+'</div>';
     if(calViewMode==='stack'){
       var items=[];
-      evts.forEach(function(e){items.push({kind:'evt',title:(e.useBriefing?'📋 ':'📅 ')+(e.title||'일정'),color:safeColor(e.color)})});
-      songs.forEach(function(s){items.push({kind:'song',title:'🎵 '+(s.songName||'찬양곡'),color:'#64748B'})});
+      evts.forEach(function(e){items.push({kind:'evt',title:(e.useBriefing?'📋 ':'📅 ')+(e.title||'일정'),color:calendarColor(e,false)})});
+      songs.forEach(function(s){items.push({kind:'song',title:'🎵 '+(s.songName||'찬양곡'),color:calendarColor(s,true)})});
       items.slice(0,3).forEach(function(item){inner+='<div class="cal-bar '+(item.kind==='song'?'song':'')+'" style="background:'+item.color+'" title="'+escHtml(item.title)+'">'+escHtml(item.title)+'</div>'});
       if(items.length>3)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(items.length-3)+'개</div>';
     }else{
-      evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+safeColor(e.color)+'" title="'+escHtml(e.title)+'">'+escHtml(e.title)+'</div>'});
+      evts.slice(0,2).forEach(function(e){inner+='<div class="cal-bar" style="background:'+calendarColor(e,false)+'" title="'+escHtml(e.title)+'">'+escHtml(e.title)+'</div>'});
       if(evts.length>2)inner+='<div style="font-size:9px;color:var(--ts);padding:0 3px">+'+(evts.length-2)+'개</div>';
-      if(songs.length>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(songs.length,4);j++)inner+='<span class="cal-dot"></span>';if(songs.length>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(songs.length-4)+'</span>';inner+='</div>'}
+      if(songs.length>0){inner+='<div style="padding:0 2px">';for(var j=0;j<Math.min(songs.length,4);j++)inner+='<span class="cal-dot" style="background:'+calendarColor(songs[j],true)+'" title="'+escHtml(CAL_KINDS[calendarKind(songs[j],true)].label)+'"></span>';if(songs.length>4)inner+='<span style="font-size:8px;color:var(--ts)">+'+(songs.length-4)+'</span>';inner+='</div>'}
     }
     h+='<div class="'+cls+'" onclick="showCalDay(\''+ds+'\','+d+')">'+inner+'</div>';
   }
@@ -16805,17 +16841,17 @@ function renderCal(){
 
 function showCalDay(ds,day){
   selectedCalDate=ds;
-  var evts=schedulesOnCalendarDate(ds);
-  var songs=allSongs.filter(function(s){return s.year===calYear&&s.month===(calMonth+1)&&s.day===day});
+  var evts=schedulesOnCalendarDate(ds).filter(function(s){return calendarMatches(s,false)});
+  var songs=allSongs.filter(function(s){return calSongMatchesDate(s,ds)&&calendarMatches(s,true)});
   document.getElementById('calEvtTitle').textContent=(calMonth+1)+'월 '+day+'일';
   var body='';
   if(evts.length>0)body+=evts.map(function(e){
     var id=escAttr(e.id);
     var editBtn=canEditScheduleItem(e)?'<button type="button" class="schedule-edit-btn" onclick="openScheduleEditorFromCalendar(\''+id+'\')">수정</button>':'';
     var actions='<div class="calendar-event-actions">'+editBtn+'<button type="button" class="schedule-calendar-btn" onclick="downloadScheduleCalendar(\''+id+'\')" aria-label="'+escHtml(e.title)+' 일정만 캘린더에 추가">📅 캘린더 추가</button></div>';
-    return '<div class="song-card calendar-event-card" style="border-left-color:'+safeColor(e.color)+'"><button type="button" class="calendar-event-main" onclick="openSchDetail(\''+id+'\')"><span class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+(e.useBriefing?'<span class="meta-tag">프로그램 브리핑</span>':'')+'</span><span class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</span>'+(e.songs?'<span style="display:block;font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</span>':'')+(e.memo?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</span>':'')+(e.useBriefing&&e.program?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</span>':'')+'</button>'+actions+'</div>';
+    return '<div class="song-card calendar-event-card" style="border-left-color:'+calendarColor(e,false)+'"><button type="button" class="calendar-event-main" onclick="openSchDetail(\''+id+'\')"><span class="song-card-title"><span>📅 '+escHtml(e.title)+'</span>'+'<span class="meta-tag">'+CAL_KINDS[calendarKind(e,false)].label+'</span>'+'</span><span class="song-card-meta">'+(e.time?'<span>🕐 '+escHtml(e.time)+'</span>':'')+(e.location?'<span>📍 '+escHtml(e.location)+'</span>':'')+'</span>'+(e.songs?'<span style="display:block;font-size:12px;color:var(--p);margin-top:4px">🎵 '+escHtml(e.songs)+'</span>':'')+(e.memo?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📝 '+escHtml(e.memo)+'</span>':'')+(e.useBriefing&&e.program?'<span style="display:block;font-size:12px;color:var(--ts);margin-top:2px">📋 프로그램 '+e.program.split('\n').filter(Boolean).length+'개</span>':'')+'</button>'+actions+'</div>';
   }).join('');
-  if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
+  if(songs.length>0)body+=songs.map(function(s){return '<div class="song-card" style="border-left-color:'+calendarColor(s,true)+'" onclick="openDetail(\''+escAttr(s.id)+'\')"><div class="song-card-title"><span>🎵 '+escHtml(s.songName)+'</span></div><div class="song-card-meta">'+(s.category?'<span class="meta-tag">'+escHtml(s.category)+'</span>':'')+(s.members?'<span>👤 '+escHtml(s.members)+'</span>':'')+(s.pianist?'<span>🎹 '+escHtml(s.pianist)+'</span>':'')+'</div></div>'}).join('');
   if(!body)body='<div style="font-size:13px;color:var(--ts);padding:12px">이 날의 일정이 없습니다.</div>';
   document.getElementById('calEvtList').innerHTML=body;
 }
