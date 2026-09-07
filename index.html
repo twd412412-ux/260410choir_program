@@ -2903,12 +2903,15 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 .seating-lock-mark svg{width:11px;height:11px}
 .seating-seat.published-changed{outline:2px dashed #1685a0;outline-offset:2px}
 .seating-seat.move-preview-seat{background:#dceff4!important;color:#124859!important;border:2px dashed #28748a!important;box-shadow:none!important}
+.seating-seat.move-conflict-seat{background:#ffe4e0!important;color:#862b28!important;border:2px solid #b73430!important;outline:2px dashed #b73430;outline-offset:2px}
+.seating-seat.move-source-anchor{outline:2px solid #28677a;outline-offset:2px}
 .seating-preview-name{white-space:normal;overflow-wrap:anywhere}
 .seating-move-confirm{position:fixed;z-index:10100;bottom:calc(80px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #91b5bf;border-radius:8px;background:#fff;color:#1b3b43;box-shadow:0 6px 24px #0003}
-.seating-move-confirm strong{font-size:13px;white-space:nowrap}
+.seating-move-confirm strong{font-size:13px;min-width:0;overflow-wrap:anywhere}
 .seating-move-confirm{width:max-content;box-sizing:border-box}
 .seating-move-confirm .btn{flex:none;white-space:nowrap;min-width:56px;min-height:40px;padding:8px 12px;border-radius:6px}
 .seating-move-confirm .seating-move-apply{background:#28677a;color:#fff}
+.seating-move-confirm .seating-move-apply:disabled{background:#d8dcdd;color:#626a6c;cursor:not-allowed}
 #subSeatingPlan.seating-fullscreen .seating-move-confirm{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 .seating-position-tools{position:fixed;z-index:10200;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;padding:16px;border:1px solid var(--bd);border-radius:8px;background:var(--sf);color:var(--tx);box-shadow:0 10px 40px #0004}
 .seating-tools-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -4612,7 +4615,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.4';
+var APP_RELEASE_VERSION='26.09.07.5';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -19556,16 +19559,19 @@ function clearSeatingPlacementQueue(){
 function startSeatingPlacementQueue(){
   if(!seatingPlacementQueue.length)return showToast('배치할 단원을 먼저 선택해주세요');
   if(seatingPlacementQueue.some(seatingMemberPositionLocked))return showToast('잠긴 자리가 포함되어 있습니다. 잠금을 먼저 해제해주세요');
+  var mode=seatingBulkPlacementMode(seatingPlacementQueue);
+  if(mode.error)return showToast(mode.error);
+  seatingMovePreview=null;
   seatingInteractionMode='select';
   seatingPlacementQueueSelecting=false;
   seatingPlacementQueueActive=true;
   seatingPlacementQueueCompleted=[];
-  seatingSelectedMemberId=seatingPlacementQueue[0];
+  seatingSelectedMemberId=mode.block?'':seatingPlacementQueue[0];
   seatingSelectedSeat=null;
   seatingMemberPanelCollapsed=true;
   renderSeatingMemberList();
   renderSeatingBoard();
-  showToast('이동을 시작할 자리를 선택해주세요');
+  showToast(mode.block?'선택한 자리 중 맨 위·왼쪽 자리가 옮겨갈 칸을 누르세요':'새로 배치할 시작 칸을 누르세요');
 }
 function placeNextSeatingQueueMember(row,col){
   if(!seatingPlacementQueueActive||!seatingPlacementQueue.length)return false;
@@ -19585,6 +19591,7 @@ function undoSeatingPlacementQueueStep(){
   renderSeatingBoard();
 }
 function stopSeatingPlacementQueue(silent){
+  seatingMovePreview=null;
   var remaining=seatingPlacementQueue.length;
   seatingPlacementQueue=[];
   seatingPlacementQueueCompleted=[];
@@ -19606,10 +19613,11 @@ function renderSeatingQueueControls(){
   var visible=seatingPlacementQueueSelecting||seatingPlacementQueueActive||seatingPlacementQueueCompleted.length>0;
   if(actions)actions.style.display=visible?'flex':'none';
   var total=seatingPlacementQueue.length+seatingPlacementQueueCompleted.length;
+  var mode=seatingBulkPlacementMode(seatingPlacementQueue);
   var progress=document.getElementById('seatingQueueProgress');
-  if(progress)progress.textContent=seatingPlacementQueueSelecting?('선택 '+seatingPlacementQueue.length+'명'):('배치 '+seatingPlacementQueueCompleted.length+'/'+total+'명');
+  if(progress)progress.textContent=seatingPlacementQueueSelecting?('선택 '+seatingPlacementQueue.length+'명'):(total+'명 '+(mode.block?'자리 이동':'새 배치'));
   var start=document.getElementById('seatingQueueStartBtn');
-  if(start){start.style.display=seatingPlacementQueueSelecting?'':'none';start.disabled=!seatingPlacementQueue.length;}
+  if(start){start.style.display=seatingPlacementQueueSelecting?'':'none';start.disabled=!seatingPlacementQueue.length;start.textContent=mode.error?'선택 확인':mode.block?'모양대로 이동':'순서대로 배치';}
   var highlight=document.getElementById('seatingQueueHighlightBtn');
   if(highlight){highlight.style.display=seatingPlacementQueueSelecting?'':'none';highlight.disabled=!seatingPlacementQueue.length;}
   var unhighlight=document.getElementById('seatingQueueUnhighlightBtn');
@@ -19914,7 +19922,7 @@ function seatingPositionEntries(plan){
     var max=seatingMaxSeatCount(rows);
     rows.forEach(function(row,r){row.seats.forEach(function(seat,c){
       var left=seatingRowLeftForSeatCount(row.seats.length,max)+seatingRowDisplayOffset(row,r,rows)*seatingSeatPitch()+c*seatingSeatPitch();
-      entries.push({board:tab,row:r,col:c,seat:seat,key:tab+':'+row.label+':'+c,position:tab+':'+row.label+':'+left,label:(tab==='choir'?'합창':'관현악')+' '+row.label+' '+(c+1)+'번',set:function(value){row.seats[c]=value;}});
+      entries.push({board:tab,row:r,col:c,left:left,seat:seat,key:tab+':'+row.label+':'+c,position:tab+':'+row.label+':'+left,label:(tab==='choir'?'합창':'관현악')+' '+row.label+' '+(c+1)+'번',set:function(value){row.seats[c]=value;}});
     });});
   });
   var specials=plan.specialSlots||{};
@@ -19925,13 +19933,15 @@ function seatingPositionEntries(plan){
 function seatingPreviewFingerprint(){
   return JSON.stringify([seatingEditorEpoch,seatingPlanId,seatingBoardTab,seatingRows,seatingOrchestraRows,normalizeSeatingSpecialSlots(seatingSpecialSlots),seatingAttendees]);
 }
-function showSeatingMovePreview(after,count){
+function showSeatingMovePreview(after,count,options){
+  options=options||{};
   var remaining=new Set(seatingPositionEntries(after).filter(function(e){return e.seat;}).map(function(e){return e.seat.memberId;}));
   var unplaced=seatingPositionEntries(seatingSnapshot()).filter(function(e){return e.seat&&!remaining.has(e.seat.memberId);}).length;
-  seatingMovePreview={after:after,count:count,unplaced:unplaced,fingerprint:seatingPreviewFingerprint()};
+  seatingMovePreview={after:after,count:count,unplaced:unplaced,blocked:options.blocked||'',conflicts:options.conflicts||[],fingerprint:seatingPreviewFingerprint()};
   closeSeatingPositionTools();renderSeatingBoard();
 }
 function previewSeatingSwap(rowA,colA,rowB,colB){
+  if(seatingMovePreview){seatingMovePreview=null;renderSeatingBoard();}
   var plan=seatingSnapshot(), rows=seatingBoardTab==='orchestra'?plan.orchestraRows:plan.rows;
   if(!rows[rowA]||!rows[rowB]||colA<0||colB<0||colA>=rows[rowA].seats.length||colB>=rows[rowB].seats.length)return;
   var a=rows[rowA].seats[colA],b=rows[rowB].seats[colB];
@@ -19940,7 +19950,36 @@ function previewSeatingSwap(rowA,colA,rowB,colB){
   rows[rowA].seats[colA]=b;rows[rowB].seats[colB]=a;
   showSeatingMovePreview(plan,a&&b?2:1);
 }
+function seatingBulkPlacementMode(ids,entries){
+  entries=entries||seatingPositionEntries(seatingSnapshot());
+  var sources=ids.map(function(id){return entries.find(function(e){return e.seat&&e.seat.memberId===id;});});
+  var placed=sources.filter(Boolean);
+  if(placed.length&&placed.length!==ids.length)return {error:'배치된 단원과 미배치 단원은 따로 선택해주세요'};
+  if(placed.some(function(e){return e.special;})||new Set(placed.map(function(e){return e.board;})).size>1)return {error:'같은 배치도 안의 좌석을 선택해주세요. 역할 자리는 따로 옮길 수 있습니다'};
+  return {block:placed.length>0,sources:sources,anchor:placed.slice().sort(function(a,b){return a.row-b.row||a.left-b.left;})[0]||null};
+}
+function previewSeatingBlock(plan,entries,ids,sources,anchor,target){
+  // Use rendered horizontal positions, including centered rows and half-seat stagger.
+  var conflicts=[],missing=0;
+  var destinations=sources.map(function(source){
+    var row=target.row+source.row-anchor.row;
+    var left=target.left+source.left-anchor.left;
+    var dest=entries.find(function(e){return !e.special&&e.board===target.board&&e.row===row&&Math.abs(e.left-left)<0.01;});
+    if(!dest)missing++;
+    else if(dest.seat&&ids.indexOf(dest.seat.memberId)===-1)conflicts.push({board:dest.board,row:dest.row,col:dest.col});
+    return dest;
+  });
+  if(missing||conflicts.length){
+    showSeatingMovePreview(plan,ids.length,{blocked:missing?'칸 부족·간격 불일치':'다른 단원 '+conflicts.length+'명과 겹침',conflicts:conflicts});
+    return;
+  }
+  if(destinations.every(function(dest,i){return dest.board===sources[i].board&&dest.row===sources[i].row&&dest.col===sources[i].col;}))return showToast('이미 이 위치에 배치되어 있습니다');
+  sources.forEach(function(source){source.set(null);});
+  destinations.forEach(function(dest,i){dest.set(cloneSeatingValue(sources[i].seat));});
+  showSeatingMovePreview(plan,ids.length);
+}
 function previewSeatingMembers(ids,row,col,bulk){
+  if(seatingMovePreview){seatingMovePreview=null;renderSeatingBoard();}
   seatingInteractionMode='select';
   ids=Array.from(new Set(ids));
   if(!ids.length)return;
@@ -19951,7 +19990,13 @@ function previewSeatingMembers(ids,row,col,bulk){
   if(members.some(function(m){return !m||!seatingAttendees[m.id];}))return showToast('참석 단원을 다시 확인해주세요');
   var sources=ids.map(function(id){return entries.find(function(e){return e.seat&&e.seat.memberId===id;});});
   if(ids.some(function(id){return entries.filter(function(e){return e.seat&&e.seat.memberId===id;}).length>1;}))return showToast('중복 배치된 단원이 있습니다. 중복 자리를 먼저 정리해주세요');
-  if(sources.some(function(e){return e&&e.seat.locked;})||(target.seat&&target.seat.locked))return showToast('자리 잠금을 먼저 해제해주세요');
+  if(sources.some(function(e){return e&&e.seat.locked;}))return showToast('자리 잠금을 먼저 해제해주세요');
+  if(bulk){
+    var mode=seatingBulkPlacementMode(ids,entries);
+    if(mode.error)return showToast(mode.error);
+    if(mode.block)return previewSeatingBlock(plan,entries,ids,mode.sources,mode.anchor,target);
+  }
+  if(target.seat&&target.seat.locked)return showToast('자리 잠금을 먼저 해제해주세요');
   if(!bulk){
     if(target.seat&&target.seat.memberId===ids[0])return showToast('이미 이 자리에 배치되어 있습니다');
     if(sources[0])sources[0].set(target.seat);
@@ -19970,6 +20015,7 @@ function cancelSeatingMovePreview(){seatingMovePreview=null;renderSeatingBoard()
 function confirmSeatingMovePreview(){
   if(!canUseSeatingPlan()||!seatingMovePreview)return;
   var preview=seatingMovePreview;
+  if(preview.blocked)return showToast('겹치지 않고 모든 자리가 들어가는 위치를 선택해주세요');
   if(preview.fingerprint!==seatingPreviewFingerprint()){
     seatingMovePreview=null;renderSeatingBoard();return showToast('배치가 변경되었습니다. 이동할 자리를 다시 선택해주세요');
   }
@@ -20026,11 +20072,13 @@ function renderSeatingInteractionTools(){
   if(preview&&preview.fingerprint!==seatingPreviewFingerprint()){seatingMovePreview=null;preview=null;}
   var next=preview?seatingPositionEntries(preview.after):[];
   var changes=seatingCompareEnabled&&seatingCompareBaseline?seatingPublishedDifferences(current,seatingCompareBaseline):[];
+  var mode=seatingPlacementQueueActive?seatingBulkPlacementMode(seatingPlacementQueue,entries):{};
   board.querySelectorAll('.seating-row').forEach(function(element,r){
     var label=element.querySelector('.seating-row-label');
     if(label){var button=document.createElement('button');button.type='button';button.className=label.className;button.textContent=label.textContent;button.title=label.textContent+' 단원 전체 선택';button.setAttribute('aria-label',button.title);button.onclick=function(){selectSeatingRow(r);};label.replaceWith(button);}
     element.querySelectorAll('.seating-seat').forEach(function(button,c){
       var entry=entries.find(function(e){return !e.special&&e.board===seatingBoardTab&&e.row===r&&e.col===c;});if(!entry)return;
+      if(mode.anchor&&mode.anchor.board===entry.board&&mode.anchor.row===r&&mode.anchor.col===c){button.classList.add('move-source-anchor');button.title=entry.seat.name+' · 이동 기준 자리';}
       if(entry.seat&&entry.seat.locked){button.classList.add('position-locked');button.draggable=false;button.setAttribute('aria-label',entry.seat.name+' · 자리 잠금');button.insertAdjacentHTML('beforeend','<span class="seating-lock-mark" title="자리 잠금">'+seatingToolIcon('lock')+'</span>');}
       if(changes.some(function(change){return (change.before&&change.before.key===entry.key)||(change.after&&change.after.key===entry.key);}))button.classList.add('published-changed');
       var dest=next.find(function(e){return !e.special&&e.board===entry.board&&e.row===r&&e.col===c;});
@@ -20039,12 +20087,13 @@ function renderSeatingInteractionTools(){
         button.title=dest.seat?dest.seat.name+' 배치 예정':'비울 자리';
         button.innerHTML='<span class="seating-preview-name">'+escHtml(dest.seat?dest.seat.name:'빈칸')+'</span>';
       }
+      if(preview&&preview.conflicts.some(function(e){return e.board===entry.board&&e.row===r&&e.col===c;})){button.classList.add('move-conflict-seat');button.title=(entry.seat?entry.seat.name:'')+' · 이동할 자리와 겹침';}
     });
   });
   var bar=document.getElementById('seatingMoveConfirm');
   if(!bar){bar=document.createElement('div');bar.id='seatingMoveConfirm';bar.className='seating-move-confirm';bar.setAttribute('role','group');bar.setAttribute('aria-label','자리 이동 확인');sub.appendChild(bar);}
   bar.hidden=!preview;
-  if(preview)bar.innerHTML='<strong>'+(preview.unplaced?'교체 · '+preview.unplaced+'명 미배치':preview.count+'명 이동 예정')+'</strong><button class="btn" onclick="cancelSeatingMovePreview()">취소</button><button class="btn seating-move-apply" onclick="confirmSeatingMovePreview()">적용</button>';
+  if(preview)bar.innerHTML='<strong>'+(preview.blocked?escHtml(preview.blocked):preview.unplaced?'교체 · '+preview.unplaced+'명 미배치':preview.count+'명 이동 예정')+'</strong><button class="btn" onclick="cancelSeatingMovePreview()">취소</button><button class="btn seating-move-apply" '+(preview.blocked?'disabled':'')+' onclick="confirmSeatingMovePreview()">적용</button>';
 }
 function renderSeatingBoard(){
   var board=document.getElementById('seatingBoard');if(!board)return;
@@ -20067,7 +20116,7 @@ function renderSeatingBoard(){
     row.seats.forEach(function(seat,c){
       var selected=seatingSelectedSeat&&seatingSelectedSeat.row===r&&seatingSelectedSeat.col===c;
       var dragging=seatingDragSeat&&seatingDragSeat.row===r&&seatingDragSeat.col===c;
-      var multiSelected=!!(seat&&seatingPlacementQueueSelecting&&seatingPlacementQueue.indexOf(seat.memberId)>-1);
+      var multiSelected=!!(seat&&(seatingPlacementQueueSelecting||seatingPlacementQueueActive)&&seatingPlacementQueue.indexOf(seat.memberId)>-1);
       var ready=!seat&&seatingSelectedMemberId?'ready ':'';
       var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+(multiSelected?'multi-selected ':'')+(seat&&seat.highlight?'highlighted ':'')+ready;
       var dropAttrs=' ondragover="handleSeatingDragOver(event)" ondrop="handleSeatingDrop(event,'+r+','+c+')"';

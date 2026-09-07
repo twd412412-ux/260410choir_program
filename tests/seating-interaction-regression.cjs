@@ -78,9 +78,9 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       previewSeatingMembers(['m4'], 1, 0, false); seatingAttendees.m4 = false;
       confirmSeatingMovePreview(); check(!seatingRows[1].seats[0], 'stale preview applied');
       resetFixture();
-      previewSeatingMembers(['m0', 'm1', 'm2', 'm3'], 2, 7, true); check(!seatingMovePreview, 'insufficient capacity accepted');
+      previewSeatingMembers(['m0', 'm1', 'm2', 'm3'], 2, 7, true); check(seatingMovePreview.blocked, 'insufficient capacity accepted');
       previewSeatingMembers(['m0', 'm1'], 0, 1, true); confirmSeatingMovePreview();
-      check(seatingRows[0].seats[1].memberId === 'm0' && seatingRows[0].seats[4].memberId === 'm1', 'overlapping move/occupied skip');
+      check(seatingMovePreview.blocked && seatingRows[0].seats[0].memberId === 'm0' && seatingRows[0].seats[1].memberId === 'm1', 'occupied destination must block, not skip');
       resetFixture();
       const before = seatingSnapshot();
       seatingBoardTab = 'orchestra'; previewSeatingMembers(['m0'], 0, 0, false); confirmSeatingMovePreview();
@@ -101,6 +101,73 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
     await page.evaluate(() => { renderSeatingBoard(); renderSeatingBoard(); });
     assert.equal(await page.evaluate(() => window.compareReads), 1, 'render performed extra reads');
     await page.evaluate(() => { closeSeatingPositionTools(); resetFixture(); });
+    const blocks = await page.evaluate(() => {
+      const check = (ok, message) => { if (!ok) throw Error(message); };
+      const placed = plan => seatingPositionEntries(plan).filter(e => e.seat && !e.special);
+      const setup = () => {
+        resetFixture(); seatingRows = createSeatingRows(6, 10);
+        // Unequal row lengths exercise centered coordinates as well as stagger.
+        seatingRows[1].seats = Array(9).fill(null); seatingRows[3].seats = Array(11).fill(null);
+        seatingMembers.slice(0, 6).forEach((m, i) => {
+          seatingRows[i < 3 ? 0 : 1].seats[1 + i % 3] = { memberId: m.id, name: m.name, part: m.part, highlight: i === 0, locked: false };
+        });
+        renderSeatingBoard();
+      };
+      setup();
+      const original = seatingSnapshot();
+      const source = placed(original);
+      // Deliberately reverse selection order: the upper-left source is still the anchor.
+      const ids = source.map(e => e.seat.memberId).reverse();
+      previewSeatingMembers(ids, 0, 1, true);
+      check(!seatingMovePreview, 'unchanged position must not create a move');
+      previewSeatingMembers(ids, 2, 5, true);
+      check(!seatingMovePreview.blocked, 'valid 3+3 block rejected');
+      const destinations = placed(seatingMovePreview.after);
+      const delta = destinations.find(e => e.seat.memberId === 'm0').left - source.find(e => e.seat.memberId === 'm0').left;
+      source.forEach(s => {
+        const d = destinations.find(e => e.seat.memberId === s.seat.memberId);
+        check(d.row - s.row === 2 && d.left - s.left === delta, '3+3 shape or physical gap changed');
+      });
+      confirmSeatingMovePreview();
+      check(placed(seatingSnapshot()).length === 6, 'block lost/duplicated a member');
+      undoSeatingChange(); check(JSON.stringify(seatingRows) === JSON.stringify(original.rows), 'block undo not atomic');
+      // A shift by one row needs stagger compensation, not the same column offset.
+      previewSeatingMembers(ids, 1, 4, true);
+      check(!seatingMovePreview.blocked, 'odd-row stagger move rejected');
+      const staggered = placed(seatingMovePreview.after);
+      const dx = staggered.find(e => e.seat.memberId === 'm0').left - source.find(e => e.seat.memberId === 'm0').left;
+      source.forEach(s => { const d = staggered.find(e => e.seat.memberId === s.seat.memberId); check(d.row - s.row === 1 && d.left - s.left === dx, 'stagger not preserved'); });
+      cancelSeatingMovePreview();
+      // The block can overlap its own previous cells; no outsider is displaced.
+      previewSeatingMembers(ids, 0, 2, true); check(!seatingMovePreview.blocked, 'self-overlap rejected');
+      confirmSeatingMovePreview(); check(placed(seatingSnapshot()).length === 6, 'self-overlap duplicate/loss');
+      setup();
+      const bystander = seatingMembers[6];
+      seatingRows[2].seats[6] = { memberId: bystander.id, name: bystander.name, part: bystander.part, locked: true };
+      const beforeConflict = JSON.stringify(seatingRows);
+      previewSeatingMembers(ids, 2, 5, true);
+      check(seatingMovePreview.blocked && seatingMovePreview.conflicts.length === 1, 'collision not detected');
+      check(document.querySelectorAll('.move-conflict-seat').length === 1, 'collision not marked');
+      check(document.querySelector('#seatingMoveConfirm .seating-move-apply').disabled, 'collision apply enabled');
+      confirmSeatingMovePreview(); check(JSON.stringify(seatingRows) === beforeConflict, 'forced apply overwrote bystander');
+      previewSeatingMembers(ids, 5, 9, true); check(seatingMovePreview.blocked, 'out of bounds not blocked');
+      confirmSeatingMovePreview(); check(JSON.stringify(seatingRows) === beforeConflict, 'bounds failure mutated');
+      // An invalid follow-up request must not leave an earlier preview applicable.
+      previewSeatingMembers(ids, 2, 1, true); check(seatingMovePreview && !seatingMovePreview.blocked, 'new valid preview');
+      previewSeatingMembers(['m0', 'm7'], 2, 1, true); check(!seatingMovePreview, 'mixed selection left stale preview');
+      seatingPlacementQueue = ['m0', 'm7']; seatingPlacementQueueSelecting = true; startSeatingPlacementQueue();
+      check(!seatingPlacementQueueActive, 'mixed selection started');
+      // New roster selections still use selection order and skip occupied cells.
+      resetFixture(); previewSeatingMembers(['m5', 'm4'], 0, 3, true);
+      check(!seatingMovePreview.blocked, 'new roster sequence rejected');
+      confirmSeatingMovePreview();
+      check(seatingRows[0].seats[3].memberId === 'm3' && seatingRows[0].seats[4].memberId === 'm5' && seatingRows[0].seats[5].memberId === 'm4', 'new roster sequence changed');
+      // Gaps within a selection remain gaps; unrelated occupants in those gaps stay put.
+      resetFixture(); previewSeatingMembers(['m2', 'm0'], 1, 0, true); confirmSeatingMovePreview();
+      check(seatingRows[1].seats[0].memberId === 'm0' && !seatingRows[1].seats[1] && seatingRows[1].seats[2].memberId === 'm2', 'selection gap compacted');
+      resetFixture();
+      return '3+3 block shape, centered/staggered rows, reverse selection, self overlap, locked collisions, bounds, stale previews, mixed selection, sequence and gaps';
+    });
     await page.evaluate(() => {
       previewSeatingMembers(['m4'], 0, 0, false);
       if (seatingMovePreview.unplaced !== 1) throw Error('replacement warning missing');
@@ -126,6 +193,16 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       assert.ok(bar.x >= 0 && bar.x + bar.width <= viewport.width + 1 && bar.y >= 0 && bar.y + bar.height <= viewport.height, 'confirmation clipped');
       assert.ok(await page.locator('#seatingMoveConfirm button').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height <= 48)), 'button labels wrapped');
       await page.screenshot({ path: path.join(output, `preview-${viewport.width}.png`) });
+      await page.locator('#seatingMoveConfirm button').filter({ hasText: '취소' }).click();
+      await page.evaluate(() => {
+        const m = seatingMembers[6]; seatingRows[1].seats[0] = normalizeSeatingSeat({ memberId: m.id, name: m.name, part: m.part });
+        previewSeatingMembers(['m0', 'm1'], 1, 0, true);
+      });
+      assert.equal(await page.locator('#seatingMoveConfirm .seating-move-apply').isDisabled(), true);
+      const blockedBar = await page.locator('#seatingMoveConfirm').boundingBox();
+      assert.ok(blockedBar.x >= 0 && blockedBar.x + blockedBar.width <= viewport.width + 1 && blockedBar.y >= 0 && blockedBar.y + blockedBar.height <= viewport.height + 1, 'blocked confirmation clipped');
+      assert.equal(await page.locator('.move-conflict-seat').count(), 1);
+      await page.screenshot({ path: path.join(output, `blocked-${viewport.width}.png`) });
       await page.locator('#seatingMoveConfirm button').filter({ hasText: '취소' }).click();
       await page.evaluate(() => { openSeatingPositionTools(); });
       const tools = await page.locator('#seatingPositionTools').boundingBox();
@@ -156,6 +233,6 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
     await page.evaluate(() => { document.body.classList.add('dark'); openSeatingPositionTools(); });
     await page.screenshot({ path: path.join(output, 'dark-tools.png') });
     assert.deepEqual(errors, [], 'browser errors');
-    console.log('PASS:', result, '; comparison on demand; responsive overlay; mouse pan; no browser errors');
+    console.log('PASS:', result, ';', blocks, '; comparison on demand; responsive overlay; mouse pan; no browser errors');
   } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
