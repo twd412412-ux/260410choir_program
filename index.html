@@ -2418,7 +2418,7 @@ body{font-weight:500}
 .home-event-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:5px;color:#6B6F60;font-size:10px;font-weight:900}
 .home-event-title{margin:0;color:#191A15;font-size:18px;font-weight:900;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
 .home-event-date{margin-top:4px;color:#7A7060;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
-.home-event-dday{align-self:start;border:1px solid #C8D0B9;border-radius:7px;background:#EAEFDF;color:#4E5A35;padding:6px 8px;font-size:10px;font-weight:900;line-height:1;white-space:nowrap}
+.home-event-dday{display:flex;align-items:center;justify-content:center;align-self:start;min-width:62px;min-height:42px;border:1px solid #B98A2C;border-radius:7px;background:#D8B35E;color:#3E2C0C;padding:8px 12px;font-size:16px;font-weight:900;line-height:1;letter-spacing:0;white-space:nowrap;box-shadow:0 2px 6px rgba(112,75,12,.16)}
 .home-event-tabs{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid #E1D7C5;border-bottom:1px solid #E1D7C5;background:#F8F2E8}
 .home-event-tab{position:relative;min-height:42px;border:0;background:transparent;color:#777163;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .home-event-tab.on{color:#3F512E}
@@ -2459,7 +2459,7 @@ body{font-weight:500}
 .dark .home-event-tabs{background:#22271F;border-color:var(--line)}
 .dark .home-event-row,.dark .home-event-info-row,.dark .home-event-more{border-color:var(--line)}
 .dark .home-event-tab.on,.dark .home-event-day.on{color:#B7C99A}
-.dark .home-event-dday{background:#2D382A;border-color:#52634A;color:#B7C99A}
+.dark .home-event-dday{background:#C6A04D;border-color:#E0C474;color:#251B08;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .dark .home-event-card .home-score-chip{background:#2D382A;border-color:#52634A;color:#B7C99A}
 .dark .program-type-badge.type-all{background:#303A29;color:#C3D2AA}
 .dark .program-type-badge.type-duet{background:#27393D;color:#AFCBD0}
@@ -4623,7 +4623,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.7';
+var APP_RELEASE_VERSION='26.09.07.8';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
