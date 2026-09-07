@@ -4576,7 +4576,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.06.6';
+var APP_RELEASE_VERSION='26.09.07.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -17781,6 +17781,10 @@ function seatingRowStaggerOffset(row,index,rows){
   var numbered=label.match(/^(\d+)\s*단$/);
   if(numbered)return parseInt(numbered[1],10)%2?0.5:0;
   rows=Array.isArray(rows)?rows:seatingActiveRows();
+  // Front/custom rows continue the preceding row's phase, independent of total row count.
+  if(index>0&&rows[index-1])return seatingRowStaggerOffset(rows[index-1],index-1,rows)===0.5?0:0.5;
+  var firstOffset=rows[0]&&rows[0].offset;
+  if(firstOffset===0||firstOffset===0.5)return firstOffset;
   return ((Math.max(0,rows.length-1-index))%2)?0.5:0;
 }
 function seatingRowDisplayOffset(row,index,rows){
