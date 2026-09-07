@@ -118,6 +118,14 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       const source = placed(original);
       // Deliberately reverse selection order: the upper-left source is still the anchor.
       const ids = source.map(e => e.seat.memberId).reverse();
+      seatingPlacementQueue = ids.slice(); seatingPlacementQueueSelecting = true;
+      startSeatingPlacementQueue();
+      let prevented = false;
+      handleSeatingDragStart({ preventDefault() { prevented = true; } }, 0, 1);
+      check(prevented && !seatingDragSeat, 'group selection allowed an individual drag');
+      handleSeatingDrop({ preventDefault() {}, stopPropagation() {}, dataTransfer: { getData: () => '0,1' } }, 2, 5);
+      check(!seatingMovePreview, 'group selection allowed an individual drop');
+      stopSeatingPlacementQueue(true);
       previewSeatingMembers(ids, 0, 1, true);
       check(!seatingMovePreview, 'unchanged position must not create a move');
       previewSeatingMembers(ids, 2, 5, true);

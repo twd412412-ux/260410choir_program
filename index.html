@@ -20240,6 +20240,7 @@ function handleSeatingSeatClick(row,col){
   if(!rows[row].seats[col])focusSeatingMemberSearchForSeat();
 }
 function handleSeatingDragStart(event,row,col){
+  if(seatingPlacementQueueSelecting||seatingPlacementQueueActive){if(event)event.preventDefault();return;}
   if(seatingInteractionMode==='pan'||(seatingActiveRows()[row]&&seatingActiveRows()[row].seats[col]&&seatingActiveRows()[row].seats[col].locked)){if(event)event.preventDefault();return;}
   if(isSeatingFullscreenWorkspace()&&seatingWorkspaceMode==='attendance')return;
   var sourceRow=seatingActiveRows()[row];
@@ -20257,6 +20258,7 @@ function handleSeatingDragOver(event){
   if(event.dataTransfer)event.dataTransfer.dropEffect='move';
 }
 function handleSeatingDrop(event,row,col){
+  if(seatingPlacementQueueSelecting||seatingPlacementQueueActive){if(event){event.preventDefault();event.stopPropagation();}return;}
   if(isSeatingFullscreenWorkspace()&&seatingWorkspaceMode==='attendance')return;
   if(event){event.preventDefault();event.stopPropagation();}
   var source=seatingDragSeat;
