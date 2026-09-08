@@ -82,11 +82,15 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
         encore: ids({program: '첫째날\n1. 곡명: 갈보리 산 위에\n앵콜: 갈보리 산 위에'}),
         noSubstringHome: homeEventMatchedScoreRow({}, '갈보리 산 위에', [{score: allScores[0]}]) === null
       };
+      allScores.push({id: 'stale-label', title: '다른 곡', linkedSongName: '갈보리 산 위에', public: true, scoreKind: 'singer'});
+      result.staleLabel = ids({program: '갈보리 산 위에'});
+      allScores.pop();
       allSongs = [
         {id: 'past', songName: '갈보리 산 위에', year: 2022, month: 9, day: 20},
         {id: 'current', songName: '갈보리 산 위에', year: 2026, month: 9, day: 20}
       ];
-      allScores.push({id: 'manual', title: '별도로 정한 악보 이름', scoreKind: 'singer', public: true, linkedSongId: 'current', linkedSongIds: ['current'], linkedSongName: '갈보리 산 위에'});
+      allScores.push({id: 'manual', title: '별도로 정한 악보 이름', currentFilePath: 'scores/manual/original.pdf', scoreKind: 'singer', public: true, linkedSongId: 'current', linkedSongIds: ['current'], linkedSongName: '갈보리 산 위에'});
+      allScores.forEach(score => {score.currentFilePath = score.currentFilePath || 'scores/' + score.id + '/original.pdf';});
       const event = {date: '2026-09-20', program: '1. 갈보리 산 위에'};
       result.selectedSong = scheduleMatchedSongs(event).map(song => song.id);
       result.explicitLink = ids(event);
@@ -94,7 +98,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
       result.permissionFiltered = ids(event);
       window.allowed = ['singer', 'orchestra'];
       allSongs = Array.from({length: 1916}, (_, i) => ({id: 'song' + i, songName: '테스트곡 ' + i, year: 2026, month: 9, day: 20}));
-      allScores = Array.from({length: 300}, (_, i) => ({id: 'score' + i, title: '테스트곡 ' + i, scoreKind: 'singer', public: true}));
+      allScores = Array.from({length: 300}, (_, i) => ({id: 'score' + i, title: '테스트곡 ' + i, currentFilePath: 'scores/score' + i + '/original.pdf', scoreKind: 'singer', public: true}));
       const bigEvent = {date: '2026-09-20', program: Array.from({length: 60}, (_, i) => (i + 1) + '. 테스트곡 ' + i).join('\n')};
       const start = performance.now();
       result.largeCount = ids(bigEvent).length;
@@ -107,6 +111,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
     assert.deepEqual(matching.bilingual, ['english']);
     assert.deepEqual(matching.encore, ['long']);
     assert.equal(matching.noSubstringHome, true);
+    assert.deepEqual(matching.staleLabel, ['long'], 'free-standing matching must not revive old link labels');
     assert.deepEqual(matching.selectedSong, ['current']);
     assert.deepEqual(matching.explicitLink, ['long', 'manual']);
     assert.deepEqual(matching.permissionFiltered, []);

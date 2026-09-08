@@ -16928,7 +16928,7 @@ function scheduleMatchedScoreRows(schedule){
   var titles=scheduleScoreTitles(schedule);
   if(titles.length){
     sortScores(allScores.filter(canViewScoreItem)).forEach(function(score){
-      if(seenScores[score.id]||!titles.some(function(title){return scoreTitlesMatch(title,score.title)||scoreTitlesMatch(title,score.linkedSongName);}))return;
+      if(seenScores[score.id]||!titles.some(function(title){return scoreTitlesMatch(title,score.title);}))return;
       seenScores[score.id]=true;
       rows.push({song:null,score:score});
     });
