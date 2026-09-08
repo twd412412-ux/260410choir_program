@@ -441,41 +441,6 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-history-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:900;color:var(--tx);margin-bottom:6px}
 .seating-history-list{display:grid;gap:5px;max-height:108px;overflow:auto}
 .seating-history-item{font-size:11px;color:var(--ts);line-height:1.45;padding:6px 8px;background:var(--sf);border:1px solid var(--line);border-radius:8px}
-#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));overflow-x:hidden;overflow-y:auto;height:100dvh;display:flex;flex-direction:column;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-#subSeatingPlan.seating-fullscreen>.seating-stage-head{flex:0 0 auto;margin-bottom:8px}
-#subSeatingPlan.seating-fullscreen>.seating-stage-head>div>div{display:none}
-#subSeatingPlan.seating-fullscreen>.seating-plan-row,#subSeatingPlan.seating-fullscreen>.seating-program-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;margin:0 0 6px!important;flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen>.seating-name-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;margin:0 0 6px!important;flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen .form-label{font-size:10px;margin-bottom:3px}
-#subSeatingPlan.seating-fullscreen .form-input,#subSeatingPlan.seating-fullscreen .form-sel{font-size:12px;padding:8px 10px;min-height:38px}
-#subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;gap:8px}
-#subSeatingPlan.seating-fullscreen .seating-panel{display:block;flex:0 0 auto;padding:8px}
-#subSeatingPlan.seating-fullscreen .seating-panel>div:first-child,#subSeatingPlan.seating-fullscreen .seating-status{display:none!important}
-#subSeatingPlan.seating-fullscreen .seating-member-search{margin-bottom:6px}
-#subSeatingPlan.seating-fullscreen .seating-submission-bar{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
-#subSeatingPlan.seating-fullscreen .seating-submit-chip{flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen .seating-lock-row{margin-bottom:6px;padding:6px}
-#subSeatingPlan.seating-fullscreen .seating-part-filter{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}
-#subSeatingPlan.seating-fullscreen .seating-part-chip{flex:0 0 auto;padding:5px 9px}
-#subSeatingPlan.seating-fullscreen .seating-member-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));grid-auto-rows:minmax(44px,auto);align-content:start;height:clamp(112px,22dvh,220px);max-height:none;overflow-y:scroll}
-#subSeatingPlan.seating-fullscreen .seating-member{min-height:44px;padding:9px 12px;border-right:1px solid var(--line)}
-#subSeatingPlan.seating-fullscreen .seating-member-list>div:not(.seating-member){grid-column:1/-1}
-#subSeatingPlan.seating-fullscreen .seating-stage-card{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:10px}
-#subSeatingPlan.seating-fullscreen .seating-board-tabs{flex:0 0 auto;margin-bottom:6px}
-#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{flex:0 0 auto;margin-bottom:6px}
-#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
-#subSeatingPlan.seating-fullscreen .seating-stage-title{flex:1 1 100%;width:100%}
-#subSeatingPlan.seating-fullscreen .seating-zoom{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-board-size-control{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-zoom-control{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-center-control{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;margin:6px 0 8px;padding-bottom:3px}
-#subSeatingPlan.seating-fullscreen .seating-toolbar-main{flex:0 0 auto;flex-wrap:nowrap}
-#subSeatingPlan.seating-fullscreen .seating-toolbar-group{flex:0 0 auto;flex-wrap:nowrap}
-#subSeatingPlan.seating-fullscreen .seating-toolbar-publish{flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen .seating-toolbar .btn{flex:0 0 auto;padding:7px 9px}
-#subSeatingPlan.seating-fullscreen .seating-board-scroll{height:var(--seating-board-height,60dvh);flex:0 0 var(--seating-board-height,60dvh);min-height:var(--seating-board-height,60dvh);padding:20px 12px 56px}
-#subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 auto}
 body.seating-fullscreen{overflow:hidden}
 body.seating-fullscreen .bottom-nav{display:none!important}
 @media(max-width:760px){
@@ -491,12 +456,6 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   .seating-stage-title{flex:1 1 100%;width:100%}
   .seating-board-title{font-size:16px}
   .seating-stage-subtitle{font-size:11px}
-  #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr}
-  #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0}
-  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:var(--seating-board-height,60dvh);min-height:var(--seating-board-height,60dvh)}
-}
-@media(max-width:520px){
-  #subSeatingPlan.seating-fullscreen .seating-member-list{grid-template-columns:1fr}
 }
 @media(min-width:761px) and (max-width:1080px){
   .seating-tool{grid-template-columns:1fr}
@@ -553,89 +512,114 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .seating-help-step strong{display:block;margin-bottom:2px;color:var(--tx);font-size:13px}
 .seating-help-step span{display:block;color:var(--ts);font-size:11px;font-weight:700;line-height:1.45}
 .seating-help-tip{margin:10px 0 14px;padding:9px 10px;border-left:3px solid var(--p);background:var(--pl);color:var(--pd);font-size:11px;font-weight:850;line-height:1.5}
-#subSeatingPlan.seating-fullscreen{overflow:hidden;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:7px;height:100dvh;padding:calc(7px + env(safe-area-inset-top,0px)) 7px calc(7px + env(safe-area-inset-bottom,0px))}
+#subSeatingPlan.seating-fullscreen{position:fixed;inset:0;z-index:1000;background:var(--bg);overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr);gap:7px;height:100dvh;padding:calc(7px + env(safe-area-inset-top,0px)) calc(7px + env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom,0px)) calc(7px + env(safe-area-inset-left,0px));overscroll-behavior:contain}
 #pageAdmin #subSeatingPlan.seating-fullscreen{padding-bottom:calc(7px + env(safe-area-inset-bottom,0px))}
 #subSeatingPlan.seating-fullscreen>.seating-stage-head{display:none}
-#subSeatingPlan.seating-fullscreen .seating-fullscreen-bar{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-fullscreen-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;border-radius:8px;padding:6px 10px}
 #subSeatingPlan.seating-fullscreen .seating-workspace-nav{display:grid}
+#subSeatingPlan.seating-fullscreen .seating-workspace-nav{border:0;background:var(--bg);border-radius:6px;padding:3px;min-width:112px}
+#subSeatingPlan.seating-fullscreen .seating-workspace-tab{padding:7px 12px;border-radius:4px;font-size:12px}
 #subSeatingPlan.seating-fullscreen>.seating-plan-row,#subSeatingPlan.seating-fullscreen>.seating-name-row,#subSeatingPlan.seating-fullscreen>.seating-program-row{display:none!important}
-#subSeatingPlan.seating-fullscreen.seating-settings-open{grid-template-rows:auto auto auto auto auto auto minmax(0,1fr);overflow-y:auto}
+#subSeatingPlan.seating-fullscreen.seating-settings-open{display:block;overflow-y:auto}
+#subSeatingPlan.seating-fullscreen.seating-settings-open .seating-tool{height:calc(100dvh - 64px);margin-top:8px}
 #subSeatingPlan.seating-fullscreen.seating-settings-open>.seating-plan-row,#subSeatingPlan.seating-fullscreen.seating-settings-open>.seating-name-row,#subSeatingPlan.seating-fullscreen.seating-settings-open>.seating-program-row{display:grid!important}
 #subSeatingPlan.seating-fullscreen.seating-settings-open .seating-settings-actions{display:flex}
-#subSeatingPlan.seating-fullscreen .seating-tool{display:grid;grid-template-columns:minmax(250px,29%) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:7px;min-height:0;overflow:hidden}
-#subSeatingPlan.seating-fullscreen .seating-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:8px;box-shadow:none}
+#subSeatingPlan.seating-fullscreen .form-label{font-size:11px;margin-bottom:4px}
+#subSeatingPlan.seating-fullscreen .form-input,#subSeatingPlan.seating-fullscreen .form-sel{font-size:14px;padding:9px 10px;min-height:40px}
+#subSeatingPlan.seating-fullscreen .seating-tool{position:relative;display:grid;grid-template-columns:clamp(13rem,var(--seating-roster-width,28%),20rem) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:7px;min-height:0;overflow:hidden}
+#subSeatingPlan.seating-fullscreen .seating-panel{grid-column:1;grid-row:1;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:10px;box-shadow:none;border-radius:8px}
 #subSeatingPlan.seating-fullscreen .seating-panel>div:first-child{display:flex!important}
 #subSeatingPlan.seating-fullscreen .seating-panel-dock-toggle{display:inline-flex}
-#subSeatingPlan.seating-fullscreen .seating-member-panel-body{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+#subSeatingPlan.seating-fullscreen .seating-member-panel-body{display:flex;flex-direction:column;min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #subSeatingPlan.seating-fullscreen .seating-member-search,#subSeatingPlan.seating-fullscreen .seating-part-filter,#subSeatingPlan.seating-fullscreen .seating-filter-result,#subSeatingPlan.seating-fullscreen .seating-attendance-batchbar,#subSeatingPlan.seating-fullscreen .seating-paint-status{flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-help-note{display:none}
 #subSeatingPlan.seating-fullscreen .seating-submission-details{display:none}
 #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-details{display:block;flex:0 0 auto}
+#subSeatingPlan.seating-fullscreen.seating-picking-empty-seat .seating-submission-details{display:none}
 #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-submission-details[open] .seating-help-note{display:block;margin:0}
-#subSeatingPlan.seating-fullscreen .seating-member-list{display:block;flex:1 1 auto;height:auto;min-height:100px;max-height:none;overflow-y:auto}
-#subSeatingPlan.seating-fullscreen .seating-member{min-height:42px;padding:8px 9px;border-right:0}
+#subSeatingPlan.seating-fullscreen .seating-member-list{display:block;flex:1 1 auto;height:auto;min-height:96px;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#subSeatingPlan.seating-fullscreen .seating-member{min-height:44px;padding:10px 9px;border-right:0;touch-action:pan-y}
+#subSeatingPlan.seating-fullscreen .seating-member-search{margin:0 0 8px}
+#subSeatingPlan.seating-fullscreen .seating-part-filter{display:flex;flex-wrap:wrap;gap:4px;overflow:visible;margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-part-chip{padding:5px 7px;font-size:11px}
+#subSeatingPlan.seating-fullscreen .seating-status{display:none}
 #subSeatingPlan.seating-fullscreen .seating-filter-result{flex:0 0 auto}
-#subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:2;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:8px;box-shadow:none}
+#subSeatingPlan.seating-fullscreen .seating-stage-card{position:relative;grid-column:2;grid-row:1;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:8px;box-shadow:none;border-radius:8px}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-panel{display:none}
 #subSeatingPlan.seating-fullscreen.seating-member-panel-collapsed .seating-stage-card{grid-column:1/-1}
 #subSeatingPlan.seating-fullscreen .seating-placement-status{display:none!important}
-#subSeatingPlan.seating-fullscreen .seating-mode-actions{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-mode-actions{display:flex;flex:0 0 auto}
 #subSeatingPlan.seating-fullscreen .seating-mode-place-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-queue-actions{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-edit-actions{display:flex}
-#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-mode-place-actions,#subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-queue-actions{display:none}
 #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-edit-actions{padding-left:0;border-left:0}
 #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-attendance-batchbar{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-direct-attendance-actions{display:none!important}
-#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{display:flex;flex:0 0 auto;margin-bottom:5px}
-#subSeatingPlan.seating-fullscreen .seating-stage-title{flex:1 1 220px;width:auto}
-#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head>div>div:not(#seatingBoardTitle){display:none}
+#subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{display:flex;flex-wrap:nowrap;flex:0 0 40px;height:40px;gap:6px;margin-bottom:6px}
+#subSeatingPlan.seating-fullscreen .seating-stage-title{display:none}
+#subSeatingPlan.seating-fullscreen .seating-board-tabs{flex:1 1 auto;max-width:270px;min-width:0;margin:0;padding:3px;border-radius:6px}
+#subSeatingPlan.seating-fullscreen .seating-board-tab{padding:7px 8px;border-radius:4px}
+#subSeatingPlan.seating-fullscreen .seating-view-toggle{display:inline-flex;margin-left:auto;flex:none;min-height:36px;font-size:12px}
 #subSeatingPlan.seating-fullscreen .seating-center-control .seating-center-segments{display:grid!important}
 #subSeatingPlan.seating-fullscreen .seating-zoom{display:none}
 #subSeatingPlan.seating-fullscreen .seating-board-size-control,#subSeatingPlan.seating-fullscreen .seating-zoom-control,#subSeatingPlan.seating-fullscreen .seating-center-control{display:flex}
 #subSeatingPlan.seating-fullscreen .seating-toolbar{display:none}
 #subSeatingPlan.seating-fullscreen .seating-draft-bar{flex:0 0 auto;margin:0 0 5px}
-#subSeatingPlan.seating-fullscreen .seating-board-scroll{flex:1 1 auto;height:auto!important;min-height:180px!important;padding:18px 12px 56px}
-#subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 auto;margin-top:6px;max-height:58px;overflow-y:auto}
+#subSeatingPlan.seating-fullscreen .seating-draft-current{display:none}
+#subSeatingPlan.seating-fullscreen.seating-settings-open .seating-draft-current{display:flex}
+#subSeatingPlan.seating-fullscreen .seating-board-scroll{flex:1 1 0;height:auto;min-height:0;padding:22px 12px 48px;border-radius:8px;touch-action:none;overflow:auto}
+#subSeatingPlan.seating-fullscreen .seating-summary{flex:0 0 32px;height:32px;align-items:center;flex-wrap:nowrap;gap:4px;margin-top:4px;overflow-x:auto;overflow-y:hidden}
+#subSeatingPlan.seating-fullscreen .seating-chip{flex:none;font-size:10px;padding:3px 6px}
 #subSeatingPlan.seating-fullscreen .seating-history-panel{display:none}
-@media(max-width:899px){
-  #subSeatingPlan.seating-fullscreen{grid-template-rows:auto auto minmax(0,1fr)}
-  #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
-  #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:1;grid-row:1}
-  #subSeatingPlan.seating-fullscreen .seating-panel{grid-column:1;grid-row:2;max-height:var(--seating-member-panel-height,32dvh)}
-  #subSeatingPlan.seating-fullscreen .seating-board-size-control input,#subSeatingPlan.seating-fullscreen .seating-zoom-control input{width:min(22vw,110px)}
+.seating-view-toggle,.seating-view-controls,.seating-action-dock,.seating-roster-close,.seating-roster-open,.seating-roster-queue-toggle,.seating-roster-backdrop{display:none}
+#subSeatingPlan.seating-fullscreen .seating-view-controls{position:absolute;top:52px;left:8px;right:8px;z-index:20;padding:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;box-shadow:var(--sh);flex-wrap:wrap;align-items:center;gap:12px}
+#subSeatingPlan.seating-fullscreen.seating-view-open .seating-view-controls{display:flex}
+.seating-view-controls input[type=range]{width:100px;min-height:36px;margin:0}
+.seating-view-controls .seating-center-control{margin-left:0}
+#subSeatingPlan.seating-fullscreen .seating-action-dock{position:relative;display:block;flex:0 0 52px;height:52px;z-index:60;margin-top:4px;background:var(--sf);border-top:1px solid var(--bd)}
+.seating-dock-default{height:100%;display:flex;align-items:center;gap:8px;min-width:0}
+.seating-action-status{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.seating-action-status>span{max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.seating-action-dock .btn{min-height:40px;padding:8px 10px;flex:none;font-size:12px;white-space:nowrap;border-radius:6px}
+.seating-action-dock .seating-queue-actions{gap:6px}
+#subSeatingPlan.seating-fullscreen.seating-previewing .seating-dock-default{visibility:hidden}
+.seating-roster-backdrop[hidden]{display:none!important}
+@media(max-width:719px),(max-height:520px){
+  #subSeatingPlan.seating-fullscreen .seating-tool{grid-template-columns:minmax(0,1fr)}
+  #subSeatingPlan.seating-fullscreen .seating-stage-card{grid-column:1;grid-row:1;padding:6px}
+  #subSeatingPlan.seating-fullscreen .seating-panel{position:fixed;left:calc(7px + env(safe-area-inset-left,0px));right:calc(7px + env(safe-area-inset-right,0px));bottom:calc(70px + env(safe-area-inset-bottom,0px));height:min(var(--seating-member-panel-height,60dvh),calc(100% - 130px));max-height:none;z-index:50;box-shadow:0 -4px 24px #0002;padding:12px}
+  #subSeatingPlan.seating-fullscreen .seating-panel-dock-toggle{display:none}
+  #subSeatingPlan.seating-fullscreen .seating-roster-close,#subSeatingPlan.seating-fullscreen .seating-roster-open{display:inline-flex;align-items:center;justify-content:center}
+  #subSeatingPlan.seating-fullscreen.seating-mode-place .seating-roster-queue-toggle{display:inline-flex;min-height:36px;font-size:12px;padding:6px 9px}
+  #subSeatingPlan.seating-fullscreen .seating-roster-close{width:36px;height:36px;padding:0;font-size:24px}
+  #subSeatingPlan.seating-fullscreen .seating-roster-backdrop:not([hidden]){display:block;position:fixed;inset:0 0 calc(70px + env(safe-area-inset-bottom,0px));z-index:40;border:0;background:rgba(25,29,23,.22)}
+  #subSeatingPlan.seating-fullscreen .seating-member-search{font-size:16px}
+  #subSeatingPlan.seating-fullscreen .seating-panel-head{flex:0 0 auto}
 }
-@media(max-width:520px){
-  #subSeatingPlan.seating-fullscreen{padding:calc(5px + env(safe-area-inset-top,0px)) 5px calc(5px + env(safe-area-inset-bottom,0px));gap:5px}
-  #pageAdmin #subSeatingPlan.seating-fullscreen{padding-bottom:calc(5px + env(safe-area-inset-bottom,0px))}
-  .seating-fullscreen-bar{padding:6px 7px}
+@media(max-width:560px){
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-bar{grid-template-columns:minmax(0,1fr) auto;gap:4px 6px;padding:5px 7px}
+  #subSeatingPlan.seating-fullscreen .seating-workspace-nav{min-width:96px;flex:none;padding:2px}
+  #subSeatingPlan.seating-fullscreen .seating-workspace-tab{font-size:11px;padding:8px 6px}
+  #subSeatingPlan.seating-fullscreen .seating-view-toggle{width:34px;min-width:34px;padding:0;align-items:center;justify-content:center}
+  #subSeatingPlan.seating-fullscreen .seating-view-toggle span{display:none}
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-actions{grid-column:2;grid-row:1}
   .seating-fullscreen-name{font-size:12px}
-  .seating-fullscreen-actions .btn{padding:6px 8px;font-size:11px}
-  .seating-workspace-tab{padding:7px 6px;font-size:11px}
-  #subSeatingPlan.seating-fullscreen .seating-panel{max-height:var(--seating-member-panel-height,32dvh)}
-  #subSeatingPlan.seating-fullscreen .seating-board-tabs{margin-bottom:4px}
-  #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{margin-bottom:4px}
-  #subSeatingPlan.seating-fullscreen .seating-mode-actions{overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
-  #subSeatingPlan.seating-fullscreen .seating-mode-actions>*{flex:0 0 auto}
-  .seating-placement-status{font-size:11px;padding:7px 8px}
+  .seating-fullscreen-actions .btn{padding:7px;font-size:11px}
+  .seating-save-state{font-size:9px;padding:3px 4px}
 }
-@media(max-width:520px) and (orientation:portrait){
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance{overflow-y:auto;grid-template-rows:auto auto auto}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-tool{grid-template-rows:clamp(320px,52dvh,520px) clamp(480px,68dvh,680px);min-height:auto;overflow:visible}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-stage-card{grid-row:1;min-height:0}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-panel{grid-row:2;min-height:0;max-height:none}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance .seating-board-scroll{touch-action:pan-y}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed{overflow:hidden;grid-template-rows:auto auto minmax(0,1fr)}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-tool{height:auto;grid-template-rows:minmax(0,1fr);min-height:0;overflow:hidden}
-  #subSeatingPlan.seating-fullscreen.seating-mode-attendance.seating-member-panel-collapsed .seating-board-scroll{touch-action:none}
+@media(max-width:360px){
+  #subSeatingPlan.seating-fullscreen .seating-board-tab-count{display:none}
+  #subSeatingPlan.seating-fullscreen .seating-board-tab{font-size:11px;padding:8px 4px}
 }
-@media(max-width:899px) and (max-height:520px) and (orientation:landscape){
-  #subSeatingPlan.seating-fullscreen{display:block;overflow-y:auto}
-  #subSeatingPlan.seating-fullscreen .seating-fullscreen-bar,#subSeatingPlan.seating-fullscreen .seating-workspace-nav{margin-bottom:5px}
-  #subSeatingPlan.seating-fullscreen .seating-tool{display:flex;flex-direction:column;min-height:0;overflow:visible}
-  #subSeatingPlan.seating-fullscreen .seating-stage-card{order:0;min-height:0;overflow:visible}
-  #subSeatingPlan.seating-fullscreen .seating-board-scroll{height:max(180px,var(--seating-board-height,60dvh))!important;min-height:max(180px,var(--seating-board-height,60dvh))!important;flex:0 0 max(180px,var(--seating-board-height,60dvh))}
-  #subSeatingPlan.seating-fullscreen .seating-panel{order:1;flex:0 0 clamp(180px,var(--seating-member-panel-height,32dvh),260px);max-height:clamp(180px,var(--seating-member-panel-height,32dvh),260px);margin-top:7px}
+@media(max-width:560px) and (max-height:600px){
+  #subSeatingPlan.seating-fullscreen .seating-summary{display:none}
+}
+@media(max-height:520px){
+  #subSeatingPlan.seating-fullscreen{gap:4px}
+  #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{height:34px;flex-basis:34px;margin-bottom:2px}
+  #subSeatingPlan.seating-fullscreen .seating-summary{display:none}
+  #subSeatingPlan.seating-fullscreen .seating-action-dock{height:46px;flex-basis:46px;margin-top:2px}
+  #subSeatingPlan.seating-fullscreen .seating-panel{height:calc(100% - 100px);bottom:calc(62px + env(safe-area-inset-bottom,0px))}
 }
 .handbook-extra{border:1px solid var(--bd);border-radius:12px;background:rgba(255,253,248,.58);margin-top:10px;overflow:hidden}
 .handbook-extra summary{cursor:pointer;list-style:none;padding:11px 12px;font-size:13px;font-weight:800;color:var(--pd);display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -2927,15 +2911,22 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 .seating-change-list li{display:flex;flex-direction:column;gap:4px;padding:9px 0;border-top:1px solid var(--bd);font-size:13px;overflow-wrap:anywhere}
 .seating-change-list span{font-size:12px}
 .seating-position-tools[hidden],.seating-move-confirm[hidden]{display:none!important}
-#subSeatingPlan.seating-fullscreen .seating-mode-actions{height:48px;min-height:48px;box-sizing:border-box;align-items:center;scrollbar-width:thin}
+#subSeatingPlan.seating-fullscreen .seating-mode-actions{height:44px;min-height:44px;flex:0 0 44px;box-sizing:border-box;align-items:center;overflow:visible;margin:0 0 4px;padding:0;gap:6px}
 .seating-mode-actions .btn{height:34px;min-height:34px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .seating-mode-actions [hidden]{display:none!important}
 .seating-selection-label{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;color:var(--tx)}
 .seating-history-actions{display:flex;align-items:center;gap:5px;margin-left:auto}
 .seating-history-actions button[aria-label]{width:34px;font-size:22px;padding:0}
-.seating-structure-toolbar{display:none;height:42px;box-sizing:border-box;align-items:center;gap:10px;margin-bottom:6px;overflow-x:auto;scrollbar-width:thin;white-space:nowrap}
+.seating-group-tools{display:flex;align-items:center;gap:5px}
+.seating-mode-actions .seating-edit-actions{padding:0;border:0;gap:5px}
+.seating-mode-actions .seating-icon-tool{width:36px;height:36px;padding:0}
+.seating-mode-actions .seating-icon-tool[aria-pressed=true]{background:#875A08;color:#fff}
+.seating-history-actions{flex:none!important}
+.seating-interaction-modes .btn{width:34px;padding:0!important}
+.seating-interaction-modes .btn span{display:none}
+.seating-structure-toolbar{display:none;height:44px;min-height:44px;flex:0 0 44px;box-sizing:border-box;align-items:center;gap:6px;margin-bottom:6px;white-space:nowrap}
 #subSeatingPlan.seating-fullscreen .seating-structure-toolbar{display:flex}
-.seating-structure-group{display:flex;align-items:center;gap:4px;flex:none;padding-right:10px;border-right:1px solid var(--bd)}
+.seating-structure-group{display:flex;align-items:center;gap:3px;flex:none;padding-right:6px;border-right:1px solid var(--bd)}
 .seating-structure-group>span{font-size:11px;color:var(--ts);margin-right:3px}
 .seating-structure-toolbar .btn{height:32px;min-height:32px;padding:4px 10px;flex:none;font-size:12px}
 .seating-structure-group .btn{min-width:32px;font-size:18px;padding:0 6px}
@@ -2946,10 +2937,36 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 #subSeatingPlan.seating-pan-mode .seating-board-scroll{box-shadow:inset 0 0 0 2px #28677a}
 #subSeatingPlan.seating-pan-mode .seating-inline-picker{visibility:hidden;pointer-events:none}
 .seating-mode-actions .btn:disabled{opacity:.45;cursor:default}
+#seatingQueueToggleBtn[aria-pressed=true],#seatingRosterQueueToggleBtn[aria-pressed=true]{background:#28677a;color:#fff}
+.seating-member:focus-visible,.seating-action-dock .btn:focus-visible{outline:2px solid #28677a;outline-offset:-2px}
+.seating-structure-toolbar>button{margin-left:auto}
+#subSeatingPlan.seating-fullscreen .seating-action-dock .seating-move-confirm{position:absolute;inset:0;transform:none;width:100%;max-width:none;box-shadow:none;border:0;border-radius:0;padding:0;gap:8px;background:var(--sf);color:var(--tx)}
+.seating-action-dock .seating-move-confirm strong{flex:1;min-width:0;max-height:42px;overflow:hidden;font-size:12px}
+@media(pointer:coarse){
+  .seating-mode-actions .seating-interaction-modes{display:none}
+}
 @media(max-width:560px){
-  .seating-mode-actions .seating-interaction-modes{position:sticky;left:0;z-index:3;background:var(--sf)}
-  .seating-mode-actions .seating-interaction-modes .btn{width:34px;padding:0}
-  .seating-mode-actions .seating-interaction-modes .btn span{display:none}
+  .seating-structure-toolbar{height:52px;min-height:52px;flex-basis:52px;gap:6px}
+  .seating-structure-group{display:grid;grid-template-columns:32px 32px;gap:1px 4px;padding-right:6px}
+  .seating-structure-group>span{grid-column:1/-1;line-height:14px;margin:0;text-align:center;font-size:10px}
+  .seating-mode-actions{gap:4px!important}
+  .seating-mode-actions .btn{font-size:11px;padding:6px 7px}
+  .seating-history-actions{gap:3px}
+  .seating-mode-actions .seating-icon-tool{width:32px}
+  .seating-interaction-modes{display:none}
+  .seating-action-dock .btn{font-size:11px;padding:8px}
+  .seating-dock-default{gap:5px}
+  .seating-action-status>span{font-size:11px}
+}
+@media(min-width:640px) and (max-height:520px){
+  #subSeatingPlan.seating-fullscreen .seating-stage-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto;column-gap:10px}
+  #subSeatingPlan.seating-fullscreen .seating-stage-card>.seating-stage-head{grid-row:1;grid-column:1;height:40px;margin:0}
+  #subSeatingPlan.seating-fullscreen .seating-mode-actions{grid-row:1;grid-column:2;height:40px;min-height:40px;margin:0}
+  #subSeatingPlan.seating-fullscreen .seating-draft-bar{grid-row:2;grid-column:1/-1}
+  #subSeatingPlan.seating-fullscreen .seating-structure-toolbar{grid-row:3;grid-column:1/-1;height:40px;min-height:40px;margin:0 0 4px}
+  #subSeatingPlan.seating-fullscreen .seating-board-scroll{grid-row:4;grid-column:1/-1}
+  #subSeatingPlan.seating-fullscreen .seating-action-dock{grid-row:5;grid-column:1/-1;height:46px;margin:0}
+  #subSeatingPlan.seating-fullscreen .seating-board-tabs{max-width:200px}
 }
 </style>
 </head>
@@ -3400,16 +3417,16 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
         <span class="seating-fullscreen-name" id="seatingFullscreenPlanTitle">새 자리배치</span>
         <span class="seating-save-state" id="seatingSaveState">저장됨</span>
       </div>
+      <div class="seating-workspace-nav" role="tablist" aria-label="자리배치 작업 모드">
+        <button class="seating-workspace-tab on" type="button" id="seatingModePlaceBtn" onclick="setSeatingWorkspaceMode('place')">배치</button>
+        <button class="seating-workspace-tab" type="button" id="seatingModeAttendanceBtn" onclick="setSeatingWorkspaceMode('attendance')">참석</button>
+      </div>
       <div class="seating-fullscreen-actions">
         <button class="btn seating-btn-soft" type="button" onclick="showSeatingWorkspaceHelp()" title="자리배치 도움말">i</button>
         <button class="btn seating-btn-soft" type="button" id="seatingSettingsToggleBtn" onclick="toggleSeatingSettingsPanel()">설정</button>
         <button class="btn btn-p" type="button" onclick="saveSeatingPlan()">저장</button>
         <button class="btn seating-btn-soft" type="button" onclick="toggleSeatingFullscreen()">닫기</button>
       </div>
-    </div>
-    <div class="seating-workspace-nav" role="tablist" aria-label="자리배치 작업 모드">
-      <button class="seating-workspace-tab on" type="button" id="seatingModePlaceBtn" onclick="setSeatingWorkspaceMode('place')">배치</button>
-      <button class="seating-workspace-tab" type="button" id="seatingModeAttendanceBtn" onclick="setSeatingWorkspaceMode('attendance')">참석</button>
     </div>
     <div class="seating-plan-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">저장된 배치</label><select class="form-sel" id="seatingPlanSelect" onchange="selectSeatingPlan(this.value)"><option value="">새 배치 만들기</option></select></div>
@@ -3436,6 +3453,8 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
         <div class="seating-panel-head">
           <div class="seating-panel-title" id="seatingMemberPanelTitle">참석 단원</div>
           <div class="seating-panel-head-actions">
+            <button class="seating-roster-queue-toggle btn seating-btn-soft" type="button" id="seatingRosterQueueToggleBtn" onclick="toggleSeatingPlacementQueueSelection()">여러 명 선택</button>
+            <button class="seating-roster-close btn seating-btn-soft" type="button" onclick="closeSeatingMemberPanel()" aria-label="명단 닫기" title="명단 닫기">×</button>
             <div class="seating-direct-attendance-actions" style="display:flex;gap:4px">
             <button class="btn btn-sm" id="seatingMarkAllBtn" style="background:var(--pl);color:var(--pd)" onclick="markAllSeatingAttendees(true)">전체</button>
             <button class="btn btn-sm" id="seatingClearAllBtn" style="background:var(--bg);color:var(--ts)" onclick="markAllSeatingAttendees(false)">해제</button>
@@ -3469,12 +3488,12 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
         </div>
       </aside>
       <section class="seating-stage-card">
+        <div class="seating-stage-head">
+          <button class="seating-panel-dock-toggle" type="button" id="seatingPanelDockToggleBtn" onclick="toggleSeatingMemberPanel()" aria-controls="seatingMemberPanel" aria-expanded="true" aria-label="명단 접기" title="명단 접기">‹</button>
         <div class="seating-board-tabs" id="seatingBoardTabs" aria-label="배치도 선택">
           <button type="button" class="seating-board-tab on" id="seatingBoardTabChoir" onclick="setSeatingBoardTab('choir')">합창<span class="seating-board-tab-count" id="seatingBoardTabChoirCount"></span></button>
           <button type="button" class="seating-board-tab" id="seatingBoardTabOrchestra" onclick="setSeatingBoardTab('orchestra')">관현악<span class="seating-board-tab-count" id="seatingBoardTabOrchestraCount"></span></button>
         </div>
-        <div class="seating-stage-head">
-          <button class="seating-panel-dock-toggle" type="button" id="seatingPanelDockToggleBtn" onclick="toggleSeatingMemberPanel()" aria-controls="seatingMemberPanel" aria-expanded="true" aria-label="왼쪽 명단 접기" title="왼쪽 명단 접기">‹</button>
           <div class="seating-stage-title">
             <div class="seating-board-title" id="seatingBoardTitle">전체 합창 배치도</div>
             <div class="seating-stage-subtitle">빈칸 선택 후 이름을 검색해 누르거나, 단원을 먼저 누른 뒤 셀을 선택하세요.</div>
@@ -3484,6 +3503,10 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
             <span id="seatingZoomLabel" style="font-size:13px;font-weight:900;color:var(--ts)">58%</span>
             <button class="btn btn-sm" onclick="changeSeatingZoom(0.1)">+</button>
           </div>
+          <button class="btn seating-btn-soft seating-view-toggle" type="button" id="seatingViewToggleBtn" onclick="toggleSeatingViewControls()" aria-controls="seatingViewControls" aria-expanded="false">화면 조절</button>
+        </div>
+        <div class="seating-view-controls" id="seatingViewControls">
+          <button class="btn seating-btn-soft" type="button" onclick="fitSeatingBoardInView()">화면 맞춤</button>
            <div class="seating-board-size-control">
              <label for="seatingBoardHeightRange">배치도 크기</label>
              <input id="seatingBoardHeightRange" type="range" min="30" max="90" step="10" value="60" oninput="setSeatingBoardHeight(this.value)" aria-label="배치도 세로 크기">
@@ -3509,27 +3532,19 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
             <button type="button" class="btn" id="seatingSelectModeBtn" onclick="setSeatingInteractionMode('select')" title="자리 선택" aria-pressed="true">자리 선택</button>
             <button type="button" class="btn" id="seatingPanModeBtn" onclick="setSeatingInteractionMode('pan')" title="화면 이동" aria-pressed="false">화면 이동</button>
           </div>
-          <span id="seatingSelectionLabel" class="seating-selection-label"></span>
           <div class="seating-mode-place-actions">
             <button class="btn seating-btn-soft" type="button" id="seatingQueueToggleBtn" onclick="toggleSeatingPlacementQueueSelection()">여러 명 선택</button>
           </div>
-          <div class="seating-queue-actions" id="seatingQueueActions">
-            <span class="seating-queue-progress" id="seatingQueueProgress"></span>
-            <button class="btn seating-btn-soft" type="button" id="seatingQueueHighlightBtn" onclick="applySeatingQueueHighlight(true)">강조</button>
-            <button class="btn seating-btn-soft" type="button" id="seatingQueueUnhighlightBtn" onclick="applySeatingQueueHighlight(false)">강조 해제</button>
-            <button class="btn seating-btn-danger-soft" type="button" id="seatingQueueClearBtn" onclick="clearSeatingPlacementQueue()" title="선택한 단원의 배치 자리만 한 번에 비웁니다">자리 비우기</button>
-            <button class="btn seating-btn-soft seating-context-lock" type="button" id="seatingQueueLockBtn" onclick="toggleSelectedSeatingPositionLock()">잠금</button>
-            <button class="btn btn-p" type="button" id="seatingQueueStartBtn" onclick="startSeatingPlacementQueue()">옮기기·배치</button>
-            <button class="btn seating-btn-soft" type="button" id="seatingQueueUndoBtn" onclick="undoSeatingPlacementQueueStep()">직전 취소</button>
-            <button class="btn seating-btn-soft" type="button" id="seatingQueueStopBtn" onclick="stopSeatingPlacementQueue()">종료</button>
+          <div class="seating-group-tools" id="seatingGroupTools" hidden>
+            <button class="btn seating-btn-soft seating-icon-tool" type="button" id="seatingQueueHighlightBtn" onclick="toggleSeatingQueueHighlight()" data-seating-icon="highlight" title="선택한 자리 강조" aria-label="선택한 자리 강조">강조</button>
+            <button class="btn seating-btn-danger-soft seating-icon-tool" type="button" id="seatingQueueClearBtn" onclick="clearSeatingPlacementQueue()" data-seating-icon="erase" title="선택한 자리 비우기" aria-label="선택한 자리 비우기">자리 비우기</button>
+            <button class="btn seating-btn-soft seating-context-lock seating-icon-tool" type="button" id="seatingQueueLockBtn" onclick="toggleSelectedSeatingPositionLock()" data-seating-icon="lock" title="자리 잠금" aria-label="자리 잠금">잠금</button>
           </div>
           <div class="seating-edit-actions">
-            <button class="btn seating-btn-soft seating-highlight-action" data-seat-context="person" type="button" aria-pressed="false" onclick="toggleSelectedSeatingHighlight()" title="선택한 단원의 자리 강조">강조</button>
-            <button class="btn seating-btn-danger-soft" data-seat-context="person" onclick="clearSelectedSeat()">자리 비우기</button>
-            <button class="btn seating-btn-soft seating-context-lock" data-seat-context="person" onclick="toggleSelectedSeatingPositionLock()">잠금</button>
+            <button class="btn seating-btn-soft seating-highlight-action seating-icon-tool" data-seat-context="person" type="button" aria-pressed="false" onclick="toggleSelectedSeatingHighlight()" data-seating-icon="highlight" title="선택한 자리 강조" aria-label="선택한 자리 강조">강조</button>
+            <button class="btn seating-btn-danger-soft seating-icon-tool" data-seat-context="person" onclick="clearSelectedSeat()" data-seating-icon="erase" title="자리 비우기" aria-label="자리 비우기">자리 비우기</button>
+            <button class="btn seating-btn-soft seating-context-lock seating-icon-tool" data-seat-context="person" onclick="toggleSelectedSeatingPositionLock()" data-seating-icon="lock" title="자리 잠금" aria-label="자리 잠금">잠금</button>
             <button class="btn seating-btn-soft" data-seat-context="empty" onclick="focusSeatingMemberSearchForSeat()">단원 배치</button>
-            <button class="btn seating-btn-soft" data-seat-context="empty" onclick="removeSelectedSeatingSeat()">칸 제거</button>
-            <button class="btn seating-btn-soft" data-seat-context="single" onclick="cancelSeatingWorkspaceSelection()">선택 취소</button>
           </div>
           <div class="seating-history-actions">
             <button class="btn seating-btn-soft" onclick="undoSeatingChange()" title="되돌리기" aria-label="되돌리기">&#8630;</button>
@@ -3585,9 +3600,24 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
           <div class="seating-board" id="seatingBoard"></div>
         </div>
         <div class="seating-summary" id="seatingSummary"></div>
+        <div class="seating-action-dock" id="seatingActionDock">
+          <div class="seating-dock-default">
+            <button class="btn seating-btn-soft seating-roster-open" type="button" id="seatingRosterOpenBtn" onclick="toggleSeatingMemberPanel()" aria-controls="seatingMemberPanel" aria-expanded="false">명단</button>
+            <div class="seating-action-status" aria-live="polite">
+              <span id="seatingSelectionLabel" class="seating-selection-label"></span>
+              <span class="seating-queue-progress" id="seatingQueueProgress"></span>
+            </div>
+            <button class="btn seating-btn-soft" data-seat-context="single" onclick="cancelSeatingWorkspaceSelection()">취소</button>
+            <div class="seating-queue-actions" id="seatingQueueActions">
+              <button class="btn seating-btn-soft" type="button" id="seatingQueueStopBtn" onclick="stopSeatingPlacementQueue()">종료</button>
+              <button class="btn btn-p" type="button" id="seatingQueueStartBtn" onclick="startSeatingPlacementQueue()">순서대로 배치</button>
+            </div>
+          </div>
+        </div>
         <div class="seating-history-panel" id="seatingHistoryPanel"></div>
       </section>
     </div>
+    <button class="seating-roster-backdrop" id="seatingRosterBackdrop" type="button" onclick="closeSeatingMemberPanel()" aria-label="명단 닫기" tabindex="-1" hidden></button>
   </div>
   <div class="admin-sub hidden" id="subMemberHandbook">
     <h3 style="font-size:16px; font-weight:700; margin-bottom:12px">📖 단원 명부 <span id="handbookCount" class="handbook-title-count">표시 0명</span></h3>
@@ -4632,10 +4662,10 @@ var seatingInteractionMode='select', seatingMovePreview=null, seatingCompareBase
 var seatingPlanLoadedVersions={};
 var seatingSelectedMemberId='', seatingSelectedSeat=null, seatingZoom=0.58, seatingCenterOffset=0, seatingPartFilter='all', seatingBoardTab='choir';
 var seatingDirty=false, seatingUndoStack=[], seatingRedoStack=[], seatingHistoryLocked=false, seatingInlineQuery='', seatingAttendingOnly=false, seatingUnplacedOnly=false, seatingAbsentOnly=false, seatingAttendeesLocked=false, seatingAutoFit=false, seatingGesturesBound=false, seatingPinchStartDist=0, seatingPinchStartZoom=0;
-var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingPanOuterScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null;
+var seatingPanStartX=0, seatingPanStartY=0, seatingPanScrollLeft=0, seatingPanScrollTop=0, seatingPanOuterScrollTop=0, seatingTouchPanning=false, seatingDragSeat=null, seatingTouchMoved=false, seatingTouchClickUntil=0;
 var seatingDraftTimer=null, seatingDraftApplying=false, seatingLastDraftSavedAt='', seatingPublishPreviewData=null;
 var seatingAttendancePaint=null, seatingAttendancePaintListenersBound=false, seatingAttendancePaintSuppressClickUntil=0;
-var seatingWorkspaceMode='place', seatingSettingsOpen=false, seatingMemberPanelCollapsed=false, seatingAttendanceBatchSelected={};
+var seatingWorkspaceMode='place', seatingSettingsOpen=false, seatingViewControlsOpen=false, seatingMemberPanelCollapsed=false, seatingAttendanceBatchSelected={};
 var seatingPlacementQueue=[], seatingPlacementQueueCompleted=[], seatingPlacementQueueSelecting=false, seatingPlacementQueueActive=false;
 var seatingPlacementStepSerial=0;
 var seatingSpecialAssignmentType='', seatingSpecialAssignmentIndex=0, seatingSpecialQuery='', seatingStaffManageIndex=0;
@@ -4657,7 +4687,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.08.3';
+var APP_RELEASE_VERSION='26.09.08.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18331,6 +18361,9 @@ function seatingDraftTimeLabel(value){
 function renderSeatingDraftBar(){
   var box=document.getElementById('seatingDraftBar');if(!box)return;
   var draft=loadSeatingDraft();
+  box.classList.toggle('seating-draft-current',!!(seatingDirty&&seatingLastDraftSavedAt));
+  var saveState=document.getElementById('seatingSaveState');
+  if(saveState)saveState.title=seatingDirty&&seatingLastDraftSavedAt?'기기 임시저장 · '+seatingDraftTimeLabel(seatingLastDraftSavedAt):'';
   if(seatingDirty&&seatingLastDraftSavedAt){
     box.classList.remove('hidden');
     box.innerHTML='<span>임시저장됨 · '+escHtml(seatingDraftTimeLabel(seatingLastDraftSavedAt))+'</span>'
@@ -19341,14 +19374,8 @@ function isSeatingFullscreenWorkspace(){
   var sub=document.getElementById('subSeatingPlan');
   return !!(sub&&sub.classList.contains('seating-fullscreen'));
 }
-function seatingUsesPortraitAttendanceScroll(){
-  return isSeatingFullscreenWorkspace()
-    &&seatingWorkspaceMode==='attendance'
-    &&!seatingMemberPanelCollapsed
-    &&!!(window.matchMedia&&window.matchMedia('(max-width:520px) and (orientation:portrait)').matches);
-}
 function seatingUsesStackedWorkspace(){
-  return isSeatingFullscreenWorkspace()&&!!(window.matchMedia&&window.matchMedia('(max-width:899px)').matches);
+  return isSeatingFullscreenWorkspace()&&!!(window.matchMedia&&window.matchMedia('(max-width:719px), (max-height:520px)').matches);
 }
 function resetSeatingWorkspaceTransientState(){
   seatingMovePreview=null;
@@ -19364,12 +19391,17 @@ function resetSeatingWorkspaceTransientState(){
   seatingSelectedMemberId='';
   seatingSelectedSeat=null;
   seatingInlineQuery='';
+  seatingViewControlsOpen=false;
 }
 function seatingWorkspacePlanTitle(){
   return String(((document.getElementById('seatingPlanName')||{}).value)||((document.getElementById('seatingProgram')||{}).value)||'새 자리배치').trim()||'새 자리배치';
 }
 function renderSeatingWorkspaceShell(){
   var sub=document.getElementById('subSeatingPlan');if(!sub)return;
+  var nav=sub.querySelector('.seating-workspace-nav');
+  var narrow=isSeatingFullscreenWorkspace()&&window.matchMedia('(max-width:560px)').matches;
+  var navParent=sub.querySelector(narrow?'.seating-stage-card>.seating-stage-head':'.seating-fullscreen-bar');
+  if(nav&&navParent&&nav.parentNode!==navParent)navParent.insertBefore(nav,sub.querySelector(narrow?'#seatingBoardTabs':'.seating-fullscreen-actions'));
   if(['place','attendance'].indexOf(seatingWorkspaceMode)===-1)seatingWorkspaceMode='place';
   ['place','attendance'].forEach(function(mode){
     sub.classList.toggle('seating-mode-'+mode,seatingWorkspaceMode===mode);
@@ -19377,7 +19409,14 @@ function renderSeatingWorkspaceShell(){
     if(btn)btn.classList.toggle('on',seatingWorkspaceMode===mode);
   });
   sub.classList.toggle('seating-settings-open',!!seatingSettingsOpen);
+  var panel=document.getElementById('seatingMemberPanel');
+  if(seatingMemberPanelCollapsed&&panel&&panel.contains(document.activeElement))document.activeElement.blur();
   sub.classList.toggle('seating-member-panel-collapsed',!!seatingMemberPanelCollapsed);
+  sub.classList.toggle('seating-view-open',seatingViewControlsOpen);
+  var viewToggle=document.getElementById('seatingViewToggleBtn');
+  if(viewToggle){viewToggle.setAttribute('aria-expanded',String(seatingViewControlsOpen));viewToggle.title='화면 조절';viewToggle.setAttribute('aria-label','화면 조절');if(!viewToggle.querySelector('svg'))viewToggle.innerHTML=seatingToolIcon('view')+'<span>화면 조절</span>';}
+  var backdrop=document.getElementById('seatingRosterBackdrop');
+  if(backdrop)backdrop.hidden=!seatingUsesStackedWorkspace()||seatingMemberPanelCollapsed||seatingSettingsOpen;
   var title=document.getElementById('seatingFullscreenPlanTitle');
   if(title)title.textContent=seatingWorkspacePlanTitle();
   var state=document.getElementById('seatingSaveState');
@@ -19385,14 +19424,18 @@ function renderSeatingWorkspaceShell(){
   var settingsBtn=document.getElementById('seatingSettingsToggleBtn');
   if(settingsBtn)settingsBtn.textContent=seatingSettingsOpen?'설정 닫기':'설정';
   var panelTitle=document.getElementById('seatingMemberPanelTitle');
-  if(panelTitle)panelTitle.textContent=seatingWorkspaceMode==='attendance'?'참석 명단':'배치할 단원';
+  var pickingEmptySeat=!!(seatingSelectedSeat&&!selectedSeatingSeatValue());
+  if(panelTitle)panelTitle.textContent=pickingEmptySeat?'빈자리 배치':(seatingWorkspaceMode==='attendance'?'참석 명단':'배치할 단원');
+  sub.classList.toggle('seating-picking-empty-seat',pickingEmptySeat);
   var panelBtn=document.getElementById('seatingPanelDockToggleBtn');
   if(panelBtn){
     panelBtn.textContent=seatingMemberPanelCollapsed?'›':'‹';
     panelBtn.setAttribute('aria-expanded',String(!seatingMemberPanelCollapsed));
-    panelBtn.setAttribute('aria-label',seatingMemberPanelCollapsed?'왼쪽 명단 펼치기':'왼쪽 명단 접기');
+    panelBtn.setAttribute('aria-label',seatingMemberPanelCollapsed?'명단 펼치기':'명단 접기');
     panelBtn.title=seatingMemberPanelCollapsed?'왼쪽 명단 펼치기':'왼쪽 명단 접기';
   }
+  var rosterBtn=document.getElementById('seatingRosterOpenBtn');
+  if(rosterBtn){rosterBtn.textContent=seatingMemberPanelCollapsed?'명단':'명단 닫기';rosterBtn.setAttribute('aria-expanded',String(!seatingMemberPanelCollapsed));}
   renderSeatingAttendanceBatchBar();
   renderSeatingQueueControls();
   renderSeatingPlacementStatus();
@@ -19431,7 +19474,22 @@ function toggleSeatingSettingsPanel(){
 }
 function toggleSeatingMemberPanel(){
   seatingMemberPanelCollapsed=!seatingMemberPanelCollapsed;
+  seatingViewControlsOpen=false;
   renderSeatingWorkspaceShell();
+}
+function closeSeatingMemberPanel(){
+  seatingMemberPanelCollapsed=true;
+  renderSeatingWorkspaceShell();
+}
+function toggleSeatingViewControls(){
+  seatingViewControlsOpen=!seatingViewControlsOpen;
+  renderSeatingWorkspaceShell();
+}
+function fitSeatingBoardInView(){
+  var board=document.getElementById('seatingBoard'),scroller=document.querySelector('#subSeatingPlan .seating-board-scroll');
+  if(!board||!scroller)return;
+  seatingZoom=Math.min(1.8,Math.max(.35,Math.min((scroller.clientWidth-28)/board.offsetWidth,(scroller.clientHeight-50)/board.offsetHeight)));
+  updateSeatingZoom();scroller.scrollLeft=0;scroller.scrollTop=0;
 }
 function showSeatingWorkspaceHelp(auto){
   openModal('modalSeatingWorkspaceHelp');
@@ -19557,7 +19615,10 @@ function renderSeatingAttendanceBatchBar(){
   var label=document.getElementById('seatingAttendanceBatchCount');
   if(label)label.textContent='선택 '+ids.length+'명';
   var bar=document.getElementById('seatingAttendanceBatchbar');
-  if(bar)bar.classList.toggle('active',ids.length>0);
+  if(bar){
+    bar.classList.toggle('active',ids.length>0);
+    bar.style.display=isSeatingFullscreenWorkspace()&&seatingWorkspaceMode==='attendance'&&!(seatingSelectedSeat&&!selectedSeatingSeatValue())?'flex':'none';
+  }
 }
 function applySeatingAttendanceBatch(checked){
   var ids=Object.keys(seatingAttendanceBatchSelected).filter(function(id){return !!seatingAttendanceBatchSelected[id];});
@@ -19635,6 +19696,11 @@ function applySeatingQueueHighlight(highlight){
   var skipped=seatingPlacementQueue.length-placed.length;
   showToast((highlight?'강조 ':'강조 해제 ')+changed.length+'명 적용'+(skipped?' · 미배치 '+skipped+'명 제외':''));
 }
+function toggleSeatingQueueHighlight(){
+  var assigned=seatingAssignedMap();
+  var selected=seatingPlacementQueue.map(function(id){return seatingPlacementSeat(assigned[id]);}).filter(Boolean);
+  applySeatingQueueHighlight(!selected.length||!selected.every(function(seat){return seat.highlight;}));
+}
 function clearSeatingPlacementQueue(){
   if(!seatingPlacementQueueSelecting||!seatingPlacementQueue.length)return showToast('먼저 비울 단원을 선택해주세요');
   var assigned=seatingAssignedMap();
@@ -19663,7 +19729,7 @@ function startSeatingPlacementQueue(){
   seatingPlacementQueueCompleted=[];
   seatingSelectedMemberId=mode.block?'':seatingPlacementQueue[0];
   seatingSelectedSeat=null;
-  seatingMemberPanelCollapsed=true;
+  if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
   renderSeatingMemberList();
   renderSeatingBoard();
   showToast(mode.block?'선택한 자리 중 맨 위·왼쪽 자리가 옮겨갈 칸을 누르세요':'빈칸을 누를 때마다 한 명씩 배치합니다');
@@ -19699,7 +19765,7 @@ function undoSeatingPlacementQueueStep(){
   var previous=seatingUndoStack[seatingUndoStack.length-1];
   if(!previous||previous.placementStepId!==last.stepId)return showToast('다른 편집이 있습니다. 되돌리기로 먼저 취소해주세요');
   undoSeatingChange();
-  seatingMemberPanelCollapsed=true;
+  if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
   renderSeatingMemberList();
   renderSeatingBoard();
 }
@@ -19711,24 +19777,31 @@ function stopSeatingPlacementQueue(silent){
   seatingPlacementQueueSelecting=false;
   seatingPlacementQueueActive=false;
   seatingSelectedMemberId='';
-  seatingMemberPanelCollapsed=false;
   renderSeatingMemberList();
   renderSeatingBoard();
   if(!silent&&remaining)showToast('연속 배치를 종료했습니다');
 }
 function renderSeatingQueueControls(){
-  document.querySelectorAll('#seatingQueueActions button').forEach(function(button){button.disabled=false;});
+  document.querySelectorAll('#seatingQueueActions button,#seatingGroupTools button').forEach(function(button){button.disabled=false;});
   var toggle=document.getElementById('seatingQueueToggleBtn');
   if(toggle){
-    toggle.textContent=seatingPlacementQueueSelecting?'선택 취소':'여러 명 선택';
+    toggle.textContent='여러 명 선택';
+    toggle.setAttribute('aria-pressed',String(seatingPlacementQueueSelecting));
     toggle.style.display=seatingPlacementQueueActive?'none':'';
   }
+  var rosterToggle=document.getElementById('seatingRosterQueueToggleBtn');
+  if(rosterToggle){rosterToggle.setAttribute('aria-pressed',String(seatingPlacementQueueSelecting));rosterToggle.disabled=seatingPlacementQueueActive;}
   var actions=document.getElementById('seatingQueueActions');
   var visible=seatingPlacementQueueSelecting||seatingPlacementQueueActive||seatingPlacementQueueCompleted.length>0;
   if(actions)actions.style.display=visible?'flex':'none';
   var total=seatingPlacementQueue.length+seatingPlacementQueueCompleted.length;
   var mode=seatingBulkPlacementMode(seatingPlacementQueue);
+  var assigned=seatingAssignedMap();
+  var placed=seatingPlacementQueue.map(function(id){return seatingPlacementSeat(assigned[id]);}).filter(Boolean);
+  var groupTools=document.getElementById('seatingGroupTools');
+  if(groupTools)groupTools.hidden=!seatingPlacementQueueSelecting||!placed.length;
   var progress=document.getElementById('seatingQueueProgress');
+  if(progress)progress.hidden=!visible;
   if(progress)progress.textContent=seatingPlacementQueueSelecting?('선택 '+seatingPlacementQueue.length+'명'):(total+'명 '+(mode.block?'자리 이동':'새 배치'));
   if(progress&&mode.block&&mode.anchor)progress.textContent+=' · 기준 '+mode.anchor.seat.name;
   if(progress&&seatingPlacementQueueActive&&!mode.block){
@@ -19738,17 +19811,15 @@ function renderSeatingQueueControls(){
   var lock=document.getElementById('seatingQueueLockBtn');
   if(lock){lock.hidden=!seatingPlacementQueueSelecting||!mode.block;lock.disabled=!seatingPlacementQueue.length;}
   var start=document.getElementById('seatingQueueStartBtn');
-  if(start){start.style.display=seatingPlacementQueueSelecting?'':'none';start.disabled=!seatingPlacementQueue.length;start.textContent=mode.error?'선택 확인':mode.block?'모양대로 이동':'순서대로 배치';}
+  if(start){start.style.display=seatingPlacementQueueSelecting?'':'none';start.disabled=!seatingPlacementQueue.length||!!mode.error;start.textContent=mode.error?'선택 확인':mode.block?'모양대로 이동':'순서대로 배치';start.title=mode.error||start.textContent;}
   var highlight=document.getElementById('seatingQueueHighlightBtn');
-  if(highlight){highlight.style.display=seatingPlacementQueueSelecting?'':'none';highlight.disabled=!seatingPlacementQueue.length;}
-  var unhighlight=document.getElementById('seatingQueueUnhighlightBtn');
-  if(unhighlight){unhighlight.style.display=seatingPlacementQueueSelecting?'':'none';unhighlight.disabled=!seatingPlacementQueue.length;}
+  if(highlight){var allHighlighted=placed.length>0&&placed.every(function(seat){return seat.highlight;});highlight.setAttribute('aria-pressed',String(allHighlighted));highlight.title=allHighlighted?'선택한 자리 강조 해제':'선택한 자리 강조';highlight.setAttribute('aria-label',highlight.title);}
   var clear=document.getElementById('seatingQueueClearBtn');
   if(clear){clear.style.display=seatingPlacementQueueSelecting?'':'none';clear.disabled=!seatingPlacementQueue.length;}
   var undo=document.getElementById('seatingQueueUndoBtn');
   if(undo){undo.style.display=seatingPlacementQueueCompleted.length?'':'none';undo.disabled=!seatingPlacementQueueCompleted.length;}
   var stop=document.getElementById('seatingQueueStopBtn');
-  if(stop){stop.style.display=visible?'':'none';stop.textContent=(!seatingPlacementQueueSelecting&&!seatingPlacementQueueActive&&seatingPlacementQueueCompleted.length)?'완료':'종료';}
+  if(stop){stop.style.display=visible?'':'none';stop.textContent=seatingPlacementQueueSelecting?'취소':(!seatingPlacementQueueActive&&seatingPlacementQueueCompleted.length)?'완료':'종료';}
   renderSeatingContextTools();
 }
 function renderSeatingContextTools(){
@@ -19767,8 +19838,11 @@ function renderSeatingContextTools(){
   document.querySelectorAll('.seating-structure-toolbar button').forEach(function(button){button.disabled=seatingInteractionMode==='pan';});
   var ids=group?seatingPlacementQueue:seat?[seat.memberId]:[];
   var allLocked=ids.length>0&&ids.every(seatingMemberPositionLocked);
-  document.querySelectorAll('.seating-context-lock').forEach(function(button){button.textContent=allLocked?'잠금 해제':'잠금';});
-  if(seatingInteractionMode==='pan')document.querySelectorAll('#seatingQueueActions button').forEach(function(button){button.disabled=true;});
+  document.querySelectorAll('.seating-context-lock').forEach(function(button){button.title=allLocked?'자리 잠금 해제':'자리 잠금';button.setAttribute('aria-label',button.title);button.setAttribute('aria-pressed',String(allLocked));});
+  document.querySelectorAll('[data-seating-icon]').forEach(function(button){if(!button.querySelector('svg'))button.innerHTML=seatingToolIcon(button.dataset.seatingIcon);});
+  var comparison=document.querySelector('.seating-structure-toolbar>button');
+  if(comparison&&!comparison.querySelector('svg')){comparison.innerHTML=seatingToolIcon('compare');comparison.title='공개본 비교';comparison.setAttribute('aria-label','공개본 비교');}
+  if(seatingInteractionMode==='pan')document.querySelectorAll('#seatingQueueActions button,#seatingGroupTools button').forEach(function(button){button.disabled=true;});
 }
 function renderSeatingPartFilter(){
   var box=document.getElementById('seatingPartFilter');if(!box)return;
@@ -19867,6 +19941,7 @@ function toggleSeatingAttendeesLocked(){
   showToast(seatingAttendeesLocked?'참석명단을 고정했습니다':'참석명단 고정을 해제했습니다');
 }
 function handleSeatingMemberRowClick(id){
+  if(isSeatingFullscreenWorkspace()&&seatingSelectedSeat&&!selectedSeatingSeatValue())return selectSeatingMember(id);
   if(isSeatingFullscreenWorkspace()&&seatingWorkspaceMode==='attendance')return toggleSeatingAttendanceBatchMember(id);
   if(isSeatingFullscreenWorkspace()&&seatingPlacementQueueSelecting)return toggleSeatingPlacementQueueMember(id);
   if(isSeatingFullscreenWorkspace()&&seatingPlacementQueueActive)return showToast('현재 순서의 빈칸을 먼저 선택해주세요');
@@ -19876,6 +19951,7 @@ function selectSeatingMember(id){
   seatingInteractionMode='select';
   seatingMovePreview=null;
   if(!seatingAttendees[id])return showToast('참석 체크된 단원만 배치할 수 있습니다');
+  if(!seatingPlacementQueueActive)seatingPlacementQueueCompleted=[];
   if(seatingSelectedMemberId===id){
     seatingSelectedMemberId='';
     if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=false;
@@ -19894,6 +19970,7 @@ function selectSeatingMember(id){
 }
 function renderSeatingMemberList(){
   var list=document.getElementById('seatingMemberList');if(!list)return;
+  var scrollTop=list.scrollTop;
   renderSeatingPartFilter();
   renderSeatingSubmissionState();
   var q=(document.getElementById('seatingMemberSearch')||{}).value||'';
@@ -19901,7 +19978,7 @@ function renderSeatingMemberList(){
   var assigned=seatingAssignedMap();
   var filtered=seatingCurrentFilteredMembers();
   var fullscreen=isSeatingFullscreenWorkspace();
-  var attendanceMode=fullscreen&&seatingWorkspaceMode==='attendance';
+  var attendanceMode=fullscreen&&seatingWorkspaceMode==='attendance'&&!(seatingSelectedSeat&&!selectedSeatingSeatValue());
   var queueMode=fullscreen&&seatingPlacementQueueSelecting;
   if(filtered.length===0){
     list.innerHTML='<div style="padding:14px;font-size:12px;color:var(--ts);text-align:center">표시할 단원이 없습니다</div>';
@@ -19930,11 +20007,12 @@ function renderSeatingMemberList(){
       prefix='<input type="checkbox" class="seating-attendance-checkbox" '+(checked?'checked':'')+((locked||!canEdit)?' disabled':'')+' title="누르거나 끌어서 참석 체크/해제" aria-label="'+escAttr(m.name)+' 참석 체크/해제" onpointerdown="startSeatingAttendancePaint(event,\''+escAttr(m.id)+'\')" onclick="return handleSeatingAttendanceCheckboxClick(event,\''+escAttr(m.id)+'\')">';
     }
     var stateLabel=attendanceMode?'<span class="seating-member-state '+(checked?'attending':'')+'">'+(checked?'참석':'미참석')+'</span>':'';
-    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked ':'')+(batchOn?'batch-selected ':'')+(queueNext?'queue-next ':'')+'" data-seating-member-id="'+escAttr(m.id)+'" onclick="handleSeatingMemberRowClick(\''+escAttr(m.id)+'\')">'
+    return '<div class="seating-member '+(on?'on ':'')+(placed?'placed ':'')+(unplaced?'unplaced ':'')+((locked||!canEdit)?'locked ':'')+(batchOn?'batch-selected ':'')+(queueNext?'queue-next ':'')+'" data-seating-member-id="'+escAttr(m.id)+'" '+(fullscreen&&!attendanceMode?'role="button" tabindex="0" aria-pressed="'+(queueMode?queueIndex>-1:on)+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}" ':'')+'onclick="handleSeatingMemberRowClick(\''+escAttr(m.id)+'\')">'
       +prefix
       +'<div class="seating-member-name"><span class="seating-member-copy">'+escHtml(m.name)+' <span class="seating-member-meta">'+escHtml(m.part+(m.subPart?' · '+m.subPart:''))+(placed?' · 배치됨':'')+(unplaced?' · 미배치':'')+(absent?' · 미참석':'')+(locked?' · 고정':(!canEdit?' · 읽기':'') )+'</span></span>'+stateLabel+'</div>'
       +'</div>';
   }).join('');
+  list.scrollTop=scrollTop;
   renderSeatingWorkspaceShell();
 }
 function seatingInlineCandidates(){
@@ -19951,6 +20029,7 @@ function seatingInlineCandidates(){
   }).slice(0,10);
 }
 function renderSeatingInlinePicker(){
+  if(isSeatingFullscreenWorkspace())return '';
   if(!seatingSelectedSeat)return '';
   var rows=seatingActiveRows();
   var row=rows[seatingSelectedSeat.row];
@@ -20012,6 +20091,10 @@ function setSeatingCenterOffset(value){
 // Lucide 0.468.0 (ISC); attribution in licenses/lucide.txt.
 function seatingToolIcon(name){
   var paths={hand:'<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',pointer:'<path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/>',lock:'<circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/>'};
+  paths.highlight='<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4 4a2 2 0 0 1-3 0l-7-7a2 2 0 0 1 0-3l4-4"/><path d="M3 7 1 5"/><path d="m1 13 3-1"/><path d="m7 1 1 3"/>';
+  paths.erase='<path d="m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>';
+  paths.compare='<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>';
+  paths.view='<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>';
   return '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(paths[name]||paths.pointer)+'</svg>';
 }
 function seatingMemberPositionLocked(id){
@@ -20165,7 +20248,6 @@ function confirmSeatingMovePreview(){
   seatingMovePreview=null;beginSeatingEdit();
   seatingRows=preview.after.rows;seatingOrchestraRows=preview.after.orchestraRows;seatingSpecialSlots=preview.after.specialSlots;
   seatingAutoFit=false;seatingSelectedSeat=null;seatingSelectedMemberId='';seatingInlineQuery='';
-  var search=document.getElementById('seatingMemberSearch');if(search)search.value='';
   seatingPlacementQueue=[];seatingPlacementQueueCompleted=[];seatingPlacementQueueActive=false;seatingPlacementQueueSelecting=false;
   renderSeatingMemberList();renderSeatingBoard();showToast(preview.count+'명 배치 적용');
 }
@@ -20247,7 +20329,10 @@ function renderSeatingInteractionTools(){
     }
   }
   var bar=document.getElementById('seatingMoveConfirm');
-  if(!bar){bar=document.createElement('div');bar.id='seatingMoveConfirm';bar.className='seating-move-confirm';bar.setAttribute('role','group');bar.setAttribute('aria-label','자리 이동 확인');sub.appendChild(bar);}
+  if(!bar){bar=document.createElement('div');bar.id='seatingMoveConfirm';bar.className='seating-move-confirm';bar.setAttribute('role','group');bar.setAttribute('aria-label','자리 이동 확인');}
+  var barParent=isSeatingFullscreenWorkspace()?document.getElementById('seatingActionDock'):sub;
+  if(bar.parentNode!==barParent)barParent.appendChild(bar);
+  sub.classList.toggle('seating-previewing',!!preview);
   bar.hidden=!preview;
   if(preview)bar.innerHTML='<strong>'+(preview.blocked?escHtml(preview.blocked):preview.unplaced?'교체 · '+preview.unplaced+'명 미배치':preview.count+'명 이동 예정')+'</strong><button class="btn" onclick="cancelSeatingMovePreview()">취소</button><button class="btn seating-move-apply" '+(preview.blocked||seatingInteractionMode==='pan'?'disabled':'')+' onclick="confirmSeatingMovePreview()">적용</button>';
 }
@@ -20357,6 +20442,12 @@ function renderSeatingSummary(){
   if(status)status.textContent=boardLabel+' 참석 '+stats.attended+'명 · 좌석 '+stats.capacity+'칸 · 배치 '+stats.placedUnique+'명 · 미배치 '+stats.unplaced+'명'+(stats.shortage>0?' · 좌석 '+stats.shortage+'칸 부족':(stats.unplaced>0?' 확인 필요':''));
 }
 function focusSeatingMemberSearchForSeat(){
+  if(isSeatingFullscreenWorkspace()){
+    seatingMemberPanelCollapsed=false;
+    seatingUnplacedOnly=false;seatingAttendingOnly=true;seatingAbsentOnly=false;
+    renderSeatingMemberList();
+    return;
+  }
   focusSeatingInlineSearch();
 }
 function handleSeatingSeatClick(row,col){
@@ -20456,6 +20547,19 @@ function seatingSetPlacementSeat(placement,seat){
   if(row&&placement.col>=0&&placement.col<row.seats.length)row.seats[placement.col]=normalizeSeatingSeat(seat);
 }
 function moveSeatingMemberToSeat(memberId,row,col){
+  if(isSeatingFullscreenWorkspace()){
+    if(!canUseSeatingPlan()||seatingInteractionMode==='pan')return;
+    var member=seatingMembers.find(function(m){return m.id===memberId;}),target=seatingActiveRows()[row];
+    if(member&&seatingAttendees[memberId]&&target&&col>=0&&col<target.seats.length&&!target.seats[col]&&!seatingAssignedMap()[memberId]){
+      seatingMovePreview=null;beginSeatingEdit();
+      target.seats[col]={memberId:memberId,name:member.name,part:member.part,highlight:false,locked:false};
+      seatingSelectedSeat=null;seatingSelectedMemberId='';seatingInlineQuery='';seatingAutoFit=false;
+      if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
+      renderSeatingMemberList();renderSeatingBoard();
+      return;
+    }
+    if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
+  }
   return previewSeatingMembers([memberId],row,col,false);
 }
 function assignMemberToSeat(memberId,row,col,clearSelectionAfter){
@@ -20793,7 +20897,24 @@ function setupSeatingBoardGestures(){
   seatingGesturesBound=true;
   scroller.setAttribute('tabindex','0');
   var mousePan=null;
-  scroller.addEventListener('click',function(e){if(seatingInteractionMode==='pan'){e.preventDefault();e.stopImmediatePropagation();}},true);
+  scroller.addEventListener('click',function(e){if(seatingInteractionMode==='pan'||Date.now()<seatingTouchClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+  var compactMedia=window.matchMedia('(max-width:719px), (max-height:520px)');
+  var updateWorkspaceLayout=function(){
+    if(!isSeatingFullscreenWorkspace())return;
+    if(!compactMedia.matches)seatingMemberPanelCollapsed=false;
+    else if(seatingWorkspaceMode==='place'&&!seatingPlacementQueueSelecting)seatingMemberPanelCollapsed=true;
+    renderSeatingWorkspaceShell();
+  };
+  if(compactMedia.addEventListener)compactMedia.addEventListener('change',updateWorkspaceLayout);
+  else compactMedia.addListener(updateWorkspaceLayout);
+  var narrowMedia=window.matchMedia('(max-width:560px)');
+  if(narrowMedia.addEventListener)narrowMedia.addEventListener('change',renderSeatingWorkspaceShell);
+  else narrowMedia.addListener(renderSeatingWorkspaceShell);
+  document.getElementById('subSeatingPlan').addEventListener('keydown',function(e){
+    if(e.key!=='Escape'||!isSeatingFullscreenWorkspace())return;
+    if(seatingUsesStackedWorkspace()&&!seatingMemberPanelCollapsed){e.preventDefault();e.stopPropagation();closeSeatingMemberPanel();}
+    else if(seatingViewControlsOpen){e.preventDefault();e.stopPropagation();toggleSeatingViewControls();}
+  });
   scroller.addEventListener('pointerdown',function(e){
     if(e.pointerType!=='mouse'||e.button!==0||seatingInteractionMode!=='pan')return;
     e.preventDefault();
@@ -20812,13 +20933,14 @@ function setupSeatingBoardGestures(){
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(type){scroller.addEventListener(type,function(){mousePan=null;});});
   scroller.addEventListener('touchstart',function(e){
     if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
-    if(seatingUsesPortraitAttendanceScroll()&&e.touches.length===1){
-      var attendanceSub=document.getElementById('subSeatingPlan');
-      seatingTouchPanning=true;
-      seatingPanStartY=e.touches[0].clientY;
-      seatingPanScrollTop=attendanceSub?attendanceSub.scrollTop:0;
-      return;
+    if(seatingInteractionMode==='pan'){
+      seatingInteractionMode='select';
+      document.getElementById('subSeatingPlan').classList.remove('seating-pan-mode');
+      renderSeatingQueueControls();
+      var apply=document.querySelector('#seatingMoveConfirm .seating-move-apply');
+      if(apply)apply.disabled=!!(seatingMovePreview&&seatingMovePreview.blocked);
     }
+    seatingTouchMoved=false;
     if(e.touches.length===1){
       var fullscreenSub=document.getElementById('subSeatingPlan');
       seatingTouchPanning=true;
@@ -20829,6 +20951,7 @@ function setupSeatingBoardGestures(){
       seatingPanOuterScrollTop=fullscreenSub?fullscreenSub.scrollTop:0;
     }
     if(e.touches.length===2){
+      seatingTouchMoved=true;
       seatingTouchPanning=false;
       seatingPinchStartDist=seatingTouchDistance(e.touches);
       seatingPinchStartZoom=seatingZoom;
@@ -20836,12 +20959,6 @@ function setupSeatingBoardGestures(){
   },{passive:false});
   scroller.addEventListener('touchmove',function(e){
     if(e.target&&e.target.closest&&e.target.closest('.seating-inline-picker'))return;
-    if(seatingUsesPortraitAttendanceScroll()&&e.touches.length===1&&seatingTouchPanning){
-      var attendanceSub=document.getElementById('subSeatingPlan');
-      e.preventDefault();
-      if(attendanceSub)attendanceSub.scrollTop=seatingPanScrollTop+(seatingPanStartY-e.touches[0].clientY);
-      return;
-    }
     if(e.touches.length===2&&seatingPinchStartDist>0){
       e.preventDefault();
       var next=seatingPinchStartZoom*(seatingTouchDistance(e.touches)/seatingPinchStartDist);
@@ -20851,6 +20968,7 @@ function setupSeatingBoardGestures(){
       e.preventDefault();
       var panDeltaX=seatingPanStartX-e.touches[0].clientX;
       var panDeltaY=seatingPanStartY-e.touches[0].clientY;
+      if(Math.hypot(panDeltaX,panDeltaY)>6)seatingTouchMoved=true;
       var desiredTop=seatingPanScrollTop+panDeltaY;
       var maxTop=Math.max(0,scroller.scrollHeight-scroller.clientHeight);
       var clampedTop=Math.max(0,Math.min(maxTop,desiredTop));
@@ -20864,12 +20982,14 @@ function setupSeatingBoardGestures(){
     }
   },{passive:false});
   scroller.addEventListener('touchend',function(e){
+    if(seatingTouchMoved)seatingTouchClickUntil=Date.now()+350;
     if(e.touches.length<2){
       seatingPinchStartDist=0;
       seatingPinchStartZoom=0;
     }
     if(e.touches.length===0)seatingTouchPanning=false;
   },{passive:false});
+  scroller.addEventListener('touchcancel',function(){seatingTouchPanning=false;seatingPinchStartDist=0;seatingTouchClickUntil=Date.now()+350;},{passive:true});
 
   scroller.addEventListener('wheel',function(e){
     var sub=document.getElementById('subSeatingPlan');
@@ -20890,7 +21010,8 @@ function applySeatingBoardHeight(){
   seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(seatingBoardHeightPct,10)||60)/10)*10));
   if(sub){
     sub.style.setProperty('--seating-board-height',seatingBoardHeightPct+'dvh');
-    sub.style.setProperty('--seating-member-panel-height',Math.max(10,Math.min(52,92-seatingBoardHeightPct))+'dvh');
+    sub.style.setProperty('--seating-member-panel-height',Math.max(40,Math.min(78,120-seatingBoardHeightPct))+'dvh');
+    sub.style.setProperty('--seating-roster-width',Math.max(20,Math.min(40,88-seatingBoardHeightPct))+'%');
   }
   if(range)range.value=String(seatingBoardHeightPct);
   if(label)label.textContent=seatingBoardHeightPct+'%';
@@ -20914,12 +21035,14 @@ function toggleSeatingFullscreen(){
   seatingAbsentOnly=false;
   seatingUnplacedOnly=on;
   sub.classList.toggle('seating-fullscreen',on);
+  if(on)seatingMemberPanelCollapsed=seatingUsesStackedWorkspace();
   document.body.classList.toggle('seating-fullscreen',on);
   if(on)applySeatingBoardHeight();
   if(btn)btn.textContent=on?'전체 화면 닫기':'전체 화면';
   renderSeatingMemberList();
   renderSeatingBoard();
   renderSeatingWorkspaceShell();
+  if(on)fitSeatingBoardInView();
   setTimeout(function(){
     if(on)sub.scrollTop=0;
   },0);

@@ -27,7 +27,7 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       const sub = document.getElementById('subSeatingPlan');
       document.body.appendChild(sub);
       Array.from(document.body.children).forEach(el => { if (el !== sub && el.tagName !== 'SCRIPT') el.style.display = 'none'; });
-      sub.style.display = 'block'; sub.classList.remove('hidden');
+      sub.style.removeProperty('display'); sub.classList.remove('hidden');
       sub.classList.add('seating-fullscreen');
       seatingSettingsOpen = false; seatingMemberPanelCollapsed = true;
       window.resetFixture = () => {
@@ -63,7 +63,7 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       check(JSON.stringify(seatingSelectedSeat) === selected, 'return cleared seat selection');
       check(!document.querySelector('[data-seat-context="person"]').disabled, 'return did not restore actions');
       seatingSelectedSeat = {row: 1, col: 0}; renderSeatingBoard();
-      check(visible('[data-seat-context="empty"]').length === 2, 'empty actions missing');
+      check(visible('[data-seat-context="empty"]').length === 1, 'empty action missing');
       check(!visible('[data-seat-context="person"]').length, 'person actions shown for empty');
       seatingInlineQuery = '김'; setSeatingInteractionMode('pan'); setSeatingInteractionMode('select');
       check(seatingSelectedSeat.row === 1 && seatingInlineQuery === '김', 'pan cleared empty seat or search');
@@ -97,7 +97,7 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
     assert.equal(await page.locator('#seatingPositionTools').isVisible(), false, 'lock opened a popup');
     await page.locator('.seating-edit-actions .seating-context-lock').click();
     assert.equal(await page.evaluate(() => seatingRows[0].seats[0].locked), false);
-    await page.locator('[data-seat-context="person"]').filter({hasText: '자리 비우기'}).click();
+    await page.locator('[data-seat-context="person"][aria-label="자리 비우기"]').click();
     assert.equal(await page.evaluate(() => seatingRows[0].seats[0]), null, 'context clear button did not clear the selected seat');
     await page.locator('.seating-history-actions [aria-label="되돌리기"]').click();
     assert.equal(await page.evaluate(() => seatingRows[0].seats[0].memberId), 'm0');
@@ -115,7 +115,7 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
     await page.locator('#seatingBoard .seating-row').nth(2).locator('.seating-seat').nth(1).click();
     assert.equal(await page.evaluate(() => seatingRows[2].seats[1].memberId), 'm5');
     assert.equal(await page.evaluate(() => seatingPlacementQueueActive), false);
-    await page.locator('#seatingQueueUndoBtn').click();
+    await page.locator('.seating-history-actions [aria-label="되돌리기"]').click();
     assert.equal(await page.evaluate(() => seatingPlacementQueue.join(',')), 'm5');
     await page.evaluate(() => resetFixture());
     const result = await page.evaluate(() => {
@@ -337,7 +337,8 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: touchX, y: touchY }] });
     for (let i = 1; i <= 5; i++) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: touchX, y: touchY - i * 12 }] });
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    assert.ok(await scroller.evaluate((el, before) => el.scrollTop > before, touchBefore), 'landscape touch scroll failed');
+    const touchAfter = await scroller.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, content: el.scrollHeight, collapsed: seatingMemberPanelCollapsed, panning: seatingTouchPanning }));
+    assert.ok(touchAfter.top > touchBefore, 'landscape touch scroll failed: '+JSON.stringify({ before: touchBefore, after: touchAfter, touchBox }));
     assert.equal(await page.evaluate(() => seatingSelectedSeat), null, 'touch pan selected seat');
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.evaluate(() => { document.body.classList.add('dark'); openSeatingPositionTools(); });
