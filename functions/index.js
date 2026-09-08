@@ -2151,6 +2151,32 @@ function songIndexShardId(songId) {
   return "shard_" + String(digest.readUInt16BE(0) % SONG_INDEX_SHARDS).padStart(2, "0");
 }
 
+async function syncSongIndexWrite(event) {
+  if (!event.data) return null;
+  const songId = event.params.songId;
+  const songRef = db.collection("songs").doc(songId);
+  const shardRef = db.collection("songIndex").doc(songIndexShardId(songId));
+  const metaRef = db.collection("songIndex").doc("_meta");
+  return db.runTransaction(async (tx) => {
+    // Read the source in the transaction: deliveries can be repeated or arrive out of order.
+    const [songSnap, shardSnap, metaSnap] = await Promise.all([tx.get(songRef), tx.get(shardRef), tx.get(metaRef)]);
+    const shardData = shardSnap.exists ? shardSnap.data() || {} : {};
+    const items = Object.assign({}, shardData.items || {});
+    const wasIndexed = Object.prototype.hasOwnProperty.call(items, songId);
+    const latest = songSnap.exists ? songSnap.data() || {} : null;
+    if (metaSnap.exists && wasIndexed === songSnap.exists && (!wasIndexed || JSON.stringify(items[songId]) === JSON.stringify(latest))) return null;
+    if (songSnap.exists) items[songId] = latest;
+    else delete items[songId];
+    if (Buffer.byteLength(JSON.stringify(items), "utf8") > 850000) throw new Error("song_index_shard_too_large");
+    const oldCount = Number(metaSnap.exists ? (metaSnap.data() || {}).count : 0);
+    const delta = Number(songSnap.exists) - Number(wasIndexed);
+    const updatedAt = nowIso();
+    tx.set(shardRef, {items, updatedAt});
+    tx.set(metaRef, {count: Math.max(0, oldCount + delta), shardCount: SONG_INDEX_SHARDS, version: 1, updatedAt});
+    return null;
+  });
+}
+
 async function rebuildSongIndex(request) {
   requireAdmin(request);
   const songsSnap = await db.collection("songs").get();
@@ -2298,31 +2324,7 @@ exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", sec
 
 exports.seatingDirectory = onCall({timeoutSeconds: 120, memory: "256MiB"}, handleSeatingDirectory);
 
-exports.syncSongIndex = onDocumentWritten("songs/{songId}", async (event) => {
-  const songId = event.params.songId;
-  const beforeExists = event.data.before.exists;
-  const afterExists = event.data.after.exists;
-  const shardRef = db.collection("songIndex").doc(songIndexShardId(songId));
-  const metaRef = db.collection("songIndex").doc("_meta");
-  await db.runTransaction(async (tx) => {
-    const [shardSnap, metaSnap] = await Promise.all([tx.get(shardRef), tx.get(metaRef)]);
-    const shardData = shardSnap.exists ? shardSnap.data() || {} : {};
-    const items = Object.assign({}, shardData.items || {});
-    if (afterExists) items[songId] = event.data.after.data() || {};
-    else delete items[songId];
-    const estimatedBytes = Buffer.byteLength(JSON.stringify(items), "utf8");
-    if (estimatedBytes > 850000) throw new Error("song_index_shard_too_large");
-    const oldCount = Number(metaSnap.exists ? (metaSnap.data() || {}).count : 0);
-    const delta = !beforeExists && afterExists ? 1 : (beforeExists && !afterExists ? -1 : 0);
-    tx.set(shardRef, {items, updatedAt: nowIso()});
-    tx.set(metaRef, {
-      count: Math.max(0, oldCount + delta),
-      shardCount: SONG_INDEX_SHARDS,
-      version: 1,
-      updatedAt: nowIso(),
-    });
-  });
-});
+exports.syncSongIndex = onDocumentWritten({document: "songs/{songId}", retry: true}, syncSongIndexWrite);
 
 exports.syncSeatingMemberDirectory = onDocumentWritten({
   document: "members/{memberId}",

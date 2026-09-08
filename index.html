@@ -3006,6 +3006,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
     <div style="text-align:right;font-size:9px;color:var(--bd);margin-top:6px">Engineered by JY</div>
   </div>
   <div class="result-count" id="resultCount"></div>
+  <div id="songLoadStatus" class="home-empty-row" role="status" hidden></div>
   <div class="card-list" id="songList"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div>
 </div>
 
@@ -4573,6 +4574,7 @@ var CAL_KINDS={hymn:{label:'주일찬송',color:'#557448'},special:{label:'특�
 var toastTimer=null;
 var songsLoaded=false, schedulesLoaded=false;
 var songsLoadPromise=null, schedulesLoadPromise=null;
+var songLoadError=false;
 var homeRenderTimer=null;
 var homeAttendanceCache={key:'',ts:0,promise:null,data:null};
 var sharedMembersCache={ts:0,rows:null,promise:null};
@@ -4623,7 +4625,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.07.8';
+var APP_RELEASE_VERSION='26.09.08.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8505,15 +8507,14 @@ function homeEventSections(schedule){
   });
 }
 function homeEventMatchedScoreRow(schedule,title,rows){
-  var titleKey=scoreSearchKey(title);
+  var titleKey=scoreSearchKey(scheduleScoreTitle(title));
   if(!titleKey)return null;
   rows=Array.isArray(rows)?rows:scheduleMatchedScoreRows(schedule);
   for(var i=0;i<rows.length;i++){
     var row=rows[i];
     var names=[row.song&&row.song.songName,row.matchedSong&&row.matchedSong.songName,row.score&&row.score.title].filter(Boolean);
     for(var j=0;j<names.length;j++){
-      var key=scoreSearchKey(names[j]);
-      if(key&&(titleKey.indexOf(key)>-1||key.indexOf(titleKey)>-1))return row;
+      if(scoreTitlesMatch(scheduleScoreTitle(title),names[j]))return row;
     }
   }
   return null;
@@ -9797,43 +9798,62 @@ function loadSongsFromCollection(){
     return rows;
   });
 }
+function applyLoadedSongs(rows){
+  allSongs=rows;
+  songsLoaded=true;
+  buildFilters();buildCatOptions();buildYearOptions();doFilter();
+  requestHomeRender();
+}
+function setSongLoadStatus(failed){
+  var status=document.getElementById('songLoadStatus');
+  if(!status)return;
+  status.hidden=!failed;
+  status.innerHTML=failed?'최신 곡 목록을 불러오지 못했습니다. <button type="button" class="home-view-link" onclick="initSongs(true)">다시 불러오기</button>':'';
+}
 function initSongs(force){
   force=!!force;
   if(!canViewSongList()){
+    setSongLoadStatus(false);
     filteredSongs=[];
     renderSongLoginRequired();
     requestHomeRender();
     return Promise.resolve([]);
   }
   if(songsLoadPromise)return songsLoadPromise;
-  var cached=force?null:loadCache('choir_songs',600000);
-  if(Array.isArray(cached)){
-    allSongs=cached;
-    songsLoaded=true;
-    buildFilters();buildCatOptions();buildYearOptions();doFilter();
-    requestHomeRender();
-    return Promise.resolve(allSongs);
+  songLoadError=false;
+  setSongLoadStatus(false);
+  var cached=loadCacheEntry('choir_songs',7*86400000);
+  if(cached.hit&&Array.isArray(cached.data)){
+    applyLoadedSongs(cached.data);
+    if(!force&&cached.age<600000)return Promise.resolve(allSongs);
   }
-  songsLoadPromise=loadSongIndexRows().catch(function(error){
+  if(!songsLoaded)document.getElementById('songList').innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
+  var settled=false;
+  var request=withLoadDeadline(loadSongIndexRows().catch(function(error){
+    if(settled||songsLoadPromise!==request||!canViewSongList())throw error;
     console.warn('곡 색인을 사용할 수 없어 원본 목록으로 전환합니다',error);
     return loadSongsFromCollection();
-  }).then(function(rows){
-    allSongs=rows;
-    songsLoaded=true;
-    saveCache('choir_songs',allSongs);
-    buildFilters();buildCatOptions();buildYearOptions();doFilter();
-    requestHomeRender();
+  }),8000).then(function(rows){
+    settled=true;
+    if(songsLoadPromise!==request)return allSongs;
+    if(!canViewSongList()){songsLoadPromise=null;return allSongs;}
+    saveCache('choir_songs',rows);
+    applyLoadedSongs(rows);
     songsLoadPromise=null;
     return allSongs;
   }).catch(function(err){
+    settled=true;
+    if(songsLoadPromise!==request)return allSongs;
+    if(!canViewSongList()){songsLoadPromise=null;return allSongs;}
     console.error(err);
-    if(!Array.isArray(cached)||cached.length===0){
-      document.getElementById('songList').innerHTML='<div class="loading">데이터를 불러올 수 없습니다.</div>';
-    }
+    songLoadError=true;
+    setSongLoadStatus(true);
+    if(!songsLoaded)document.getElementById('songList').innerHTML='';
     songsLoadPromise=null;
     return allSongs;
   });
-  return songsLoadPromise;
+  songsLoadPromise=request;
+  return request;
 }
 
 // ==================== Firestore/Storage: 악보 ====================
@@ -12940,16 +12960,7 @@ function refreshData(){
   invalidateHomeAttendanceCache();
   invalidatePublishedSeatingCache(true);
   var songRefresh=canViewSongList()
-    ? db.collection('songs').get().then(function(snap){
-      allSongs=[];
-      snap.forEach(function(doc){
-        allSongs.push(songRowFromDoc(doc));
-      });
-      songsLoaded=true;
-      saveCache('choir_songs',allSongs);
-      buildFilters();doFilter();
-      return allSongs;
-    })
+    ? initSongs(true)
     : Promise.resolve([]).then(function(){
       allSongs=[];
       filteredSongs=[];
@@ -12958,7 +12969,7 @@ function refreshData(){
       renderSongLoginRequired();
       return [];
     });
-  Promise.all([
+  return withLoadDeadline(Promise.all([
     songRefresh,
     initSchedules(true),
     db.collection('settings').doc('notice').get().then(function(doc){
@@ -12968,10 +12979,10 @@ function refreshData(){
     }),
     loadScores(true,canManageScores()),
     getPublishedSeatingPlan(true)
-  ]).then(function(){
+  ]),20000).then(function(){
     requestHomeRender();
     if(currentTab==='scores')renderScoresPage();
-    showToast('최신 데이터로 업데이트 완료!');
+    showToast(canViewSongList()&&songLoadError?'곡 목록을 갱신하지 못했습니다. 다시 불러오기를 눌러주세요.':'최신 데이터로 업데이트 완료!');
   }).catch(function(){
     showToast('일부 데이터를 불러오지 못했습니다');
   });
@@ -13067,6 +13078,7 @@ function resetSongFilters(){
 
 // ==================== 곡 목록 렌더링 ====================
 function renderSongLoginRequired(){
+  setSongLoadStatus(false);
   var c=document.getElementById('songList');
   var rc=document.getElementById('resultCount');
   if(rc){
@@ -16863,6 +16875,19 @@ function songDateKey(song){
 function scheduleScoreSource(schedule){
   return [schedule&&schedule.songs,schedule&&schedule.program].filter(Boolean).join('\n');
 }
+function scheduleScoreTitle(value){
+  return rehearsalCleanLine(value).replace(/^(?:곡명|곡|전체|합창|솔로|듀엣|중창|앵콜|encore)\s*[:：·]\s*/i,'').trim();
+}
+function scheduleScoreTitles(schedule){
+  var titles=[], seen={};
+  function add(value){
+    var title=scheduleScoreTitle(value), key=scoreSearchKey(title);
+    if(key&&!seen[key]){seen[key]=true;titles.push(title);}
+  }
+  String(schedule&&schedule.songs||'').split(/[,，;|\r\n]+/).forEach(add);
+  parseRehearsalProgramItems(schedule&&schedule.program||'','').forEach(function(item){add(rehearsalItemTitle(item));});
+  return titles;
+}
 function scheduleSongInRange(song,schedule){
   var key=songDateKey(song);
   return !!(key&&scheduleOccursOnDate(schedule,key));
@@ -16873,32 +16898,17 @@ function betterScheduleSongMatch(a,b){
   return songScheduleRankValue(a.song)<songScheduleRankValue(b.song);
 }
 function scheduleMatchedSongs(schedule){
-  var source=scheduleScoreSource(schedule);
-  var sourceKey=scoreSearchKey(source);
-  if(!sourceKey)return [];
-  var bestByKey={};
-  (allSongs||[]).forEach(function(song){
-    var name=song&&song.songName||'';
-    var key=scoreSearchKey(name);
-    if(key.length<2)return;
-    var idx=sourceKey.indexOf(key);
-    if(idx<0)return;
-    var row={song:song,key:key,idx:idx,inRange:scheduleSongInRange(song,schedule)};
-    if(betterScheduleSongMatch(row,bestByKey[key]))bestByKey[key]=row;
-  });
-  var rows=Object.keys(bestByKey).map(function(key){return bestByKey[key];});
-  rows.sort(function(a,b){return b.key.length-a.key.length||a.idx-b.idx});
-  var selected=[];
-  rows.forEach(function(row){
-    var covered=selected.some(function(sel){
-      return sel.key.indexOf(row.key)>-1&&row.idx>=sel.idx&&row.idx<=(sel.idx+sel.key.length);
+  var selected=[], seen={};
+  scheduleScoreTitles(schedule).forEach(function(title){
+    var best=null;
+    (allSongs||[]).forEach(function(song){
+      if(!scoreTitlesMatch(title,song.songName))return;
+      var row={song:song,inRange:scheduleSongInRange(song,schedule)};
+      if(betterScheduleSongMatch(row,best))best=row;
     });
-    if(!covered)selected.push(row);
+    if(best&&!seen[best.song.id]){seen[best.song.id]=true;selected.push(best.song);}
   });
-  selected.sort(function(a,b){
-    return a.idx-b.idx||((b.inRange?1:0)-(a.inRange?1:0))||songScheduleRankValue(a.song)-songScheduleRankValue(b.song);
-  });
-  return selected.map(function(row){return row.song;});
+  return selected;
 }
 function scheduleMatchedScoreRows(schedule){
   var rows=[], seenScores={};
@@ -16915,11 +16925,10 @@ function scheduleMatchedScoreRows(schedule){
       rows.push({song:contextualSong,matchedSong:song,score:null});
     }
   });
-  var sourceKey=scoreSearchKey(scheduleScoreSource(schedule));
-  if(sourceKey){
+  var titles=scheduleScoreTitles(schedule);
+  if(titles.length){
     sortScores(allScores.filter(canViewScoreItem)).forEach(function(score){
-      var key=scoreSearchKey(score.title);
-      if(key.length<2||sourceKey.indexOf(key)<0||seenScores[score.id])return;
+      if(seenScores[score.id]||!titles.some(function(title){return scoreTitlesMatch(title,score.title)||scoreTitlesMatch(title,score.linkedSongName);}))return;
       seenScores[score.id]=true;
       rows.push({song:null,score:score});
     });
