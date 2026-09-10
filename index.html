@@ -4687,7 +4687,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.08.4';
+var APP_RELEASE_VERSION='26.09.10.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8988,6 +8988,26 @@ function globalSearchText(value){
 function globalSearchCompact(value){
   return globalSearchText(value).replace(/\s+/g,'');
 }
+function globalSearchInitialPattern(value){
+  if(!/[\u1100-\u1112]/.test(value))return null;
+  var pattern=Array.from(value).map(function(char){
+    // NFKC converts typed compatibility consonants to modern Hangul initials.
+    var initial=char.charCodeAt(0)-0x1100;
+    if(initial>=0&&initial<19){
+      var start=0xac00+initial*588;
+      return '['+char+String.fromCharCode(start)+'-'+String.fromCharCode(start+587)+']';
+    }
+    return char.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  }).join('');
+  return new RegExp(pattern);
+}
+function prepareGlobalSearchQuery(query){
+  if(query&&typeof query==='object')return query;
+  var text=globalSearchText(query), compact=text.replace(/\s+/g,'');
+  return {text:text,compact:compact,initialPattern:globalSearchInitialPattern(compact),tokens:text.split(' ').filter(Boolean).map(function(token){
+    return {text:token,initialPattern:globalSearchInitialPattern(token)};
+  })};
+}
 function globalSearchTimestamp(value){
   var time=Date.parse(value||'');
   return isNaN(time)?0:time;
@@ -9040,30 +9060,35 @@ function globalSearchSourceRows(type){
   return rows;
 }
 function globalSearchMatch(item,query){
-  if(!query)return true;
+  query=prepareGlobalSearchQuery(query);
+  if(!query.text)return true;
   var haystack=item.haystack;
-  var compact=globalSearchCompact(haystack);
-  return globalSearchText(query).split(' ').filter(Boolean).every(function(token){
-    return haystack.indexOf(token)>-1||compact.indexOf(globalSearchCompact(token))>-1;
+  var compact=haystack.replace(/\s+/g,'');
+  return query.tokens.every(function(token){
+    return haystack.indexOf(token.text)>-1||compact.indexOf(token.text)>-1||!!(token.initialPattern&&token.initialPattern.test(compact));
   });
 }
 function globalSearchRank(item,query){
+  query=prepareGlobalSearchQuery(query);
   var title=globalSearchText(item.title);
-  var compactTitle=globalSearchCompact(item.title);
-  var q=globalSearchText(query);
-  var compactQ=globalSearchCompact(query);
+  var compactTitle=title.replace(/\s+/g,'');
+  var q=query.text;
+  var compactQ=query.compact;
   if(title===q||compactTitle===compactQ)return 0;
   if(title.indexOf(q)===0||compactTitle.indexOf(compactQ)===0)return 1;
   if(title.indexOf(q)>-1||compactTitle.indexOf(compactQ)>-1)return 2;
+  var match=query.initialPattern&&query.initialPattern.exec(compactTitle);
+  if(match)return match.index===0?(match[0].length===compactTitle.length?0:1):2;
   return 3;
 }
 function sortGlobalSearchRows(rows,query,type){
+  query=prepareGlobalSearchQuery(query);
   return rows.slice().sort(function(a,b){
-    if(query){
+    if(query.text){
       var rankDiff=globalSearchRank(a,query)-globalSearchRank(b,query);
       if(rankDiff)return rankDiff;
     }
-    if(type==='schedule'&&!query){
+    if(type==='schedule'&&!query.text){
       var today=globalSearchTimestamp(getTodayInputDate());
       var af=a.sortValue>=today, bf=b.sortValue>=today;
       if(af!==bf)return af?-1:1;
@@ -9144,8 +9169,9 @@ function renderGlobalSearch(){
     results.innerHTML=html;
     return;
   }
+  var searchQuery=prepareGlobalSearchQuery(query);
   types.forEach(function(type){
-    var rows=sortGlobalSearchRows(globalSearchSourceRows(type).filter(function(item){return globalSearchMatch(item,query);}),query,type);
+    var rows=sortGlobalSearchRows(globalSearchSourceRows(type).filter(function(item){return globalSearchMatch(item,searchQuery);}),searchQuery,type);
     var limit=globalSearchTab==='all'?8:40;
     html+=renderGlobalSearchGroup(type,rows.slice(0,limit),'',rows.length);
   });
