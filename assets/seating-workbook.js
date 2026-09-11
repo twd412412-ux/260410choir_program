@@ -2,6 +2,7 @@
   'use strict';
   const MAGIC='choir-seating-xlsx', VERSION=3, MAX_ROWS=40, MAX_COLS=120;
   const boards=[['합창 배치','rows'],['관현악 배치','orchestraRows']];
+  const partStyles=[['S1','FFE3EAF8'],['S2','FFF8E2E4'],['T1','FFE5EEDC'],['T2','FFFFE7B5'],['관현악','FFECE5F4']];
   // One seat spans two half-seat columns; match the app's centered parity geometry.
   function boardGeometry(rows){
     const max=Math.max(...rows.map(r=>r.seats.length));
@@ -49,7 +50,13 @@
     });
     const needed=new Set(allSeats(plan).map(s=>s.memberId).concat(Object.keys(plan.attendees||{}).filter(id=>plan.attendees[id])));
     people.forEach(m=>{identities[labels[m.id]]={id:m.id,name:m.name,part:m.part};});
-    const choices=[...people.values()].filter(m=>m.name.trim()).sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.part.localeCompare(b.part,'ko')||a.id.localeCompare(b.id));
+    const partRank=part=>{const index=partStyles.findIndex(p=>p[0]===part);return index<0?partStyles.length:index;};
+    const choices=[...people.values()].filter(m=>m.name.trim()).sort((a,b)=>partRank(a.part)-partRank(b.part)||a.part.localeCompare(b.part,'ko')||a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
+    const partChoices=partStyles.map(([part])=>choices.filter(m=>m.part===part));
+    function memberColors(sheet,cell,endAddress=cell.address){
+      const rules=partStyles.flatMap(([,color],i)=>partChoices[i].length?[{type:'expression',formulae:['COUNTIF(ChoirPart'+i+',$'+cell.address+')>0'],style:{fill:{type:'pattern',pattern:'solid',fgColor:{argb:color}}}}]:[]);
+      if(rules.length)sheet.addConditionalFormatting({ref:cell.address+':'+endAddress,rules});
+    }
     function memberDropdown(cell){
       if(!choices.length)return;
       cell.dataValidation={type:'list',allowBlank:true,formulae:['ChoirMemberNames'],showErrorMessage:false};
@@ -89,9 +96,9 @@
           sheet.mergeCells(g.row,col,g.row,col+1);
           const c=row.getCell(col);c.value=seat?labels[seat.memberId]||seat.name:null;
           memberDropdown(c);
-          const color={S1:'FFE3EAF8',S2:'FFF8E2E4',T1:'FFE5EEDC',T2:'FFFFE7B5'}[seat?.part]||'FFF5F5F1';
           c.font={name:'맑은 고딕',size:11,bold:!!seat,color:{argb:'FF222A25'}};
-          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F5F1'}};
+          memberColors(sheet,c,row.getCell(col+1).address);
           c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
           c.border={top:{style:'thin',color:{argb:'FF818C83'}},bottom:{style:'thin',color:{argb:'FF818C83'}},left:{style:'thin',color:{argb:'FF818C83'}},right:{style:'thin',color:{argb:'FF818C83'}}};
         });
@@ -104,13 +111,21 @@
     if([special.conductor,special.accompanist,...(special.staff||[])].some(Boolean)){
       const sheet=wb.addWorksheet('역할');header(sheet,['역할','번호','이름']);
       [['지휘',0,special.conductor],['반주',0,special.accompanist],...(special.staff||[]).map((s,i)=>['스태프',i,s])].forEach(([type,i,s])=>sheet.addRow([type,i+1,s?labels[s.memberId]||s.name:null]));
-      for(let r=2;r<=sheet.rowCount;r++)memberDropdown(sheet.getCell(r,3));
+      for(let r=2;r<=sheet.rowCount;r++){memberDropdown(sheet.getCell(r,3));memberColors(sheet,sheet.getCell(r,3));}
       sheet.columns.forEach(c=>c.width=23);
     }
     if(choices.length){
       const list=wb.addWorksheet('_단원목록',{state:'veryHidden'});
       choices.forEach(m=>list.addRow([labels[m.id]]));
       wb.definedNames.add("'_단원목록'!$A$1:$A$"+choices.length,'ChoirMemberNames');
+      partChoices.forEach((members,i)=>{
+        if(!members.length)return;
+        // Include plain names only when unambiguous, so manual input receives the same color.
+        const values=[...new Set(members.flatMap(m=>[labels[m.id],...([...people.values()].filter(p=>key(p.name)===key(m.name)).length===1?[m.name]:[])]))];
+        const col=i+2;
+        values.forEach((value,r)=>{list.getCell(r+1,col).value=value;});
+        wb.definedNames.add("'_단원목록'!$"+list.getColumn(col).letter+'$1:$'+list.getColumn(col).letter+'$'+values.length,'ChoirPart'+i);
+      });
     }
     const meta=wb.addWorksheet('_앱정보',{state:'veryHidden'});
     meta.addRow([MAGIC,VERSION]);

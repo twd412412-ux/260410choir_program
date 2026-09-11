@@ -23,6 +23,14 @@ async function disk(w){const b=await w.xlsx.writeBuffer();const loaded=new Excel
   assert.equal(dropdown.allowBlank,true);assert.notEqual(dropdown.showErrorMessage,true);
   assert.equal(w.getWorksheet('역할').getCell('C2').dataValidation.type,'list');
   assert.equal(w.getWorksheet('관현악 배치').getCell('C4').dataValidation.type,'list');
+  assert.deepEqual(list.getColumn(1).values.filter(Boolean),['김하민 [S1]','반주자','윤하은','김하민 [T1]','스태프','추가단원','이사람']);
+  const colorRule=w.getWorksheet('합창 배치').conditionalFormattings.find(rule=>rule.ref==='C4:D4');
+  assert.equal(colorRule.rules.length,5);
+  assert.equal(colorRule.rules[2].formulae[0],'COUNTIF(ChoirPart2,$C4)>0');
+  assert.equal(colorRule.rules[2].style.fill.fgColor.argb,'FFE5EEDC');
+  assert.equal(colorRule.rules[3].style.fill.fgColor.argb,'FFFFE7B5');
+  assert.equal(w.getWorksheet('합창 배치').getCell('C4').fill.fgColor.argb,'FFF5F5F1','cleared seats should not keep the previous part color');
+  assert.deepEqual(w.definedNames.getRanges('ChoirPart3').ranges,["'_단원목록'!$E$1:$E$2"]);
   w.getWorksheet('합창 배치').getCell('C4').value='윤하은';
   result=core.parse(w,members);assert.equal(result.snapshot.rows[0].seats[0].memberId,'c','changed name must override old cell identity');
   assert.ok(result.snapshot.attendees.a,'removed occupant remains attending and unplaced');
