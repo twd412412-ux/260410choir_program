@@ -4705,7 +4705,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.11.3';
+var APP_RELEASE_VERSION='26.09.11.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18976,7 +18976,7 @@ function seatingDownloadFileName(){
 async function openSeatingExcel(){
   if(!canUseSeatingPlan())return showToast('자리배치 권한이 필요합니다.');
   try{
-    if(!window.SeatingExcel)await withLoadDeadline(loadScriptOnce('seatingExcelUi','./assets/seating-excel.js?v=2'),15000);
+    if(!window.SeatingExcel)await withLoadDeadline(loadScriptOnce('seatingExcelUi','./assets/seating-excel.js?v=3'),15000);
     if(canUseSeatingPlan())window.SeatingExcel.open();
   }catch(e){
     var script=document.getElementById('seatingExcelUi');if(script)script.remove();

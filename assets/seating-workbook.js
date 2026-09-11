@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const MAGIC='choir-seating-xlsx', VERSION=2, MAX_ROWS=40, MAX_COLS=120;
+  const MAGIC='choir-seating-xlsx', VERSION=3, MAX_ROWS=40, MAX_COLS=120;
   const boards=[['합창 배치','rows'],['관현악 배치','orchestraRows']];
   // One seat spans two half-seat columns; match the app's centered parity geometry.
   function boardGeometry(rows){
@@ -27,12 +27,20 @@
   function directoryMap(directory){
     return new Map(directory.map(m=>[String(m.id||m.memberId),{id:String(m.id||m.memberId),name:String(m.name||''),part:String(m.part||'')}]));
   }
-  function build(ExcelJS,plan,directory){
+  function reserveRows(source,capacity=200){
+    const rows=source.map(r=>({...r,seats:r.seats.slice()}));
+    if(!rows.length||!capacity)return rows;
+    let label=Math.max(0,...rows.map(r=>Number(String(r.label).match(/^(\d+)\s*단$/)?.[1]||0)));
+    while(rows.length<5)rows.unshift({label:(++label)+'단',offset:label%2/2,seats:[]});
+    const width=Math.min(MAX_COLS,Math.max(Math.ceil(capacity/rows.length),...rows.map(r=>r.seats.length)));
+    return rows.map(r=>({...r,seats:r.seats.concat(Array(Math.max(0,width-r.seats.length)).fill(null))}));
+  }
+  function build(ExcelJS,plan,directory,options={}){
     const wb=new ExcelJS.Workbook();
     wb.creator='광주교회 찬양대';
     const people=directoryMap(directory);
     allSeats(plan).forEach(s=>{if(!people.has(s.memberId))people.set(s.memberId,{id:s.memberId,name:s.name,part:s.part});});
-    const labels={}, identities={};
+    const labels={}, identities={}, starts={};
     people.forEach(m=>{
       const same=[...people.values()].filter(x=>key(x.name)===key(m.name));
       let label=m.name;
@@ -47,18 +55,19 @@
       row.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF496452'}};c.font={name:'맑은 고딕',bold:true,color:{argb:'FFFFFFFF'},size:11};c.alignment={horizontal:'center',vertical:'middle'};});
     }
     boards.forEach(([name,field],b)=>{
-      const rows=plan[field]||[];
+      const rows=b?(plan[field]||[]):reserveRows(plan[field]||[],options.reserveSeats??200);
       if(b&&!rows.some(r=>r.seats.some(Boolean)))return;
       if(!rows.length||rows.length>MAX_ROWS||rows.some(r=>!r.seats.length||r.seats.length>MAX_COLS))fail('배치도는 1~40줄, 줄당 1~120칸까지 엑셀로 저장할 수 있습니다.');
       const width=Math.max(...rows.map(r=>r.seats.length));
       const geometry=boardGeometry(rows),end=width*2+3,center=width+2+(plan.centerOffset||0);
+      starts[field]=Object.fromEntries(rows.map((r,i)=>[r.label,geometry[i].start]));
       const sheet=wb.addWorksheet(name,{views:[{state:'frozen',xSplit:2,ySplit:3,showGridLines:false}],pageSetup:{orientation:'landscape',paperSize:8,fitToPage:true,fitToWidth:1,fitToHeight:0}});
       sheet.properties.defaultRowHeight=38;
       sheet.getColumn(1).width=10;sheet.getColumn(2).width=9;
       for(let i=3;i<=end;i++)sheet.getColumn(i).width=7;
       sheet.addRow([plan.planName||plan.name||'자리배치']);sheet.mergeCells(1,1,1,end);
       sheet.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF24382B'}};
-      sheet.addRow(['이름 칸 사이에서 이동·수정할 수 있습니다. 줄·칸 수는 앱에서 조정 후 다시 내려받아주세요.']);
+      sheet.addRow(['한 칸에 한 명 · 이름을 잘라내어 다른 빈칸에 붙여넣기 · 줄 삭제 가능 · B열 칸수로 사용할 좌석 수 지정']);
       sheet.mergeCells(2,1,2,end);sheet.getRow(2).height=24;
       sheet.getCell('A2').font={name:'맑은 고딕',size:10,color:{argb:'FF5D655F'}};
       header(sheet,['단','칸수']);
@@ -78,7 +87,7 @@
           c.font={name:'맑은 고딕',size:11,bold:!!seat,color:{argb:'FF222A25'}};
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
           c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
-          c.border={top:{style:'thin',color:{argb:'FFD8DDD7'}},bottom:{style:'thin',color:{argb:'FFD8DDD7'}},left:{style:'thin',color:{argb:'FFD8DDD7'}},right:{style:'thin',color:{argb:'FFD8DDD7'}}};
+          c.border={top:{style:'thin',color:{argb:'FF818C83'}},bottom:{style:'thin',color:{argb:'FF818C83'}},left:{style:'thin',color:{argb:'FF818C83'}},right:{style:'thin',color:{argb:'FF818C83'}}};
         });
         const gap=sheet.getRow(g.row+1);gap.height=12;
         gap.getCell(center).border={right:{style:'mediumDashed',color:{argb:'FFAD8A32'}}};
@@ -95,6 +104,7 @@
     meta.addRow([MAGIC,VERSION]);
     const data={identities,attendees:[...needed],flags:Object.fromEntries(allSeats(plan).map(s=>[s.memberId,{highlight:!!s.highlight,locked:!!s.locked}])),name:plan.planName||plan.name||'자리배치',title:plan.title||'',date:plan.date||'',program:plan.program||'전체 합창',centerOffset:plan.centerOffset||0,micSlots:plan.micSlots||[],attendeesLocked:!!plan.attendeesLocked,orchestra:!!wb.getWorksheet('관현악 배치'),roles:!!wb.getWorksheet('역할')};
     data.firstOffsets={rows:plan.rows?.[0]?.offset||0,orchestraRows:plan.orchestraRows?.[0]?.offset||0};
+    data.starts=starts;
     const json=JSON.stringify(data);
     for(let i=0;i<json.length;i+=8000)meta.addRow([json.slice(i,i+8000)]);
     return wb;
@@ -102,7 +112,7 @@
   function parse(wb,directory){
     const meta=wb.getWorksheet('_앱정보');
     const version=meta?Number(text(meta.getCell('B1'))):0;
-    if(!meta||text(meta.getCell('A1'))!==MAGIC||![1,VERSION].includes(version))fail('자리배치에서 내려받은 .xlsx 파일을 선택해주세요.');
+    if(!meta||text(meta.getCell('A1'))!==MAGIC||![1,2,VERSION].includes(version))fail('자리배치에서 내려받은 .xlsx 파일을 선택해주세요.');
     if(meta.rowCount>150)fail('엑셀의 연결정보가 너무 큽니다.');
     let json='';for(let r=2;r<=meta.rowCount;r++){
       const chunk=meta.getCell(r,1).value;
@@ -132,7 +142,7 @@
     boards.forEach(([name,field],b)=>{
       const sheet=wb.getWorksheet(name);
       if(!sheet){if(!b||data.orchestra)fail(name+' 시트가 없습니다.');return;}
-      if(sheet.rowCount>MAX_ROWS*(version===2?2:1)+3||sheet.columnCount>MAX_COLS*(version===2?2:1)+(version===2?3:2))fail(name+': 최대 40줄, 줄당 120칸까지 가능합니다.');
+      if(sheet.rowCount>MAX_ROWS*(version>=2?2:1)+3||sheet.columnCount>MAX_COLS*(version>=2?2:1)+(version>=2?3:2))fail(name+': 최대 40줄, 줄당 120칸까지 가능합니다.');
       if(text(sheet.getCell('A3'))!=='단'||text(sheet.getCell('B3'))!=='칸수')fail(name+': 단 / 칸수 제목을 유지해주세요.');
       const labels=new Set(), importedGeometry=[];
       for(let r=4;r<=sheet.rowCount;r++){
@@ -143,7 +153,21 @@
         if(!label||label.length>20||labels.has(label))fail(name+' '+r+'행: 단 이름이 비었거나 중복되었습니다.');
         if(!Number.isInteger(count)||count<1||count>MAX_COLS)fail(name+' '+r+'행: 칸수를 1~120으로 입력해주세요.');
         let names=values.slice(2),start=3;
-        if(version===2){
+        if(version===3){
+          const anchor=Number(data.starts?.[field]?.[label]);
+          const first=Array.from({length:sheet.columnCount-2},(_,i)=>sheet.getCell(r,i+3)).find(c=>c.isMerged||text(c));
+          start=Number.isInteger(anchor)&&anchor>=3&&anchor<=MAX_COLS*2+3?anchor:(first?.col||3);
+          const end=start+count*2;
+          if(end>MAX_COLS*2+4)fail(name+' '+r+'행: 칸수가 너무 많습니다.');
+          for(let c=3;c<=sheet.columnCount;c++)if((c<start||c>=end)&&text(sheet.getCell(r,c)))fail(name+' '+r+'행: 칸수 밖에 이름이 있습니다. 이름을 옮기거나 B열 칸수를 늘려주세요.');
+          names=Array.from({length:count},(_,i)=>{
+            const col=start+i*2,a=sheet.getCell(r,col),b=sheet.getCell(r,col+1);
+            if((a.isMerged&&a.master.address!==a.address)||(b.isMerged&&b.master.address!==a.address)||sheet.getCell(r+1,col).master.address===a.address)fail(name+' '+r+'행: 이름 칸의 병합 위치를 확인해주세요.');
+            const left=text(a),right=b.isMerged?'':text(b);
+            if(left&&right)fail(name+' '+r+'행: 한 칸에 이름은 한 명만 입력해주세요.');
+            return left||right;
+          });
+        }else if(version===2){
           const cells=[];
           for(let col=3;col<=sheet.columnCount;col++){
             const c=sheet.getCell(r,col);
@@ -154,7 +178,8 @@
               cells.push(c);
             }else if(text(c))fail(name+' '+r+'행: 이름 칸 밖에 값이 있습니다.');
           }
-          if(cells.length!==count||cells.some((c,i)=>c.col!==cells[0].col+i*2))fail(name+' '+r+'행: 칸수가 달라졌습니다. 줄·칸은 앱에서 조정 후 다시 내려받아주세요.');
+          if((version===2?cells.length!==count:cells.length<count)||cells.some((c,i)=>c.col!==cells[0].col+i*2))fail(name+' '+r+'행: 이름 칸과 B열 칸수를 확인해주세요.');
+          if(cells.slice(count).some(c=>text(c)))fail(name+' '+r+'행: 지정한 칸수 밖에 이름이 있습니다. 이름을 옮기거나 B열 칸수를 늘려주세요.');
           names=cells.map(text);start=cells[0].col;
           importedGeometry.push({start,row:r});
         }else if(values.slice(count+2).some(Boolean))fail(name+' '+r+'행: 칸수 밖에 이름이 있습니다. 칸수를 늘려주세요.');
@@ -163,7 +188,7 @@
         const offset=/^\d+단$/.test(label)?Number(label.slice(0,-1))%2/2:(previous ? (previous.offset===0 ? .5 : 0) : (data.firstOffsets?.[field]===.5 ? .5 : 0));
         result[field].push({label,offset,seats:Array.from({length:count},(_,i)=>resolve(names[i]||'',name+' '+label+' '+(i+1)+'번'))});
       }
-      if(!result[field].length)fail(name+': 최소 한 줄은 있어야 합니다.');
+      if(!result[field].length||result[field].length>MAX_ROWS)fail(name+': 1~40줄을 유지해주세요.');
       if(version===2&&boardGeometry(result[field]).some((g,i)=>g.start!==importedGeometry[i].start))fail(name+': 줄의 위치가 바뀌었습니다. 이름 칸 안에서 수정해주세요.');
     });
     const roles=wb.getWorksheet('역할');
@@ -189,7 +214,7 @@
     Object.assign(result,{planId:'',planName:info('name')+' (엑셀)',title:info('title'),date:info('date'),program:info('program'),attendees,attendeesLocked:data.attendeesLocked===true,autoFit:false,partSubmissions:{},history:[],centerOffset:[-1,0,1].includes(data.centerOffset)?data.centerOffset:0,micSlots:Array.isArray(data.micSlots)?data.micSlots.slice(0,MAX_COLS).map(v=>v===true):[]});
     return {snapshot:result,issues,placed:used.size,attended:Object.keys(attendees).length,empty:result.rows.concat(result.orchestraRows).reduce((n,r)=>n+r.seats.filter(s=>!s).length,0),rows:result.rows.length+result.orchestraRows.length};
   }
-  const api={build,parse,allSeats,boardGeometry};
+  const api={build,parse,allSeats,boardGeometry,reserveRows};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.SeatingWorkbook=api;
 })(typeof globalThis==='object'?globalThis:this);
