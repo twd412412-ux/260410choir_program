@@ -4,6 +4,7 @@ const http=require('node:http');
 const assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const ExcelJS=require('../assets/vendor/exceljs-4.4.0.min.js');
+const {boardGeometry}=require('../assets/seating-workbook.js');
 const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(\);\r?$/m,'').replace(/^initInstallUi\(\);\r?$/m,'');
 const photoPath=process.env.SEATING_PHOTO_PLAN;
@@ -47,7 +48,8 @@ const fixture=photoPath?JSON.parse(fs.readFileSync(photoPath,'utf8')):{id:'test-
     const file=path.join(out,download.suggestedFilename());await download.saveAs(file);
     const wb=new ExcelJS.Workbook();await wb.xlsx.load(fs.readFileSync(file));
     const grid=wb.getWorksheet('합창 배치');
-    const last=grid.rowCount;grid.getCell(last,3).value=grid.getCell(4,3).value;grid.getCell(4,3).value=null;
+    const geometry=boardGeometry(fixture.rows),first=geometry[0],last=geometry[geometry.length-1];
+    grid.getCell(last.row,last.start).value=grid.getCell(first.row,first.start).value;grid.getCell(first.row,first.start).value=null;
     const edited=Buffer.from(await wb.xlsx.writeBuffer());
     await page.locator('#seatingExcelFile').setInputFiles({name:'edited.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:edited});
     await page.locator('#seatingExcelPreview:not([hidden])').waitFor();
