@@ -9,7 +9,7 @@
     if(!loading)loading=(async()=>{
       try{
         if(!window.ExcelJS)await withLoadDeadline(loadScriptOnce('seatingExcelJs','./assets/vendor/exceljs-4.4.0.min.js'),15000);
-        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=3'),15000);
+        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=4'),15000);
       }catch(e){
         ['seatingExcelJs','seatingWorkbookCore'].forEach(id=>{const s=document.getElementById(id);if(s&&s.dataset.loaded!=='true')s.remove();});
         loading=null;throw new Error('엑셀 기능을 불러오지 못했습니다. 다시 눌러주세요.');
@@ -34,7 +34,7 @@
     try{
       await libraries();
       if(turn!==ticket||!canUseSeatingPlan())return;
-      const workbook=SeatingWorkbook.build(ExcelJS,snapshot,directory());
+      const workbook=SeatingWorkbook.build(ExcelJS,snapshot,seatingMembers);
       const bytes=await workbook.xlsx.writeBuffer();
       if(turn!==ticket||!canUseSeatingPlan())return;
       const url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));

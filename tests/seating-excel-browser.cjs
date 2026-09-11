@@ -49,6 +49,10 @@ const fixture=photoPath?JSON.parse(fs.readFileSync(photoPath,'utf8')):{id:'test-
     const wb=new ExcelJS.Workbook();await wb.xlsx.load(fs.readFileSync(file));
     const grid=wb.getWorksheet('합창 배치');
     const geometry=boardGeometry(reserveRows(fixture.rows)),first=geometry[0],last=geometry[geometry.length-1];
+    assert.equal(grid.getCell(last.row,last.start).dataValidation.type,'list');
+    assert.deepEqual(grid.getCell(last.row,last.start).dataValidation.formulae,['ChoirMemberNames']);
+    assert.ok(wb.getWorksheet('_단원목록').rowCount>0);
+    assert.equal(wb.getWorksheet('_단원목록').state,'veryHidden');
     grid.getCell(last.row,last.start).value=grid.getCell(first.row,first.start).value;grid.getCell(first.row,first.start).value=null;
     const edited=Buffer.from(await wb.xlsx.writeBuffer());
     await page.locator('#seatingExcelFile').setInputFiles({name:'edited.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:edited});
