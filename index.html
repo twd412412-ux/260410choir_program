@@ -3444,6 +3444,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
       <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
       <button class="btn seating-btn-soft" onclick="saveSeatingPlanAs()">다른 이름 저장</button>
       <button class="btn seating-btn-soft" onclick="openSeatingImageExportOptions()">이미지 저장</button>
+      <button class="btn seating-btn-soft" type="button" onclick="openSeatingExcel()">엑셀</button>
       <button class="btn seating-btn-publish" onclick="openSeatingPublishConfirm()">단원에게 공개</button>
       <button class="btn seating-btn-danger-soft" onclick="unpublishSeatingPlan()">공개 취소</button>
       <button class="btn btn-d" onclick="deleteSeatingPlan()">저장 배치 삭제</button>
@@ -3565,6 +3566,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
               <button class="btn seating-btn-soft" onclick="saveSeatingPlanAs()">다른 이름 저장</button>
               <button class="btn seating-btn-soft" onclick="createNewSeatingPlan()">새 배치</button>
               <button class="btn seating-btn-soft" onclick="openSeatingImageExportOptions()">이미지 저장</button>
+              <button class="btn seating-btn-soft" type="button" onclick="openSeatingExcel()">엑셀</button>
             </div>
             <details class="seating-toolbar-group collapsible">
               <summary><span class="seating-toolbar-label">편집</span><span class="seating-toolbar-toggle"><span class="toggle-closed">열기</span><span class="toggle-open">닫기</span></span></summary>
@@ -4188,6 +4190,22 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 </div>
 
 <!-- MODAL: 자리배치 이미지 저장 -->
+<div class="modal-overlay modal-center seating-special-modal" id="modalSeatingExcel">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">자리배치 엑셀</span><button class="modal-close" type="button" onclick="closeModal('modalSeatingExcel')" aria-label="닫기">×</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-p" id="seatingExcelDownload" type="button" onclick="SeatingExcel.download()">엑셀 내려받기</button>
+      <button class="btn seating-btn-soft" id="seatingExcelUpload" type="button" onclick="document.getElementById('seatingExcelFile').click()">엑셀 불러오기</button>
+      <input id="seatingExcelFile" type="file" accept=".xlsx" hidden onchange="SeatingExcel.read(this.files[0]);this.value=''">
+    </div>
+    <div id="seatingExcelStatus" role="status" style="margin-top:14px;font-size:13px;color:var(--ts);overflow-wrap:anywhere"></div>
+    <div id="seatingExcelPreview" hidden>
+      <div class="form-group" style="margin-top:14px"><label class="form-label" for="seatingExcelName">새 배치 이름</label><input class="form-input" id="seatingExcelName" maxlength="150"></div>
+      <div id="seatingExcelChanges" style="max-height:30vh;overflow:auto;font-size:13px;line-height:1.6;overflow-wrap:anywhere"></div>
+      <button class="btn btn-p" type="button" id="seatingExcelApply" onclick="SeatingExcel.apply()" style="margin-top:14px;width:100%">새 배치로 불러오기</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay modal-center seating-special-modal" id="modalSeatingImageExport">
   <div class="modal-content">
     <div class="modal-header"><span class="modal-title">배치도 이미지 저장</span><button class="modal-close" onclick="closeModal('modalSeatingImageExport')">✕</button></div>
@@ -4687,7 +4705,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.11.1';
+var APP_RELEASE_VERSION='26.09.11.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5262,6 +5280,7 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalSeatingExcel'&&window.SeatingExcel)window.SeatingExcel.cancel();
   if(id==='modalProfilePhotoGuide'){
     profilePhotoGuide.handled=true;
     document.getElementById('profileButton').focus({preventScroll:true});
@@ -18953,6 +18972,16 @@ function seatingDownloadFileName(){
   var date=seatingInputValue('seatingDate')||getTodayInputDate();
   var boardLabel=seatingBoardTab==='orchestra'?'관현악':'합창';
   return (date+'_'+name+'_'+boardLabel).replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_')+'.png';
+}
+async function openSeatingExcel(){
+  if(!canUseSeatingPlan())return showToast('자리배치 권한이 필요합니다.');
+  try{
+    if(!window.SeatingExcel)await withLoadDeadline(loadScriptOnce('seatingExcelUi','./assets/seating-excel.js?v=1'),15000);
+    if(canUseSeatingPlan())window.SeatingExcel.open();
+  }catch(e){
+    var script=document.getElementById('seatingExcelUi');if(script)script.remove();
+    showToast('엑셀 기능을 불러오지 못했습니다. 다시 눌러주세요.');
+  }
 }
 function openSeatingImageExportOptions(){
   var input=document.getElementById('seatingImageIncludeSpecial');

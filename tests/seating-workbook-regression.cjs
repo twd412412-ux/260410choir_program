@@ -1,0 +1,41 @@
+const assert=require('node:assert/strict');
+const ExcelJS=require('../assets/vendor/exceljs-4.4.0.min.js');
+const core=require('../assets/seating-workbook.js');
+const members=[{id:'a',name:'김하민',part:'S1'},{id:'b',name:'김하민',part:'T1'},{id:'c',name:'윤하은',part:'S2'},{id:'d',name:'이사람',part:'관현악'},{id:'e',name:'반주자',part:'S1'},{id:'f',name:'스태프',part:'T2'},{id:'g',name:'추가단원',part:'T2'}];
+const seat=(id,flags={})=>({...members.find(m=>m.id===id),memberId:id,highlight:false,locked:false,...flags});
+const plan={name:'전체 합창',title:'행사',date:'2026-09-11',program:'합창',attendees:{a:true,b:true,c:true,d:true,e:true,f:true,g:true},attendeesLocked:true,centerOffset:-1,micSlots:[true,false,true],rows:[{label:'1단',offset:.5,seats:[seat('a',{highlight:true}),seat('b',{locked:true}),null]},{label:'0단',offset:0,seats:[null,null,null]}],orchestraRows:[{label:'1열',offset:0,seats:[seat('d'),null]}],specialSlots:{conductor:null,accompanist:seat('e'),staff:[seat('f')]} };
+function build(){return core.build(ExcelJS,plan,members);}
+async function disk(w){const b=await w.xlsx.writeBuffer();const loaded=new ExcelJS.Workbook();await loaded.xlsx.load(b);return loaded;}
+(async()=>{
+  let w=await disk(build()),result=core.parse(w,members);
+  assert.deepEqual(result.issues,[]);assert.equal(result.placed,5);assert.equal(result.attended,7);
+  assert.equal(result.snapshot.rows.length,2);assert.deepEqual(result.snapshot.rows[1].seats,[null,null,null]);
+  assert.equal(result.snapshot.rows[0].seats[0].memberId,'a');assert.equal(result.snapshot.rows[0].seats[1].memberId,'b');
+  assert.equal(result.snapshot.rows[0].seats[0].highlight,true);assert.equal(result.snapshot.rows[0].seats[1].locked,true);
+  assert.equal(result.snapshot.centerOffset,-1);assert.deepEqual(result.snapshot.micSlots,plan.micSlots);
+  assert.equal(result.snapshot.planId,'');assert.equal(result.snapshot.history.length,0);
+  assert.equal(w.getWorksheet('_앱정보').state,'veryHidden');
+  w.getWorksheet('합창 배치').getCell('C4').value='윤하은';
+  result=core.parse(w,members);assert.equal(result.snapshot.rows[0].seats[0].memberId,'c','changed name must override old cell identity');
+  assert.ok(result.snapshot.attendees.a,'removed occupant remains attending and unplaced');
+  w.getWorksheet('합창 배치').getCell('C4').value='김하민';
+  assert.match(core.parse(w,members).issues.join(' '),/동명이인/);
+  w.getWorksheet('합창 배치').getCell('C4').value='없는사람';assert.match(core.parse(w,members).issues.join(' '),/찾을 수 없습니다/);
+  w=build();const sh=w.getWorksheet('합창 배치');sh.getCell('C5').value=sh.getCell('C4').value;
+  assert.match(core.parse(w,members).issues.join(' '),/에도 배치/);
+  sh.getCell('C5').value='추가단원';assert.equal(core.parse(w,members).snapshot.rows[1].seats[0].memberId,'g');
+  sh.getCell('F5').value='윤하은';assert.throws(()=>core.parse(w,members),/칸수 밖/);
+  sh.getCell('B5').value=4;assert.equal(core.parse(w,members).snapshot.rows[1].seats.length,4);
+  sh.getCell('F5').value={formula:'HYPERLINK("https://example.com", "a")'};assert.throws(()=>core.parse(w,members),/수식/);
+  w=build();w.removeWorksheet('관현악 배치');assert.throws(()=>core.parse(w,members),/관현악 배치/);
+  w=build();w.removeWorksheet('역할');assert.throws(()=>core.parse(w,members),/역할 시트/);
+  w=build();w.getWorksheet('합창 배치').getCell('A5').value='1단';assert.throws(()=>core.parse(w,members),/중복/);
+  w=build();w.getWorksheet('합창 배치').getCell('B4').value=0;assert.throws(()=>core.parse(w,members),/칸수/);
+  w=new ExcelJS.Workbook();w.addWorksheet('임의 엑셀');assert.throws(()=>core.parse(w,members),/내려받은/);
+  const samePart=members.concat({id:'aa',name:'김하민',part:'S1'});
+  w=core.build(ExcelJS,plan,samePart);assert.equal(core.parse(w,samePart).snapshot.rows[0].seats[0].memberId,'a');
+  const solo={...plan,orchestraRows:[],specialSlots:{conductor:null,accompanist:null,staff:[null]}};
+  w=await disk(core.build(ExcelJS,solo,members));assert.equal(w.getWorksheet('관현악 배치'),undefined);assert.deepEqual(core.parse(w,members).snapshot.orchestraRows,[]);
+  assert.equal(core.parse(w,members).snapshot.rows[1].seats.length,3);
+  console.log('PASS: XLSX roundtrip, empty front row, identities, edited names, duplicate people, ambiguous names, bounds, formulas, roles, attendance, flags, new-plan isolation.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
