@@ -4687,7 +4687,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.10.1';
+var APP_RELEASE_VERSION='26.09.11.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -20550,10 +20550,12 @@ function handleSeatingDragEnd(event){
   if(event&&event.currentTarget)event.currentTarget.classList.remove('dragging');
 }
 function swapSeatingSeats(rowA,colA,rowB,colB){
+  if(!canUseSeatingPlan()||seatingInteractionMode==='pan')return;
   var rows=seatingActiveRows();
   var aRow=rows[rowA], bRow=rows[rowB];
   if(!aRow||!bRow)return showToast('자리를 찾을 수 없습니다');
-  return previewSeatingSwap(rowA,colA,rowB,colB);
+  previewSeatingSwap(rowA,colA,rowB,colB);
+  confirmSeatingMovePreview();
 }
 function seatingPlacementSeat(placement){
   if(!placement)return null;
@@ -20573,6 +20575,7 @@ function seatingSetPlacementSeat(placement,seat){
   if(row&&placement.col>=0&&placement.col<row.seats.length)row.seats[placement.col]=normalizeSeatingSeat(seat);
 }
 function moveSeatingMemberToSeat(memberId,row,col){
+  if(!canUseSeatingPlan()||seatingInteractionMode==='pan')return;
   if(isSeatingFullscreenWorkspace()){
     if(!canUseSeatingPlan()||seatingInteractionMode==='pan')return;
     var member=seatingMembers.find(function(m){return m.id===memberId;}),target=seatingActiveRows()[row];
@@ -20586,10 +20589,11 @@ function moveSeatingMemberToSeat(memberId,row,col){
     }
     if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
   }
-  return previewSeatingMembers([memberId],row,col,false);
+  previewSeatingMembers([memberId],row,col,false);
+  confirmSeatingMovePreview();
 }
 function assignMemberToSeat(memberId,row,col,clearSelectionAfter){
-  return previewSeatingMembers([memberId],row,col,false);
+  return moveSeatingMemberToSeat(memberId,row,col);
 }
 function seatingPlacementLabel(placement){
   if(!placement)return '미배치';

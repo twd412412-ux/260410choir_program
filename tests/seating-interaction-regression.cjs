@@ -144,8 +144,14 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       check(seatingRows[1].seats[0].highlight, 'highlight lost');
       undoSeatingChange(); check(seatingRows[0].seats[0].memberId === 'm0' && !seatingRows[1].seats[0], 'bulk undo failed');
       resetFixture();
-      swapSeatingSeats(0, 0, 0, 1); check(seatingMovePreview.count === 2, 'swap preview');
-      confirmSeatingMovePreview(); check(seatingRows[0].seats[1].memberId === 'm0' && seatingRows[0].seats[0].memberId === 'm1', 'swap lost a member');
+      handleSeatingSeatClick(0, 0); handleSeatingSeatClick(0, 1);
+      check(!seatingMovePreview, 'simple swap requires apply');
+      check(seatingRows[0].seats[1].memberId === 'm0' && seatingRows[0].seats[0].memberId === 'm1', 'swap lost a member');
+      check(seatingRows[0].seats[1].highlight, 'swap lost highlight');
+      undoSeatingChange(); check(seatingRows[0].seats[0].memberId === 'm0', 'swap undo failed');
+      moveSeatingMemberToSeat('m0', 1, 0);
+      check(!seatingMovePreview && seatingRows[1].seats[0].memberId === 'm0' && !seatingRows[0].seats[0], 'single move requires apply');
+      undoSeatingChange();
       const prior = JSON.stringify(seatingRows);
       previewSeatingMembers(['m4'], 1, 0, false); cancelSeatingMovePreview(); check(JSON.stringify(seatingRows) === prior, 'cancel mutated');
       previewSeatingMembers(['m4'], 1, 0, false); seatingAttendees.m4 = false;
@@ -280,7 +286,7 @@ const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\
       resetFixture();
     });
     await page.locator('#seatingBoard .seating-seat').first().dragTo(page.locator('#seatingBoard .seating-row').nth(1).locator('.seating-seat').first());
-    assert.ok(await page.evaluate(() => !!seatingMovePreview), 'actual drag missed preview');
+    assert.ok(await page.evaluate(() => !seatingMovePreview && seatingRows[1].seats[0].memberId === 'm0' && !seatingRows[0].seats[0]), 'actual drag did not apply immediately');
     await page.evaluate(() => { cancelSeatingMovePreview(); resetFixture(); });
 
     const output = path.join(root, 'tmp', 'seating-interaction'); fs.mkdirSync(output, { recursive: true });
