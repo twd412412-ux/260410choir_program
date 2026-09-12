@@ -22,6 +22,22 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
    seatingMemberPanelCollapsed=true;applySeatingPlan(p);renderSeatingPlanSelect();seatingZoom=1;updateSeatingZoom();
   });
   assert.deepEqual(await page.locator('#seatingPlanSelect optgroup').evaluateAll(es=>es.map(e=>e.label)),['수양회 · 1','찬양의밤 · 1','미분류 · 1']);
+  assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성');
+  const storedPlans=await page.evaluate(()=>JSON.stringify(seatingPlans));
+  await page.evaluate(()=>setPublishedSeatingState([{...seatingPlans[0],sourcePlanId:'a'}]));
+  assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성 · 공개 중');
+  assert.equal(await page.locator('#seatingPlanSelect option[value="b"]').textContent(),'남성');
+  assert.equal(await page.locator('#seatingPlanSelect').inputValue(),'a');
+  // A saved plan may be renamed; publication identity must remain tied to its ID.
+  await page.evaluate(()=>setPublishedSeatingState([{...seatingPlans[1],sourcePlanId:'a'}]));
+  assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성 · 공개 중');
+  assert.equal(await page.locator('#seatingPlanSelect option[value="b"]').textContent(),'남성');
+  await page.evaluate(()=>setPublishedSeatingState([]));
+  assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성');
+  await page.evaluate(()=>setPublishedSeatingState([{...seatingPlans[0],sourcePlanId:'a'}]));
+  await page.evaluate(()=>invalidatePublishedSeatingCache(false));
+  assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성');
+  assert.equal(await page.evaluate(()=>JSON.stringify(seatingPlans)),storedPlans);
   // Mixed row lengths must center on the staggered seats, not the microphone grid.
   for(const counts of [[16,15,16,15],[10,10,10,10],[9,10,9,10]]){
    await page.evaluate(counts=>{

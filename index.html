@@ -4708,7 +4708,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.12.3';
+var APP_RELEASE_VERSION='26.09.13.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -7994,6 +7994,7 @@ function setPublishedSeatingState(plans,preferredId){
   var wanted=String(preferredId||publicSeatingSelectedPlanId||'');
   publishedSeatingPlan=publishedSeatingPlans.find(function(plan){return plan.publicId===wanted;})||publishedSeatingPlans[0]||null;
   publicSeatingSelectedPlanId=publishedSeatingPlan?publishedSeatingPlan.publicId:'';
+  renderSeatingPlanSelect();
   return publishedSeatingPlan;
 }
 function savePublishedSeatingCache(){
@@ -8010,6 +8011,7 @@ function invalidatePublishedSeatingCache(clearStored){
   publishedSeatingLoaded=false;
   publishedSeatingPromise=null;
   publishedSeatingLastCheckedAt=0;
+  renderSeatingPlanSelect();
   if(clearStored){
     try{localStorage.removeItem(PUBLISHED_SEATING_CACHE_KEY)}catch(e){}
   }
@@ -18654,7 +18656,8 @@ function renderSeatingPlanSelect(){
   folders.forEach(function(folder){
     html+='<optgroup label="'+escHtml((folder||'미분류')+' · '+groups.get(folder).length)+'">';
     groups.get(folder).forEach(function(plan){
-      var title=(plan.name||plan.planName||plan.title||plan.program||'이름 없는 배치')+(plan.date?' · '+plan.date:'');
+      var isPublic=publishedSeatingPlans.some(function(published){return publishedSeatingSamePlan(published,Object.assign({},plan,{sourcePlanId:plan.id}));});
+      var title=(plan.name||plan.planName||plan.title||plan.program||'이름 없는 배치')+(isPublic?' · 공개 중':'');
       html+='<option value="'+escHtml(plan.id)+'">'+escHtml(title)+'</option>';
     });
     html+='</optgroup>';
