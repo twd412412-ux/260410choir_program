@@ -38,6 +38,38 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
   await page.evaluate(()=>invalidatePublishedSeatingCache(false));
   assert.equal(await page.locator('#seatingPlanSelect option[value="a"]').textContent(),'여성');
   assert.equal(await page.evaluate(()=>JSON.stringify(seatingPlans)),storedPlans);
+  await page.evaluate(()=>{seatingSettingsOpen=true;renderSeatingWorkspaceShell();});
+  const folder=page.locator('#seatingFolder');
+  assert.deepEqual(await folder.locator('option').allTextContents(),['미분류','수양회','찬양의밤','새 폴더 만들기…']);
+  await folder.selectOption('수양회');
+  assert.equal(await folder.inputValue(),'수양회');assert.equal(await page.evaluate(()=>seatingDirty),true);
+  await page.evaluate(()=>{seatingDirty=false;});
+  page.once('dialog',dialog=>dialog.dismiss());
+  await folder.selectOption({label:'새 폴더 만들기…'});
+  assert.equal(await folder.inputValue(),'수양회');assert.equal(await page.evaluate(()=>seatingDirty),false);
+  page.once('dialog',dialog=>dialog.accept('   '));
+  await folder.selectOption({label:'새 폴더 만들기…'});
+  assert.equal(await folder.inputValue(),'수양회');assert.equal(await page.evaluate(()=>seatingDirty),false);
+  page.once('dialog',dialog=>dialog.accept('  연습 "A" <합창>  '));
+  await folder.selectOption({label:'새 폴더 만들기…'});
+  assert.equal(await folder.inputValue(),'연습 "A" <합창>');
+  await page.evaluate(()=>renderSeatingPlanSelect());
+  assert.equal(await folder.inputValue(),'연습 "A" <합창>','unsaved folder survives publication/list refresh');
+  await page.evaluate(()=>{seatingDirty=false;});
+  page.once('dialog',dialog=>dialog.accept('가'.repeat(61)));
+  await folder.selectOption({label:'새 폴더 만들기…'});
+  assert.equal(await folder.inputValue(),'연습 "A" <합창>');assert.equal(await page.evaluate(()=>seatingDirty),false);
+  page.once('dialog',dialog=>dialog.accept('수양회'));
+  await folder.selectOption({label:'새 폴더 만들기…'});
+  assert.equal(await folder.locator('option[value="수양회"]').count(),1);
+  assert.equal(await folder.inputValue(),'수양회');
+  await folder.selectOption({label:'미분류'});assert.equal(await folder.inputValue(),'');
+  await page.evaluate(()=>{canUseSeatingPlan=()=>false;});
+  await folder.selectOption('찬양의밤');assert.equal(await folder.inputValue(),'');
+  await page.evaluate(()=>{canUseSeatingPlan=()=>true;applySeatingPlan(seatingPlans[0]);});
+  assert.equal(await folder.inputValue(),'찬양의밤');
+  assert.equal(await page.evaluate(()=>saved.length),0,'choosing a folder must not write a plan');
+  assert.equal(await page.evaluate(()=>JSON.stringify(seatingPlans)),storedPlans);
   // Mixed row lengths must center on the staggered seats, not the microphone grid.
   for(const counts of [[16,15,16,15],[10,10,10,10],[9,10,9,10]]){
    await page.evaluate(counts=>{
@@ -123,6 +155,6 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
   }
   await page.evaluate(()=>{canUseSeatingPlan=()=>false;setSeatingMicVisible(true);});assert.equal(await page.evaluate(()=>seatingMicVisible),false);
   assert.deepEqual(errors,[]);
-  console.log('PASS: folder groups/edit/save/reopen, original IDs, unrelated plans, mic visibility, undo, center and seats unchanged, publication metadata, image export, mobile/tablet layout, permissions.');
+  console.log('PASS: folder dropdown/create/cancel/duplicates/validation/permissions, drafts/save/reopen, public status, original IDs, unrelated plans, mic visibility, undo, staggered centers, image export, mobile/tablet layout.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -3435,7 +3435,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
     <div class="seating-name-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">배치 이름 *</label><input class="form-input" id="seatingPlanName" placeholder="예: 2026 찬양의밤 전체합창" oninput="markSeatingDirty()"></div>
       <div class="form-group" style="margin-bottom:0"><label class="form-label">행사명</label><input class="form-input" id="seatingTitle" placeholder="예: 2025 찬양의밤" oninput="markSeatingDirty()"></div>
-      <div class="form-group" style="margin-bottom:0;min-width:0"><label class="form-label" for="seatingFolder">폴더</label><input class="form-input" id="seatingFolder" list="seatingFolderOptions" maxlength="60" placeholder="폴더 선택 또는 새 이름" oninput="markSeatingDirty()"><datalist id="seatingFolderOptions"></datalist></div>
+      <div class="form-group" style="margin-bottom:0;min-width:0"><label class="form-label" for="seatingFolder">폴더</label><select class="form-sel" id="seatingFolder" style="width:100%;min-width:0" onchange="changeSeatingFolder()"><option value="">미분류</option><option value="" data-create="true">새 폴더 만들기…</option></select></div>
     </div>
     <div class="seating-program-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">프로그램</label><input class="form-input" id="seatingProgram" placeholder="예: 전체 합창" oninput="markSeatingDirty();renderSeatingBoard()"></div>
@@ -4708,7 +4708,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.1';
+var APP_RELEASE_VERSION='26.09.13.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -18352,6 +18352,7 @@ function seatingInputValue(id){
   return el?el.value:'';
 }
 function setSeatingInputValue(id,value){
+  if(id==='seatingFolder'){renderSeatingFolderSelect(value);return;}
   var el=document.getElementById(id);
   if(el)el.value=value||'';
 }
@@ -18647,6 +18648,30 @@ function initSeatingPlanTool(){
 function seatingFolderName(value){
   return String(value||'').normalize('NFC').trim().slice(0,60);
 }
+function renderSeatingFolderSelect(value){
+  var sel=document.getElementById('seatingFolder');if(!sel)return;
+  var current=seatingFolderName(value===undefined?sel.value:value);
+  var folders=new Set(seatingPlans.map(function(plan){return seatingFolderName(plan.folder);}).filter(Boolean));
+  if(current)folders.add(current);
+  sel.innerHTML='<option value="">미분류</option>'+Array.from(folders).sort(function(a,b){return a.localeCompare(b,'ko');}).map(function(folder){
+    return '<option value="'+escHtml(folder)+'">'+escHtml(folder)+'</option>';
+  }).join('')+'<option value="" data-create="true">새 폴더 만들기…</option>';
+  sel.value=current;sel.dataset.currentFolder=current;
+}
+function changeSeatingFolder(){
+  var sel=document.getElementById('seatingFolder');if(!sel)return;
+  var previous=sel.dataset.currentFolder||'';
+  if(!canUseSeatingPlan()){renderSeatingFolderSelect(previous);return;}
+  var option=sel.selectedOptions[0],next=sel.value;
+  if(option&&option.dataset.create){
+    var entered=prompt('새 폴더 이름을 입력하세요','');
+    if(entered===null||!entered.trim()){renderSeatingFolderSelect(previous);return;}
+    if(entered.normalize('NFC').trim().length>60){renderSeatingFolderSelect(previous);showToast('폴더 이름은 60자 이내로 입력해주세요');return;}
+    next=seatingFolderName(entered);
+  }
+  renderSeatingFolderSelect(next);
+  if(next!==previous)markSeatingDirty();
+}
 function renderSeatingPlanSelect(){
   var sel=document.getElementById('seatingPlanSelect');if(!sel)return;
   var html='<option value="">새 배치 만들기</option>';
@@ -18662,8 +18687,7 @@ function renderSeatingPlanSelect(){
     });
     html+='</optgroup>';
   });
-  var options=document.getElementById('seatingFolderOptions');
-  if(options)options.innerHTML=folders.filter(Boolean).map(function(folder){return '<option value="'+escHtml(folder)+'"></option>';}).join('');
+  renderSeatingFolderSelect();
   sel.innerHTML=html;
   sel.value=seatingPlanId||'';
 }
