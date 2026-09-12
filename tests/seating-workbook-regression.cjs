@@ -13,6 +13,13 @@ async function disk(w){const b=await w.xlsx.writeBuffer();const loaded=new Excel
   assert.equal(result.snapshot.rows[0].seats[0].memberId,'a');assert.equal(result.snapshot.rows[0].seats[1].memberId,'b');
   assert.equal(result.snapshot.rows[0].seats[0].highlight,true);assert.equal(result.snapshot.rows[0].seats[1].locked,true);
   assert.equal(result.snapshot.centerOffset,-1);assert.deepEqual(result.snapshot.micSlots,plan.micSlots);
+  for(const centerOffset of [-6,0,5]){
+    const shifted={...plan,centerOffset,orchestraCenterOffset:1,rows:plan.rows.map(row=>({...row,seats:row.seats.concat(Array(7).fill(null))}))};
+    const workbook=await disk(core.build(ExcelJS,shifted,members,{reserveSeats:0}));
+    assert.equal(core.parse(workbook,members).snapshot.centerOffset,centerOffset,'half-seat center survives XLSX roundtrip');
+    assert.equal(core.parse(workbook,members).snapshot.orchestraCenterOffset,1,'orchestra center is independent');
+    assert.equal(workbook.getWorksheet('합창 배치').getRow(3).values.filter(value=>value==='센터').length,2);
+  }
   assert.equal(result.snapshot.planId,'');assert.equal(result.snapshot.history.length,0);
   assert.equal(w.getWorksheet('_앱정보').state,'veryHidden');
   const list=w.getWorksheet('_단원목록');

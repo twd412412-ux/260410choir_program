@@ -101,7 +101,7 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
     return {mic:(mics[0].x+mics.at(-1).x+mics.at(-1).w)/2,center:labels.find(l=>l.t==='센터').x};
    });
    assert.equal(exportedGeometry.center,28+70+42+(Math.max(...counts)*92-8)/2,'image export preserves stage axis');
-   for(const view of ['audience','member'])for(const offset of [-1,0,1]){
+   for(const view of ['audience','member'])for(const offset of [-4,-1,0,1,5]){
     const publicGeometry=await page.evaluate(({view,offset})=>{
      let body=document.getElementById('publicSeatingBody');
      const fixture=document.createElement('div');document.body.appendChild(fixture);fixture.appendChild(body);
@@ -117,7 +117,7 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
     fs.mkdirSync(path.join(root,'tmp','folder-mic'),{recursive:true});
     await page.locator('#seatingBoard').screenshot({path:path.join(root,'tmp','folder-mic','stagger-center.png')});
    }
-   for(const offset of [-1,0,1]){
+   for(const offset of [-4,-1,0,1,5]){
     const axis=await page.evaluate(offset=>{
      seatingCenterOffset=offset;renderSeatingBoard();
      const template=document.createElement('template');template.innerHTML=renderSeatingPublishBoardPreview({rows:seatingRows,centerOffset:offset});
@@ -127,6 +127,39 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
     assert.deepEqual(axis,{editor:expected,preview:expected,stored:offset});
    }
    assert.deepEqual(await page.evaluate(()=>({rows:JSON.stringify(seatingRows),lefts:[...document.querySelectorAll('#seatingBoard .seating-line')].map(e=>e.getBoundingClientRect().left-document.getElementById('seatingBoard').getBoundingClientRect().left)})),stable);
+   if(counts[0]===16){
+    await page.evaluate(()=>{seatingCenterOffset=0;seatingViewControlsOpen=true;renderSeatingBoard();renderSeatingWorkspaceShell();});
+    for(let n=1;n<=4;n++){
+     await page.locator('[data-center-step="1"]').click();
+     assert.equal(await page.evaluate(()=>seatingCenterOffset),n);
+     assert.equal(await page.locator('#seatingCenterValue').textContent(),'+'+(n/2)+'칸');
+    }
+    await page.evaluate(()=>undoSeatingChange());assert.equal(await page.evaluate(()=>seatingCenterOffset),3);
+    await page.evaluate(()=>redoSeatingChange());assert.equal(await page.evaluate(()=>seatingCenterOffset),4);
+    await page.locator('[data-center-step="-1"]').click();assert.equal(await page.evaluate(()=>seatingCenterOffset),3);
+    const captured=await page.evaluate(()=>seatingSnapshot());
+    await page.locator('#seatingCenterReset').click();assert.equal(await page.evaluate(()=>seatingCenterOffset),0);
+    await page.evaluate(snapshot=>applySeatingSnapshot(snapshot,true),captured);assert.equal(await page.evaluate(()=>seatingCenterOffset),3);
+    const separate=await page.evaluate(()=>{
+     seatingOrchestraRows=[{label:'앞열',seats:Array(6).fill(null)}];seatingOrchestraCenterOffset=0;
+     setSeatingBoardTab('orchestra');changeSeatingCenterOffset(-1);changeSeatingCenterOffset(-1);
+     const published=buildPublishedSeatingPlanData();
+     setSeatingBoardTab('choir');
+     return {choir:seatingActiveCenterOffset(),orchestra:seatingOrchestraCenterOffset,published:[published.centerOffset,published.orchestraCenterOffset],legacy:normalizeStoredSeatingPlan({id:'legacy',centerOffset:-1}).orchestraCenterOffset};
+    });
+    assert.deepEqual(separate,{choir:3,orchestra:-2,published:[3,-2],legacy:-1});
+    const orchestraPreview=await page.evaluate(()=>{
+     const data=buildPublishedSeatingPlanData();
+     data.orchestraRows[0].seats[0]={memberId:'orch-test',name:'검증',part:'관현악'};
+     const fragment=document.createElement('template');fragment.innerHTML=renderSeatingPublishBoardPreview(data);
+     return [...fragment.content.querySelectorAll('.public-seating-center-line')].map(el=>parseFloat(el.style.left));
+    });
+    assert.deepEqual(orchestraPreview,[61+(16*52-4)/2+3*26,61+(6*52-4)/2-2*26]);
+    await page.evaluate(()=>{canUseSeatingPlan=()=>false;changeSeatingCenterOffset(1);setSeatingCenterOffset(0);});
+    assert.equal(await page.evaluate(()=>seatingCenterOffset),3);
+    await page.evaluate(()=>{canUseSeatingPlan=()=>true;seatingCenterOffset=15;renderSeatingBoard();changeSeatingCenterOffset(1);});
+    assert.equal(await page.evaluate(()=>seatingCenterOffset),15);assert.equal(await page.locator('[data-center-step="1"]').isDisabled(),true);
+   }
   }
   await page.evaluate(()=>applySeatingPlan(seatingPlans[0]));
   const before=await page.evaluate(()=>({rows:JSON.stringify(seatingRows),center:document.querySelector('#seatingBoard .seating-center-line').style.left,mics:seatingMicSlots.slice()}));
@@ -135,12 +168,16 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
   assert.deepEqual(await page.evaluate(()=>({rows:JSON.stringify(seatingRows),center:document.querySelector('#seatingBoard .seating-center-line').style.left,mics:seatingMicSlots.slice()})),before);
   assert.equal(await page.evaluate(()=>buildPublishedSeatingPlanData().micVisible),false);
   await page.evaluate(()=>undoSeatingChange());assert.equal(await page.locator('#seatingBoard .seating-mic-row').count(),1);
-  await page.evaluate(()=>{setSeatingMicVisible(false);setSeatingInputValue('seatingFolder','새 폴더');markSeatingDirty();});
+  await page.evaluate(()=>{setSeatingMicVisible(false);setSeatingInputValue('seatingFolder','새 폴더');setSeatingCenterOffset(-2);seatingOrchestraCenterOffset=-1;markSeatingDirty();});
   await page.evaluate(()=>saveSeatingPlan());
   assert.deepEqual(await page.evaluate(()=>saved.map(p=>({id:p.id,folder:p.folder,micVisible:p.micVisible}))),[{id:'a',folder:'새 폴더',micVisible:false}]);
   assert.equal(await page.evaluate(()=>seatingPlans.find(p=>p.id==='b').folder),'수양회');
+  assert.equal(await page.evaluate(()=>saved[0].centerOffset),-2);
+  assert.equal(await page.evaluate(()=>saved[0].orchestraCenterOffset),-1);
   await page.evaluate(()=>applySeatingPlan(seatingPlans.find(p=>p.id==='a')));
   assert.equal(await page.locator('#seatingFolder').inputValue(),'새 폴더');assert.equal(await page.locator('#seatingBoard .seating-mic-row').count(),0);
+  assert.equal(await page.evaluate(()=>seatingCenterOffset),-2);
+  assert.equal(await page.evaluate(()=>seatingOrchestraCenterOffset),-1);
   // Inspect canvas drawing rather than just relying on the hidden DOM row.
   const exported=await page.evaluate(()=>{
    const drawn=[];const fill=CanvasRenderingContext2D.prototype.fillText;

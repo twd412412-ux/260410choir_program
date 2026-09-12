@@ -9,7 +9,7 @@
     if(!loading)loading=(async()=>{
       try{
         if(!window.ExcelJS)await withLoadDeadline(loadScriptOnce('seatingExcelJs','./assets/vendor/exceljs-4.4.0.min.js'),15000);
-        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=7'),15000);
+        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=8'),15000);
       }catch(e){
         ['seatingExcelJs','seatingWorkbookCore'].forEach(id=>{const s=document.getElementById(id);if(s&&s.dataset.loaded!=='true')s.remove();});
         loading=null;throw new Error('엑셀 기능을 불러오지 못했습니다. 다시 눌러주세요.');

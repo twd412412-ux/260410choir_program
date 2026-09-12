@@ -16,6 +16,7 @@
     });
   }
   const key=value=>String(value||'').normalize('NFC').replace(/\s+/g,'').trim();
+  const centerOffset=value=>Number.isSafeInteger(Number(value))?Number(value):0;
   const memberLabelKey=value=>key(String(value||'').normalize('NFKC')).replace(/\(([^()]*)\)$/,'[$1]').toLowerCase();
   const allSeats=plan=>[].concat(...(plan.rows||[]).map(r=>r.seats),...(plan.orchestraRows||[]).map(r=>r.seats),plan.specialSlots?.conductor,plan.specialSlots?.accompanist,plan.specialSlots?.staff||[]).filter(Boolean);
   function fail(message){throw new Error(message);}
@@ -72,7 +73,8 @@
       if(b&&!rows.some(r=>r.seats.some(Boolean)))return;
       if(!rows.length||rows.length>MAX_ROWS||rows.some(r=>!r.seats.length||r.seats.length>MAX_COLS))fail('배치도는 1~40줄, 줄당 1~120칸까지 엑셀로 저장할 수 있습니다.');
       const width=Math.max(...rows.map(r=>r.seats.length));
-      const geometry=boardGeometry(rows),end=width*2+3,center=width+2+(plan.centerOffset||0);
+      const offset=centerOffset(b&&plan.orchestraCenterOffset!==undefined?plan.orchestraCenterOffset:plan.centerOffset);
+      const geometry=boardGeometry(rows),end=width*2+3,center=Math.max(3,Math.min(end-1,width+2+offset));
       starts[field]=Object.fromEntries(rows.map((r,i)=>[r.label,geometry[i].start]));
       const sheet=wb.addWorksheet(name,{views:[{state:'frozen',xSplit:2,ySplit:3,showGridLines:false}],pageSetup:{orientation:'landscape',paperSize:8,fitToPage:true,fitToWidth:1,fitToHeight:0}});
       sheet.properties.defaultRowHeight=38;
@@ -84,7 +86,7 @@
       sheet.mergeCells(2,1,2,end);sheet.getRow(2).height=24;
       sheet.getCell('A2').font={name:'맑은 고딕',size:10,color:{argb:'FF5D655F'}};
       header(sheet,['단','칸수']);
-      const markerStart=Math.max(3,center);
+      const markerStart=Math.max(3,Math.min(end-1,center));
       sheet.mergeCells(3,markerStart,3,markerStart+1);
       const marker=sheet.getCell(3,markerStart);marker.value='센터';marker.font={name:'맑은 고딕',bold:true,size:12,color:{argb:'FF806019'}};marker.alignment={horizontal:'center',vertical:'middle'};
       rows.forEach((r,ri)=>{
@@ -132,6 +134,7 @@
     meta.addRow([MAGIC,VERSION]);
     const data={identities,attendees:[...needed],flags:Object.fromEntries(allSeats(plan).map(s=>[s.memberId,{highlight:!!s.highlight,locked:!!s.locked}])),name:plan.planName||plan.name||'자리배치',title:plan.title||'',date:plan.date||'',program:plan.program||'전체 합창',centerOffset:plan.centerOffset||0,micSlots:plan.micSlots||[],attendeesLocked:!!plan.attendeesLocked,orchestra:!!wb.getWorksheet('관현악 배치'),roles:!!wb.getWorksheet('역할')};
     data.folder=String(plan.folder||'').normalize('NFC').trim().slice(0,60);
+    data.orchestraCenterOffset=centerOffset(plan.orchestraCenterOffset===undefined?plan.centerOffset:plan.orchestraCenterOffset);
     data.micVisible=plan.micVisible!==false;
     data.firstOffsets={rows:plan.rows?.[0]?.offset||0,orchestraRows:plan.orchestraRows?.[0]?.offset||0};
     data.starts=starts;
@@ -244,7 +247,7 @@
     used.forEach((_,id)=>{attendees[id]=true;});
     const info=field=>String(data[field]||'').slice(0,150);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(info('date'))||new Date(info('date')+'T00:00:00Z').toISOString().slice(0,10)!==info('date'))fail('날짜 정보가 올바르지 않습니다.');
-    Object.assign(result,{planId:'',planName:info('name')+' (엑셀)',title:info('title'),date:info('date'),program:info('program'),attendees,attendeesLocked:data.attendeesLocked===true,autoFit:false,partSubmissions:{},history:[],centerOffset:[-1,0,1].includes(data.centerOffset)?data.centerOffset:0,micSlots:Array.isArray(data.micSlots)?data.micSlots.slice(0,MAX_COLS).map(v=>v===true):[]});
+    Object.assign(result,{planId:'',planName:info('name')+' (엑셀)',title:info('title'),date:info('date'),program:info('program'),attendees,attendeesLocked:data.attendeesLocked===true,autoFit:false,partSubmissions:{},history:[],centerOffset:centerOffset(data.centerOffset),orchestraCenterOffset:centerOffset(data.orchestraCenterOffset===undefined?data.centerOffset:data.orchestraCenterOffset),micSlots:Array.isArray(data.micSlots)?data.micSlots.slice(0,MAX_COLS).map(v=>v===true):[]});
     result.folder=String(data.folder||'').normalize('NFC').trim().slice(0,60);
     result.micVisible=data.micVisible!==false;
     return {snapshot:result,issues,warnings,placed:used.size,attended:Object.keys(attendees).length,empty:result.rows.concat(result.orchestraRows).reduce((n,r)=>n+r.seats.filter(s=>!s).length,0),rows:result.rows.length+result.orchestraRows.length};
