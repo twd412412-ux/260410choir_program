@@ -4708,7 +4708,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.2';
+var APP_RELEASE_VERSION='26.09.13.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -19065,7 +19065,6 @@ function downloadSeatingImage(includeSpecial){
   var specialSlots=normalizeSeatingSpecialSlots(seatingSpecialSlots);
   var staffItems=specialSlots.staff.map(function(seat,index){return {seat:seat,index:index};}).filter(function(item){return !!item.seat;});
   var hasSpecial=includeSpecial&&(!!specialSlots.accompanist||staffItems.length>0);
-  var stats=seatingPlacementStats().boards[seatingBoardTab];
   var maxSeats=seatingMaxSeatCount(rows);
   var seatW=84,seatH=50,gap=8,labelW=70,countW=42,leftPad=28,rightPad=28,topPad=92,rowGap=14;
   var rowBlockW=labelW+countW+(maxSeats*seatW)+((maxSeats-1)*gap);
@@ -19090,7 +19089,7 @@ function downloadSeatingImage(includeSpecial){
   seatingCanvasText(ctx,(seatingInputValue('seatingProgram')||'전체 합창')+' · '+(seatingBoardTab==='orchestra'?'관현악':'합창')+' 배치도',leftPad,34,width-leftPad-rightPad);
   ctx.font='700 14px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
   ctx.fillStyle='#596354';
-  var subtitle=[seatingInputValue('seatingTitle')||'찬양의밤',seatingInputValue('seatingDate')||'', '참석 '+stats.attended+'명', '미배치 '+stats.unplaced+'명',(!includeSpecial&&seatingBoardTab==='choir'&&seatingImageSpecialAssignedCount()?'반주·스태프 제외':'')].filter(Boolean).join(' · ');
+  var subtitle=[seatingInputValue('seatingTitle')||'찬양의밤',seatingInputValue('seatingDate')||'',(!includeSpecial&&seatingBoardTab==='choir'&&seatingImageSpecialAssignedCount()?'반주·스태프 제외':'')].filter(Boolean).join(' · ');
   seatingCanvasText(ctx,subtitle,leftPad,64,width-leftPad-rightPad);
   var baseCenterLeft=leftPad+labelW+countW+(((maxSeats*seatW)+((maxSeats-1)*gap))/2);
   var staggerCenterShift=seatingStaggerCenterShift(rows)*(seatW+gap)/seatingSeatPitch();
@@ -21218,14 +21217,11 @@ function openSeatingPublishConfirm(){
   var stats=data.stats||{};
   var warnings=[];
   if(seatingDirty)warnings.push('저장하지 않은 수정 내용도 현재 화면 그대로 공개됩니다.');
-  if(stats.unplaced>0)warnings.push('미배치 '+stats.unplaced+'명이 있습니다.');
-  if(stats.shortage>0)warnings.push('좌석이 참석 인원보다 '+stats.shortage+'칸 부족합니다.');
   if(stats.duplicate>0)warnings.push('중복 배치 '+stats.duplicate+'명이 있습니다.');
   body.innerHTML='<div class="seating-confirm-summary">'
     +'<div class="seating-confirm-item"><div class="seating-confirm-label">행사</div><div class="seating-confirm-value">'+escHtml(data.title)+'</div></div>'
     +'<div class="seating-confirm-item"><div class="seating-confirm-label">날짜</div><div class="seating-confirm-value">'+escHtml(data.date)+'</div></div>'
     +'<div class="seating-confirm-item"><div class="seating-confirm-label">프로그램</div><div class="seating-confirm-value">'+escHtml(data.program)+'</div></div>'
-    +'<div class="seating-confirm-item"><div class="seating-confirm-label">상태</div><div class="seating-confirm-value">참석 '+(stats.attended||0)+'명 · 배치 '+(stats.placed||0)+'명 · 미배치 '+(stats.unplaced||0)+'명</div></div>'
     +'</div>'
     +(warnings.length?'<div class="seating-confirm-warning">'+warnings.map(escHtml).join('<br>')+'</div>':'')
     +renderSeatingPublishBoardPreview(data);

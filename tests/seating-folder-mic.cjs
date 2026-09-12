@@ -144,6 +144,21 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
    return drawn;
   });
   assert.ok(!exported.includes('마이크'));assert.ok(exported.includes('센터'));
+  assert.ok(!exported.some(text=>/참석 \d+명|미배치 \d+명/.test(text)),'shared image contains administrative counts');
+  const publication=await page.evaluate(()=>{
+   const build=buildPublishedSeatingPlanData,dirty=seatingDirty;
+   const original=build();
+   buildPublishedSeatingPlanData=()=>({...original,stats:{...original.stats,attended:200,placed:60,unplaced:140,shortage:100,duplicate:1}});
+   seatingDirty=true;
+   try{
+    openSeatingPublishConfirm();
+    return {text:document.getElementById('seatingPublishConfirmBody').textContent,stats:seatingPublishPreviewData.stats,editor:document.getElementById('seatingSummary').textContent};
+   }finally{buildPublishedSeatingPlanData=build;seatingDirty=dirty;closeModal('modalSeatingPublishConfirm');}
+  });
+  assert.ok(!/참석 \d+명|미배치 \d+명|좌석이 참석 인원/.test(publication.text));
+  assert.ok(publication.text.includes('중복 배치 1명'));assert.ok(publication.text.includes('저장하지 않은 수정'));
+  assert.ok(publication.text.includes('센터'));assert.equal(publication.stats.unplaced,140);
+  assert.ok(publication.editor.includes('참석'));assert.ok(publication.editor.includes('미배치'));
   for(const viewport of [{width:390,height:844},{width:820,height:1180},{width:844,height:390}]){
    await page.setViewportSize(viewport);
    await page.evaluate(()=>{seatingSettingsOpen=true;seatingViewControlsOpen=true;renderSeatingWorkspaceShell();document.getElementById('subSeatingPlan').classList.add('seating-settings-open','seating-view-open');});
