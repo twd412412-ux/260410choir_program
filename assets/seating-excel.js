@@ -9,7 +9,7 @@
     if(!loading)loading=(async()=>{
       try{
         if(!window.ExcelJS)await withLoadDeadline(loadScriptOnce('seatingExcelJs','./assets/vendor/exceljs-4.4.0.min.js'),15000);
-        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=5'),15000);
+        if(!window.SeatingWorkbook)await withLoadDeadline(loadScriptOnce('seatingWorkbookCore','./assets/seating-workbook.js?v=6'),15000);
       }catch(e){
         ['seatingExcelJs','seatingWorkbookCore'].forEach(id=>{const s=document.getElementById(id);if(s&&s.dataset.loaded!=='true')s.remove();});
         loading=null;throw new Error('엑셀 기능을 불러오지 못했습니다. 다시 눌러주세요.');
@@ -67,7 +67,7 @@
       const result=SeatingWorkbook.parse(workbook,directory());
       el('Preview').hidden=false;el('Name').value=result.snapshot.planName;
       el('Apply').hidden=result.issues.length>0;
-      const lines=[];
+      const lines=[...(result.warnings||[])];
       if(result.issues.length){status('확인할 항목 '+result.issues.length+'개 · 아직 반영하지 않았습니다.');lines.push(...result.issues);}
       else{
         status(result.rows+'줄 · 배치 '+result.placed+'명 · 빈자리 '+result.empty+'칸');

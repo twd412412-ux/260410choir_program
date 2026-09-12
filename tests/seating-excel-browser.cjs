@@ -55,9 +55,16 @@ const fixture=photoPath?JSON.parse(fs.readFileSync(photoPath,'utf8')):{id:'test-
     assert.equal(wb.getWorksheet('_단원목록').state,'veryHidden');
     grid.getCell(last.row,last.start).value=grid.getCell(first.row,first.start).value;grid.getCell(first.row,first.start).value=null;
     const edited=Buffer.from(await wb.xlsx.writeBuffer());
-    await page.locator('#seatingExcelFile').setInputFiles({name:'edited.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:edited});
+    const info=wb.getWorksheet('_앱정보');let metadataText='';for(let r=2;r<=info.rowCount;r++)metadataText+=info.getCell(r,1).value;
+    const metadata=JSON.parse(metadataText);metadata.attendees.push('removed-attendee-test');
+    for(let r=2;r<=info.rowCount;r++)info.getCell(r,1).value=null;
+    const json=JSON.stringify(metadata);for(let i=0;i<json.length;i+=8000)info.getCell(2+i/8000,1).value=json.slice(i,i+8000);
+    const withStaleAttendance=Buffer.from(await wb.xlsx.writeBuffer());
+    await page.locator('#seatingExcelFile').setInputFiles({name:'edited.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:withStaleAttendance});
     await page.locator('#seatingExcelPreview:not([hidden])').waitFor();
     assert.match(await page.locator('#seatingExcelStatus').innerText(),/배치/);
+    assert.match(await page.locator('#seatingExcelChanges').innerText(),/옛 참석 정보 1건/);
+    assert.equal(await page.locator('#seatingExcelApply').isVisible(),true);
     for(const viewport of [{width:820,height:1180},{width:390,height:844},{width:844,height:390}]){
       await page.setViewportSize(viewport);
       await page.locator('#seatingExcelApply').scrollIntoViewIfNeeded();

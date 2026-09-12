@@ -16,6 +16,7 @@
     });
   }
   const key=value=>String(value||'').normalize('NFC').replace(/\s+/g,'').trim();
+  const memberLabelKey=value=>key(String(value||'').normalize('NFKC')).replace(/\(([^()]*)\)$/,'[$1]').toLowerCase();
   const allSeats=plan=>[].concat(...(plan.rows||[]).map(r=>r.seats),...(plan.orchestraRows||[]).map(r=>r.seats),plan.specialSlots?.conductor,plan.specialSlots?.accompanist,plan.specialSlots?.staff||[]).filter(Boolean);
   function fail(message){throw new Error(message);}
   function text(cell){
@@ -146,17 +147,18 @@
       if(typeof chunk!=='string')fail('엑셀 연결정보가 올바르지 않습니다.');
       json+=chunk;
     }
-    const data=JSON.parse(json), people=directoryMap(directory), issues=[], used=new Map();
+    const data=JSON.parse(json), people=directoryMap(directory), issues=[], warnings=[], used=new Map();
     if(!data.identities||!Array.isArray(data.attendees)||data.attendees.length>2000)fail('엑셀 연결정보가 올바르지 않습니다.');
     const addIssue=message=>{if(issues.length<50)issues.push(message);};
     function resolve(label,location){
       if(!label)return null;
-      const identity=data.identities[label];
+      const normalized=memberLabelKey(label);
+      const aliases=Object.entries(data.identities).filter(([name])=>memberLabelKey(name)===normalized);
+      const identity=data.identities[label]||(aliases.length===1?aliases[0][1]:null);
       let m=identity&&people.get(identity.id);
       if(m&&key(m.name)!==key(identity.name))m=null;
       if(!m){
-        const normalized=key(label);
-        const matches=[...people.values()].filter(x=>key(x.name)===normalized||key(x.name+' ['+x.part+']')===normalized);
+        const matches=[...people.values()].filter(x=>memberLabelKey(x.name)===normalized||memberLabelKey(x.name+' ['+x.part+']')===normalized);
         if(matches.length!==1){addIssue(location+' · '+label+(matches.length?' — 동명이인: 이름 뒤에 [파트]를 붙여주세요.':' — 명부에서 찾을 수 없습니다.'));return null;}
         m=matches[0];
       }
@@ -234,12 +236,14 @@
       }
     }
     const attendees={};
-    data.attendees.forEach(id=>{if(people.has(id))attendees[id]=true;else addIssue('참석 단원 '+id+' — 명부에서 찾을 수 없습니다.');});
+    const staleAttendees=new Set();
+    data.attendees.forEach(id=>{if(people.has(id))attendees[id]=true;else staleAttendees.add(id);});
+    if(staleAttendees.size)warnings.push('현재 명부에 없는 옛 참석 정보 '+staleAttendees.size+'건은 새 배치의 참석 명단에서 제외됩니다.');
     used.forEach((_,id)=>{attendees[id]=true;});
     const info=field=>String(data[field]||'').slice(0,150);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(info('date'))||new Date(info('date')+'T00:00:00Z').toISOString().slice(0,10)!==info('date'))fail('날짜 정보가 올바르지 않습니다.');
     Object.assign(result,{planId:'',planName:info('name')+' (엑셀)',title:info('title'),date:info('date'),program:info('program'),attendees,attendeesLocked:data.attendeesLocked===true,autoFit:false,partSubmissions:{},history:[],centerOffset:[-1,0,1].includes(data.centerOffset)?data.centerOffset:0,micSlots:Array.isArray(data.micSlots)?data.micSlots.slice(0,MAX_COLS).map(v=>v===true):[]});
-    return {snapshot:result,issues,placed:used.size,attended:Object.keys(attendees).length,empty:result.rows.concat(result.orchestraRows).reduce((n,r)=>n+r.seats.filter(s=>!s).length,0),rows:result.rows.length+result.orchestraRows.length};
+    return {snapshot:result,issues,warnings,placed:used.size,attended:Object.keys(attendees).length,empty:result.rows.concat(result.orchestraRows).reduce((n,r)=>n+r.seats.filter(s=>!s).length,0),rows:result.rows.length+result.orchestraRows.length};
   }
   const api={build,parse,allSeats,boardGeometry,reserveRows};
   if(typeof module==='object'&&module.exports)module.exports=api;

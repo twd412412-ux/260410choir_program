@@ -99,5 +99,18 @@ async function disk(w){const b=await w.xlsx.writeBuffer();const loaded=new Excel
     w.removeWorksheet(name);const plain=w.addWorksheet(name);plain.addRow(['기존 파일']);plain.addRow([]);plain.addRow(['단','칸수']);values.forEach(v=>plain.addRow(v));
   }
   assert.deepEqual(core.parse(await disk(w),members).issues,[],'legacy v1 unsupported');
+  for(const label of ['김하민(S1)','김하민 [ s1 ]','김하민（Ｓ１）','김하민(S1)'.normalize('NFD')]){
+    w=build();w.getWorksheet('합창 배치').getCell('C4').value=label;
+    result=core.parse(await disk(w),members);
+    assert.deepEqual(result.issues,[]);assert.equal(result.snapshot.rows[0].seats[0].memberId,'a');
+  }
+  w=core.build(ExcelJS,{...plan,attendees:{...plan.attendees,deletedMember:true}},members,{reserveSeats:0});
+  result=core.parse(await disk(w),members);
+  assert.deepEqual(result.issues,[]);assert.equal(result.warnings.length,1);assert.equal(result.snapshot.attendees.deletedMember,undefined);
+  assert.equal(result.attended,7);assert.equal(result.placed,5);
+  result=core.parse(w,members.filter(m=>m.id!=='a'));
+  assert.ok(result.issues.some(message=>message.includes('김하민')),'missing seated member must still block import');
+  w.getWorksheet('합창 배치').getCell('C4').value='김하민';
+  assert.ok(core.parse(w,members).issues.some(message=>message.includes('동명이인')),'never guess ambiguous names');
   console.log('PASS: XLSX roundtrip, empty front row, identities, edited names, duplicate people, ambiguous names, bounds, formulas, roles, attendance, flags, new-plan isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
