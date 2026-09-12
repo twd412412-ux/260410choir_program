@@ -131,6 +131,8 @@
     const meta=wb.addWorksheet('_앱정보',{state:'veryHidden'});
     meta.addRow([MAGIC,VERSION]);
     const data={identities,attendees:[...needed],flags:Object.fromEntries(allSeats(plan).map(s=>[s.memberId,{highlight:!!s.highlight,locked:!!s.locked}])),name:plan.planName||plan.name||'자리배치',title:plan.title||'',date:plan.date||'',program:plan.program||'전체 합창',centerOffset:plan.centerOffset||0,micSlots:plan.micSlots||[],attendeesLocked:!!plan.attendeesLocked,orchestra:!!wb.getWorksheet('관현악 배치'),roles:!!wb.getWorksheet('역할')};
+    data.folder=String(plan.folder||'').normalize('NFC').trim().slice(0,60);
+    data.micVisible=plan.micVisible!==false;
     data.firstOffsets={rows:plan.rows?.[0]?.offset||0,orchestraRows:plan.orchestraRows?.[0]?.offset||0};
     data.starts=starts;
     const json=JSON.stringify(data);
@@ -243,6 +245,8 @@
     const info=field=>String(data[field]||'').slice(0,150);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(info('date'))||new Date(info('date')+'T00:00:00Z').toISOString().slice(0,10)!==info('date'))fail('날짜 정보가 올바르지 않습니다.');
     Object.assign(result,{planId:'',planName:info('name')+' (엑셀)',title:info('title'),date:info('date'),program:info('program'),attendees,attendeesLocked:data.attendeesLocked===true,autoFit:false,partSubmissions:{},history:[],centerOffset:[-1,0,1].includes(data.centerOffset)?data.centerOffset:0,micSlots:Array.isArray(data.micSlots)?data.micSlots.slice(0,MAX_COLS).map(v=>v===true):[]});
+    result.folder=String(data.folder||'').normalize('NFC').trim().slice(0,60);
+    result.micVisible=data.micVisible!==false;
     return {snapshot:result,issues,warnings,placed:used.size,attended:Object.keys(attendees).length,empty:result.rows.concat(result.orchestraRows).reduce((n,r)=>n+r.seats.filter(s=>!s).length,0),rows:result.rows.length+result.orchestraRows.length};
   }
   const api={build,parse,allSeats,boardGeometry,reserveRows};

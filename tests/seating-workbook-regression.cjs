@@ -112,5 +112,8 @@ async function disk(w){const b=await w.xlsx.writeBuffer();const loaded=new Excel
   assert.ok(result.issues.some(message=>message.includes('김하민')),'missing seated member must still block import');
   w.getWorksheet('합창 배치').getCell('C4').value='김하민';
   assert.ok(core.parse(w,members).issues.some(message=>message.includes('동명이인')),'never guess ambiguous names');
+  w=core.build(ExcelJS,{...plan,folder:'찬양의밤',micVisible:false},members,{reserveSeats:0});
+  result=core.parse(await disk(w),members);assert.equal(result.snapshot.folder,'찬양의밤');assert.equal(result.snapshot.micVisible,false);
+  result=core.parse(await disk(build()),members);assert.equal(result.snapshot.folder,'');assert.equal(result.snapshot.micVisible,true);
   console.log('PASS: XLSX roundtrip, empty front row, identities, edited names, duplicate people, ambiguous names, bounds, formulas, roles, attendance, flags, new-plan isolation.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
