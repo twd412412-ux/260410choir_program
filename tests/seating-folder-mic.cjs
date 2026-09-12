@@ -22,6 +22,59 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
    seatingMemberPanelCollapsed=true;applySeatingPlan(p);renderSeatingPlanSelect();seatingZoom=1;updateSeatingZoom();
   });
   assert.deepEqual(await page.locator('#seatingPlanSelect optgroup').evaluateAll(es=>es.map(e=>e.label)),['수양회 · 1','찬양의밤 · 1','미분류 · 1']);
+  // Mixed row lengths must center on the staggered seats, not the microphone grid.
+  for(const counts of [[16,15,16,15],[10,10,10,10],[9,10,9,10]]){
+   await page.evaluate(counts=>{
+    seatingRows=counts.map((n,i)=>({label:['3단','2단','1단','0단앞'][i],seats:Array(n).fill(null)}));
+    seatingCenterOffset=0;seatingMicVisible=true;renderSeatingBoard();
+   },counts);
+   for(const width of [390,820,1280]){
+    await page.setViewportSize({width,height:900});
+    const geometry=await page.evaluate(()=>{
+     const rects=[...document.querySelectorAll('#seatingBoard .seating-seat')].map(e=>e.getBoundingClientRect());
+     const center=(Math.min(...rects.map(r=>r.left))+Math.max(...rects.map(r=>r.right)))/2;
+     const mic=document.querySelector('#seatingBoard .seating-mic-line').getBoundingClientRect();
+     const line=document.querySelector('#seatingBoard .seating-center-line').getBoundingClientRect();
+     return {center,mic:(mic.left+mic.right)/2,line:line.left,count:seatingMicSlots.length};
+    });
+    assert.ok(Math.abs(geometry.mic-geometry.center)<0.2,'microphone row off-center: '+JSON.stringify(geometry));
+    assert.ok(Math.abs(geometry.line-geometry.center)<0.2,'center marker off-center: '+JSON.stringify(geometry));
+    assert.equal(geometry.count,Math.max(...counts));
+   }
+   const stable=await page.evaluate(()=>({rows:JSON.stringify(seatingRows),lefts:[...document.querySelectorAll('#seatingBoard .seating-line')].map(e=>e.getBoundingClientRect().left-document.getElementById('seatingBoard').getBoundingClientRect().left)}));
+   const exportedGeometry=await page.evaluate(()=>{
+    const boxes=[],labels=[];
+    const round=seatingDrawRoundRect,fill=CanvasRenderingContext2D.prototype.fillText,blob=HTMLCanvasElement.prototype.toBlob;
+    seatingDrawRoundRect=function(ctx,x,y,w,h,...rest){boxes.push({x,y,w,h});return round(ctx,x,y,w,h,...rest);};
+    CanvasRenderingContext2D.prototype.fillText=function(t,x,y,...rest){labels.push({t,x,y});return fill.call(this,t,x,y,...rest);};
+    HTMLCanvasElement.prototype.toBlob=function(){};
+    try{downloadSeatingImage(false);}finally{seatingDrawRoundRect=round;CanvasRenderingContext2D.prototype.fillText=fill;HTMLCanvasElement.prototype.toBlob=blob;}
+    const micLabel=labels.find(l=>l.t==='마이크');
+    const mics=boxes.filter(b=>b.h===34&&b.y===micLabel.y-18);
+    return {mic:(mics[0].x+mics.at(-1).x+mics.at(-1).w)/2,center:labels.find(l=>l.t==='센터').x};
+   });
+   assert.ok(Math.abs(exportedGeometry.mic-exportedGeometry.center)<0.2,'image export microphone center');
+   for(const view of ['audience','member']){
+    const publicGeometry=await page.evaluate(view=>{
+     let body=document.getElementById('publicSeatingBody');
+     const fixture=document.createElement('div');document.body.appendChild(fixture);fixture.appendChild(body);
+     publishedSeatingPlan={id:'fixture',rows:JSON.parse(JSON.stringify(seatingRows)),centerOffset:0};
+     publicSeatingView=view;publicSeatingBoardTab='choir';publicSeatingSearch='';renderPublicSeatingModalBody();
+     const rects=[...body.querySelectorAll('.public-seating-seat')].map(e=>e.getBoundingClientRect());
+     const center=(Math.min(...rects.map(r=>r.left))+Math.max(...rects.map(r=>r.right)))/2;
+     const marker=body.querySelector('.public-seating-center-line').getBoundingClientRect().left;
+     fixture.style.display='none';return {center,marker};
+    },view);
+    assert.ok(Math.abs(publicGeometry.center-publicGeometry.marker)<0.2,view+' public center: '+JSON.stringify(publicGeometry));
+   }
+   if(counts[0]===16){
+    fs.mkdirSync(path.join(root,'tmp','folder-mic'),{recursive:true});
+    await page.locator('#seatingBoard').screenshot({path:path.join(root,'tmp','folder-mic','stagger-center.png')});
+   }
+   await page.evaluate(()=>{seatingCenterOffset=1;renderSeatingBoard();});
+   assert.deepEqual(await page.evaluate(()=>({rows:JSON.stringify(seatingRows),lefts:[...document.querySelectorAll('#seatingBoard .seating-line')].map(e=>e.getBoundingClientRect().left-document.getElementById('seatingBoard').getBoundingClientRect().left)})),stable);
+  }
+  await page.evaluate(()=>applySeatingPlan(seatingPlans[0]));
   const before=await page.evaluate(()=>({rows:JSON.stringify(seatingRows),center:document.querySelector('#seatingBoard .seating-center-line').style.left,mics:seatingMicSlots.slice()}));
   await page.evaluate(()=>setSeatingMicVisible(false));
   assert.equal(await page.locator('#seatingBoard .seating-mic-row').count(),0);

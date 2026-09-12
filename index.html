@@ -4708,7 +4708,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.12.2';
+var APP_RELEASE_VERSION='26.09.12.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8376,7 +8376,7 @@ function renderPublicSeatingModalBody(){
   var mine=findPublicSeatingMine(plan);
   var maxSeats=publicSeatingMaxSeatCount(rows);
   var baseCenterLeft=seatingCenterLeftForSeatCount(maxSeats);
-  var centerLeft=baseCenterLeft+seatingCenterOffsetPixels(plan.centerOffset,memberView);
+  var centerLeft=baseCenterLeft+(memberView?-1:1)*seatingStaggerCenterShift(rows)+seatingCenterOffsetPixels(plan.centerOffset,memberView);
   var maxSeatWidth=seatingRowWidthForSeatCount(maxSeats);
   var boardWidth=memberView?(seatingLeadWidth()*2)+maxSeatWidth:seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var publicSpecialSlots=publicSeatingBoardTab==='choir'?normalizeSeatingSpecialSlots(plan.specialSlots||{}):defaultSeatingSpecialSlots();
@@ -17925,6 +17925,17 @@ function seatingCenterOffsetPixels(value,mirrored){
 function seatingRowLeftForSeatCount(count,maxCount){
   return seatingCenterLeftForSeatCount(maxCount)-(seatingRowWidthForSeatCount(count)/2);
 }
+function seatingStaggerCenterShift(rows){
+  var left=Infinity,right=-Infinity;
+  (rows||[]).forEach(function(row,index){
+    var count=(row.seats||[]).length;if(!count)return;
+    var halfWidth=seatingRowWidthForSeatCount(count)/2;
+    var shift=seatingRowDisplayOffset(row,index,rows)*seatingSeatPitch();
+    left=Math.min(left,shift-halfWidth);right=Math.max(right,shift+halfWidth);
+  });
+  // Measure seats only; microphone slots and occupied/empty state do not set the center.
+  return isFinite(left)?(left+right)/2:0;
+}
 function seatingSeatNameClass(name){
   var len=String(name||'').replace(/\s+/g,'').length;
   return len>=5?' long':(len>=4?' medium':'');
@@ -19055,7 +19066,8 @@ function downloadSeatingImage(includeSpecial){
   var subtitle=[seatingInputValue('seatingTitle')||'찬양의밤',seatingInputValue('seatingDate')||'', '참석 '+stats.attended+'명', '미배치 '+stats.unplaced+'명',(!includeSpecial&&seatingBoardTab==='choir'&&seatingImageSpecialAssignedCount()?'반주·스태프 제외':'')].filter(Boolean).join(' · ');
   seatingCanvasText(ctx,subtitle,leftPad,64,width-leftPad-rightPad);
   var baseCenterLeft=leftPad+labelW+countW+(((maxSeats*seatW)+((maxSeats-1)*gap))/2);
-  var centerLeft=baseCenterLeft+(normalizeSeatingCenterOffset(seatingCenterOffset)*(seatW+gap)/2);
+  var staggerCenterShift=seatingStaggerCenterShift(rows)*(seatW+gap)/seatingSeatPitch();
+  var centerLeft=baseCenterLeft+staggerCenterShift+(normalizeSeatingCenterOffset(seatingCenterOffset)*(seatW+gap)/2);
   ctx.save();
   ctx.setLineDash([8,8]);
   ctx.strokeStyle='#C6AD2E';
@@ -19108,7 +19120,7 @@ function downloadSeatingImage(includeSpecial){
   ctx.fillText('마이크',leftPad,micY+18);
   seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,maxSeats);
   seatingMicSlots.forEach(function(on,i){
-    var x=leftPad+labelW+countW+i*(seatW+gap);
+    var x=leftPad+labelW+countW+staggerCenterShift+i*(seatW+gap);
     seatingDrawRoundRect(ctx,x,micY,seatW,34,6);
     ctx.fillStyle=on?'#4F7FB7':'#FFFDF8';
     ctx.fill();
@@ -20422,7 +20434,8 @@ function renderSeatingBoard(){
   if(title)title.textContent=program+' · '+(seatingBoardTab==='orchestra'?'관현악':'합창')+' 배치도';
   if(seatingBoardTab==='choir')seatingMicSlots=normalizeSeatingMicSlots(seatingMicSlots,seatingMaxSeatCount(rows));
   var maxSeats=seatingMaxSeatCount(rows);
-  var centerLeft=seatingCenterLeftForSeatCount(maxSeats)+seatingCenterOffsetPixels(seatingCenterOffset,false);
+  var staggerCenterShift=seatingStaggerCenterShift(rows);
+  var centerLeft=seatingCenterLeftForSeatCount(maxSeats)+staggerCenterShift+seatingCenterOffsetPixels(seatingCenterOffset,false);
   var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
   var html='<div class="seating-center-line" style="left:'+centerLeft+'px"></div><div class="seating-center-label" style="left:'+(centerLeft-18)+'px">센터</div>';
   rows.forEach(function(row,r){
@@ -20449,7 +20462,7 @@ function renderSeatingBoard(){
   });
   html+=renderSeatingInlinePicker();
   if(seatingBoardTab==='choir'&&seatingMicVisible){
-    html+='<div class="seating-mic-row"><div class="seating-mic-label">마이크</div><div class="seating-mic-line">';
+    html+='<div class="seating-mic-row"><div class="seating-mic-label">마이크</div><div class="seating-mic-line" style="margin-left:'+staggerCenterShift+'px">';
     seatingMicSlots.forEach(function(on,i){
       html+='<button class="seating-mic-slot '+(on?'on':'')+'" onclick="toggleSeatingMicSlot('+i+')" title="'+(on?'마이크 있음':'마이크 없음')+'">'+(on?'마이크':'빈칸')+'</button>';
     });
@@ -21145,7 +21158,7 @@ function renderSeatingPublishBoardPreview(plan){
   return boards.map(function(board){
     var rows=board.rows;
     var maxSeats=publicSeatingMaxSeatCount(rows);
-    var centerLeft=seatingCenterLeftForSeatCount(maxSeats)+seatingCenterOffsetPixels(plan&&plan.centerOffset,false);
+    var centerLeft=seatingCenterLeftForSeatCount(maxSeats)+seatingStaggerCenterShift(board.rows)+seatingCenterOffsetPixels(plan&&plan.centerOffset,false);
     var boardWidth=seatingLeadWidth()+(maxSeats*seatingSeatPitch())+40;
     var specialCount=board.key==='choir'?publicSeatingSpecialSeatList(plan).length:0;
     var html='<div style="font-size:12px;font-weight:900;color:var(--tx);margin:10px 0 6px">'+board.label+' 배치도</div>'
