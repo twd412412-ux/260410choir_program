@@ -70,7 +70,7 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
   assert.equal(await folder.inputValue(),'찬양의밤');
   assert.equal(await page.evaluate(()=>saved.length),0,'choosing a folder must not write a plan');
   assert.equal(await page.evaluate(()=>JSON.stringify(seatingPlans)),storedPlans);
-  // Mixed row lengths must center on the staggered seats, not the microphone grid.
+  // Microphones follow seat bounds, but the stage axis must retain its saved half-seat basis.
   for(const counts of [[16,15,16,15],[10,10,10,10],[9,10,9,10]]){
    await page.evaluate(counts=>{
     seatingRows=counts.map((n,i)=>({label:['3단','2단','1단','0단앞'][i],seats:Array(n).fill(null)}));
@@ -82,11 +82,10 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
      const rects=[...document.querySelectorAll('#seatingBoard .seating-seat')].map(e=>e.getBoundingClientRect());
      const center=(Math.min(...rects.map(r=>r.left))+Math.max(...rects.map(r=>r.right)))/2;
      const mic=document.querySelector('#seatingBoard .seating-mic-line').getBoundingClientRect();
-     const line=document.querySelector('#seatingBoard .seating-center-line').getBoundingClientRect();
-     return {center,mic:(mic.left+mic.right)/2,line:line.left,count:seatingMicSlots.length};
+     return {center,mic:(mic.left+mic.right)/2,line:parseFloat(document.querySelector('#seatingBoard .seating-center-line').style.left),count:seatingMicSlots.length};
     });
     assert.ok(Math.abs(geometry.mic-geometry.center)<0.2,'microphone row off-center: '+JSON.stringify(geometry));
-    assert.ok(Math.abs(geometry.line-geometry.center)<0.2,'center marker off-center: '+JSON.stringify(geometry));
+    assert.equal(geometry.line,61+(Math.max(...counts)*52-4)/2,'saved center basis must not acquire a quarter-seat shift');
     assert.equal(geometry.count,Math.max(...counts));
    }
    const stable=await page.evaluate(()=>({rows:JSON.stringify(seatingRows),lefts:[...document.querySelectorAll('#seatingBoard .seating-line')].map(e=>e.getBoundingClientRect().left-document.getElementById('seatingBoard').getBoundingClientRect().left)}));
@@ -101,25 +100,32 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.
     const mics=boxes.filter(b=>b.h===34&&b.y===micLabel.y-18);
     return {mic:(mics[0].x+mics.at(-1).x+mics.at(-1).w)/2,center:labels.find(l=>l.t==='센터').x};
    });
-   assert.ok(Math.abs(exportedGeometry.mic-exportedGeometry.center)<0.2,'image export microphone center');
-   for(const view of ['audience','member']){
-    const publicGeometry=await page.evaluate(view=>{
+   assert.equal(exportedGeometry.center,28+70+42+(Math.max(...counts)*92-8)/2,'image export preserves stage axis');
+   for(const view of ['audience','member'])for(const offset of [-1,0,1]){
+    const publicGeometry=await page.evaluate(({view,offset})=>{
      let body=document.getElementById('publicSeatingBody');
      const fixture=document.createElement('div');document.body.appendChild(fixture);fixture.appendChild(body);
-     publishedSeatingPlan={id:'fixture',rows:JSON.parse(JSON.stringify(seatingRows)),centerOffset:0};
+     publishedSeatingPlan={id:'fixture',rows:JSON.parse(JSON.stringify(seatingRows)),centerOffset:offset};
      publicSeatingView=view;publicSeatingBoardTab='choir';publicSeatingSearch='';renderPublicSeatingModalBody();
-     const rects=[...body.querySelectorAll('.public-seating-seat')].map(e=>e.getBoundingClientRect());
-     const center=(Math.min(...rects.map(r=>r.left))+Math.max(...rects.map(r=>r.right)))/2;
-     const marker=body.querySelector('.public-seating-center-line').getBoundingClientRect().left;
+     const center=61+(Math.max(...seatingRows.map(row=>row.seats.length))*52-4)/2+(view==='member'?-1:1)*offset*26;
+     const marker=parseFloat(body.querySelector('.public-seating-center-line').style.left);
      fixture.style.display='none';return {center,marker};
-    },view);
+    },{view,offset});
     assert.ok(Math.abs(publicGeometry.center-publicGeometry.marker)<0.2,view+' public center: '+JSON.stringify(publicGeometry));
    }
    if(counts[0]===16){
     fs.mkdirSync(path.join(root,'tmp','folder-mic'),{recursive:true});
     await page.locator('#seatingBoard').screenshot({path:path.join(root,'tmp','folder-mic','stagger-center.png')});
    }
-   await page.evaluate(()=>{seatingCenterOffset=1;renderSeatingBoard();});
+   for(const offset of [-1,0,1]){
+    const axis=await page.evaluate(offset=>{
+     seatingCenterOffset=offset;renderSeatingBoard();
+     const template=document.createElement('template');template.innerHTML=renderSeatingPublishBoardPreview({rows:seatingRows,centerOffset:offset});
+     return {editor:parseFloat(document.querySelector('#seatingBoard .seating-center-line').style.left),preview:parseFloat(template.content.querySelector('.public-seating-center-line').style.left),stored:seatingCenterOffset};
+    },offset);
+    const expected=61+(Math.max(...counts)*52-4)/2+offset*26;
+    assert.deepEqual(axis,{editor:expected,preview:expected,stored:offset});
+   }
    assert.deepEqual(await page.evaluate(()=>({rows:JSON.stringify(seatingRows),lefts:[...document.querySelectorAll('#seatingBoard .seating-line')].map(e=>e.getBoundingClientRect().left-document.getElementById('seatingBoard').getBoundingClientRect().left)})),stable);
   }
   await page.evaluate(()=>applySeatingPlan(seatingPlans[0]));
