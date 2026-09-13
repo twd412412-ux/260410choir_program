@@ -4803,7 +4803,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.10';
+var APP_RELEASE_VERSION='26.09.13.11';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8673,12 +8673,9 @@ function loadHomeEventSchedules(force){
   var cachedEntry=force?null:loadCacheEntry(HOME_EVENT_CACHE_KEY,HOME_EVENT_CACHE_TTL_MS);
   if(cachedEntry&&cachedEntry.hit&&Array.isArray(cachedEntry.data)){
     mergeHomeEventSchedules(cachedEntry.data);
-    homeEventSchedulesLoaded=true;
-    homeEventSchedulesLoadedAt=cachedEntry.ts;
-    return Promise.resolve(homeEventSchedules);
   }
   var loadId=++homeEventSchedulesLoadId;
-  homeEventSchedulesPromise=db.collection('schedules').where('showEventHub','==',true).get().then(function(snap){
+  homeEventSchedulesPromise=db.collection('schedules').where('showEventHub','==',true).get({source:'server'}).then(function(snap){
     var rows=[];
     snap.forEach(function(doc){rows.push(scheduleRowFromDoc(doc));});
     if(loadId!==homeEventSchedulesLoadId)return homeEventSchedules;
@@ -8691,7 +8688,7 @@ function loadHomeEventSchedules(force){
   }).catch(function(e){
     console.error(e);
     if(loadId===homeEventSchedulesLoadId)homeEventSchedulesPromise=null;
-    return homeEventSchedules;
+    throw e;
   });
   return homeEventSchedulesPromise;
 }
@@ -9034,7 +9031,7 @@ function renderHome(){
       +'</div>';
     if(!c.querySelector('[data-home-region]'))c.innerHTML='';
     updateHomeRegion('songs',dashboard);
-    updateHomeRegion('eventHub',homeLoadIssue('eventHub',state)+eventHubSection);
+    updateHomeRegion('eventHub',homeLoadIssue('eventHub',state)+eventHubSection+(!eventHubSection&&state.eventHubPending&&!state.errors.eventHub?'<div class="home-empty-row" role="status">행사 프로그램 불러오는 중…</div>':''));
     updateHomeRegion('publicSeating',homeLoadIssue('publicSeating',state)+publicSeatingSection);
     updateHomeRegion('schedules','<div class="home-card"><div class="home-section-head"><div class="home-section-title"><span class="home-card-icon">📅</span><span>이번 주 일정</span></div><button class="home-view-link" onclick="switchTab(\'calendar\')">전체 보기 ›</button></div>'+homeLoadIssue('schedules',state)+scheduleHtml+'</div>');
     updateHomeRegion('tools',adminToolsSection);
