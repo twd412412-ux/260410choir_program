@@ -52,7 +52,7 @@ const ALLOWED_PERMISSIONS = new Set([
   "attendance.delete", "member.view", "member.history", "member.manage",
   "member.delete", "account.manage", "account.pin", "archive.upload",
   "archive.manageMine", "archive.organize", "notice.manage", "song.recommend",
-  "seating.manage",
+  "seating.manage", "seating.edit",
 ]);
 const PRESET_PERMISSIONS = {
   none: [],
@@ -134,7 +134,7 @@ async function rebuildSeatingMemberDirectory() {
 }
 
 async function handleSeatingDirectory(request) {
-  requirePermission(request, "seating.manage");
+  if (!hasPermission(request, "seating.manage")) requirePermission(request, "seating.edit");
   const action = cleanString(request.data && request.data.action, 40) || "rebuild";
   if (action !== "rebuild") throw new HttpsError("invalid-argument", "지원하지 않는 자리배치 명단 요청입니다.");
   return rebuildSeatingMemberDirectory();

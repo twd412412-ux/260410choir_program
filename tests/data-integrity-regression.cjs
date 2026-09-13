@@ -28,6 +28,7 @@ const { chromium } = require('playwright');
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     const integrity = await page.evaluate(async () => {
+      adminRole = 'admin';
       function check(value, message) { if (!value) throw new Error(message); }
       const clone = value => JSON.parse(JSON.stringify(value));
       const store = new Map(), revisions = new Map();

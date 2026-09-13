@@ -36,6 +36,10 @@ service cloud.firestore {
           && request.auth.token.permissions.hasAny([permission]));
     }
 
+    function canViewSeating() {
+      return hasPermission('seating.manage') || hasPermission('seating.edit');
+    }
+
     function canReadScoreKind(kind) {
       let scope = signedIn() ? request.auth.token.get('scoreAccessScope', 'default') : 'none';
       let part = signedIn() ? request.auth.token.get('choirPart', '') : '';
@@ -95,7 +99,7 @@ service cloud.firestore {
 
     match /settings/publishedSeatingPlan {
       allow read: if isAppUser();
-      allow write: if hasPermission('seating.manage');
+      allow write: if hasPermission('seating.edit');
     }
 
     match /specialPerformancePlans/{planId} {
@@ -103,16 +107,18 @@ service cloud.firestore {
     }
 
     match /settings/seatingMemberDirectory {
-      allow read: if hasPermission('seating.manage');
+      allow read: if canViewSeating();
       allow write: if false;
     }
 
     match /settings/seatingPlans {
-      allow read, write: if hasPermission('seating.manage');
+      allow read: if canViewSeating();
+      allow write: if hasPermission('seating.edit');
     }
 
     match /seatingPlans/{planId} {
-      allow read, write: if hasPermission('seating.manage');
+      allow read: if canViewSeating();
+      allow write: if hasPermission('seating.edit');
     }
 
     match /settings/scores {

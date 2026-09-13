@@ -4,17 +4,17 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(__dirname,'.
 const clone=value=>JSON.parse(JSON.stringify(value));
 const plan=id=>({sourcePlanId:id,publicId:'plan:'+id,name:id,date:'2026-09-13',program:'choir',rows:[{label:'0',seats:[{memberId:id,name:id}]}]});
 function fixture(plans){
- const state={stored:{schemaVersion:2,plans:clone(plans)},commits:0,reads:0,toasts:[],local:[],retry:false};
+ const state={stored:{schemaVersion:2,plans:clone(plans)},saved:{updatedAt:'v1'},commits:0,reads:0,toasts:[],local:[],retry:false};
  const c=vm.createContext({
-  Blob,console:{error(){}},PUBLISHED_SEATING_MAX_PLANS:8,PUBLISHED_SEATING_MAX_BYTES:600000,
+  Blob,console:{error(){}},PUBLISHED_SEATING_MAX_PLANS:8,PUBLISHED_SEATING_MAX_BYTES:600000,SEATING_PLAN_COLLECTION:'seatingPlans',seatingPlanVersion:p=>p.updatedAt||'v1',
   seatingRows:[{}],publishedSeatingRequestId:0,publishedSeatingLoaded:false,publishedSeatingPromise:null,publishedSeatingLastCheckedAt:0,seatingPublishPreviewData:null,publicSeatingSearch:'',
   cloneSeatingValue:clone,normalizePublishedSeatingPlans:data=>clone(data?.plans||[]),canUseSeatingPlan:()=>true,currentActorName:()=> 'editor',
   showToast:message=>state.toasts.push(message),setPublishedSeatingState:plans=>state.local.push(clone(plans)),savePublishedSeatingCache(){},writeLog(){},requestHomeRender(){},
   buildPublishedSeatingPlanDataFromSavedPlan:saved=>({...plan(saved.id),...saved,sourcePlanId:saved.id}),
-  db:{collection:()=>({doc:()=>({})}),runTransaction:async callback=>{
+  db:{collection:collection=>({doc:id=>({collection,id})}),runTransaction:async callback=>{
    async function attempt(){
     let pending;
-    const result=await callback({get:async()=>{state.reads++;return {exists:true,data:()=>clone(state.stored)};},set:(_,data)=>{pending=clone(data);}});
+    const result=await callback({get:async ref=>{state.reads++;const data=ref.collection==='seatingPlans'?state.saved:state.stored;return {exists:!!data,data:()=>clone(data)};},set:(_,data)=>{pending=clone(data);}});
     return {result,pending};
    }
    if(state.retry){await attempt();state.stored={plans:[]};}
@@ -51,5 +51,12 @@ function fixture(plans){
  const cancelled=fixture([plan('p2')]);cancelled.state.retry=true;
  assert.equal(await cancelled.c.syncPublishedSeatingPlanAfterSave({id:'p2'},null,changed),false);
  assert.equal(cancelled.state.commits,0);assert.equal(cancelled.state.local.length,0);assert.deepEqual(cancelled.state.stored.plans,[]);
+ const delayed=fixture([plan('p2')]);delayed.state.saved={updatedAt:'v2'};
+ assert.equal(await delayed.c.syncPublishedSeatingPlanAfterSave({id:'p2',updatedAt:'v1'},null,changed),false);
+ assert.equal(delayed.state.commits,0);assert.equal(delayed.state.local.length,0);
+ const deleted=fixture([plan('p2')]);deleted.state.saved=null;
+ assert.equal(await deleted.c.syncPublishedSeatingPlanAfterSave({id:'p2'},null,changed),false);assert.equal(deleted.state.commits,0);
+ const viewer=fixture([plan('p2')]);viewer.c.canUseSeatingPlan=()=>false;
+ assert.equal(await viewer.c.syncPublishedSeatingPlanAfterSave({id:'p2'},null,changed),false);assert.equal(viewer.state.reads,0);
  console.log('PASS: publication count/payload limits preserve all existing plans, updates at capacity, saved center, transaction retry after unpublish, no spurious local publication.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
