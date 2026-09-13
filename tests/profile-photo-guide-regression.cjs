@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 (async () => {
   const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8')
     .replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\r?$/m, '');
-  const server = http.createServer((req, res) => {
+  const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(html);
   });

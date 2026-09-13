@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   // Exercise real rendering/aggregation with fixture data, without the live Firebase bootstrap.
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'),'utf8')
     .replace(/^init\(\);\r?$/m,'').replace(/^initInstallUi\(\);\r?$/m,'');
-  const server = http.createServer((req, res) => {
+  const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return;
     if (req.url === '/') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); }
     else { res.statusCode = 404; res.end(); }
   });

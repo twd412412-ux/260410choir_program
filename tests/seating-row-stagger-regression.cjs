@@ -64,7 +64,7 @@ console.log('PASS: added/front/saved rows stagger by half a seat, mixed seat cou
   const http = require('node:http');
   const { chromium } = require('playwright');
   const pageHtml = html.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\r?$/m, '');
-  const server = http.createServer((req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(pageHtml); });
+  const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(pageHtml); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   let browser;
   try {

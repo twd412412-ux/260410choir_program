@@ -10,7 +10,7 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
 const photoPath=process.env.SEATING_PHOTO_PLAN;
 const fixture=photoPath?JSON.parse(fs.readFileSync(photoPath,'utf8')):{id:'test-source',name:'배치 테스트',title:'합창',date:'2026-09-11',program:'전체 합창',attendees:{a:true,b:true},rows:[{label:'1단',offset:.5,seats:[{memberId:'a',name:'가단원',part:'S1',highlight:false,locked:false},{memberId:'b',name:'나단원',part:'T2',highlight:false,locked:false}]},{label:'0단',offset:0,seats:[null,null]}],orchestraRows:[],specialSlots:{conductor:null,accompanist:null,staff:[null]}};
 (async()=>{
-  const server=http.createServer((req,res)=>{
+  const server=http.createServer((req,res)=>{ if (require('./serve-firebase-sdk.cjs')(req, res)) return;
     const url=new URL(req.url,'http://localhost');
     if(url.pathname.startsWith('/assets/')){
       const p=path.resolve(root,'.'+url.pathname);

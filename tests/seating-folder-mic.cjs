@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(process.env.SEATING_TEST_HTML||path.join(root,'index.html'),'utf8').replace(/^init\(\);\r?$/m,'').replace(/^initInstallUi\(\);\r?$/m,'');
 (async()=>{
- const server=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html; charset=utf-8');r.end(html);});
+ const server=http.createServer((q,r)=>{ if (require('./serve-firebase-sdk.cjs')(q, r)) return;r.setHeader('Content-Type','text/html; charset=utf-8');r.end(html);});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage();const errors=[];

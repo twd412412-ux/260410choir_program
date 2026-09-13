@@ -11,7 +11,7 @@ const output = path.join(root, 'tmp', 'seating-workspace');
 fs.mkdirSync(output, { recursive: true });
 
 (async () => {
-  const server = http.createServer((req, res) => {
+  const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(html);
   });

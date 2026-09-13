@@ -55,7 +55,7 @@ console.log(`PASS initials, mixed syllables, Unicode, all 19 consonants, literal
 
 (async () => {
   const html = source.replace(/^init\(\);\r?$/m, '').replace(/^initInstallUi\(\);\r?$/m, '');
-  const server = http.createServer((req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); });
+  const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   let browser;
   try {

@@ -12,14 +12,11 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/hymn-dove-book.png">
 <link rel="apple-touch-icon" href="assets/hymn-dove-book.png">
-<link rel="preload" href="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" as="script">
+<link rel="preload" href="assets/vendor/firebase-10.12.0/firebase-auth-compat.js" as="script">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <title>광주교회 찬양대</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
 .dark{--p:#9DAF96;--pd:#C9D5C2;--pl:#263126;--bg:#141813;--sf:#1D211B;--tx:#F4F0E8;--ts:#AAB3A4;--bd:#343B31;--sh:0 12px 30px rgba(0,0,0,.28);--accent:#D0A56A;--soft:#24281F;--line:#343B31}
@@ -3020,6 +3017,24 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 </style>
 </head>
 <body>
+<div id="appStartup" role="status" style="position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:#FFFDF8;color:#1C211B;font:16px/1.6 system-ui,sans-serif;padding:24px;text-align:center">
+  <div><strong style="font-size:22px">광주교회 찬양대</strong><p id="appStartupMessage">앱을 여는 중입니다.</p><button id="appStartupRetry" type="button" hidden style="padding:12px 24px;border:1px solid #526E53;border-radius:8px;background:#526E53;color:white;font:inherit">다시 열기</button></div>
+</div>
+<script>
+(function(){
+  var panel=document.getElementById('appStartup');
+  var timer=setTimeout(function(){
+    document.getElementById('appStartupMessage').textContent='연결이 지연되고 있습니다. 다시 열어주세요.';
+    document.getElementById('appStartupRetry').hidden=false;
+  },10000);
+  document.getElementById('appStartupRetry').onclick=function(){
+    var url=new URL(location.href);
+    url.searchParams.set('startupRetry',String(Date.now()));
+    location.replace(url.href);
+  };
+  window.completeAppStartup=function(){clearTimeout(timer);panel.remove();window.appStartupReady=true;};
+})();
+</script>
 
 <div class="header">
   <div class="header-title">광주교회 찬양대</div>
@@ -4593,6 +4608,9 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="assets/vendor/firebase-10.12.0/firebase-app-compat.js"></script>
+<script src="assets/vendor/firebase-10.12.0/firebase-firestore-compat.js"></script>
+<script src="assets/vendor/firebase-10.12.0/firebase-storage-compat.js"></script>
 <script>
 // ==================== Firebase ====================
 firebase.initializeApp({
@@ -4785,7 +4803,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.9';
+var APP_RELEASE_VERSION='26.09.13.10';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -6653,7 +6671,7 @@ function configureFirebaseAuthPersistence(auth){
 function ensureFirebaseAuth(){
   if(firebase.auth)return configureFirebaseAuthPersistence(firebase.auth());
   if(firebaseAuthLoadPromise)return firebaseAuthLoadPromise;
-  firebaseAuthLoadPromise=loadScriptOnce('firebaseAuthCompatSdk','https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js').then(function(){
+  firebaseAuthLoadPromise=loadScriptOnce('firebaseAuthCompatSdk','assets/vendor/firebase-10.12.0/firebase-auth-compat.js').then(function(){
     return configureFirebaseAuthPersistence(firebase.auth());
   });
   return firebaseAuthLoadPromise;
@@ -6661,7 +6679,7 @@ function ensureFirebaseAuth(){
 function ensureFirebaseFunctions(){
   if(firebase.functions)return Promise.resolve(firebase.app().functions('asia-northeast3'));
   if(firebaseFunctionsLoadPromise)return firebaseFunctionsLoadPromise;
-  firebaseFunctionsLoadPromise=loadScriptOnce('firebaseFunctionsCompatSdk','https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js').then(function(){
+  firebaseFunctionsLoadPromise=loadScriptOnce('firebaseFunctionsCompatSdk','assets/vendor/firebase-10.12.0/firebase-functions-compat.js').then(function(){
     return firebase.app().functions('asia-northeast3');
   });
   return firebaseFunctionsLoadPromise;
@@ -24101,6 +24119,7 @@ function init(){
   initAutoAppUpdate();
 }
 init();
+window.completeAppStartup();
 
 // ==================== PWA 설치 안내 ====================
 var deferredPrompt=null;
