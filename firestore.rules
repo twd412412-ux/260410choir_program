@@ -119,6 +119,28 @@ service cloud.firestore {
     match /seatingPlans/{planId} {
       allow read: if canViewSeating();
       allow write: if hasPermission('seating.edit');
+      match /seatingPresence/{sessionId} {
+        function validPresence() {
+          return canViewSeating()
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'state', 'seenAt', 'expiresAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 60
+          && (request.resource.data.name == request.auth.token.get('choirName', '')
+            || (isAdmin() && request.resource.data.name == '관리자')
+            || (isElevatedStaff() && request.resource.data.name == '총무부'))
+          && request.resource.data.state in ['viewing', 'editing', 'away']
+          && (request.resource.data.state != 'editing' || hasPermission('seating.edit'))
+          && request.resource.data.seenAt == request.time
+          && request.resource.data.expiresAt is timestamp
+          && request.resource.data.expiresAt > request.time
+          && request.resource.data.expiresAt <= request.time + duration.value(15, 'm');
+        }
+        allow read: if canViewSeating();
+        allow create: if validPresence();
+        allow update: if resource.data.uid == request.auth.uid && validPresence();
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      }
     }
 
     match /settings/scores {

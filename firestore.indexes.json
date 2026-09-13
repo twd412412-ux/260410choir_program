@@ -43,5 +43,7 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {"collectionGroup": "seatingPresence", "fieldPath": "expiresAt", "ttl": true, "indexes": []}
+  ]
 }
