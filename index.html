@@ -4654,6 +4654,7 @@ var firebaseAuthReady=false;
 var firebaseAuthChecking=false;
 var secureElevatedSession=false;
 var secureAuthClaimsFingerprint='', secureAuthClaimsRefreshPromise=null, secureAuthClaimsLastCheckedAt=0;
+var secureAuthSessionEpoch=0, secureAuthAppliedSessionFingerprint='';
 var SECURE_AUTH_CLAIMS_REFRESH_MIN_MS=2*60*1000;
 var recoveryFirebaseApp=null;
 var adminResetVerified=false;
@@ -4768,7 +4769,7 @@ var appNotificationHasNew=false, appNotificationPreviousSeenAt='';
 var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=[], globalSearchMemberLoading=false, globalSearchMemberPromise=null, globalSearchArchiveRows=[], globalSearchArchiveLoading=false, globalSearchArchivePromise=null;
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.7';
+var APP_RELEASE_VERSION='26.09.13.8';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -6806,12 +6807,12 @@ function secureProfileFromClaims(uid,claims,profile){
     name:profile.name||claims.choirName||cached.name||'',
     part:profile.part||claims.choirPart||cached.part||'',
     memberId:profile.memberId||claims.memberId||cached.memberId||'',
-    role:profile.role||claims.role||'',
-    canArchiveUpload:!!(profile.canArchiveUpload||normalizePermissionArray(claims.permissions).indexOf('archive.upload')>-1),
-    permissionPreset:profile.permissionPreset||claims.permissionPreset||'',
-    permissions:normalizePermissionArray(profile.permissions||claims.permissions),
-    attendanceScope:normalizeAttendanceScopeArray(profile.attendanceScope||claims.attendanceScope||[]),
-    scoreAccessScope:normalizeScoreAccessScope(profile.scoreAccessScope||claims.scoreAccessScope),
+    role:claims.role||'',
+    canArchiveUpload:normalizePermissionArray(claims.permissions).indexOf('archive.upload')>-1,
+    permissionPreset:claims.permissionPreset||'',
+    permissions:normalizePermissionArray(claims.permissions),
+    attendanceScope:normalizeAttendanceScopeArray(claims.attendanceScope||[]),
+    scoreAccessScope:normalizeScoreAccessScope(claims.scoreAccessScope),
     scorePartPreferences:uniqueArray(profile.scorePartPreferences||claims.scorePartPreferences||cached.scorePartPreferences||[]).slice(0,8),
     linkedPart:normalizePartName(profile.linkedPart||cached.linkedPart),
     linkedSubPart:normalizePartName(profile.linkedSubPart||cached.linkedSubPart),
@@ -6836,8 +6837,15 @@ function secureAuthAccessFingerprint(claims){
     scoreAccessScope:normalizeScoreAccessScope(claims.scoreAccessScope)
   });
 }
+function secureAuthSessionAccessFingerprint(){
+  var user=currentUser||{};
+  return JSON.stringify({id:user.id||'',role:user.role||'',preset:user.permissionPreset||'',
+    permissions:getUserPermissions(user).slice().sort(),attendanceScope:normalizeAttendanceScopeArray(user.attendanceScope||[]).slice().sort(),
+    scoreAccessScope:normalizeScoreAccessScope(user.scoreAccessScope),adminRole:adminRole||'',elevated:secureElevatedSession});
+}
 function applySecureAuthState(firebaseUser,claims,profile){
   claims=claims||{};
+  secureAuthSessionEpoch++;
   firebaseAuthReady=true;
   secureAuthClaimsFingerprint=secureAuthAccessFingerprint(claims);
   secureAuthClaimsLastCheckedAt=Date.now();
@@ -6857,6 +6865,7 @@ function applySecureAuthState(firebaseUser,claims,profile){
   if(secureElevatedSession&&claims.admin===true)adminRole='admin';
   else if(secureElevatedSession&&claims.legacyRole==='chongmu')adminRole='chongmu';
   else adminRole=getSessionRoleForUser(currentUser)||null;
+  secureAuthAppliedSessionFingerprint=secureAuthSessionAccessFingerprint();
   if(archiveMyReactionsUid!==(currentUser&&currentUser.id?currentUser.id:''))resetArchiveReactionSession();
   updateUserBar();
   syncAccessShell();
@@ -6864,16 +6873,22 @@ function applySecureAuthState(firebaseUser,claims,profile){
 function refreshSecureAuthClaims(force){
   if(!firebaseAuthReady||firebaseAuthChecking)return Promise.resolve(false);
   var now=Date.now();
-  if(!force&&secureAuthClaimsLastCheckedAt&&(now-secureAuthClaimsLastCheckedAt)<SECURE_AUTH_CLAIMS_REFRESH_MIN_MS)return Promise.resolve(false);
+  var sessionDrift=secureAuthAppliedSessionFingerprint!==secureAuthSessionAccessFingerprint();
+  if(!force&&!sessionDrift&&secureAuthClaimsLastCheckedAt&&(now-secureAuthClaimsLastCheckedAt)<SECURE_AUTH_CLAIMS_REFRESH_MIN_MS)return Promise.resolve(false);
   if(secureAuthClaimsRefreshPromise)return secureAuthClaimsRefreshPromise;
+  var epoch=secureAuthSessionEpoch,refreshAuth=null,refreshUser=null;
   secureAuthClaimsRefreshPromise=ensureFirebaseAuth().then(function(auth){
+    if(epoch!==secureAuthSessionEpoch)return false;
+    refreshAuth=auth;
     var firebaseUser=auth.currentUser;
+    refreshUser=firebaseUser;
     if(!firebaseUser)return false;
     return firebaseUser.getIdTokenResult(true).then(function(tokenResult){
+      if(epoch!==secureAuthSessionEpoch||auth.currentUser!==firebaseUser)return false;
       var claims=tokenResult.claims||{};
       var nextFingerprint=secureAuthAccessFingerprint(claims);
       var nextElevated=Number(claims.elevatedUntil||0)>Date.now()&&(claims.admin===true||claims.legacyRole==='chongmu');
-      var changed=nextFingerprint!==secureAuthClaimsFingerprint||nextElevated!==secureElevatedSession;
+      var changed=nextFingerprint!==secureAuthClaimsFingerprint||nextElevated!==secureElevatedSession||secureAuthAppliedSessionFingerprint!==secureAuthSessionAccessFingerprint();
       secureAuthClaimsLastCheckedAt=Date.now();
       if(!changed)return false;
       applySecureAuthState(firebaseUser,claims,null);
@@ -6887,6 +6902,7 @@ function refreshSecureAuthClaims(force){
       return true;
     });
   }).catch(function(error){
+    if(epoch!==secureAuthSessionEpoch||(refreshAuth&&refreshAuth.currentUser!==refreshUser))return false;
     console.warn('auth_claims_refresh_failed',error);
     var code=String(error&&error.code||'');
     if(code==='auth/user-token-expired'||code==='auth/user-disabled'||code==='auth/invalid-user-token'||code==='auth/user-not-found'){
@@ -6911,9 +6927,13 @@ function refreshAfterSecureAuth(forceFresh){
   updateAdminTabs();
   refreshHomeAccessState();
   if(currentUser&&currentUser.memberId){
-    hydrateUserLinkedMember(currentUser).then(function(user){
-      if(!currentUser||currentUser.id!==user.id)return;
-      currentUser=user;
+    var linkedUser=currentUser,epoch=secureAuthSessionEpoch;
+    hydrateUserLinkedMember(Object.assign({},linkedUser)).then(function(user){
+      if(epoch!==secureAuthSessionEpoch||currentUser!==linkedUser||currentUser.memberId!==user.memberId)return;
+      // A delayed directory read must never restore an old permission/session snapshot.
+      currentUser.linkedPart=user.linkedPart;
+      currentUser.linkedSubPart=user.linkedSubPart;
+      currentUser.linkedMemberStatus=user.linkedMemberStatus;
       localStorage.setItem('choir_user',JSON.stringify(currentUser));
       updateUserBar();
       refreshHomeAccessState();
@@ -6926,6 +6946,7 @@ function refreshAfterSecureAuth(forceFresh){
 }
 function signInWithSecureToken(data){
   if(!data||!data.token)return Promise.reject(new Error('missing_custom_token'));
+  secureAuthSessionEpoch++;
   return ensureFirebaseAuth().then(function(auth){
     return auth.signInWithCustomToken(data.token);
   }).then(function(credential){
@@ -7764,6 +7785,8 @@ function loginUser(){
 }
 
 function logoutUser(){
+  secureAuthSessionEpoch++;
+  secureAuthAppliedSessionFingerprint='';
   clearAccountManagementSession(true);
   var userToLogout=currentUser;
   var pushCleanup=removePushSubscription(userToLogout,true).catch(function(error){console.error(error)});
@@ -18885,6 +18908,7 @@ function loadSeatingPlans(){
 }
 function initSeatingPlanTool(){
   if(!canViewSeatingPlan())return showToast('자리배치 조회 권한이 필요합니다.');
+  refreshSecureAuthClaims(false);
   renderSeatingWorkspaceShell();
   var list=document.getElementById('seatingMemberList');
   if(list)list.innerHTML='<div class="loading"><div class="spinner"></div>명단 불러오는 중...</div>';
