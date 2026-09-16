@@ -4,7 +4,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#F2E9D8">
 <meta name="apple-mobile-web-app-title" content="찬양대">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4661,6 +4661,36 @@ firebase.initializeApp({
 });
 var db = firebase.firestore();
 var storage = firebase.storage();
+// Optional device storage must never prevent startup or a verified login.
+var appStorageMemory=Object.create(null), appStorageWarningShown=false;
+function appStorageGet(key){
+  if(Object.prototype.hasOwnProperty.call(appStorageMemory,key))return appStorageMemory[key];
+  try{return window.localStorage.getItem(key);}catch(e){return null;}
+}
+function appStorageSet(key,value){
+  value=String(value);
+  try{window.localStorage.setItem(key,value);delete appStorageMemory[key];return true;}
+  catch(e){appStorageMemory[key]=value;return false;}
+}
+function appStorageRemove(key){
+  try{window.localStorage.removeItem(key);delete appStorageMemory[key];}
+  catch(e){appStorageMemory[key]=null;}
+}
+function readAppJson(key,fallback,valid){
+  var raw=appStorageGet(key);
+  if(raw===null)return fallback;
+  try{var value=JSON.parse(raw);if(!valid||valid(value))return value;}
+  catch(e){}
+  // Retain the original for recovery; never clear unrelated data or drafts.
+  var backup='choir_recovery_'+key+'_v1';
+  if(appStorageGet(backup)===null)appStorageSet(backup,raw);
+  return fallback;
+}
+function normalizeFavoriteIds(rows){
+  return (Array.isArray(rows)?rows:[]).filter(function(id,index,items){
+    return typeof id==='string'&&id.length>0&&items.indexOf(id)===index;
+  });
+}
 // ==================== 전역 변수 ====================
 var allSongs=[], filteredSongs=[], currentTab='home';
 var allScores=[], scoresLoaded=false, scoresLoadPromise=null, scoresLoadedPrivate=false, scoreCandidateSelectedIds=[];
@@ -4668,7 +4698,7 @@ var scoreOrganizeMode=false, scoreOrganizeSelectedIds=[], scoreAdminFocusGroupKe
 var scoreLoadTimer=null;
 var scoreRealtimeUnsubscribes=[], scoreRealtimeReadyPromise=null, scoreRealtimeGeneration=0, scoreRealtimeKey='';
 var scoreCatalogShardRows=Object.create(null);
-var scoreViewMode=localStorage.getItem('choir_score_view')||'';
+var scoreViewMode=appStorageGet('choir_score_view')||'';
 var SCORE_CATALOG_VERSION=1;
 var SCORE_CATALOG_SHARDS={singer:2,orchestra:8};
 var SCORE_SORT_KEY='choir_score_sort_v1';
@@ -4753,7 +4783,7 @@ var scheduleMonthErrors=Object.create(null), scheduleMonthRequestTokens=Object.c
 var revealedAccountPins=Object.create(null), accountPinsVisible=false, accountPinsLoading=false, accountPinsLoaded=false, accountPinRevealRequestId=0;
 var accountMembersLoaded=false, accountMembersLoadPromise=null, accountMembersLoadRequestId=0;
 var accountLinkMembers=[], accountLinkMemberMap={}, accountLinkMembersLoaded=false, accountLinkMembersPromise=null;
-var calViewMode=localStorage.getItem('choir_cal_view')==='default'?'default':'stack';
+var calViewMode=appStorageGet('choir_cal_view')==='default'?'default':'stack';
 var archiveItems=[];
 var archiveLastDoc=null, archiveHasMore=true, archiveLoading=false;
 var ARCHIVE_PAGE_SIZE=30;
@@ -4774,8 +4804,9 @@ var ARCHIVE_REACTIONS=[
   {key:'tricky',emoji:'😅',label:'난감해요'}
 ];
 var ARCHIVE_REACTION_ALIASES={agree:'grace',trouble:'cheer',laugh:'surprise',best:'heart'};
-var favorites=JSON.parse(localStorage.getItem('choir_fav')||'[]');
-var recentViewed=JSON.parse(localStorage.getItem('choir_rec')||'[]');
+var favorites=normalizeFavoriteIds(readAppJson('choir_fav',[],Array.isArray));
+var recentViewed=normalizeFavoriteIds(readAppJson('choir_rec',[],Array.isArray));
+var favoriteSyncState=null;
 var activeDays=[];
 var COLORS=['#6F826E','#A26F42','#8E86A8','#C66B6B','#C79A45','#6E8792','#7D8A58','#9A6F63','#5F7F68','#B8794F'];
 var selColor='';
@@ -4824,8 +4855,8 @@ var seatingPlacementQueue=[], seatingPlacementQueueCompleted=[], seatingPlacemen
 var seatingPlacementStepSerial=0;
 var seatingSpecialAssignmentType='', seatingSpecialAssignmentIndex=0, seatingSpecialQuery='', seatingStaffManageIndex=0;
 var seatingSpecialPressTimer=null, seatingSpecialPressStartX=0, seatingSpecialPressStartY=0, seatingSpecialPressTriggered=false, seatingSpecialClickSuppressUntil=0;
-var seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(localStorage.getItem(SEATING_BOARD_HEIGHT_KEY),10)||60)/10)*10));
-var logHideAdmin=localStorage.getItem('choir_log_hide_admin')!=='false';
+var seatingBoardHeightPct=Math.max(30,Math.min(90,Math.round((parseInt(appStorageGet(SEATING_BOARD_HEIGHT_KEY),10)||60)/10)*10));
+var logHideAdmin=appStorageGet('choir_log_hide_admin')!=='false';
 var cachedLogRows=[];
 var scheduleEditId='';
 var scheduleProgramTypeDraft=[];
@@ -4842,7 +4873,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.16.1';
+var APP_RELEASE_VERSION='26.09.16.2';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5042,8 +5073,8 @@ function reloadAppVersion(){
 }
 
 // ==================== 다크모드 ====================
-function initDark(){if(localStorage.getItem('choir_dark')==='true'){document.documentElement.classList.add('dark');document.getElementById('btnDark').textContent='☀️'}}
-function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
+function initDark(){if(appStorageGet('choir_dark')==='true'){document.documentElement.classList.add('dark');document.getElementById('btnDark').textContent='☀️'}}
+function toggleDark(){var d=document.documentElement.classList.toggle('dark');appStorageSet('choir_dark',d);document.getElementById('btnDark').textContent=d?'☀️':'🌙'}
 
 // ==================== PWA ====================
 if('serviceWorker' in navigator){
@@ -6017,7 +6048,7 @@ function showFirstAdminTab(){
 function getQuickCreateDate(){
   if(selectedCalDate)return selectedCalDate;
   if(typeof calYear==='number'&&typeof calMonth==='number')return calYear+'-'+String(calMonth+1).padStart(2,'0')+'-01';
-  return new Date().toISOString().split('T')[0];
+  return getTodayInputDate();
 }
 
 function resetAddSongForm(defaultDate){
@@ -6893,7 +6924,7 @@ function secureProfileFromClaims(uid,claims,profile){
     linkedPart:normalizePartName(profile.linkedPart||cached.linkedPart),
     linkedSubPart:normalizePartName(profile.linkedSubPart||cached.linkedSubPart),
     linkedMemberStatus:profile.linkedMemberStatus||cached.linkedMemberStatus||'',
-    favorites:Array.isArray(profile.favorites)?profile.favorites:(Array.isArray(cached.favorites)?cached.favorites:favorites)
+    favorites:favoriteProfileItems(uid,profile,cached)
   };
 }
 function secureAuthAccessFingerprint(claims){
@@ -6928,15 +6959,14 @@ function applySecureAuthState(firebaseUser,claims,profile){
   secureElevatedSession=Number(claims.elevatedUntil||0)>Date.now()&&(claims.admin===true||claims.legacyRole==='chongmu');
   if(claims.account===true){
     currentUser=secureProfileFromClaims(firebaseUser.uid,claims,profile);
-    localStorage.setItem('choir_user',JSON.stringify(currentUser));
+    favorites=currentUser.favorites.slice();
+    persistFavoriteCache();
     saveLastLoginHint(currentUser);
-    if(Array.isArray(currentUser.favorites)){
-      favorites=currentUser.favorites;
-      localStorage.setItem('choir_fav',JSON.stringify(favorites));
-    }
+    startFavoriteSync();
   }else{
+    stopFavoriteSync();
     currentUser=null;
-    localStorage.removeItem('choir_user');
+    appStorageRemove('choir_user');
   }
   if(secureElevatedSession&&claims.admin===true)adminRole='admin';
   else if(secureElevatedSession&&claims.legacyRole==='chongmu')adminRole='chongmu';
@@ -7010,7 +7040,7 @@ function refreshAfterSecureAuth(forceFresh){
       currentUser.linkedPart=user.linkedPart;
       currentUser.linkedSubPart=user.linkedSubPart;
       currentUser.linkedMemberStatus=user.linkedMemberStatus;
-      localStorage.setItem('choir_user',JSON.stringify(currentUser));
+      appStorageSet('choir_user',JSON.stringify(currentUser));
       updateUserBar();
       refreshHomeAccessState();
     });
@@ -7861,6 +7891,7 @@ function loginUser(){
 }
 
 function logoutUser(){
+  stopFavoriteSync();
   stopSeatingPresence(false);
   secureAuthSessionEpoch++;
   secureAuthAppliedSessionFingerprint='';
@@ -7878,7 +7909,7 @@ function logoutUser(){
   secureElevatedSession=false;
   secureAuthClaimsFingerprint='';
   secureAuthClaimsLastCheckedAt=0;
-  localStorage.removeItem('choir_user');
+  appStorageRemove('choir_user');
   invalidatePublishedSeatingCache(true);
   if(!canViewScores())clearScoreAccessCache();
   syncAccessShell();
@@ -7889,7 +7920,7 @@ function logoutUser(){
     filteredSongs=[];
     songsLoaded=false;
     songsLoadPromise=null;
-    localStorage.removeItem('choir_songs');
+    appStorageRemove('choir_songs');
   }
   if(currentTab==='archive'||currentTab==='scores'||currentTab==='songs'||currentTab==='favorites')switchTab('home');
   renderSongList();
@@ -7925,14 +7956,14 @@ function restoreUser() {
   firebaseAuthChecking=true;
   var hadCachedUser=false;
   try{
-    var saved=JSON.parse(localStorage.getItem('choir_user')||'null');
+    var saved=readAppJson('choir_user',null,function(value){return value===null||(!!value&&typeof value==='object'&&!Array.isArray(value));});
     if(saved&&saved.id&&saved.name){
       currentUser=saved;
       hadCachedUser=true;
       saveLastLoginHint(saved);
       showCachedUserChecking(saved);
     }
-  }catch(e){localStorage.removeItem('choir_user');}
+  }catch(e){console.warn('cached_profile_unavailable',e);}
   firebaseAuthReadyPromise=ensureFirebaseAuth().then(function(auth){
     return new Promise(function(resolve){
       var unsubscribe=auth.onAuthStateChanged(function(firebaseUser){
@@ -7945,13 +7976,17 @@ function restoreUser() {
           secureAuthClaimsFingerprint='';
           secureAuthClaimsLastCheckedAt=0;
           firebaseAuthReady=true;
-          localStorage.removeItem('choir_user');
+          appStorageRemove('choir_user');
           invalidatePublishedSeatingCache(true);
           updateUserBar();
           syncAccessShell();
-          if(hadCachedUser&&!sessionStorage.getItem('choir_secure_relogin_notice')){
-            sessionStorage.setItem('choir_secure_relogin_notice','1');
-            showToast('보안 업데이트로 한 번만 다시 로그인해주세요');
+          if(hadCachedUser){
+            try{
+              if(!sessionStorage.getItem('choir_secure_relogin_notice')){
+                sessionStorage.setItem('choir_secure_relogin_notice','1');
+                showToast('보안 업데이트로 한 번만 다시 로그인해주세요');
+              }
+            }catch(e){}
           }
           resolve(null);
           return;
@@ -7973,7 +8008,7 @@ function restoreUser() {
           currentUser=null;
           adminRole=null;
           firebaseAuthReady=true;
-          localStorage.removeItem('choir_user');
+          appStorageRemove('choir_user');
           updateUserBar();
           syncAccessShell();
           resolve(null);
@@ -7995,17 +8030,133 @@ function restoreUser() {
     firebaseAuthReady=true;
     currentUser=null;
     adminRole=null;
-    localStorage.removeItem('choir_user');
+    appStorageRemove('choir_user');
     updateUserBar();
     syncAccessShell();
     return null;
   });
   return firebaseAuthReadyPromise;
 }
-function syncFav(){
-  localStorage.setItem('choir_fav',JSON.stringify(favorites));
-  if(firebaseAuthReady&&currentUser){db.collection('accounts').doc(currentUser.id).update({favorites:favorites}).catch(function(){})}
+function favoritePendingKey(uid){return 'choir_fav_pending_v1_'+encodeURIComponent(uid);}
+function loadFavoritePending(uid){
+  var stored=readAppJson(favoritePendingKey(uid),{},function(value){return !!value&&typeof value==='object'&&!Array.isArray(value);});
+  var pending=Object.create(null);
+  Object.keys(stored).forEach(function(id){if(id&&typeof stored[id]==='boolean')pending[id]=stored[id];});
+  return pending;
 }
+function overlayFavoritePending(rows,pending){
+  rows=normalizeFavoriteIds(rows);
+  Object.keys(pending||{}).forEach(function(id){
+    var index=rows.indexOf(id);
+    if(pending[id]&&index===-1)rows.push(id);
+    else if(!pending[id]&&index!==-1)rows.splice(index,1);
+  });
+  return rows;
+}
+function favoriteProfileItems(uid,profile,cached){
+  var owner=appStorageGet('choir_fav_owner_v1');
+  var sameUser=cached&&cached.id===uid;
+  var rows=Array.isArray(profile.favorites)?profile.favorites:
+    ((owner===uid||(!owner&&sameUser))?favorites:[]);
+  return overlayFavoritePending(rows,loadFavoritePending(uid));
+}
+function persistFavoriteCache(){
+  favorites=normalizeFavoriteIds(favorites);
+  var saved=appStorageSet('choir_fav',JSON.stringify(favorites));
+  if(currentUser){
+    currentUser.favorites=favorites.slice();
+    appStorageSet('choir_fav_owner_v1',currentUser.id);
+    appStorageSet('choir_user',JSON.stringify(currentUser));
+  }
+  return saved;
+}
+function refreshFavoriteViews(){
+  if(currentTab==='songs')renderSongList();
+  if(currentTab==='favorites')renderFav();
+}
+function stopFavoriteSync(){
+  var state=favoriteSyncState;
+  favoriteSyncState=null;
+  if(state&&state.unsubscribe){try{state.unsubscribe();}catch(e){}}
+}
+function activeFavoriteState(state){
+  return favoriteSyncState===state&&!!currentUser&&currentUser.id===state.uid&&firebaseAuthReady&&!firebaseAuthChecking;
+}
+function flushFavoritePending(){
+  var state=favoriteSyncState;
+  if(!state||!activeFavoriteState(state))return Promise.resolve(false);
+  if(state.busy)return state.busy;
+  var id=Object.keys(state.pending)[0];
+  if(!id)return Promise.resolve(true);
+  var present=state.pending[id], succeeded=false;
+  state.busy=Promise.resolve().then(function(){
+    if(!activeFavoriteState(state))return false;
+    var field=firebase.firestore.FieldValue;
+    // Atomic per-song edits preserve changes made on other devices.
+    return db.collection('accounts').doc(state.uid).update({favorites:present?field.arrayUnion(id):field.arrayRemove(id)}).then(function(){
+      if(!activeFavoriteState(state))return false;
+      if(state.pending[id]===present)delete state.pending[id];
+      appStorageSet(favoritePendingKey(state.uid),JSON.stringify(state.pending));
+      succeeded=true;
+      return true;
+    });
+  }).catch(function(error){
+    if(activeFavoriteState(state)){
+      console.warn('favorite_sync_failed',error);
+      showToast('즐겨찾기는 이 기기에 유지했습니다. 연결 후 다시 동기화합니다.');
+    }
+    return false;
+  }).finally(function(){
+    state.busy=null;
+    if(succeeded&&activeFavoriteState(state)&&Object.keys(state.pending).length)flushFavoritePending();
+  });
+  return state.busy;
+}
+function startFavoriteSync(){
+  var uid=firebaseAuthReady&&!firebaseAuthChecking&&currentUser&&currentUser.id;
+  if(!uid){stopFavoriteSync();return;}
+  if(favoriteSyncState&&favoriteSyncState.uid===uid&&favoriteSyncState.unsubscribe){flushFavoritePending();return;}
+  stopFavoriteSync();
+  var state={uid:uid,pending:loadFavoritePending(uid),unsubscribe:null,busy:null};
+  favoriteSyncState=state;
+  favorites=overlayFavoritePending(favorites,state.pending);
+  persistFavoriteCache();
+  try{
+    var ref=db.collection('accounts').doc(uid);
+    if(typeof ref.onSnapshot!=='function')return;
+    state.unsubscribe=ref.onSnapshot(function(snapshot){
+      if(!activeFavoriteState(state)||!snapshot.exists)return;
+      var rows=overlayFavoritePending((snapshot.data()||{}).favorites,state.pending);
+      var changed=JSON.stringify(rows)!==JSON.stringify(favorites);
+      favorites=rows;
+      persistFavoriteCache();
+      if(changed)refreshFavoriteViews();
+    },function(error){
+      if(!activeFavoriteState(state))return;
+      state.unsubscribe=null;
+      console.warn('favorite_read_failed',error);
+      showToast('즐겨찾기 동기화를 확인하지 못했습니다. 이 기기 목록은 유지합니다.');
+    });
+    flushFavoritePending();
+  }catch(error){console.warn('favorite_listener_failed',error);}
+}
+function syncFav(id,present){
+  var saved=persistFavoriteCache();
+  if(!saved&&!appStorageWarningShown){
+    appStorageWarningShown=true;
+    showToast('기기 저장 공간을 확인해주세요. 저장되지 않은 변경은 앱을 닫으면 사라질 수 있습니다.');
+  }
+  if(!id||!firebaseAuthReady||firebaseAuthChecking||!currentUser)return;
+  if(!favoriteSyncState||favoriteSyncState.uid!==currentUser.id)startFavoriteSync();
+  var state=favoriteSyncState;
+  if(!state)return;
+  state.pending[id]=!!present;
+  appStorageSet(favoritePendingKey(state.uid),JSON.stringify(state.pending));
+  flushFavoritePending();
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')startFavoriteSync();});
+window.addEventListener('online',startFavoriteSync);
+window.addEventListener('pageshow',startFavoriteSync);
 
 
 // ==================== 홈 ====================
@@ -13487,7 +13638,7 @@ function toggleFav(id){
     openUserModal();
     return;
   }
-  var i=favorites.indexOf(id);if(i>-1){favorites.splice(i,1);showToast('즐겨찾기 제거')}else{favorites.push(id);showToast('즐겨찾기 추가')}syncFav();renderSongList();if(currentTab==='favorites')renderFav()
+  var i=favorites.indexOf(id);if(i>-1){favorites.splice(i,1);showToast('즐겨찾기 제거')}else{favorites.push(id);showToast('즐겨찾기 추가')}syncFav(id,i===-1);renderSongList();if(currentTab==='favorites')renderFav()
 }
 function toggleBkDetail(){if(currentDetailSong)toggleFav(currentDetailSong.id)}
 function renderRecentSongs(){
@@ -13532,7 +13683,7 @@ function openDetail(id){
   currentDetailSong=song;
   recentViewed=recentViewed.filter(function(x){return x!==id});recentViewed.unshift(id);
   if(recentViewed.length>30)recentViewed=recentViewed.slice(0,30);
-  localStorage.setItem('choir_rec',JSON.stringify(recentViewed));
+  appStorageSet('choir_rec',JSON.stringify(recentViewed));
 
   document.getElementById('detailTitle').textContent=song.songName;
   var canEditDetail=canEditSongItem(song);
@@ -13695,7 +13846,7 @@ function delSong(id,name){
     allSongs=allSongs.filter(function(s){return s.id!==id});
     saveCache('choir_songs',allSongs);buildFilters();doFilter();
     writeLog('곡 삭제','"'+name+'" 삭제됨');
-    favorites=favorites.filter(function(x){return x!==id});syncFav();showToast('삭제되었습니다');
+    favorites=favorites.filter(function(x){return x!==id});syncFav(id,false);showToast('삭제되었습니다');
   }).catch(function(e){console.error(e);showToast('삭제 중 오류 발생')});
 }
 function delFromDetail(){if(currentDetailSong){if(!canDeleteSongItem(currentDetailSong))return showToast('삭제 권한이 없습니다');delSong(currentDetailSong.id,currentDetailSong.songName);closeModal('modalDetail')}}
@@ -16879,7 +17030,7 @@ function loadSchAdmin(skipLoad){
   }
   var sorted=allSchedules.slice().sort(function(a,b){return scheduleSortValue(b).localeCompare(scheduleSortValue(a))});
   if(sorted.length===0){c.innerHTML='<div style="font-size:13px;color:var(--ts)">등록된 일정이 없습니다</div>';return}
-  var today=new Date().toISOString().split('T')[0];
+  var today=getTodayInputDate();
   c.innerHTML=sorted.map(function(s){
     var past=scheduleEndDate(s)<today;
     var id=escAttr(s.id);
@@ -17623,7 +17774,7 @@ function renderArchivePage(){
   if(uploadCard)uploadCard.classList.toggle('hidden',!canUploadArchive());
   loadArchiveAlbums(false);
   if(document.getElementById('archiveDate') && !document.getElementById('archiveDate').value){
-    document.getElementById('archiveDate').value=new Date().toISOString().split('T')[0];
+    document.getElementById('archiveDate').value=getTodayInputDate();
   }
   loadArchiveMyReactions(false);
   if(archiveItems.length===0)loadArchiveItems();
@@ -18006,7 +18157,7 @@ function uploadArchiveMedia(){
     if(idx>=fileArr.length){
       if(btn){btn.disabled=false;btn.textContent='업로드';btn.style.opacity='';}
       partEl.value='';
-      dateEl.value=new Date().toISOString().split('T')[0];
+      dateEl.value=getTodayInputDate();
       titleEl.value='';
       descEl.value='';
       if(albumEl)albumEl.value=archiveSelectedAlbumId!=='all'?archiveSelectedAlbumId:'';
@@ -22508,7 +22659,7 @@ function exportCSV(){
     csv+=[s.songName,s.year,s.month,s.day||'',s.dayOfWeek,s.category,s.subCategory,s.location,s.members,s.pianist].map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(',')+'\n';
   });
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='광주교회찬양대_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+  a.download='광주교회찬양대_'+getTodayInputDate()+'.csv';a.click();
   writeLog('백업 다운로드','곡 CSV 다운로드\n곡 기록 '+allSongs.length+'건');
   showToast('CSV 다운로드 완료');
 }
@@ -22537,7 +22688,7 @@ function exportAttCSV(){
       });
       var a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-      a.download='찬양대_출석_'+new Date().toISOString().split('T')[0]+'.csv';
+      a.download='찬양대_출석_'+getTodayInputDate()+'.csv';
       a.click();
       writeLog('백업 다운로드','출석 CSV 다운로드\n대상 단원 '+attMembers.length+'명 / 출석 회차 '+allRecords.length+'건');
       showToast('출석 CSV 다운로드 완료');
@@ -24357,7 +24508,7 @@ function initInstallUi(){
 function showInstallBanner(mode,force){
   var browserIssue=androidInstallBrowserIssue();
   if(isStandaloneApp()&&!browserIssue)return;
-  if(!force&&localStorage.getItem('choir_install_dismissed'))return;
+  if(!force&&appStorageGet('choir_install_dismissed'))return;
   var old=document.getElementById('installBanner');
   if(old)old.remove();
   if(browserIssue)mode='browser';
@@ -24406,7 +24557,7 @@ function installApp(){
   });
 }
 function openInstallGuide(){
-  localStorage.removeItem('choir_install_dismissed');
+  appStorageRemove('choir_install_dismissed');
   if(androidInstallBrowserIssue()){
     showInstallBanner('browser',true);
     return;
@@ -24427,7 +24578,7 @@ function showInstallHelp(){
   alert('설치 방법\n\n브라우저 메뉴에서 홈 화면에 추가 또는 앱 설치를 선택하면 앱처럼 바로 열 수 있습니다.');
 }
 function dismissInstall(saveChoice){
-  if(saveChoice)localStorage.setItem('choir_install_dismissed','true');
+  if(saveChoice)appStorageSet('choir_install_dismissed','true');
   var b=document.getElementById('installBanner');if(b)b.remove();
 }
 initInstallUi();
@@ -25327,8 +25478,8 @@ function saveAttendance(){
 // ==================== 출석 통계 ====================
 function initAttStatDates(){
   var now=new Date();var from=new Date(now);from.setMonth(from.getMonth()-3);
-  document.getElementById('attStatFrom').value=from.toISOString().split('T')[0];
-  document.getElementById('attStatTo').value=now.toISOString().split('T')[0];
+  document.getElementById('attStatFrom').value=homeInputDate(from);
+  document.getElementById('attStatTo').value=homeInputDate(now);
 }
 
 function togglePrevWeekCard(btn){
@@ -25850,7 +26001,7 @@ function getMemHistoryRangeInfo(){
   if(range==='3m'){
     var d3=new Date(now.getFullYear(),now.getMonth(),now.getDate());
     d3.setMonth(d3.getMonth()-3);
-    return {range:range,label:'최근 3개월',from:d3.toISOString().split('T')[0]};
+    return {range:range,label:'최근 3개월',from:homeInputDate(d3)};
   }
   if(range==='year'){
     return {range:range,label:String(now.getFullYear())+'년',from:now.getFullYear()+'-01-01'};
@@ -25860,7 +26011,7 @@ function getMemHistoryRangeInfo(){
   }
   var d6=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   d6.setMonth(d6.getMonth()-6);
-  return {range:'6m',label:'최근 6개월',from:d6.toISOString().split('T')[0]};
+  return {range:'6m',label:'최근 6개월',from:homeInputDate(d6)};
 }
 
 
