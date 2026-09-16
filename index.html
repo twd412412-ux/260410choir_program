@@ -4873,7 +4873,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.16.2';
+var APP_RELEASE_VERSION='26.09.16.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -6766,6 +6766,9 @@ function authGateway(action,data,app){
 }
 function accountAdminCall(action,data){
   return callSecureFunction('accountAdmin',Object.assign({action:action},data||{}));
+}
+function attendanceAdminCall(action,data){
+  return callSecureFunction('attendanceAdmin',Object.assign({action:action},data||{}));
 }
 var registrationBusy={}, registrationAttempts={};
 function startRegistration(kind,buttonId){
@@ -25371,11 +25374,27 @@ function mergeAttendanceChanges(latest,baseline,changes,metadata,reportChange){
 }
 
 function saveAttendanceChanges(docId,baseline,changes,metadata,reportChange){
-  var ref=db.collection('attendance').doc(docId);
-  return db.runTransaction(function(tx){
-    return tx.get(ref).then(function(doc){
-      tx.set(ref,mergeAttendanceChanges(doc.exists?doc.data():{},baseline,changes,metadata,reportChange));
+  if(!metadata||!metadata.date||!metadata.session){
+    var ref=db.collection('attendance').doc(docId);
+    return db.runTransaction(function(tx){
+      return tx.get(ref).then(function(doc){
+        tx.set(ref,mergeAttendanceChanges(doc.exists?doc.data():{},baseline,changes,metadata||{},reportChange));
+      });
     });
+  }
+  var secureChanges=changes.map(function(change){
+    return Object.assign({},change,{
+      baselineStatus:((baseline.records||{})[change.id]||''),
+      baselineReason:((baseline.reasons||{})[change.id]||'')
+    });
+  });
+  var secureReportChange=reportChange?Object.assign({},reportChange,{
+    baselineExcludeFromReport:!!baseline.excludeFromReport,
+    baselineExcludeReason:baseline.excludeReason||''
+  }):null;
+  return attendanceAdminCall('save',{
+    docId:docId,date:metadata.date,session:metadata.session,
+    changes:secureChanges,reportChange:secureReportChange
   });
 }
 
@@ -25463,7 +25482,7 @@ function saveAttendance(){
       saveBtn.style.cursor='';
     }
     console.error(e);
-    if(e&&e.code==='attendance-conflict'){
+    if(e&&(e.code==='attendance-conflict'||e.code==='functions/aborted')){
       showToast(e.message+' 저장하지 않았습니다.');
       if(confirm(e.message+'\n현재 입력을 버리고 최신 출결을 다시 불러올까요?'))return loadAttendance();
     }else showToast('출결을 저장하지 못했습니다. 입력 내용은 유지됩니다.');
@@ -26025,7 +26044,7 @@ function deleteAttendance(){
   var date=document.getElementById('attDate').value;
   if(adminRole==='admin'){
     if(!confirm(date+' '+attSession+' 출석 기록을 완전히 삭제할까요?'))return;
-    db.collection('attendance').doc(docId).delete().then(function(){
+    attendanceAdminCall('delete',{docId:docId,date:date,session:attSession}).then(function(){
       showToast(date+' '+attSession+' 기록이 삭제되었습니다!');
       invalidateHomeAttendanceCache();
       document.getElementById('attDate').value='';
@@ -26044,22 +26063,22 @@ function deleteAttendance(){
     var scopeLabel=attPartFilter==='all'?'담당 범위':attPartFilter;
     if(scopeMembers.length===0)return showToast('초기화할 담당 범위가 없습니다');
     if(!confirm(date+' '+attSession+' '+scopeLabel+' 출석 기록 '+scopeMembers.length+'명을 초기화할까요?'))return;
-    var ref=db.collection('attendance').doc(docId);
     var baseline=attBaselines[docId];
-    var changes=scopeMembers.map(function(m){return {id:m.id,name:m.name,status:'',reason:''};});
+    var changes=scopeMembers.map(function(m){
+      return {
+        id:m.id,name:m.name,status:'',reason:'',
+        baselineStatus:((baseline.records||{})[m.id]||''),
+        baselineReason:((baseline.reasons||{})[m.id]||'')
+      };
+    });
     attSaving=true;
-    db.runTransaction(function(tx){
-      return tx.get(ref).then(function(doc){
-        if(!doc.exists)return;
-        tx.set(ref,mergeAttendanceChanges(doc.data()||{},baseline,changes,{updatedAt:new Date().toISOString(),updatedBy:currentActorName()},null));
-      });
-    }).then(function(){
+    attendanceAdminCall('clear',{docId:docId,date:date,session:attSession,changes:changes}).then(function(){
       attSaving=false;
       showToast(scopeLabel+' 기록이 초기화되었습니다');
       invalidateHomeAttendanceCache();
       writeLog('출석 초기화',date+' '+attSession+' ['+scopeLabel+'] 기록 초기화');
       loadAttendance();
-    }).catch(function(e){attSaving=false;console.error(e);showToast(e&&e.code==='attendance-conflict'?e.message+' 초기화하지 않았습니다.':'초기화 중 오류 발생')});
+    }).catch(function(e){attSaving=false;console.error(e);showToast(e&&(e.code==='attendance-conflict'||e.code==='functions/aborted')?e.message+' 초기화하지 않았습니다.':'초기화 중 오류 발생')});
   },date);
 }
 

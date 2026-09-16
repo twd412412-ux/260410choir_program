@@ -267,6 +267,144 @@ function requireAdmin(request) {
   if (!isAdminRequest(request)) throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
 }
 
+const ATTENDANCE_STATUSES = new Set(["출석", "지각", "사유결석", "무단결석"]);
+
+function attendanceScopeForRequest(request) {
+  requireAuth(request);
+  if (isAdminRequest(request) || isElevationValid(request.auth.token, "chongmu")) return ["ALL"];
+  const explicit = normalizeAttendanceScope(request.auth.token.attendanceScope);
+  if (explicit.length) return explicit;
+  const part = cleanString(request.auth.token.choirPart, 30);
+  if (part === "지휘") return ["ALL"];
+  return part ? normalizeAttendanceScope([part]) : [];
+}
+
+function memberInAttendanceScope(member, scope) {
+  if (scope.includes("ALL")) return true;
+  const part = cleanString(member && member.part, 30);
+  const subPart = cleanString(member && member.subPart, 30);
+  return Boolean((part && scope.includes(part)) || (subPart && scope.includes(subPart)));
+}
+
+function normalizeAttendanceChanges(values) {
+  if (!Array.isArray(values) || values.length > 400) {
+    throw new HttpsError("invalid-argument", "출결 변경 범위를 확인해주세요.");
+  }
+  const seen = new Set();
+  return values.map((row) => {
+    const id = cleanString(row && row.id, 1500);
+    if (!isValidDocumentId(id) || seen.has(id)) throw new HttpsError("invalid-argument", "출결 단원 정보가 올바르지 않습니다.");
+    seen.add(id);
+    const status = cleanString(row && row.status, 20);
+    const baselineStatus = cleanString(row && row.baselineStatus, 20);
+    if (status && !ATTENDANCE_STATUSES.has(status)) throw new HttpsError("invalid-argument", "출결 상태가 올바르지 않습니다.");
+    if (baselineStatus && !ATTENDANCE_STATUSES.has(baselineStatus)) throw new HttpsError("invalid-argument", "기준 출결 상태가 올바르지 않습니다.");
+    return {
+      id,
+      name: cleanString(row && row.name, 60),
+      status,
+      reason: status === "사유결석" ? cleanString(row && row.reason, 300) : "",
+      baselineStatus,
+      baselineReason: baselineStatus === "사유결석" ? cleanString(row && row.baselineReason, 300) : "",
+    };
+  });
+}
+
+function attendanceDocumentInfo(data) {
+  const date = cleanString(data && data.date, 10);
+  const session = cleanString(data && data.session, 10);
+  const docId = cleanString(data && data.docId, 80);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !["오전", "오후"].includes(session) || docId !== date + "_" + session) {
+    throw new HttpsError("invalid-argument", "출결 날짜 또는 회차가 올바르지 않습니다.");
+  }
+  return {date, session, docId};
+}
+
+async function assertAttendanceScope(request, changes) {
+  const scope = attendanceScopeForRequest(request);
+  if (scope.includes("ALL") || !changes.length) return scope;
+  if (!scope.length) throw new HttpsError("permission-denied", "담당 출결 파트가 지정되지 않았습니다.");
+  const refs = changes.map((change) => db.collection("members").doc(change.id));
+  const snaps = await db.getAll(...refs);
+  snaps.forEach((snap, index) => {
+    if (!snap.exists) throw new HttpsError("not-found", "출결 대상 단원을 찾을 수 없습니다.");
+    if (!memberInAttendanceScope(snap.data() || {}, scope)) {
+      throw new HttpsError("permission-denied", "담당 파트 밖의 출결은 변경할 수 없습니다.");
+    }
+  });
+  return scope;
+}
+
+async function saveScopedAttendance(request, mode) {
+  if (mode === "clear") requirePermission(request, "attendance.delete");
+  else requirePermission(request, "attendance.check");
+  const info = attendanceDocumentInfo(request.data || {});
+  const changes = normalizeAttendanceChanges(request.data && request.data.changes);
+  if (mode === "clear" && changes.some((change) => change.status || change.reason)) {
+    throw new HttpsError("invalid-argument", "출결 초기화 요청이 올바르지 않습니다.");
+  }
+  await assertAttendanceScope(request, changes);
+  const reportChange = request.data && request.data.reportChange;
+  if (reportChange && !isAdminRequest(request)) throw new HttpsError("permission-denied", "보고서 제외 설정은 관리자만 변경할 수 있습니다.");
+  const ref = db.collection("attendance").doc(info.docId);
+  const actor = isAdminRequest(request) ? "관리자" : (isElevationValid(request.auth.token, "chongmu") ? "총무부" : cleanString(request.auth.token.choirName, 60));
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const latest = snap.exists ? snap.data() || {} : {};
+    const records = Object.assign({}, latest.records || {});
+    const reasons = Object.assign({}, latest.reasons || {});
+    changes.forEach((change) => {
+      const latestStatus = cleanString(records[change.id], 20);
+      const latestReason = cleanString(reasons[change.id], 300);
+      const changedElsewhere = latestStatus !== change.baselineStatus || latestReason !== change.baselineReason;
+      if (changedElsewhere && (latestStatus !== change.status || latestReason !== change.reason)) {
+        throw new HttpsError("aborted", (change.name || "해당 단원") + "님의 출결을 다른 사람이 변경했습니다.");
+      }
+      if (change.status) records[change.id] = change.status;
+      else delete records[change.id];
+      if (change.reason) reasons[change.id] = change.reason;
+      else delete reasons[change.id];
+    });
+    const next = Object.assign({}, latest, {
+      date: info.date,
+      session: info.session,
+      updatedAt: nowIso(),
+      updatedBy: actor,
+      records,
+      reasons,
+    });
+    if (reportChange) {
+      const requestedExclude = Boolean(reportChange.excludeFromReport);
+      const requestedReason = requestedExclude ? cleanString(reportChange.excludeReason, 300) : "";
+      const baselineExclude = Boolean(reportChange.baselineExcludeFromReport);
+      const baselineReason = baselineExclude ? cleanString(reportChange.baselineExcludeReason, 300) : "";
+      const latestExclude = Boolean(latest.excludeFromReport);
+      const latestExcludeReason = latestExclude ? cleanString(latest.excludeReason, 300) : "";
+      if ((latestExclude !== baselineExclude || latestExcludeReason !== baselineReason) &&
+          (latestExclude !== requestedExclude || latestExcludeReason !== requestedReason)) {
+        throw new HttpsError("aborted", "보고서 제외 설정을 다른 사람이 변경했습니다.");
+      }
+      next.excludeFromReport = requestedExclude;
+      next.excludeReason = requestedReason;
+    }
+    tx.set(ref, next);
+  });
+  return {ok: true, changed: changes.length};
+}
+
+async function handleAttendanceAdmin(request) {
+  const action = cleanString(request.data && request.data.action, 40);
+  if (action === "save") return saveScopedAttendance(request, "save");
+  if (action === "clear") return saveScopedAttendance(request, "clear");
+  if (action === "delete") {
+    requireAdmin(request);
+    const info = attendanceDocumentInfo(request.data || {});
+    await db.collection("attendance").doc(info.docId).delete();
+    return {ok: true};
+  }
+  throw new HttpsError("invalid-argument", "지원하지 않는 출결 관리 요청입니다.");
+}
+
 function isRecoveryRequest(request) {
   return Boolean(request.auth && cleanString(request.auth.token.email, 200).toLowerCase() === RECOVERY_EMAIL && request.auth.token.email_verified === true);
 }
@@ -2323,6 +2461,7 @@ exports.securityMaintenance = onCall({timeoutSeconds: 300, memory: "512MiB", sec
 });
 
 exports.seatingDirectory = onCall({timeoutSeconds: 120, memory: "256MiB"}, handleSeatingDirectory);
+exports.attendanceAdmin = onCall({timeoutSeconds: 120, memory: "256MiB"}, handleAttendanceAdmin);
 
 exports.syncSongIndex = onDocumentWritten({document: "songs/{songId}", retry: true}, syncSongIndexWrite);
 

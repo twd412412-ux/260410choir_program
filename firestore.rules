@@ -253,8 +253,8 @@ service cloud.firestore {
         || hasPermission('attendance.view')
         || hasPermission('attendance.check')
         || hasPermission('attendance.delete');
-      allow create, update: if isAdmin() || hasPermission('attendance.check');
-      allow delete: if isAdmin() || hasPermission('attendance.delete');
+      // Attendance writes are validated by the attendanceAdmin callable function.
+      allow create, update, delete: if false;
     }
 
     match /activityLogs/{logId} {
