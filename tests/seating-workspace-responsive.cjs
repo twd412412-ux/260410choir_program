@@ -70,7 +70,7 @@ fs.mkdirSync(output, { recursive: true });
       const result = await page.locator(selector).evaluate(el => {
         const r = el.getBoundingClientRect();
         const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-        return { w: r.width, h: r.height, x: r.x, y: r.y, fits: r.x >= 0 && r.y >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1, hit: el === top || el.contains(top) };
+        return { w: r.width, h: r.height, x: r.x, y: r.y, viewport: [innerWidth,innerHeight], covering: top && top.outerHTML.slice(0,300), fits: r.x >= 0 && r.y >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1, hit: el === top || el.contains(top) };
       });
       assert.ok(result.w >= 28 && result.h >= 28 && result.fits && result.hit, `${selector} not reachable: ${JSON.stringify(result)}`);
     };

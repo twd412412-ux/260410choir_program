@@ -3028,6 +3028,14 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
   #subSeatingPlan.seating-fullscreen .seating-action-dock{grid-row:5;grid-column:1/-1;height:46px;margin:0}
   #subSeatingPlan.seating-fullscreen .seating-board-tabs{max-width:200px}
 }
+@media(max-width:760px){
+  #subSeatingPlan.seating-fullscreen .seating-mode-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:32px 32px;height:66px;min-height:66px;flex-basis:66px;gap:2px!important}
+  .seating-mode-actions .btn,.seating-mode-actions .seating-highlight-colors button{height:32px;min-height:32px}
+  .seating-mode-actions .seating-interaction-modes{display:none}
+  .seating-mode-actions .seating-mode-place-actions{grid-row:1;grid-column:1}
+  .seating-mode-actions .seating-history-actions{grid-row:1;grid-column:2}
+  .seating-mode-actions .seating-group-tools,.seating-mode-actions .seating-edit-actions{grid-row:2;grid-column:1/-1;min-width:0}
+}
 .seating-readonly-badge{display:none;font-size:12px;font-weight:700;color:var(--ts)}
 #subSeatingPlan.seating-readonly .seating-readonly-badge{display:inline}
 #subSeatingPlan.seating-readonly :is([data-seating-edit],.seating-name-row,.seating-program-row,.seating-settings-actions,.seating-workspace-nav,.seating-structure-toolbar,.seating-toolbar,.seating-mode-actions,.seating-center-control,#seatingMicVisibilityControl,#seatingDraftBar,#seatingPlacementStatus,#seatingSettingsToggleBtn,.seating-direct-attendance-actions,.seating-roster-queue-toggle,.seating-attendance-batchbar,.seating-special-hold-hint){display:none!important}
@@ -4834,7 +4842,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.13.12';
+var APP_RELEASE_VERSION='26.09.16.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
