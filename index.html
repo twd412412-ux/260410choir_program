@@ -4873,7 +4873,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.16.4';
+var APP_RELEASE_VERSION='26.09.19.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5805,9 +5805,9 @@ function expandAttendanceScope(scope){
   return uniqueArray(parts);
 }
 function getAttendanceScopeKeys(){
-  if(adminRole==='admin'||adminRole==='chongmu')return ['ALL'];
+  if(secureElevatedSession&&(adminRole==='admin'||adminRole==='chongmu'))return ['ALL'];
   if(currentUser&&Array.isArray(currentUser.attendanceScope)&&currentUser.attendanceScope.length)return normalizeAttendanceScopeArray(currentUser.attendanceScope);
-  if(currentUser&&(currentUser.role==='attendance'||hasPermission('attendance.view')||hasPermission('attendance.check')))return accountDefaultScope(currentUser);
+  if(currentUser)return scopeFromAccountPart(currentUser.part);
   return [];
 }
 function getAttendanceAllowedParts(){
@@ -25375,12 +25375,7 @@ function mergeAttendanceChanges(latest,baseline,changes,metadata,reportChange){
 
 function saveAttendanceChanges(docId,baseline,changes,metadata,reportChange){
   if(!metadata||!metadata.date||!metadata.session){
-    var ref=db.collection('attendance').doc(docId);
-    return db.runTransaction(function(tx){
-      return tx.get(ref).then(function(doc){
-        tx.set(ref,mergeAttendanceChanges(doc.exists?doc.data():{},baseline,changes,metadata||{},reportChange));
-      });
-    });
+    return Promise.reject(new Error('출결 날짜 또는 회차가 올바르지 않습니다.'));
   }
   var secureChanges=changes.map(function(change){
     return Object.assign({},change,{

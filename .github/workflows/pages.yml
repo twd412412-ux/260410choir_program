@@ -25,6 +25,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify attendance backend before publishing
+        run: node scripts/verify-attendance-deployment.cjs
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

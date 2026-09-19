@@ -58,24 +58,32 @@ const { chromium } = require('playwright');
         }
       };
       const key = 'attendance/2026-09-06_오전';
+      // Test the merge helper independently; callable round trips are covered by attendance-server-regression.
+      function testMerge(docId, baseline, changes, metadata, reportChange) {
+        const ref = db.collection('attendance').doc(docId);
+        return db.runTransaction(async tx => {
+          const doc = await tx.get(ref);
+          tx.set(ref, mergeAttendanceChanges(doc.exists ? doc.data() : {}, baseline, changes, metadata, reportChange));
+        });
+      }
       const baseline = { records: { a: '출석', b: '출석', c: '지각' }, reasons: {}, preserved: 'keep' };
       put(key, baseline);
       await Promise.all([
-        saveAttendanceChanges('2026-09-06_오전', baseline, [{ id: 'a', name: 'S1', status: '지각', reason: '' }], {}, null),
-        saveAttendanceChanges('2026-09-06_오전', baseline, [{ id: 'b', name: 'S2', status: '사유결석', reason: '출장' }], {}, null)
+        testMerge('2026-09-06_오전', baseline, [{ id: 'a', name: 'S1', status: '지각', reason: '' }], {}, null),
+        testMerge('2026-09-06_오전', baseline, [{ id: 'b', name: 'S2', status: '사유결석', reason: '출장' }], {}, null)
       ]);
       check(store.get(key).records.a === '지각' && store.get(key).records.b === '사유결석', 'concurrent parts lost records');
       check(store.get(key).records.c === '지각' && store.get(key).preserved === 'keep', 'untouched records/metadata changed');
       check(retries > 0, 'transaction retry not exercised');
       let conflict = false;
-      try { await saveAttendanceChanges('2026-09-06_오전', baseline, [{ id: 'a', name: 'S1', status: '', reason: '' }], {}, null); }
+      try { await testMerge('2026-09-06_오전', baseline, [{ id: 'a', name: 'S1', status: '', reason: '' }], {}, null); }
       catch (error) { conflict = error.code === 'attendance-conflict'; }
       check(conflict && store.get(key).records.a === '지각', 'same member conflict overwritten');
-      await saveAttendanceChanges('2026-09-06_오전', clone(store.get(key)), [{ id: 'b', name: 'S2', status: '', reason: '' }], {}, null);
+      await testMerge('2026-09-06_오전', clone(store.get(key)), [{ id: 'b', name: 'S2', status: '', reason: '' }], {}, null);
       check(!store.get(key).records.b && !store.get(key).reasons.b && store.get(key).records.a === '지각', 'clear touched other part');
       const fresh = clone(store.get(key));
-      await saveAttendanceChanges('2026-09-06_오전', fresh, [{ id: 'c', name: 'T1', status: '출석', reason: '' }], {}, { excludeFromReport: true, excludeReason: '행사' });
-      await saveAttendanceChanges('2026-09-06_오전', fresh, [{ id: 'a', name: 'S1', status: '출석', reason: '' }], {}, null);
+      await testMerge('2026-09-06_오전', fresh, [{ id: 'c', name: 'T1', status: '출석', reason: '' }], {}, { excludeFromReport: true, excludeReason: '행사' });
+      await testMerge('2026-09-06_오전', fresh, [{ id: 'a', name: 'S1', status: '출석', reason: '' }], {}, null);
       check(store.get(key).excludeFromReport && store.get(key).excludeReason === '행사', 'report setting lost');
       check(attendanceChanges(baseline, { a: '출석', b: '출석', c: '지각' }, {}, [{ id: 'a' }, { id: 'b' }, { id: 'c' }]).length === 0, 'unchanged rows should not write');
 
