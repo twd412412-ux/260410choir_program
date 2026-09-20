@@ -4885,7 +4885,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.20.3';
+var APP_RELEASE_VERSION='26.09.20.4';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -5451,6 +5451,7 @@ function openModal(id){
   if(id!=='modalProfilePhotoGuide'&&document.getElementById('modalProfilePhotoGuide').classList.contains('active'))closeModal('modalProfilePhotoGuide');
   modal.classList.add('active');
   syncLayoutState();
+  if(id==='modalPublicSeating')syncPublishedSeatingLive();
   if(id==='modalMemberEdit'){
     setTimeout(function(){
       var content=modal.querySelector('.modal-content');
@@ -5481,6 +5482,7 @@ function closeModal(id){
   }
   modal.classList.remove('active');
   syncLayoutState();
+  if(id==='modalPublicSeating')syncPublishedSeatingLive();
   if(currentTab==='home')setTimeout(tryApplyPendingAppUpdate,0);
 }
 document.addEventListener('click',function(e){
@@ -5911,6 +5913,7 @@ function switchTab(tab){
   if(tab!=='admin')hideRevealedAccountPins(true);
   currentTab=tab;
   syncLayoutState();
+  syncPublishedSeatingLive();
   ['pageHome','pageSongs','pageScores','pageFavorites','pageCalendar','pageArchive','pageStats','pageAdmin'].forEach(function(id){document.getElementById(id).classList.add('hidden')});
   document.querySelectorAll('.nav-item,.home-fab').forEach(function(el){el.classList.toggle('active',el.dataset.t===tab)});
   var p=document.getElementById('page'+tab.charAt(0).toUpperCase()+tab.slice(1));
@@ -8342,6 +8345,7 @@ function publishedSeatingCacheTtl(){
   return publishedSeatingPlans.length?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
 }
 function invalidatePublishedSeatingCache(clearStored){
+  stopPublishedSeatingLive();
   publishedSeatingRequestId++;
   publishedSeatingPlans=[];
   publishedSeatingPlan=null;
@@ -8362,7 +8366,10 @@ function getPublishedSeatingPlan(force){
     return Promise.resolve(null);
   }
   var now=Date.now();
-  if(!force&&publishedSeatingLoaded&&publishedSeatingLastCheckedAt&&(now-publishedSeatingLastCheckedAt)<publishedSeatingCacheTtl())return Promise.resolve(publishedSeatingPlan);
+  if(!force&&publishedSeatingLoaded&&(publishedSeatingUnsubscribe||(publishedSeatingLastCheckedAt&&(now-publishedSeatingLastCheckedAt)<publishedSeatingCacheTtl()))){
+    syncPublishedSeatingLive();
+    return Promise.resolve(publishedSeatingPlan);
+  }
   if(!force&&publishedSeatingPromise)return publishedSeatingPromise;
   if(!force){
     var cached=loadCacheEntry(PUBLISHED_SEATING_CACHE_KEY,PUBLISHED_SEATING_EMPTY_TTL_MS);
@@ -8374,6 +8381,7 @@ function getPublishedSeatingPlan(force){
         setPublishedSeatingState(cachedPlans);
         publishedSeatingLoaded=true;
         publishedSeatingLastCheckedAt=cached.ts;
+        syncPublishedSeatingLive();
         return Promise.resolve(publishedSeatingPlan);
       }
     }
@@ -8391,6 +8399,7 @@ function getPublishedSeatingPlan(force){
     publishedSeatingLastCheckedAt=Date.now();
     publishedSeatingPromise=null;
     savePublishedSeatingCache();
+    syncPublishedSeatingLive();
     return publishedSeatingPlan;
   }).catch(function(err){
     if(requestId===publishedSeatingRequestId)publishedSeatingPromise=null;
@@ -8398,11 +8407,57 @@ function getPublishedSeatingPlan(force){
   });
   return publishedSeatingPromise;
 }
+var publishedSeatingUnsubscribe=null, publishedSeatingLiveGeneration=0;
+function isPublicSeatingModalOpen(){
+  var modal=document.getElementById('modalPublicSeating');
+  return !!(modal&&modal.classList.contains('active'));
+}
+function shouldWatchPublishedSeating(){
+  return document.visibilityState!=='hidden'&&canViewPublishedSeating()&&(currentTab==='home'||isPublicSeatingModalOpen());
+}
+function stopPublishedSeatingLive(){
+  publishedSeatingLiveGeneration++;
+  if(publishedSeatingUnsubscribe)publishedSeatingUnsubscribe();
+  publishedSeatingUnsubscribe=null;
+}
+function syncPublishedSeatingLive(){
+  if(!shouldWatchPublishedSeating()){stopPublishedSeatingLive();return;}
+  if(publishedSeatingUnsubscribe)return;
+  var generation=++publishedSeatingLiveGeneration;
+  publishedSeatingUnsubscribe=db.collection('settings').doc('publishedSeatingPlan').onSnapshot({includeMetadataChanges:true},function(doc){
+    if(generation!==publishedSeatingLiveGeneration||!shouldWatchPublishedSeating())return;
+    // Keep the last confirmed publication until the server confirms this snapshot.
+    if(doc.metadata&&(doc.metadata.fromCache||doc.metadata.hasPendingWrites))return;
+    var plans=normalizePublishedSeatingPlans(doc.exists?doc.data():null);
+    var changed=!publishedSeatingLoaded||JSON.stringify(plans)!==JSON.stringify(publishedSeatingPlans);
+    publishedSeatingRequestId++;
+    publishedSeatingPromise=null;
+    setPublishedSeatingState(plans);
+    publishedSeatingLoaded=true;
+    publishedSeatingLastCheckedAt=Date.now();
+    savePublishedSeatingCache();
+    if(!changed)return;
+    if(currentTab==='home')requestHomeRender();
+    if(isPublicSeatingModalOpen()){
+      var oldScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
+      var top=oldScroll?oldScroll.scrollTop:0,left=oldScroll?oldScroll.scrollLeft:0;
+      renderPublicSeatingModalBody();
+      var newScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
+      if(newScroll){newScroll.scrollTop=top;newScroll.scrollLeft=left;}
+    }
+  },function(error){
+    if(generation!==publishedSeatingLiveGeneration)return;
+    stopPublishedSeatingLive();
+    console.warn('published_seating_live_failed',error);
+  });
+}
 function refreshPublishedSeatingOnResume(){
-  if(currentTab!=='home'||!canViewPublishedSeating())return;
-  getPublishedSeatingPlan(false).then(function(){requestHomeRender()}).catch(function(error){console.warn('published_seating_refresh_failed',error)});
+  syncPublishedSeatingLive();
+  if(!shouldWatchPublishedSeating())return;
+  if(!publishedSeatingLoaded)getPublishedSeatingPlan(false).then(function(){requestHomeRender()}).catch(function(error){console.warn('published_seating_refresh_failed',error)});
 }
 document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden')stopPublishedSeatingLive();
   if(document.visibilityState==='visible')setTimeout(refreshPublishedSeatingOnResume,220);
 });
 window.addEventListener('pageshow',function(){setTimeout(refreshPublishedSeatingOnResume,220)});
