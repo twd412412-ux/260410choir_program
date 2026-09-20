@@ -473,6 +473,11 @@ body.seating-fullscreen .bottom-nav{display:none!important}
 .seating-fullscreen-bar,.seating-workspace-nav,.seating-placement-status,.seating-mode-actions,.seating-panel-dock-toggle,.seating-settings-actions,.seating-attendance-batchbar{display:none}
 .seating-fullscreen-bar{align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--sf);box-shadow:var(--sh)}
 .seating-fullscreen-title{min-width:0;display:flex;align-items:center;gap:8px}
+.seating-fullscreen-title:has(.seating-save-meta:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr);gap:3px}
+.seating-save-info{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.seating-save-info:has(.seating-save-meta[hidden]){flex:none}
+.seating-save-info:has(.seating-save-meta:not([hidden])) .seating-save-state{min-width:60px;text-align:center}
+.seating-save-meta{min-width:0;font-size:11px;color:var(--ts);line-height:1.4;overflow-wrap:anywhere}
 .seating-fullscreen-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:950;color:var(--tx)}
 .seating-save-state{flex:none;border-radius:999px;padding:3px 7px;background:var(--bg);color:var(--ts);font-size:10px;font-weight:900}
 .seating-save-state.dirty{background:#FFF0C9;color:#7A5200}
@@ -613,6 +618,9 @@ body.seating-fullscreen .bottom-nav{display:none!important}
   #subSeatingPlan.seating-fullscreen .seating-view-toggle span{display:none}
   #subSeatingPlan.seating-fullscreen .seating-fullscreen-actions{grid-column:2;grid-row:1}
   .seating-fullscreen-name{font-size:12px}
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-title:has(.seating-save-meta:not([hidden])){display:contents}
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-title:has(.seating-save-meta:not([hidden])) .seating-fullscreen-name{grid-column:1;grid-row:1}
+  #subSeatingPlan.seating-fullscreen .seating-fullscreen-title:has(.seating-save-meta:not([hidden])) .seating-save-info{grid-column:1/-1;grid-row:2}
   .seating-fullscreen-actions .btn{padding:7px;font-size:11px}
   .seating-save-state{font-size:9px;padding:3px 4px}
 }
@@ -3518,7 +3526,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
     <div class="seating-fullscreen-bar">
       <div class="seating-fullscreen-title">
         <span class="seating-fullscreen-name" id="seatingFullscreenPlanTitle">새 자리배치</span>
-        <span class="seating-save-state" id="seatingSaveState">저장됨</span>
+        <span class="seating-save-info"><span class="seating-save-state" id="seatingSaveState">저장됨</span><span class="seating-save-meta" id="seatingSaveMeta" hidden></span></span>
       </div>
       <div class="seating-workspace-nav" role="tablist" aria-label="자리배치 작업 모드">
         <button class="seating-workspace-tab on" type="button" id="seatingModePlaceBtn" onclick="setSeatingWorkspaceMode('place')">배치</button>
@@ -4877,7 +4885,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.20.2';
+var APP_RELEASE_VERSION='26.09.20.3';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -20286,6 +20294,15 @@ function renderSeatingWorkspaceShell(){
   if(title)title.textContent=seatingWorkspacePlanTitle();
   var state=document.getElementById('seatingSaveState');
   if(state){state.textContent=!editable?'조회 전용':(seatingDirty?'저장 안 됨':'저장됨');state.classList.toggle('dirty',editable&&seatingDirty);}
+  var saveMeta=document.getElementById('seatingSaveMeta');
+  if(saveMeta){
+    var savedPlan=seatingPlanId&&seatingPlans.find(function(plan){return plan.id===seatingPlanId;});
+    var lastSave=seatingPlanId&&seatingPlanHistory&&seatingPlanHistory[0];
+    var savedAt=(savedPlan&&savedPlan.updatedAt)||(lastSave&&(lastSave.at||lastSave.updatedAt));
+    var savedBy=(savedPlan&&savedPlan.updatedBy)||(lastSave&&(lastSave.by||lastSave.updatedBy));
+    saveMeta.textContent=savedAt?'최근 저장 · '+seatingPublishedTime(savedAt)+' · '+(savedBy||'저장자 미기록'):'';
+    saveMeta.hidden=!savedAt;
+  }
   var settingsBtn=document.getElementById('seatingSettingsToggleBtn');
   if(settingsBtn)settingsBtn.textContent=seatingSettingsOpen?'설정 닫기':'설정';
   var panelTitle=document.getElementById('seatingMemberPanelTitle');

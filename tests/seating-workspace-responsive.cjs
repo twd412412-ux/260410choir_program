@@ -220,6 +220,25 @@ fs.mkdirSync(output, { recursive: true });
     const protectedData = await page.evaluate(() => JSON.stringify(seatingRows));
     await page.evaluate(() => moveSeatingMemberToSeat('m40', 3, 3));
     assert.equal(await page.evaluate(() => JSON.stringify(seatingRows)), protectedData, 'direct placement bypassed permission');
+    for (const width of [320, 390, 820, 1180]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.evaluate(() => {
+        canUseSeatingPlan = () => true;
+        seatingPlanId = 'saved-fixture';
+        seatingPlans = [{ id: seatingPlanId, updatedAt: '2026-09-20T05:35:12Z', updatedBy: '저장 담당자' }];
+        seatingDirty = false; renderSeatingWorkspaceShell();
+      });
+      assert.match(await page.locator('#seatingSaveMeta').innerText(), /2026\.09\.20 14:35:12.*저장 담당자/);
+      assert(await page.locator('#seatingSaveMeta').isVisible());
+      assert(await page.locator('.seating-fullscreen-bar').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+      const before = await page.locator('.seating-fullscreen-bar').boundingBox();
+      await page.evaluate(() => { seatingDirty = true; renderSeatingWorkspaceShell(); });
+      assert.equal(await page.locator('#seatingSaveState').innerText(), '저장 안 됨');
+      assert.equal((await page.locator('.seating-fullscreen-bar').boundingBox()).height, before.height);
+      await page.screenshot({ path: path.join(output, 'save-meta-' + width + '.png') });
+    }
+    await page.evaluate(() => { seatingPlanId = ''; renderSeatingWorkspaceShell(); });
+    assert.equal(await page.locator('#seatingSaveMeta').isVisible(), false);
     assert.deepEqual(errors, [], 'page errors');
     assert.deepEqual(dataRequests, [], 'workspace interaction requested backend data');
     console.log('PASS: tablet/phone layouts, reachable inline tools and actions, sequential and direct placement, undo/redo, stable drafts, attendance, touch, permissions, no backend reads.');
