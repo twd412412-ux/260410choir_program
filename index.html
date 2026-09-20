@@ -21,6 +21,8 @@
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
 .dark{--p:#9DAF96;--pd:#C9D5C2;--pl:#263126;--bg:#141813;--sf:#1D211B;--tx:#F4F0E8;--ts:#AAB3A4;--bd:#343B31;--sh:0 12px 30px rgba(0,0,0,.28);--accent:#D0A56A;--soft:#24281F;--line:#343B31}
 *{margin:0;padding:0;box-sizing:border-box}
+/* Keep native scrolling and pinch zoom; custom gesture surfaces override this rule. */
+:where(button,a,input,select,textarea,label,summary,[role="button"],[onclick]){touch-action:manipulation}
 body{font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:92px;transition:background .3s,color .3s;letter-spacing:0}
 .hidden{display:none!important}
 .header{background:rgba(255,253,247,.94);color:var(--tx);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 var(--line);backdrop-filter:blur(16px)}
@@ -4873,7 +4875,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.19.1';
+var APP_RELEASE_VERSION='26.09.20.1';
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
