@@ -89,6 +89,9 @@ const setup = () => {
         });
         assert.deepEqual(await page.evaluate(() => Object.fromEntries(publicMovementPair().changes.map(row => [row.key, row.status]))),
           { 'id:a': 'move', 'id:b': 'leave', 'id:c': 'leave', 'id:r': 'move', 'id:i': 'stay', 'id:p': 'stay' });
+        assert.deepEqual(await page.locator('.public-movement-song span').allTextContents(),
+          ['곡 후 퇴장 · 소규모 출연', '곡 후 출연자 변경', '곡 후 입장 · 배치 변경', '마지막 곡']);
+        assert.equal(await page.locator('.public-movement-person').count(), 0);
         await page.getByRole('button', { name: '다음 출연', exact: true }).click();
         assert.equal(await page.locator('#publicSeatingBoard').count(), 0, 'duet rendered a fabricated seating chart');
         assert.match(await page.locator('.public-movement-front').innerText(), /김동명.*박관현/s);

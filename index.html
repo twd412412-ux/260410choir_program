@@ -2689,12 +2689,13 @@ body{font-weight:500}
 .public-movement select{width:100%;font-size:16px;margin-top:8px}
 .public-movement-toggle{width:100%;text-align:left;font-weight:800!important}
 .public-movement p{margin:8px 0;overflow-wrap:anywhere}
-.public-movement-counts{padding:6px 0;color:var(--ts)}
 .public-movement-actions{display:flex;gap:6px;margin:6px 0}
 .public-movement-actions [aria-pressed=true]{background:var(--p);color:white}
-.public-movement-list{max-height:180px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.public-movement-person{display:grid;gap:3px;padding:8px 2px;border-bottom:1px solid var(--bd);overflow-wrap:anywhere}
-.public-movement-person small{font-weight:400;color:var(--ts)}
+.public-movement-list{max-height:240px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:8px}
+.public-movement .public-movement-song{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bd);border-radius:0;background:transparent}
+.public-movement-song strong{min-width:0;overflow-wrap:anywhere;font-size:13px}
+.public-movement-song span{font-size:11px;color:var(--ts);text-align:right;max-width:130px;overflow-wrap:anywhere}
+.public-movement-song[aria-pressed=true]{background:var(--bg);box-shadow:inset 3px 0 var(--p)}
 .public-seating-seat.movement-move{outline:2px solid #3C89AD;outline-offset:1px}
 .public-seating-seat.movement-enter{outline:2px solid #4D9259;outline-offset:1px}
 .public-seating-seat.movement-leave{outline:2px dashed #B55E58;outline-offset:1px}
@@ -4980,7 +4981,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.7';
+var APP_RELEASE_VERSION='26.09.26.8';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8904,10 +8905,22 @@ function publicMovementPair(){
   steps.forEach(function(step){step.item=Object.assign({},step.item,items.get(step.item.key)||{});});
   var index=steps.findIndex(function(step){return step.item.key===publicMovementKey;});
   if(index<0){index=steps.findIndex(function(step){return step.plan&&step.plan.publicId===publishedSeatingPlan.publicId;});if(index<0)index=0;publicMovementKey=steps[index]&&steps[index].item.key||'';}
+  return Object.assign({schedule:schedule,steps:steps,index:index},publicMovementTransition(steps,index));
+}
+function publicMovementTransition(steps,index){
   var carry=steps[index]&&steps[index].plan||steps[index+1]&&steps[index+1].plan;
   if(!carry)for(var i=index-1;i>=0;i--){if(steps[i].plan){carry=steps[i].plan;break;}}
   var fromState=programMovementState(steps[index],carry),toState=programMovementState(steps[index+1],carry);
-  return {schedule:schedule,steps:steps,index:index,from:steps[index],to:steps[index+1],fromState:fromState,toState:toState,changes:!fromState.error&&!toState.error?seatingMovementDiffPositions(fromState.positions,toState.positions):[]};
+  return {from:steps[index],to:steps[index+1],fromState:fromState,toState:toState,changes:!fromState.error&&!toState.error?seatingMovementDiffPositions(fromState.positions,toState.positions):[]};
+}
+function publicMovementSummary(pair){
+  if(!pair.to)return '마지막 곡';
+  if(pair.fromState.error||pair.toState.error||pair.changes.some(function(row){return row.status==='check';}))return '연결 확인 필요';
+  if(!pair.changes.some(function(row){return row.status!=='stay';}))return '곡 후 이동 없음';
+  if(!pair.fromState.small&&pair.toState.small)return '곡 후 퇴장 · 소규모 출연';
+  if(pair.fromState.small&&!pair.toState.small)return '곡 후 입장 · 배치 변경';
+  if(pair.fromState.small&&pair.toState.small)return '곡 후 출연자 변경';
+  return '곡 후 이동 있음';
 }
 function selectPublicMovement(key){publicMovementKey=key;publicMovementSide='from';var pair=publicMovementPair();if(pair&&pair.fromState.plan)selectPublicSeatingPlan(pair.fromState.plan.publicId);else renderPublicSeatingModalBody();}
 function showPublicMovementSide(side){var pair=publicMovementPair(),state=pair&&(side==='to'?pair.toState:pair.fromState);if(!state||state.error)return;publicMovementSide=side;if(state.plan)selectPublicSeatingPlan(state.plan.publicId);else renderPublicSeatingModalBody();}
@@ -8916,15 +8929,12 @@ function publicMovementMarkup(){
   var html='<section class="public-movement"><button class="public-movement-toggle" type="button" aria-expanded="'+publicMovementOpen+'" onclick="togglePublicMovement()">곡 사이 이동 '+(publicMovementOpen?'⌃':'⌄')+'</button>';
   if(!publicMovementOpen)return html+'</section>';
   var pair=publicMovementPair();if(!pair){var error=publicMovementErrors.get(link.scheduleId);return html+'<div role="status">'+(error?escHtml(error)+' <button type="button" onclick="loadPublicMovementSchedule()">다시 시도</button>':publicMovementSchedules.has(link.scheduleId)?'연결된 프로그램이 없습니다':'프로그램 불러오는 중...')+'</div></section>';}
-  html+='<select aria-label="이동 전 곡" onchange="selectPublicMovement(this.value)">'+pair.steps.map(function(step){return '<option value="'+escAttr(step.item.key)+'" '+(step.item.key===publicMovementKey?'selected':'')+'>'+step.item.order+'. '+escHtml(step.item.title)+'</option>';}).join('')+'</select>';
-  if(!pair.to)return html+'<p>마지막 곡입니다</p></section>';
+  html+='<div class="public-movement-list">'+pair.steps.map(function(step,index){return '<button type="button" class="public-movement-song" data-key="'+escAttr(step.item.key)+'" aria-pressed="'+(index===pair.index)+'" onclick="selectPublicMovement(this.dataset.key)"><strong>'+step.item.order+'. '+escHtml(step.item.title)+'</strong><span>'+publicMovementSummary(publicMovementTransition(pair.steps,index))+'</span></button>';}).join('')+'</div>';
+  if(!pair.to)return html+'</section>';
   html+='<p>'+escHtml(pair.from.item.title)+' → '+escHtml(pair.to.item.title)+'</p>';
   if(pair.fromState.error||pair.toState.error)return html+'<p>'+escHtml(pair.fromState.error||pair.toState.error)+'</p></section>';
-  var changes=pair.changes,q=publicSeatingSearch;
-  var counts={move:0,stay:0,enter:0,leave:0,check:0};changes.forEach(function(row){counts[row.status]++;});
-  html+='<div class="public-movement-counts">이동 '+counts.move+' · 유지 '+counts.stay+' · 입장 '+counts.enter+' · 퇴장 '+counts.leave+(counts.check?' · 확인 '+counts.check:'')+'</div><div class="public-movement-actions"><button type="button" aria-pressed="'+(publicMovementSide==='from')+'" onclick="showPublicMovementSide(\'from\')">이전 '+(pair.fromState.small?'출연':'배치')+'</button><button type="button" aria-pressed="'+(publicMovementSide==='to')+'" onclick="showPublicMovementSide(\'to\')">다음 '+(pair.toState.small?'출연':'배치')+'</button></div>';
-  var visible=changes.filter(function(row){return q?publicSeatingMatches({name:row.name,part:row.part},q):row.status!=='stay';});
-  html+='<div class="public-movement-list">'+visible.map(function(row){return '<div class="public-movement-person"><b>'+escHtml(row.name)+' <small>'+escHtml(row.part)+'</small></b><span>'+({move:'이동',stay:'유지',enter:'입장',leave:'퇴장',check:'중복 배치 확인'})[row.status]+' · '+escHtml(row.from?row.from.label:'무대 밖')+' → '+escHtml(row.to?row.to.label:'무대 밖')+'</span></div>';}).join('')+(visible.length?'':'<p>'+(q?'검색된 단원 없음':'자리 이동 없음')+'</p>')+'</div></section>';return html;
+  html+='<div class="public-movement-actions"><button type="button" aria-pressed="'+(publicMovementSide==='from')+'" onclick="showPublicMovementSide(\'from\')">이전 '+(pair.fromState.small?'출연':'배치')+'</button><button type="button" aria-pressed="'+(publicMovementSide==='to')+'" onclick="showPublicMovementSide(\'to\')">다음 '+(pair.toState.small?'출연':'배치')+'</button></div>';
+  return html+'</section>';
 }
 function publicMovementSeatClass(seat,changes){
   var change=changes&&changes.get(seatingMovementIdentity(seat));

@@ -113,14 +113,28 @@ const setup = () => {
         });
         await page.getByRole('button', { name: /곡 사이 이동/ }).click();
         await page.waitForFunction(() => publicMovementSchedules.has('concert'));
-        assert.match(await page.locator('.public-movement-counts').innerText(), /이동 1 · 유지 1 · 입장 1 · 퇴장 1/);
+        assert.match(await page.locator('.public-movement-song').first().innerText(), /첫 곡.*곡 후 이동 있음/s);
+        assert.equal(await page.locator('.public-movement-person').count(), 0);
+        assert.match(await page.locator('.public-movement-song').last().innerText(), /마지막 곡/);
+        assert.deepEqual(await page.evaluate(() => {
+          const base = { to: {}, fromState: {}, toState: {} };
+          return [publicMovementSummary({ ...base, changes: [{ status: 'stay' }] }),
+            publicMovementSummary({ ...base, changes: [{ status: 'check' }] }),
+            publicMovementSummary({ ...base, fromState: { error: 'missing' }, changes: [] })];
+        }), ['곡 후 이동 없음', '연결 확인 필요', '연결 확인 필요']);
         const reads = await page.evaluate(() => fixture.reads);
         await page.getByRole('button', { name: '다음 배치', exact: true }).click();
         assert.equal(await page.evaluate(() => publishedSeatingPlan.publicId), '남성');
         assert.equal(await page.locator('.public-seating-seat.movement-move').count(), 1);
         assert.equal(await page.evaluate(() => fixture.reads), reads, 'changing movement view fetched backend');
         await page.evaluate(() => { publicSeatingSearch = '이단원'; renderPublicSeatingModalBody(); });
-        assert.match(await page.locator('.public-movement-list').innerText(), /이단원.*유지/s);
+        assert.match(await page.locator('.public-movement-list').innerText(), /첫 곡.*곡 후 이동 있음/s);
+        assert.doesNotMatch(await page.locator('.public-movement-list').innerText(), /이단원/);
+        await page.locator('.public-movement-song').last().click();
+        assert.equal(await page.locator('.public-movement-song').last().getAttribute('aria-pressed'), 'true');
+        await page.locator('.public-movement-song').first().click();
+        assert.equal(await page.locator('.public-movement-song').first().getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.evaluate(() => fixture.reads), reads, 'selecting song summaries fetched backend');
         for (const width of [320, 390, 820]) {
           await page.setViewportSize({ width, height: 844 });
           assert(await page.locator('.public-movement').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
