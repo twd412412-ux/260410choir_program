@@ -118,6 +118,25 @@ const setup = () => {
         });
         assert.match(await page.locator('.rehearsal-context').innerText(), /김동명.*박관현.*반주 정반주/s);
         assert.match(await page.evaluate(() => concertPrintMarkup(serverSchedule, 'member', null)), /앞쪽 출연.*|김동명/);
+        await page.evaluate(() => {
+          const schedule = structuredClone(serverSchedule);
+          schedule.programItems.forEach(item => { delete item.accompanist; });
+          publishedSeatingPlans.forEach(plan => { plan.specialSlots = {}; });
+          publicMovementSchedules.set(schedule.id, schedule);
+          publicMovementKey = seatingProgramItems(schedule)[0].key; publicMovementSide = 'from';
+          document.getElementById('modalRehearsalCue').classList.remove('active');
+          document.getElementById('modalPublicSeating').classList.add('active'); renderPublicSeatingModalBody();
+        });
+        assert.deepEqual(await page.locator('.public-movement-song span').allTextContents(),
+          ['곡 후 퇴장 · 소규모 출연', '곡 후 출연자 변경', '곡 후 입장 · 배치 변경', '마지막 곡'], 'missing accompanist must not block movement');
+        await page.getByRole('button', { name: '다음 출연', exact: true }).click();
+        assert.match(await page.locator('.public-movement-front').innerText(), /김동명.*박관현/s);
+        assert.deepEqual(await page.evaluate(() => {
+          const item = { title: '합창', performanceType: 'all' };
+          const small = { title: '듀엣', performanceType: 'duet' };
+          const states = [programMovementState({ item }), programMovementState({ item: small }), programMovementState({ item, status: 'conflict' })];
+          return states.map(state => publicMovementSummary({ to: {}, fromState: state, toState: {}, changes: [] }));
+        }), ['배치도 미연결', '출연자 미지정', '배치 연결 중복']);
         assert.deepEqual(errors, []); console.log(engine.name() + ' PASS roster picker, orchestra singers, homonyms, pianist separation, save/hydration, no-selection safety, reorder/rename, small-group stage transitions and phone/tablet UI');
       } finally { await browser.close(); }
     }

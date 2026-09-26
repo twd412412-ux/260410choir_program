@@ -4983,7 +4983,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.9';
+var APP_RELEASE_VERSION='26.09.26.10';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8878,15 +8878,15 @@ function programMovementState(step,carry){
   if(!step)return {error:'프로그램 순서 확인 필요'};
   if(isSmallProgramItem(step.item)){
     var refs=normalizeProgramPerformers(step.item.performers);
-    if(!step.item.performersConfigured||!refs.length)return {error:'소규모 곡 출연자를 지정해주세요'};
+    if(!step.item.performersConfigured||!refs.length)return {error:'소규모 곡 출연자를 지정해주세요',errorCode:'performers'};
     var positions=new Map();
     // Instrumentalists and staff do not exit with the choir unless explicitly singing.
     seatingMovementPositions(carry).forEach(function(position,key){if(position&&position.board!=='choir')positions.set(key,position);});
     refs.forEach(function(ref){positions.set(seatingMovementIdentity(ref),{seat:ref,board:'front',row:'front',x:0,label:'앞쪽 출연'});});
     return {positions:positions,small:true,performers:refs,plan:null};
   }
-  if(step.status==='conflict')return {error:'공개 배치 연결이 중복되어 있습니다'};
-  if(!step.plan)return {error:'공개 배치 연결이 필요합니다'};
+  if(step.status==='conflict')return {error:'공개 배치 연결이 중복되어 있습니다',errorCode:'conflict'};
+  if(!step.plan)return {error:'이 곡에 연결된 공개 배치도가 없습니다. 배치도에서 해당 곡을 선택해 공개해주세요.',errorCode:'plan'};
   return {positions:seatingMovementPositions(step.plan),plan:step.plan,small:false};
 }
 function loadPublicMovementSchedule(){
@@ -8917,7 +8917,11 @@ function publicMovementTransition(steps,index){
 }
 function publicMovementSummary(pair){
   if(!pair.to)return '마지막 곡';
-  if(pair.fromState.error||pair.toState.error||pair.changes.some(function(row){return row.status==='check';}))return '연결 확인 필요';
+  if(pair.fromState.error||pair.toState.error){
+    var state=pair.fromState.error?pair.fromState:pair.toState;
+    return {performers:'출연자 미지정',conflict:'배치 연결 중복',plan:'배치도 미연결'}[state.errorCode]||'연결 확인 필요';
+  }
+  if(pair.changes.some(function(row){return row.status==='check';}))return '중복 배치 확인';
   if(!pair.changes.some(function(row){return row.status!=='stay';}))return '곡 후 이동 없음';
   if(!pair.fromState.small&&pair.toState.small)return '곡 후 퇴장 · 소규모 출연';
   if(pair.fromState.small&&!pair.toState.small)return '곡 후 입장 · 배치 변경';

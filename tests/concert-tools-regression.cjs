@@ -135,7 +135,7 @@ const setup = () => {
           return [publicMovementSummary({ ...base, changes: [{ status: 'stay' }] }),
             publicMovementSummary({ ...base, changes: [{ status: 'check' }] }),
             publicMovementSummary({ ...base, fromState: { error: 'missing' }, changes: [] })];
-        }), ['곡 후 이동 없음', '연결 확인 필요', '연결 확인 필요']);
+        }), ['곡 후 이동 없음', '중복 배치 확인', '연결 확인 필요']);
         const reads = await page.evaluate(() => fixture.reads);
         await page.getByRole('button', { name: '다음 배치', exact: true }).click();
         assert.equal(await page.evaluate(() => publishedSeatingPlan.publicId), '남성');
