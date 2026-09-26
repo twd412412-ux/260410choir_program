@@ -2644,6 +2644,42 @@ body{font-weight:500}
 .rehearsal-cue-modal.theme-light .rehearsal-metronome button,.rehearsal-cue-modal.theme-light .rehearsal-metronome select,.rehearsal-cue-modal.theme-light .rehearsal-metronome input[type=number]{background:#FFF;border-color:#BFC8BA}
 .rehearsal-cue-modal.theme-light .rehearsal-metronome button[aria-pressed=true]{background:#E7C36C;color:#1D211B}
 .rehearsal-timer{padding:22px 20px 17px;border-bottom:1px solid #353A30}
+.concert-timing,.concert-tools,.concert-editor{padding:12px 20px;border-bottom:1px solid #6B7562;color:inherit;min-width:0}
+.concert-timing-summary{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin:4px 0}
+.concert-timing-summary strong{font-size:16px;font-variant-numeric:tabular-nums}
+.concert-timing small{font-size:11px;opacity:.8}
+.concert-tools{display:flex;gap:6px;flex-wrap:wrap}
+.concert-tools button,.concert-tools select,.concert-editor input,.concert-editor select,.concert-editor textarea,.concert-editor button{font-family:inherit;font-size:16px;min-height:38px;padding:6px 8px;border:1px solid #7E8874;border-radius:6px;background:#232820;color:#F6F1E6;max-width:100%;box-sizing:border-box;color-scheme:dark}
+.concert-tools button,.concert-editor button{font-size:12px;cursor:pointer}
+.concert-editor[hidden]{display:none}
+.concert-editor label{font-size:12px}
+.concert-editor input,.concert-editor select,.concert-editor textarea{width:100%}
+.concert-editor-rows{margin:12px 0}
+.concert-duration-row{display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #7E8874}
+.concert-duration-row span,.concert-cue-row span{overflow-wrap:anywhere}
+.concert-editor form{display:grid;gap:7px;margin-top:12px}
+.concert-cue-row{display:flex;align-items:center;gap:6px;padding:6px 0;font-size:12px}
+.concert-cue-row span{flex:1;min-width:0}
+.concert-editor-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-top:10px}
+.concert-editor-actions span{width:100%;font-size:12px;color:#E6BC76}
+.concert-cue-instruction{white-space:pre-wrap;font-size:16px;margin-top:16px;line-height:1.6;color:inherit}
+.rehearsal-cue-modal.theme-light .concert-tools button,.rehearsal-cue-modal.theme-light .concert-tools select,.rehearsal-cue-modal.theme-light .concert-editor input,.rehearsal-cue-modal.theme-light .concert-editor select,.rehearsal-cue-modal.theme-light .concert-editor textarea,.rehearsal-cue-modal.theme-light .concert-editor button{background:#fff;color:#20251e;color-scheme:light}
+.rehearsal-cue-modal.theme-light .concert-editor-actions span{color:#854914}
+.public-movement{padding:8px 0;border-bottom:1px solid var(--bd);margin-bottom:10px;font-size:12px;min-width:0}
+.public-movement button,.public-movement select{border:1px solid var(--bd);background:var(--sf);color:var(--tx);padding:8px 10px;border-radius:6px;font:inherit;max-width:100%;cursor:pointer}
+.public-movement select{width:100%;font-size:16px;margin-top:8px}
+.public-movement-toggle{width:100%;text-align:left;font-weight:800!important}
+.public-movement p{margin:8px 0;overflow-wrap:anywhere}
+.public-movement-counts{padding:6px 0;color:var(--ts)}
+.public-movement-actions{display:flex;gap:6px;margin:6px 0}
+.public-movement-actions [aria-pressed=true]{background:var(--p);color:white}
+.public-movement-list{max-height:180px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.public-movement-person{display:grid;gap:3px;padding:8px 2px;border-bottom:1px solid var(--bd);overflow-wrap:anywhere}
+.public-movement-person small{font-weight:400;color:var(--ts)}
+.public-seating-seat.movement-move{outline:2px solid #3C89AD;outline-offset:1px}
+.public-seating-seat.movement-enter{outline:2px solid #4D9259;outline-offset:1px}
+.public-seating-seat.movement-leave{outline:2px dashed #B55E58;outline-offset:1px}
+.public-seating-seat.movement-check{outline:2px dashed #A07B1C;outline-offset:1px}
 .rehearsal-timer-label{color:#8F9788;font-size:10px;font-weight:850}
 .rehearsal-timer-value{margin-top:3px;color:#F6F1E6;font-size:38px;font-weight:850;font-variant-numeric:tabular-nums;line-height:1.15}
 .rehearsal-timer-actions{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:7px;margin-top:12px}
@@ -4906,7 +4942,8 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.3';
+var APP_RELEASE_VERSION='26.09.26.4';
+var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -8741,8 +8778,11 @@ function openPublicSeatingModal(publicId){
   getPublishedSeatingPlan(false).then(function(plan){
     if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
     var target=publicId||publishedSeatingPlans[0].publicId;
+    publicMovementOpen=false;publicMovementKey='';publicMovementSide='from';
     publicSeatingView=canViewSeatingPlan()?'audience':'member';
     selectPublicSeatingPlan(target);
+    var movementLink=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);
+    if(movementLink)publicMovementSchedules.delete(movementLink.scheduleId);
     var input=document.getElementById('publicSeatingSearch');
     if(input)input.value=publicSeatingSearch||'';
     openModal('modalPublicSeating');
@@ -8772,11 +8812,71 @@ function renderPublicSeatingPlanStack(){
         +'</button>';
     }).join('')+'</div>';
 }
+var publicMovementSchedules=new Map(),publicMovementLoads=new Map(),publicMovementErrors=new Map();
+function seatingMovementIdentity(seat){
+  if(!seat)return '';return seat.memberId?'id:'+seat.memberId:'name:'+publicSeatingNormalizeText(seat.name)+'|'+publicSeatingNormalizeText(seat.part);
+}
+function seatingMovementPositions(plan){
+  var positions=new Map();if(!plan)return positions;
+  function put(seat,value){var key=seatingMovementIdentity(seat);if(!key)return;if(positions.has(key))positions.set(key,null);else positions.set(key,Object.assign({seat:seat},value));}
+  ['choir','orchestra'].forEach(function(board){var rows=board==='choir'?plan.rows:plan.orchestraRows;
+    (rows||[]).forEach(function(row,r){(row.seats||[]).forEach(function(seat,c){if(!seat)return;put(seat,{board:board,label:(board==='orchestra'?'관현악 ':'')+(row.label||'줄')+' '+(c+1)+'번',row:row.label||String(r),x:c-((row.seats||[]).length-1)/2+seatingRowDisplayOffset(row,r,rows)-seatingPlanCenterOffset(plan,board)/2});});});
+  });
+  publicSeatingSpecialSeatList(plan).forEach(function(item){var label=({conductor:'지휘',accompanist:'반주',staff:'스태프'})[item.type]+(item.type==='staff'?' '+(item.index+1):'');put(item.seat,{board:'special',row:label,x:0,label:label});});return positions;
+}
+function seatingMovementDiff(from,to){
+  var a=seatingMovementPositions(from),b=seatingMovementPositions(to),keys=new Set(Array.from(a.keys()).concat(Array.from(b.keys())));
+  return Array.from(keys).map(function(key){var before=a.get(key),after=b.get(key),ambiguous=(a.has(key)&&before===null)||(b.has(key)&&after===null);
+    return {key:key,name:(after&&after.seat||before&&before.seat||{}).name||'중복 배치',part:(after&&after.seat||before&&before.seat||{}).part||'',from:before,to:after,status:ambiguous?'check':!before?'enter':!after?'leave':before.board===after.board&&before.row===after.row&&before.x===after.x?'stay':'move'};
+  }).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+}
+function loadPublicMovementSchedule(){
+  var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);if(!link)return Promise.resolve(null);
+  var id=link.scheduleId;
+  if(publicMovementLoads.has(id))return publicMovementLoads.get(id);
+  if(publicMovementSchedules.has(id))return Promise.resolve(publicMovementSchedules.get(id));
+  publicMovementErrors.delete(id);
+  var request=withLoadDeadline(db.collection('schedules').doc(id).get(),12000).then(function(doc){
+    publicMovementSchedules.set(id,doc.exists?Object.assign({id:doc.id},doc.data()):null);
+  }).catch(function(){publicMovementErrors.set(id,'프로그램을 불러오지 못했습니다');}).finally(function(){publicMovementLoads.delete(id);if(isPublicSeatingModalOpen()&&publicMovementOpen)renderPublicSeatingModalBody();});
+  publicMovementLoads.set(id,request);return request;
+}
+function togglePublicMovement(){publicMovementOpen=!publicMovementOpen;if(publicMovementOpen)loadPublicMovementSchedule();renderPublicSeatingModalBody();}
+function publicMovementPair(){
+  var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink),schedule=link&&publicMovementSchedules.get(link.scheduleId);if(!schedule)return null;
+  var plans=publishedSeatingPlans.filter(function(plan){var l=normalizeSeatingProgramLink(plan.programLink);return l&&l.scheduleId===schedule.id;}),steps=seatingProgramSequence(schedule,plans);
+  var index=steps.findIndex(function(step){return step.item.key===publicMovementKey;});
+  if(index<0){index=steps.findIndex(function(step){return step.plan&&step.plan.publicId===publishedSeatingPlan.publicId;});if(index<0)index=0;publicMovementKey=steps[index]&&steps[index].item.key||'';}
+  return {schedule:schedule,steps:steps,index:index,from:steps[index],to:steps[index+1]};
+}
+function selectPublicMovement(key){publicMovementKey=key;publicMovementSide='from';var pair=publicMovementPair();if(pair&&pair.from&&pair.from.plan)selectPublicSeatingPlan(pair.from.plan.publicId);else renderPublicSeatingModalBody();}
+function showPublicMovementSide(side){var pair=publicMovementPair(),step=pair&&(side==='to'?pair.to:pair.from);if(!step||!step.plan)return;publicMovementSide=side;selectPublicSeatingPlan(step.plan.publicId);}
+function publicMovementMarkup(){
+  var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);if(!link)return '';
+  var html='<section class="public-movement"><button class="public-movement-toggle" type="button" aria-expanded="'+publicMovementOpen+'" onclick="togglePublicMovement()">곡 사이 이동 '+(publicMovementOpen?'⌃':'⌄')+'</button>';
+  if(!publicMovementOpen)return html+'</section>';
+  var pair=publicMovementPair();if(!pair){var error=publicMovementErrors.get(link.scheduleId);return html+'<div role="status">'+(error?escHtml(error)+' <button type="button" onclick="loadPublicMovementSchedule()">다시 시도</button>':publicMovementSchedules.has(link.scheduleId)?'연결된 프로그램이 없습니다':'프로그램 불러오는 중...')+'</div></section>';}
+  html+='<select aria-label="이동 전 곡" onchange="selectPublicMovement(this.value)">'+pair.steps.map(function(step){return '<option value="'+escAttr(step.item.key)+'" '+(step.item.key===publicMovementKey?'selected':'')+'>'+step.item.order+'. '+escHtml(step.item.title)+'</option>';}).join('')+'</select>';
+  if(!pair.to)return html+'<p>마지막 곡입니다</p></section>';
+  html+='<p>'+escHtml(pair.from.item.title)+' → '+escHtml(pair.to.item.title)+'</p>';
+  if(!pair.from.plan||!pair.to.plan)return html+'<p>'+(pair.from.status==='conflict'||pair.to.status==='conflict'?'공개 배치 연결이 중복되어 있습니다':'두 곡 모두 공개 배치가 연결되어야 이동을 확인할 수 있습니다')+'</p></section>';
+  var changes=seatingMovementDiff(pair.from.plan,pair.to.plan),q=publicSeatingSearch;
+  var counts={move:0,stay:0,enter:0,leave:0,check:0};changes.forEach(function(row){counts[row.status]++;});
+  html+='<div class="public-movement-counts">이동 '+counts.move+' · 유지 '+counts.stay+' · 입장 '+counts.enter+' · 퇴장 '+counts.leave+(counts.check?' · 확인 '+counts.check:'')+'</div><div class="public-movement-actions"><button type="button" aria-pressed="'+(publicMovementSide==='from')+'" onclick="showPublicMovementSide(\'from\')">이전 배치</button><button type="button" aria-pressed="'+(publicMovementSide==='to')+'" onclick="showPublicMovementSide(\'to\')">다음 배치</button></div>';
+  var visible=changes.filter(function(row){return q?publicSeatingMatches({name:row.name,part:row.part},q):row.status!=='stay';});
+  html+='<div class="public-movement-list">'+visible.map(function(row){return '<div class="public-movement-person"><b>'+escHtml(row.name)+' <small>'+escHtml(row.part)+'</small></b><span>'+({move:'이동',stay:'유지',enter:'입장',leave:'퇴장',check:'중복 배치 확인'})[row.status]+' · '+escHtml(row.from?row.from.label:'무대 밖')+' → '+escHtml(row.to?row.to.label:'무대 밖')+'</span></div>';}).join('')+(visible.length?'':'<p>'+(q?'검색된 단원 없음':'자리 이동 없음')+'</p>')+'</div></section>';return html;
+}
+function publicMovementSeatClass(seat,changes){
+  var change=changes&&changes.get(seatingMovementIdentity(seat));
+  return change&&change.status!=='stay'?' movement-'+change.status:'';
+}
 function renderPublicSeatingModalBody(){
   var box=document.getElementById('publicSeatingBody');if(!box)return;
   var plan=publishedSeatingPlan;
   if(!plan){box.innerHTML='<div class="home-empty-row">아직 공개된 자리배치가 없습니다</div>';return;}
   var q=String(publicSeatingSearch||'').trim();
+  var movementPair=publicMovementOpen&&publicMovementPair(),movementChanges=new Map();
+  if(movementPair&&movementPair.from&&movementPair.to&&movementPair.from.plan&&movementPair.to.plan)seatingMovementDiff(movementPair.from.plan,movementPair.to.plan).forEach(function(row){movementChanges.set(row.key,row);});
   var stats=publicSeatingStats(plan);
   if(publicSeatingBoardTab==='orchestra'&&!stats.boards.orchestra.placed)publicSeatingBoardTab='choir';
   if(q){
@@ -8804,7 +8904,7 @@ function renderPublicSeatingModalBody(){
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '이름 검색으로 배치된 자리를 확인해 주세요.';
   var publishedText=seatingPublishedTime(plan.publishedAt);
-  var html=renderPublicSeatingPlanStack()
+  var html=renderPublicSeatingPlanStack()+publicMovementMarkup()
     +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
     +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
     +'<div class="public-seating-view-toggle" aria-label="배치도 보는 방향">'
@@ -8844,7 +8944,7 @@ function renderPublicSeatingModalBody(){
       var dimClass=q&&seat&&!publicSeatingMatches(seat,q)&&!publicSeatingIsMine(seat)?' dim':'';
       var highlightClass=seat&&seat.highlight?' highlighted':'';
       if(seat){
-        html+='<div class="public-seating-seat '+partClass(seat.part)+highlightClass+mineClass+matchClass+dimClass+'"'+seatingHighlightStyle(seat)+' title="'+escHtml(publicSeatingSeatLabel(r,c,publicSeatingBoardTab)+' · '+(seat.part||'')+' '+(seat.name||'')+(seat.highlight?' · 강조':''))+'">'+seatingSeatNameHtml(seat.name||'')+'</div>';
+        html+='<div class="public-seating-seat '+partClass(seat.part)+highlightClass+mineClass+matchClass+dimClass+publicMovementSeatClass(seat,movementChanges)+'"'+seatingHighlightStyle(seat)+' title="'+escHtml(publicSeatingSeatLabel(r,c,publicSeatingBoardTab)+' · '+(seat.part||'')+' '+(seat.name||'')+(seat.highlight?' · 강조':''))+'">'+seatingSeatNameHtml(seat.name||'')+'</div>';
       }else{
         html+='<div class="public-seating-seat empty">빈칸</div>';
       }
@@ -9121,7 +9221,15 @@ function withLoadDeadline(promise,ms){
 }
 
 var homeRenderGeneration=0;
+function openSeatingDeepLink(){
+  if(publicSeatingDeepLinkHandled||!canViewPublishedSeating())return;
+  var id=new URL(window.location.href).searchParams.get('seating');
+  if(!id||!publishedSeatingPlans.some(function(plan){return plan.publicId===id;}))return;
+  publicSeatingDeepLinkHandled=true;
+  setTimeout(function(){openPublicSeatingModal(id);},0);
+}
 function renderHome(){
+  openSeatingDeepLink();
   var c=document.getElementById('homeContent');if(!c)return;
   var generation=++homeRenderGeneration;
   var actorKey=adminRole+'|'+(currentUser?currentUser.id:'');
@@ -10136,6 +10244,182 @@ function openRehearsalCue(scheduleId){
     if(document.getElementById('modalRehearsalCue').classList.contains('active'))renderRehearsalSchedulePicker();
   });
 }
+function normalizeConcertPlan(value){
+  value=value&&typeof value==='object'?value:{};
+  var durations=Object.create(null);
+  Object.keys(value.durations||{}).slice(0,180).forEach(function(key){
+    var n=Number(value.durations[key]);
+    if(key.length<=1200&&Number.isFinite(n)&&n>0&&n<=14400)durations[key]=Math.round(n);
+  });
+  var seen=new Set();
+  var cues=(Array.isArray(value.cues)?value.cues:[]).slice(0,60).filter(function(cue){
+    if(!cue||typeof cue.id!=='string'||!cue.id||seen.has(cue.id))return false;
+    seen.add(cue.id);return ['speech','transition','video'].indexOf(cue.kind)>-1;
+  }).map(function(cue){return {id:cue.id.slice(0,120),kind:cue.kind,title:String(cue.title||'').trim().slice(0,200),note:String(cue.note||'').slice(0,500),before:String(cue.before||'').slice(0,1200)};}).filter(function(cue){return cue.title;});
+  return {startTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(value.startTime||'')?value.startTime:'',durations:durations,cues:cues};
+}
+function concertSongItems(schedule){
+  var counts=new Map();
+  return rehearsalItemsFromSchedule(schedule).map(function(item){
+    var identity=rehearsalItemMatchKey(item).normalize('NFC'),count=(counts.get(identity)||0)+1;
+    counts.set(identity,count);
+    return Object.assign({},item,{kind:'song',cueKey:JSON.stringify([identity,count])});
+  });
+}
+function concertCueItems(schedule,plan){
+  plan=normalizeConcertPlan(plan||schedule&&schedule.rehearsalPlan);
+  var songs=concertSongItems(schedule),result=[];
+  function append(cue){result.push({title:cue.title,section:'',performanceType:'all',kind:cue.kind,cueKey:'cue:'+cue.id,cueNote:cue.note});}
+  songs.forEach(function(song){plan.cues.filter(function(cue){return cue.before===song.cueKey;}).forEach(append);result.push(song);});
+  plan.cues.filter(function(cue){return !cue.before;}).forEach(append);
+  // A renamed/deleted song must not silently relocate its anchored transition.
+  return result.map(function(item){item.duration=plan.durations[item.cueKey]||0;return item;});
+}
+function concertCueBadge(item){
+  if(!item||!item.kind||item.kind==='song')return renderProgramPerformanceBadge(rehearsalItemPerformanceType(item));
+  return '<span class="program-type-badge">'+({speech:'멘트',transition:'전환',video:'영상'})[item.kind]+'</span>';
+}
+function concertTimeLabel(minutes){
+  if(!Number.isFinite(minutes))return '—';
+  var day=Math.floor(minutes/1440);minutes=((Math.round(minutes)%1440)+1440)%1440;
+  return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0')+(day?' (+'+day+'일)':'');
+}
+function concertTiming(schedule,items){
+  var plan=normalizeConcertPlan(schedule&&schedule.rehearsalPlan),time=plan.startTime||String(schedule&&schedule.time||'');
+  var m=/^([01]?\d|2[0-3]):([0-5]\d)$/.exec(time),start=m?Number(m[1])*60+Number(m[2]):null;
+  var total=0,missing=0,known=true;
+  var rows=items.map(function(item){var at=total,row={item:item,elapsed:at,start:start===null||!known?null:start+at/60};total+=item.duration||0;if(!item.duration){missing++;known=false;}return row;});
+  return {start:start,total:total,missing:missing,rows:rows,end:start===null?null:start+total/60};
+}
+function concertTimingMarkup(schedule){
+  if(!schedule)return '';
+  var timing=concertTiming(schedule,rehearsalItems),missing=timing.missing;
+  var cumulative=timing.rows[rehearsalIndex]&&timing.rows[rehearsalIndex].elapsed||0;
+  var duration=rehearsalItems[rehearsalIndex]&&rehearsalItems[rehearsalIndex].duration||0;
+  var difference=rehearsalTimerSeconds<cumulative?rehearsalTimerSeconds-cumulative:Math.max(0,rehearsalTimerSeconds-cumulative-duration);
+  var drift=!missing&&rehearsalTimerSeconds?Math.round(difference/60):0;
+  return '<div class="concert-timing-summary"><span>'+(missing?'입력된 시간 합계':'전체 소요')+'</span><strong>'+rehearsalTimerText(timing.total)+'</strong></div>'
+    +'<div class="concert-timing-summary"><span>'+(missing?'종료 시각':'예상 종료')+'</span><strong>'+(missing?'미정':concertTimeLabel(timing.end))+'</strong></div>'
+    +'<small>'+(missing?'소요시간 미입력 '+missing+'개':timing.start===null?'시작 시각 미설정':drift>0?'예정보다 '+drift+'분 늦음':drift<0?'예정보다 '+Math.abs(drift)+'분 빠름':'예정대로')+'</small>';
+}
+function concertDurationValue(seconds){return seconds?Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):'';}
+function parseConcertDuration(value){
+  value=String(value||'').trim();if(!value)return 0;
+  var m=/^(\d{1,3}):([0-5]\d)$/.exec(value);
+  if(!m)return null;var seconds=Number(m[1])*60+Number(m[2]);return seconds<=14400?seconds:null;
+}
+function concertToolsMarkup(schedule){
+  var editable=canEditScheduleItem(schedule);
+  return '<div class="concert-tools"><select id="concertPrintMode" aria-label="인쇄 형식"><option value="director">지휘자용</option><option value="member">단원용</option></select><button type="button" onclick="openConcertPrint()">인쇄</button>'+(editable?'<button type="button" onclick="openConcertEditor()">큐 구성</button>':'')+'</div>'
+    +'<div id="concertEditor" class="concert-editor" hidden></div>';
+}
+function openConcertEditor(){
+  var schedule=getRehearsalSchedule();if(!schedule||!canEditScheduleItem(schedule))return;
+  if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(normalizeConcertPlan(schedule.rehearsalPlan));}
+  renderConcertEditor();
+}
+function renderConcertEditor(){
+  var host=document.getElementById('concertEditor'),schedule=getRehearsalSchedule();if(!host||!schedule||!rehearsalPlanDraft)return;
+  var items=concertCueItems(schedule,rehearsalPlanDraft),songs=concertSongItems(schedule);
+  host.hidden=false;
+  host.innerHTML='<label>시작 시각<input id="concertStartTime" type="time" value="'+escAttr(rehearsalPlanDraft.startTime||schedule.time||'')+'" onchange="rehearsalPlanDraft.startTime=this.value"></label>'
+    +'<div class="concert-editor-rows">'+items.map(function(item,index){return '<label class="concert-duration-row"><span>'+escHtml(item.title)+'</span><input type="text" inputmode="numeric" placeholder="분:초" aria-label="'+escAttr(item.title)+' 소요시간" value="'+concertDurationValue(item.duration)+'" onchange="setConcertDuration('+index+',this)"></label>';}).join('')+'</div>'
+    +'<div class="concert-cue-list">'+rehearsalPlanDraft.cues.map(function(cue,index){var orphan=cue.before&&!songs.some(function(song){return song.cueKey===cue.before;});return '<div class="concert-cue-row"><span>'+escHtml(cue.title)+(orphan?' · 연결 곡 확인 필요':'')+'</span><button type="button" title="큐 수정" onclick="editConcertExtra('+index+')">수정</button><button type="button" title="큐 삭제" onclick="removeConcertExtra('+index+')">×</button></div>';}).join('')+'</div>'
+    +'<form id="concertExtraForm" onsubmit="addConcertExtra(event)"><select id="concertExtraKind" aria-label="큐 종류"><option value="speech">멘트</option><option value="transition">입장·자리 전환</option><option value="video">영상</option></select><input id="concertExtraTitle" maxlength="200" placeholder="큐 제목" required><select id="concertExtraBefore" aria-label="큐 위치">'+songs.map(function(item,index){return '<option value="'+escAttr(item.cueKey)+'">'+(index+1)+'. '+escHtml(item.title)+' 앞</option>';}).join('')+'<option value="">마지막 곡 뒤</option></select><textarea id="concertExtraNote" maxlength="500" placeholder="담당자·진행 내용"></textarea><button type="submit" id="concertExtraSubmit">큐 추가</button></form>'
+    +'<div class="concert-editor-actions"><span id="concertEditorStatus" role="status"></span><button type="button" onclick="cancelConcertEditor()">취소</button><button type="button" id="concertSave" onclick="saveConcertPlan()" '+(rehearsalPlanBusy?'disabled':'')+'>구성 저장</button></div>';
+}
+function setConcertDuration(index,input){
+  if(!rehearsalPlanDraft)return;
+  var seconds=parseConcertDuration(input.value),item=concertCueItems(getRehearsalSchedule(),rehearsalPlanDraft)[index];
+  input.setCustomValidity(seconds===null?'분:초 형식으로 입력해주세요. 예: 4:30':'');
+  if(seconds===null){input.reportValidity();return;}
+  if(item)rehearsalPlanDraft.durations[item.cueKey]=seconds;
+}
+function editConcertExtra(index){
+  var cue=rehearsalPlanDraft&&rehearsalPlanDraft.cues[index];if(!cue)return;
+  var form=document.getElementById('concertExtraForm');form.dataset.editId=cue.id;
+  document.getElementById('concertExtraKind').value=cue.kind;
+  document.getElementById('concertExtraTitle').value=cue.title;
+  document.getElementById('concertExtraBefore').value=cue.before;
+  document.getElementById('concertExtraNote').value=cue.note;
+  document.getElementById('concertExtraSubmit').textContent='큐 수정';
+  form.scrollIntoView({block:'nearest'});
+}
+function removeConcertExtra(index){
+  if(!rehearsalPlanDraft||!confirm('이 큐를 삭제할까요?'))return;
+  var cue=rehearsalPlanDraft.cues.splice(index,1)[0];if(cue)delete rehearsalPlanDraft.durations['cue:'+cue.id];renderConcertEditor();
+}
+function addConcertExtra(event){
+  event.preventDefault();if(!rehearsalPlanDraft)return;
+  var form=document.getElementById('concertExtraForm'),id=form.dataset.editId;
+  if(!id&&rehearsalPlanDraft.cues.length>=60)return showToast('추가 큐는 최대 60개입니다');
+  var cue={id:id||'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,9),kind:document.getElementById('concertExtraKind').value,title:document.getElementById('concertExtraTitle').value.trim(),before:document.getElementById('concertExtraBefore').value,note:document.getElementById('concertExtraNote').value};
+  if(!cue.title)return;
+  var index=rehearsalPlanDraft.cues.findIndex(function(row){return row.id===id;});
+  if(index>=0)rehearsalPlanDraft.cues[index]=cue;else rehearsalPlanDraft.cues.push(cue);
+  renderConcertEditor();
+}
+function cancelConcertEditor(){rehearsalPlanDraft=null;var host=document.getElementById('concertEditor');if(host)host.hidden=true;}
+function saveConcertPlan(){
+  var schedule=getRehearsalSchedule();if(!schedule||!canUseRehearsalCue()||!canEditScheduleItem(schedule)||!rehearsalPlanDraft||rehearsalPlanBusy)return Promise.resolve(false);
+  var invalid=document.querySelector('.concert-duration-row input:invalid,#concertStartTime:invalid');if(invalid){invalid.reportValidity();return Promise.resolve(false);}
+  var id=schedule.id,owner=currentActorId(),draft=normalizeConcertPlan(rehearsalPlanDraft),base=rehearsalPlanBase,source=String(schedule.program||schedule.songs||'');
+  rehearsalPlanBusy=true;document.getElementById('concertSave').disabled=true;
+  var ref=db.collection('schedules').doc(id);
+  return withLoadDeadline(db.runTransaction(function(tx){return tx.get(ref).then(function(doc){
+    if(!doc.exists)throw new Error('일정이 삭제되었습니다');
+    var latest=doc.data();
+    if(currentActorId()!==owner||!canEditScheduleItem(Object.assign({id:id},latest)))throw new Error('수정 권한을 확인해주세요');
+    if(JSON.stringify(normalizeConcertPlan(latest.rehearsalPlan))!==base||String(latest.program||latest.songs||'')!==source)throw new Error('다른 사람이 구성을 변경했습니다. 일정을 다시 열어 확인해주세요');
+    tx.update(ref,{rehearsalPlan:draft,updatedAt:new Date().toISOString(),updatedBy:currentActorName()});
+  });}),15000).then(function(){
+    var row=allSchedules.find(function(item){return item.id===id;});if(row)row.rehearsalPlan=draft;
+    if(rehearsalScheduleId===id&&currentActorId()===owner){
+      var current=rehearsalItems[rehearsalIndex],notes=new Map();rehearsalItems.forEach(function(item,index){notes.set(item.cueKey,rehearsalNotes[index]);});
+      rehearsalItems=concertCueItems(row||schedule);rehearsalIndex=Math.max(0,rehearsalItems.findIndex(function(item){return current&&item.cueKey===current.cueKey;}));
+      rehearsalNotes={};rehearsalItems.forEach(function(item,index){if(notes.has(item.cueKey))rehearsalNotes[index]=notes.get(item.cueKey);});
+      rehearsalPlanDraft=null;saveRehearsalState();stopRehearsalMetronome();renderRehearsalCue();
+    }
+    showToast('큐 구성을 저장했습니다');return true;
+  }).catch(function(error){var status=document.getElementById('concertEditorStatus');if(status)status.textContent=error.message||'저장하지 못했습니다. 입력은 유지됩니다';return false;}).finally(function(){rehearsalPlanBusy=false;var button=document.getElementById('concertSave');if(button)button.disabled=false;});
+}
+var concertQrPromise=null;
+function loadConcertQr(){
+  if(window.qrcode)return Promise.resolve(window.qrcode);
+  if(concertQrPromise)return concertQrPromise;
+  concertQrPromise=new Promise(function(resolve,reject){
+    var script=document.createElement('script');script.src='assets/vendor/qrcode-generator-1.4.4.js';
+    var timer=setTimeout(function(){script.remove();concertQrPromise=null;reject(new Error('QR을 불러오지 못했습니다'));},10000);
+    script.onload=function(){clearTimeout(timer);resolve(window.qrcode);};
+    script.onerror=function(){clearTimeout(timer);concertQrPromise=null;reject(new Error('QR을 불러오지 못했습니다'));};document.head.appendChild(script);
+  });return concertQrPromise;
+}
+function concertPublicUrl(publicId){
+  var url=new URL(window.location.href);url.search='';url.hash='';url.searchParams.set('seating',publicId);return url.href;
+}
+function concertPrintMarkup(schedule,mode,qrFactory){
+  var items=concertCueItems(schedule),timing=concertTiming(schedule,items),director=mode!=='member';
+  var plans=publishedSeatingPlans.filter(function(plan){var link=normalizeSeatingProgramLink(plan.programLink);return link&&link.scheduleId===schedule.id;}),steps=seatingProgramSequence(schedule,plans);
+  var rows=timing.rows.map(function(row,index){
+    var step=steps.find(function(step){return step.item.key===row.item.cueKey;});
+    var arrangement=step&&step.plan?publicSeatingPlanTitle(step.plan):step&&step.status==='conflict'?'배치 연결 중복':'';
+    return '<tr><td>'+String(index+1).padStart(2,'0')+'</td><td><b>'+escHtml(row.item.title)+'</b>'+(director&&row.item.cueNote?'<small>'+escHtml(row.item.cueNote)+'</small>':'')+'</td><td>'+escHtml(row.item.kind==='song'?programPerformanceTypeLabel(row.item.performanceType):({speech:'멘트',transition:'전환',video:'영상'})[row.item.kind])+'</td>'+(director?'<td>'+concertDurationValue(row.item.duration)+'</td><td>'+concertTimeLabel(row.start)+'</td>':'')+'<td>'+escHtml(arrangement)+'</td></tr>';
+  }).join('');
+  var qr=plans.map(function(plan){var link=concertPublicUrl(plan.publicId),code='';
+    if(qrFactory){var factory=qrFactory(0,'M');factory.addData(link);factory.make();code=factory.createSvgTag({cellSize:2,margin:4,scalable:true});}
+    return '<div class="print-qr">'+code+'<span>'+escHtml(publicSeatingPlanTitle(plan))+'</span><a href="'+escAttr(link)+'">자리배치 열기</a></div>';
+  }).join('');
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escHtml(schedule.title)+' · 행사 순서</title><style>body{font-family:Arial,"Malgun Gothic",sans-serif;margin:0;color:#20251e;background:#ecefea;letter-spacing:0}main{max-width:900px;margin:20px auto;background:white;padding:28px;box-sizing:border-box}h1{font-size:24px;margin:0 0 8px}p{font-size:12px;line-height:1.5}table{width:100%;border-collapse:collapse;font-size:11px}td,th{text-align:left;padding:8px 5px;border-bottom:1px solid #d4d9d1;overflow-wrap:anywhere}th{background:#eef1e9}td small{display:block;white-space:pre-wrap;margin-top:4px;color:#4b5546}thead{display:table-header-group}tr{break-inside:avoid}.print-qrs{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px}.print-qr{display:grid;justify-items:center;gap:4px;width:110px;font-size:10px;text-align:center;break-inside:avoid}.print-qr svg{width:90px;height:90px}.print-toolbar{padding:12px;text-align:center}.print-toolbar button{padding:10px 18px;cursor:pointer}@page{size:A4 portrait;margin:12mm}@media print{body{background:white}main{margin:0;padding:0;max-width:none}.print-toolbar{display:none}}</style></head><body><div class="print-toolbar"><button onclick="window.print()">인쇄 / PDF 저장</button></div><main><h1>'+escHtml(schedule.title)+'</h1><p>'+escHtml([schedule.date,schedule.time,schedule.location,schedule.dress&&'단복 '+schedule.dress].filter(Boolean).join(' · '))+'</p>'+(director?'<p>'+(!timing.missing?'전체 '+rehearsalTimerText(timing.total)+' · 예상 종료 '+concertTimeLabel(timing.end):'소요시간 미입력 '+timing.missing+'개 · 종료 시각 미정')+'</p>':'')+'<table><thead><tr><th>순서</th><th>곡 / 큐</th><th>구성</th>'+(director?'<th>소요</th><th>시작</th>':'')+'<th>배치</th></tr></thead><tbody>'+rows+'</tbody></table>'+(qr?'<div class="print-qrs">'+qr+'</div><p>자리배치는 단원 로그인 후 확인할 수 있습니다.</p>':'')+'<p>'+escHtml(schedule.briefingMemo||'')+'</p></main></body></html>';
+}
+function openConcertPrint(){
+  var schedule=getRehearsalSchedule();if(!schedule||!canUseRehearsalCue())return;
+  var mode=document.getElementById('concertPrintMode').value,win=window.open('','_blank');
+  if(!win)return showToast('팝업을 허용한 뒤 다시 인쇄해주세요');
+  win.document.write('<!doctype html><meta charset="utf-8"><p>인쇄본 준비 중...</p>');win.document.close();
+  getPublishedSeatingPlan(false).then(loadConcertQr).then(function(factory){
+    if(win.closed)return;win.document.open();win.document.write(concertPrintMarkup(schedule,mode,factory));win.document.close();
+  }).catch(function(){if(win.closed)return;win.document.open();win.document.write(concertPrintMarkup(schedule,mode,null));win.document.close();showToast('QR 생성 실패 · 인쇄본의 자리배치 링크는 사용할 수 있습니다');});
+}
 function startRehearsalCue(scheduleId){
   if(!canUseRehearsalCue())return;
   var schedule=allSchedules.find(function(item){return item.id===scheduleId});
@@ -10144,7 +10428,8 @@ function startRehearsalCue(scheduleId){
   pauseRehearsalTimer();
   rehearsalOwnerId=currentActorId()||'local';
   rehearsalScheduleId=schedule.id;
-  rehearsalItems=rehearsalItemsFromSchedule(schedule);
+  rehearsalItems=concertCueItems(schedule);
+  rehearsalPlanDraft=null;
   loadRehearsalState(schedule.id,rehearsalItems);
   renderRehearsalCue();
 }
@@ -10175,15 +10460,17 @@ function renderRehearsalCue(){
     var section=rehearsalItemSection(item);
     if(section&&section!==lastSection)orderHtml+='<div class="rehearsal-order-section">'+escHtml(section)+'</div>';
     lastSection=section;
-    orderHtml+='<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span class="rehearsal-order-number">'+String(index+1).padStart(2,'0')+'</span><span class="rehearsal-order-title">'+escHtml(rehearsalItemTitle(item))+'</span>'+renderProgramPerformanceBadge(rehearsalItemPerformanceType(item))+'</button>';
+    orderHtml+='<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span class="rehearsal-order-number">'+String(index+1).padStart(2,'0')+'</span><span class="rehearsal-order-title">'+escHtml(rehearsalItemTitle(item))+'</span>'+concertCueBadge(item)+'</button>';
   });
   if(title)title.textContent=schedule.title||'리허설 큐시트';
   if(scheduleBtn)scheduleBtn.classList.remove('hidden');
   if(progress)progress.style.width=Math.round((rehearsalIndex+1)/rehearsalItems.length*100)+'%';
   body.innerHTML='<div class="rehearsal-stage">'
-    +'<main class="rehearsal-current"><div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 순서</span>'+renderProgramPerformanceBadge(rehearsalItemPerformanceType(currentItem))+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div><div class="rehearsal-next"><span class="rehearsal-next-label">다음</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div></main>'
+    +'<main class="rehearsal-current"><div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 순서</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div></main>'
     +'<aside class="rehearsal-side"><div class="rehearsal-timer"><div class="rehearsal-timer-label">진행 시간</div><div class="rehearsal-timer-value" id="rehearsalTimerValue">'+rehearsalTimerText(rehearsalTimerSeconds)+'</div><div class="rehearsal-timer-actions"><button class="rehearsal-timer-toggle '+(rehearsalTimerRunning?'running':'')+'" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">'+(rehearsalTimerRunning?'일시정지':'타이머 시작')+'</button><button class="rehearsal-timer-reset" type="button" title="타이머 초기화" aria-label="타이머 초기화" onclick="resetRehearsalTimer()">↻</button></div></div>'
-    +renderRehearsalMetronome()
+    +'<section class="concert-timing" id="concertTiming">'+concertTimingMarkup(schedule)+'</section>'
+    +concertToolsMarkup(schedule)
+    +(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')
     +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div>'
     +'<div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+orderHtml+'</div></aside>'
     +'</div>';
@@ -10211,6 +10498,7 @@ function updateRehearsalNote(value){
   saveRehearsalState();
 }
 function refreshRehearsalTimerUi(){
+  if(rehearsalTimerRunning&&rehearsalTimerStartedAt)rehearsalTimerSeconds=Math.max(0,Math.floor((Date.now()-rehearsalTimerStartedAt)/1000));
   var value=document.getElementById('rehearsalTimerValue');
   var button=document.getElementById('rehearsalTimerToggle');
   if(value)value.textContent=rehearsalTimerText(rehearsalTimerSeconds);
@@ -10218,6 +10506,8 @@ function refreshRehearsalTimerUi(){
     button.textContent=rehearsalTimerRunning?'일시정지':'타이머 시작';
     button.classList.toggle('running',rehearsalTimerRunning);
   }
+  var timing=document.getElementById('concertTiming');
+  if(timing)timing.innerHTML=concertTimingMarkup(getRehearsalSchedule());
 }
 function requestRehearsalWakeLock(){
   if(!rehearsalTimerRunning||!navigator.wakeLock||!navigator.wakeLock.request)return;
@@ -10238,15 +10528,16 @@ function toggleRehearsalTimer(){
     return;
   }
   rehearsalTimerRunning=true;
+  rehearsalTimerStartedAt=Date.now()-rehearsalTimerSeconds*1000;
   clearInterval(rehearsalTimerId);
   rehearsalTimerId=setInterval(function(){
-    rehearsalTimerSeconds++;
     refreshRehearsalTimerUi();
   },1000);
   requestRehearsalWakeLock();
   refreshRehearsalTimerUi();
 }
 function pauseRehearsalTimer(){
+  if(rehearsalTimerRunning&&rehearsalTimerStartedAt)rehearsalTimerSeconds=Math.max(0,Math.floor((Date.now()-rehearsalTimerStartedAt)/1000));
   if(rehearsalTimerId)clearInterval(rehearsalTimerId);
   rehearsalTimerId=null;
   rehearsalTimerRunning=false;
@@ -10257,6 +10548,7 @@ function pauseRehearsalTimer(){
 function resetRehearsalTimer(){
   if(rehearsalTimerSeconds&&!confirm('진행 타이머를 00:00으로 초기화할까요?'))return;
   rehearsalTimerSeconds=0;
+  if(rehearsalTimerRunning)rehearsalTimerStartedAt=Date.now();
   saveRehearsalState();
   refreshRehearsalTimerUi();
 }
@@ -10306,7 +10598,7 @@ function normalizeRehearsalMetronomePreset(preset){
 }
 function rehearsalMetronomeItemKey(){
   if(!rehearsalScheduleId||!rehearsalItems[rehearsalIndex])return '';
-  function identity(item){return String(item&&item.songId||item&&item.id||rehearsalItemTitle(item)).normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();}
+  function identity(item){if(item&&item.kind&&item.kind!=='song')return 'cue:'+item.cueKey;return String(item&&item.songId||item&&item.id||rehearsalItemTitle(item)).normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();}
   var base=identity(rehearsalItems[rehearsalIndex]),occurrence=0;
   for(var i=0;i<rehearsalIndex;i++)if(identity(rehearsalItems[i])===base)occurrence++;
   return JSON.stringify([base,occurrence]);
@@ -17026,7 +17318,8 @@ function initSchedules(force){
 }
 function scheduleRowFromDoc(doc){
   var d=doc.data()||{};
-  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||'',colorMode:d.colorMode||'custom',calendarKind:d.calendarKind||'',useBriefing:!!d.useBriefing,showInSundayScores:!!d.showInSundayScores,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
+  var rehearsalPlan=normalizeConcertPlan(d.rehearsalPlan);
+  return {id:doc.id,date:d.date||'',endDate:d.endDate||d.date||'',monthKeys:Array.isArray(d.monthKeys)?d.monthKeys:scheduleMonthKeysForRange(d.date,d.endDate||d.date),title:d.title||'',time:d.time||'',location:d.location||'',songs:d.songs||'',memo:d.memo||'',color:d.color||'',colorMode:d.colorMode||'custom',calendarKind:d.calendarKind||'',useBriefing:!!d.useBriefing,showInSundayScores:!!d.showInSundayScores,showEventHub:!!d.showEventHub,program:d.program||'',programItems:normalizeStoredProgramItems(d.programItems),rehearsalPlan:rehearsalPlan,dress:d.dress||'',briefingMemo:d.briefingMemo||'',createdAt:d.createdAt||'',createdById:d.createdById||'',createdByName:d.createdByName||'',updatedAt:d.updatedAt||'',updatedBy:d.updatedBy||''};
 }
 function initColorPicker(){
   var c=document.getElementById('colorOpts');if(!c)return;
