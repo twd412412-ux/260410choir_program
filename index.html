@@ -2671,7 +2671,10 @@ body{font-weight:500}
 .concert-editor label{font-size:12px}
 .concert-editor input,.concert-editor select,.concert-editor textarea{width:100%}
 .concert-editor-rows{margin:12px 0}
-.concert-duration-row{display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #7E8874}
+.concert-duration-row{display:grid;grid-template-columns:minmax(0,1fr) 148px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #7E8874}
+.concert-duration-fields{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.concert-duration-fields label{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.concert-duration-fields input{width:52px;min-width:0;text-align:center;padding:6px 4px}
 .concert-duration-row span,.concert-cue-row span{overflow-wrap:anywhere}
 .concert-editor form{display:grid;gap:7px;margin-top:12px}
 .concert-cue-row{display:flex;align-items:center;gap:6px;padding:6px 0;font-size:12px}
@@ -4958,7 +4961,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.5';
+var APP_RELEASE_VERSION='26.09.26.6';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -10426,16 +10429,21 @@ function renderConcertEditor(){
   var items=concertCueItems(schedule,rehearsalPlanDraft),songs=concertSongItems(schedule);
   host.hidden=false;
   host.innerHTML='<label>시작 시각<input id="concertStartTime" type="time" value="'+escAttr(rehearsalPlanDraft.startTime||schedule.time||'')+'" onchange="rehearsalPlanDraft.startTime=this.value"></label>'
-    +'<div class="concert-editor-rows">'+items.map(function(item,index){return '<label class="concert-duration-row"><span>'+escHtml(item.title)+'</span><input type="text" inputmode="numeric" placeholder="분:초" aria-label="'+escAttr(item.title)+' 소요시간" value="'+concertDurationValue(item.duration)+'" onchange="setConcertDuration('+index+',this)"></label>';}).join('')+'</div>'
+    +'<div class="concert-editor-rows">'+items.map(function(item,index){return '<div class="concert-duration-row"><span>'+escHtml(item.title)+'</span><div class="concert-duration-fields"><label><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" data-duration-unit="minutes" aria-label="'+escAttr(item.title)+' 소요 분" value="'+(item.duration?Math.floor(item.duration/60):'')+'" oninput="setConcertDuration('+index+',this)"><span>분</span></label><label><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-duration-unit="seconds" aria-label="'+escAttr(item.title)+' 소요 초" value="'+(item.duration?item.duration%60:'')+'" oninput="setConcertDuration('+index+',this)"><span>초</span></label></div></div>';}).join('')+'</div>'
     +'<div class="concert-cue-list">'+rehearsalPlanDraft.cues.map(function(cue,index){var orphan=cue.before&&!songs.some(function(song){return song.cueKey===cue.before;});return '<div class="concert-cue-row"><span>'+escHtml(cue.title)+(orphan?' · 연결 곡 확인 필요':'')+'</span><button type="button" title="큐 수정" onclick="editConcertExtra('+index+')">수정</button><button type="button" title="큐 삭제" onclick="removeConcertExtra('+index+')">×</button></div>';}).join('')+'</div>'
     +'<form id="concertExtraForm" onsubmit="addConcertExtra(event)"><select id="concertExtraKind" aria-label="큐 종류"><option value="speech">멘트</option><option value="transition">입장·자리 전환</option><option value="video">영상</option></select><input id="concertExtraTitle" maxlength="200" placeholder="큐 제목" required><select id="concertExtraBefore" aria-label="큐 위치">'+songs.map(function(item,index){return '<option value="'+escAttr(item.cueKey)+'">'+(index+1)+'. '+escHtml(item.title)+' 앞</option>';}).join('')+'<option value="">마지막 곡 뒤</option></select><textarea id="concertExtraNote" maxlength="500" placeholder="담당자·진행 내용"></textarea><button type="submit" id="concertExtraSubmit">큐 추가</button></form>'
     +'<div class="concert-editor-actions"><span id="concertEditorStatus" role="status"></span><button type="button" onclick="cancelConcertEditor()">취소</button><button type="button" id="concertSave" onclick="saveConcertPlan()" '+(rehearsalPlanBusy?'disabled':'')+'>구성 저장</button></div>';
 }
 function setConcertDuration(index,input){
   if(!rehearsalPlanDraft)return;
-  var seconds=parseConcertDuration(input.value),item=concertCueItems(getRehearsalSchedule(),rehearsalPlanDraft)[index];
-  input.setCustomValidity(seconds===null?'분:초 형식으로 입력해주세요. 예: 4:30':'');
-  if(seconds===null){input.reportValidity();return;}
+  var row=input.closest('.concert-duration-row'),minutes=row.querySelector('[data-duration-unit=minutes]'),secs=row.querySelector('[data-duration-unit=seconds]');
+  var m=minutes.value.trim(),s=secs.value.trim(),validMinutes=/^\d{0,3}$/.test(m)&&Number(m)<=240,validSeconds=/^\d{0,2}$/.test(s)&&Number(s)<=59;
+  minutes.setCustomValidity(validMinutes?'':'분은 0~240 사이의 정수로 입력해주세요');
+  secs.setCustomValidity(validSeconds?'':'초는 0~59 사이의 정수로 입력해주세요');
+  if(!validMinutes||!validSeconds)return;
+  var seconds=Number(m)*60+Number(s),item=concertCueItems(getRehearsalSchedule(),rehearsalPlanDraft)[index];
+  minutes.setCustomValidity(seconds>14400?'최대 240분까지 입력할 수 있습니다':'');
+  if(seconds>14400)return;
   if(item)rehearsalPlanDraft.durations[item.cueKey]=seconds;
 }
 function editConcertExtra(index){
