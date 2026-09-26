@@ -36,6 +36,16 @@ const html=fs.readFileSync(process.env.SEATING_TEST_HTML||'index.html','utf8').r
     await page.evaluate(light=>document.getElementById('modalRehearsalCue').classList.toggle('theme-light',light),light);
     await page.locator('#rehearsalMetronome').scrollIntoViewIfNeeded();
     assert.equal(await page.locator('#rehearsalMetronome').evaluate(el=>el.scrollWidth>el.clientWidth),false);
+    const layout=await page.evaluate(()=>{
+     const metro=document.getElementById('rehearsalMetronome'),body=document.getElementById('rehearsalCueBody');
+     return {top:body.firstElementChild===metro,height:metro.getBoundingClientRect().height,
+      bpmFont:parseFloat(getComputedStyle(document.getElementById('rehearsalMetroBpm')).fontSize),
+      currentHeight:document.querySelector('.rehearsal-current').getBoundingClientRect().height};
+    });
+    assert(layout.top,'metronome must be first in cue body');
+    assert(layout.height<=(size.width<=760?160:100),'metronome should remain compact');
+    assert(layout.bpmFont>=24,'BPM should be readable');
+    assert(layout.currentHeight<300,'short songs should not have a forced empty panel');
     await page.screenshot({path:`tmp/metronome-${size.width}-${light?'light':'dark'}.png`});
    }
   }

@@ -30,6 +30,20 @@ const setup = () => {
         const errors = []; page.on('pageerror', error => errors.push(error.message));
         await page.route(/firestore\.googleapis\.com|cloudfunctions\.net/, route => route.abort());
         await page.goto('http://127.0.0.1:' + server.address().port); await page.evaluate(setup);
+        fs.mkdirSync(path.join(root, 'tmp/concert-tools'), { recursive: true });
+        for (const width of [320, 390, 820, 1180]) {
+          await page.setViewportSize({ width, height: width === 1180 ? 820 : 844 });
+          const layout = await page.evaluate(() => {
+            const metro = document.getElementById('rehearsalMetronome'), body = document.getElementById('rehearsalCueBody');
+            return [body.firstElementChild === metro, metro.getBoundingClientRect().height,
+              metro.scrollWidth <= metro.clientWidth + 1, document.querySelector('.rehearsal-current').getBoundingClientRect().height];
+          });
+          assert(layout[0] && layout[2], 'top metronome overflowed');
+          assert(layout[1] <= (width <= 760 ? 160 : 100), 'metronome too tall');
+          assert(layout[3] < 320, 'current song has forced empty space');
+          await page.screenshot({ path: path.join(root, 'tmp/concert-tools', engine.name() + '-compact-' + width + '.png') });
+        }
+        await page.setViewportSize({ width: 820, height: 1180 });
         await page.getByRole('button', { name: '큐 구성', exact: true }).click();
         const durationRows = page.locator('.concert-duration-row');
         for (let i = 0; i < 3; i++) { await durationRows.nth(i).locator('[data-duration-unit=minutes]').fill('4'); await durationRows.nth(i).locator('[data-duration-unit=seconds]').fill('30'); }
