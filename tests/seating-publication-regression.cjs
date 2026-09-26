@@ -10,6 +10,7 @@ function fixture(plans){
   seatingRows:[{}],publishedSeatingRequestId:0,publishedSeatingLoaded:false,publishedSeatingPromise:null,publishedSeatingLastCheckedAt:0,seatingPublishPreviewData:null,publicSeatingSearch:'',
   cloneSeatingValue:clone,normalizePublishedSeatingPlans:data=>clone(data?.plans||[]),canUseSeatingPlan:()=>true,currentActorName:()=> 'editor',
   showToast:message=>state.toasts.push(message),setPublishedSeatingState:plans=>state.local.push(clone(plans)),savePublishedSeatingCache(){},writeLog(){},requestHomeRender(){},
+  setSeatingPublicationStatus(){},
   buildPublishedSeatingPlanDataFromSavedPlan:saved=>({...plan(saved.id),...saved,sourcePlanId:saved.id}),
   db:{collection:collection=>({doc:id=>({collection,id})}),runTransaction:async callback=>{
    async function attempt(){

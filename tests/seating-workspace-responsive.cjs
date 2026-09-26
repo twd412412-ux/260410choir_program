@@ -236,6 +236,17 @@ fs.mkdirSync(output, { recursive: true });
       assert.equal(await page.locator('#seatingSaveState').innerText(), '저장 안 됨');
       assert.equal((await page.locator('.seating-fullscreen-bar').boundingBox()).height, before.height);
       await page.screenshot({ path: path.join(output, 'save-meta-' + width + '.png') });
+      await page.evaluate(() => setSeatingPublicationStatus(seatingPlanId, {
+        version: '2026-09-20T05:35:12Z', state: 'failed',
+        error: '연결을 확인하고 다시 시도해주세요'
+      }));
+      assert(await page.locator('#seatingPublicationRetry').isVisible());
+      assert(await page.locator('#seatingPublicationStatus').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+      assert((await page.locator('#seatingPublicationStatus').boundingBox()).height < 100, 'publication status displaced the seating workspace');
+      const retryBox = await page.locator('#seatingPublicationRetry').boundingBox();
+      assert(retryBox.x >= 0 && retryBox.x + retryBox.width <= width);
+      await page.screenshot({ path: path.join(output, 'publication-status-' + width + '.png') });
+      await page.evaluate(() => setSeatingPublicationStatus(seatingPlanId, null));
     }
     await page.evaluate(() => { seatingPlanId = ''; renderSeatingWorkspaceShell(); });
     assert.equal(await page.locator('#seatingSaveMeta').isVisible(), false);

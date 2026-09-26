@@ -36,6 +36,7 @@ function seating() {
     saveSeatingDraftNow: () => { state.drafts++; },
     loadSeatingPlans: () => { state.reloads++; return Promise.resolve([]); },
     syncPublishedSeatingPlanAfterSave: (data, old, publication) => { state.sync.push(clone(publication)); return Promise.resolve(false); },
+    syncSeatingPublicationWithStatus: (data, old, publication) => c.syncPublishedSeatingPlanAfterSave(data, old, publication),
     buildPublishedSeatingPlanData: () => ({ rows: clone(c.seatingRows) }),
     seatingSnapshot: () => ({ planId: c.seatingPlanId, planName: values.seatingPlanName, rows: c.seatingRows })
   });
