@@ -2698,6 +2698,10 @@ body{font-weight:500}
 .public-movement .public-movement-song{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bd);border-radius:0;background:transparent}
 .public-movement-song strong{min-width:0;overflow-wrap:anywhere;font-size:13px}
 .public-movement-song span{font-size:11px;color:var(--ts);text-align:right;max-width:130px;overflow-wrap:anywhere}
+.public-movement-label{text-align:right;margin-top:8px;font-size:11px;color:var(--ts)}
+.public-movement-song .public-movement-status{min-width:48px;padding:5px 8px;text-align:center;font-size:14px;font-weight:850;line-height:1.2;border:1px solid var(--tx);border-radius:4px;color:var(--tx)}
+.public-movement-song .public-movement-status.exit{background:var(--tx);color:var(--sf)}
+.public-movement-song .public-movement-status.unknown{border-color:var(--bd);color:var(--ts);font-size:12px}
 .public-movement-song[aria-pressed=true]{background:var(--bg);box-shadow:inset 3px 0 var(--p)}
 .public-seating-seat.movement-move{outline:2px solid #3C89AD;outline-offset:1px}
 .public-seating-seat.movement-enter{outline:2px solid #4D9259;outline-offset:1px}
@@ -4983,7 +4987,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.10';
+var APP_RELEASE_VERSION='26.09.26.11';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8600,6 +8604,7 @@ function publicSeatingNormalizeText(v){
 }
 function publicSeatingIsMine(seat){
   if(!seat||!currentUser)return false;
+  if(currentUser.memberId)return seat.memberId===currentUser.memberId;
   if(seat.memberId&&currentUser.id&&seat.memberId===currentUser.id)return true;
   return publicSeatingNormalizeText(seat.name)===publicSeatingNormalizeText(currentUser.name);
 }
@@ -8928,6 +8933,16 @@ function publicMovementSummary(pair){
   if(pair.fromState.small&&pair.toState.small)return '곡 후 출연자 변경';
   return '곡 후 이동 있음';
 }
+function publicMovementMemberStatus(pair){
+  if(!currentUser)return {label:'로그인',kind:'unknown',hint:'단원 계정으로 로그인해주세요'};
+  if(!currentUser.memberId)return {label:'명부 연결',kind:'unknown',hint:'계정의 단원 명부 연결이 필요합니다'};
+  if(!pair.to)return {label:'퇴장',kind:'exit',hint:'마지막 곡 종료 후 퇴장'};
+  if(pair.toState.error)return {label:'확인',kind:'unknown',hint:publicMovementSummary(Object.assign({},pair,{fromState:{}}))};
+  var key='id:'+currentUser.memberId,positions=pair.toState.positions;
+  if(positions.has(key)&&!positions.get(key))return {label:'확인',kind:'unknown',hint:'본인 배치가 중복되어 있습니다'};
+  var appears=positions.has(key);
+  return {label:appears?'출연':'퇴장',kind:appears?'perform':'exit',hint:'다음 곡: '+pair.to.item.title};
+}
 function selectPublicMovement(key){publicMovementKey=key;publicMovementSide='from';var pair=publicMovementPair();if(pair&&pair.fromState.plan)selectPublicSeatingPlan(pair.fromState.plan.publicId);else renderPublicSeatingModalBody();}
 function showPublicMovementSide(side){var pair=publicMovementPair(),state=pair&&(side==='to'?pair.toState:pair.fromState);if(!state||state.error)return;publicMovementSide=side;if(state.plan)selectPublicSeatingPlan(state.plan.publicId);else renderPublicSeatingModalBody();}
 function publicMovementMarkup(){
@@ -8935,7 +8950,7 @@ function publicMovementMarkup(){
   var html='<section class="public-movement"><button class="public-movement-toggle" type="button" aria-expanded="'+publicMovementOpen+'" onclick="togglePublicMovement()">곡 사이 이동 '+(publicMovementOpen?'⌃':'⌄')+'</button>';
   if(!publicMovementOpen)return html+'</section>';
   var pair=publicMovementPair();if(!pair){var error=publicMovementErrors.get(link.scheduleId);return html+'<div role="status">'+(error?escHtml(error)+' <button type="button" onclick="loadPublicMovementSchedule()">다시 시도</button>':publicMovementSchedules.has(link.scheduleId)?'연결된 프로그램이 없습니다':'프로그램 불러오는 중...')+'</div></section>';}
-  html+='<div class="public-movement-list">'+pair.steps.map(function(step,index){return '<button type="button" class="public-movement-song" data-key="'+escAttr(step.item.key)+'" aria-pressed="'+(index===pair.index)+'" onclick="selectPublicMovement(this.dataset.key)"><strong>'+step.item.order+'. '+escHtml(step.item.title)+'</strong><span>'+publicMovementSummary(publicMovementTransition(pair.steps,index))+'</span></button>';}).join('')+'</div>';
+  html+='<div class="public-movement-label">다음 곡</div><div class="public-movement-list">'+pair.steps.map(function(step,index){var status=publicMovementMemberStatus(publicMovementTransition(pair.steps,index));return '<button type="button" class="public-movement-song" data-key="'+escAttr(step.item.key)+'" aria-pressed="'+(index===pair.index)+'" onclick="selectPublicMovement(this.dataset.key)"><strong>'+step.item.order+'. '+escHtml(step.item.title)+'</strong><span class="public-movement-status '+status.kind+'" title="'+escAttr(status.hint)+'">'+status.label+'</span></button>';}).join('')+'</div>';
   if(!pair.to)return html+'</section>';
   html+='<p>'+escHtml(pair.from.item.title)+' → '+escHtml(pair.to.item.title)+'</p>';
   if(pair.fromState.error||pair.toState.error)return html+'<p>'+escHtml(pair.fromState.error||pair.toState.error)+'</p></section>';

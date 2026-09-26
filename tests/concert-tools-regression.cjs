@@ -113,6 +113,7 @@ const setup = () => {
         assert.equal(await page.getByRole('button', { name: '큐 구성', exact: true }).count(), 0);
         await page.evaluate(() => {
           adminRole = 'admin'; canEditScheduleItem = () => true; canViewPublishedSeating = () => true;
+          currentUser = { id: 'account', memberId: 'move', name: '김단원', part: 'S1' };
           const songs = seatingProgramItems(eventRow);
           const seat = (id, name) => ({ memberId: id, name, part: 'S1' });
           const plan = (publicId, index, seats) => ({ publicId, sourcePlanId: publicId, name: publicId, title: eventRow.title, date: eventRow.date,
@@ -127,9 +128,9 @@ const setup = () => {
         });
         await page.getByRole('button', { name: /곡 사이 이동/ }).click();
         await page.waitForFunction(() => publicMovementSchedules.has('concert'));
-        assert.match(await page.locator('.public-movement-song').first().innerText(), /첫 곡.*곡 후 이동 있음/s);
+        assert.match(await page.locator('.public-movement-song').first().innerText(), /첫 곡.*출연/s);
         assert.equal(await page.locator('.public-movement-person').count(), 0);
-        assert.match(await page.locator('.public-movement-song').last().innerText(), /마지막 곡/);
+        assert.equal(await page.locator('.public-movement-status').last().innerText(), '퇴장');
         assert.deepEqual(await page.evaluate(() => {
           const base = { to: {}, fromState: {}, toState: {} };
           return [publicMovementSummary({ ...base, changes: [{ status: 'stay' }] }),
@@ -142,7 +143,7 @@ const setup = () => {
         assert.equal(await page.locator('.public-seating-seat.movement-move').count(), 1);
         assert.equal(await page.evaluate(() => fixture.reads), reads, 'changing movement view fetched backend');
         await page.evaluate(() => { publicSeatingSearch = '이단원'; renderPublicSeatingModalBody(); });
-        assert.match(await page.locator('.public-movement-list').innerText(), /첫 곡.*곡 후 이동 있음/s);
+        assert.match(await page.locator('.public-movement-list').innerText(), /첫 곡.*출연/s);
         assert.doesNotMatch(await page.locator('.public-movement-list').innerText(), /이단원/);
         await page.locator('.public-movement-song').last().click();
         assert.equal(await page.locator('.public-movement-song').last().getAttribute('aria-pressed'), 'true');

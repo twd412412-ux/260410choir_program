@@ -83,14 +83,15 @@ const setup = () => {
             orchestraRows: [{ label: '관현악', seats: [seat('i')] }], specialSlots: { accompanist: seat('p') },
             programLink: { scheduleId: serverSchedule.id, items: [items[0], items[3]] } };
           publishedSeatingPlans = [base]; publishedSeatingPlan = base; publishedSeatingLoaded = true;
+          currentUser = { id: 'account-b', memberId: 'b', name: '김동명', part: 'T1' };
           getPublishedSeatingPlan = () => Promise.resolve(base); canViewPublishedSeating = () => true;
           document.getElementById('modalPublicSeating').classList.add('active'); publicMovementOpen = true;
           publicMovementSchedules.set(serverSchedule.id, structuredClone(serverSchedule)); publicMovementKey = items[0].key; renderPublicSeatingModalBody();
         });
         assert.deepEqual(await page.evaluate(() => Object.fromEntries(publicMovementPair().changes.map(row => [row.key, row.status]))),
           { 'id:a': 'move', 'id:b': 'leave', 'id:c': 'leave', 'id:r': 'move', 'id:i': 'stay', 'id:p': 'stay' });
-        assert.deepEqual(await page.locator('.public-movement-song span').allTextContents(),
-          ['곡 후 퇴장 · 소규모 출연', '곡 후 출연자 변경', '곡 후 입장 · 배치 변경', '마지막 곡']);
+        assert.deepEqual(await page.locator('.public-movement-status').allTextContents(),
+          ['퇴장', '출연', '출연', '퇴장']);
         assert.equal(await page.locator('.public-movement-person').count(), 0);
         await page.getByRole('button', { name: '다음 출연', exact: true }).click();
         assert.equal(await page.locator('#publicSeatingBoard').count(), 0, 'duet rendered a fabricated seating chart');
@@ -127,8 +128,8 @@ const setup = () => {
           document.getElementById('modalRehearsalCue').classList.remove('active');
           document.getElementById('modalPublicSeating').classList.add('active'); renderPublicSeatingModalBody();
         });
-        assert.deepEqual(await page.locator('.public-movement-song span').allTextContents(),
-          ['곡 후 퇴장 · 소규모 출연', '곡 후 출연자 변경', '곡 후 입장 · 배치 변경', '마지막 곡'], 'missing accompanist must not block movement');
+        assert.deepEqual(await page.locator('.public-movement-status').allTextContents(),
+          ['퇴장', '출연', '출연', '퇴장'], 'missing accompanist must not block movement');
         await page.getByRole('button', { name: '다음 출연', exact: true }).click();
         assert.match(await page.locator('.public-movement-front').innerText(), /김동명.*박관현/s);
         assert.deepEqual(await page.evaluate(() => {
@@ -137,6 +138,26 @@ const setup = () => {
           const states = [programMovementState({ item }), programMovementState({ item: small }), programMovementState({ item, status: 'conflict' })];
           return states.map(state => publicMovementSummary({ to: {}, fromState: state, toState: {}, changes: [] }));
         }), ['배치도 미연결', '출연자 미지정', '배치 연결 중복']);
+        await page.evaluate(() => {
+          currentUser = { id: 'account-a', memberId: 'a', name: '김동명', part: 'S1' }; renderPublicSeatingModalBody();
+        });
+        assert.deepEqual(await page.locator('.public-movement-status').allTextContents(), ['출연', '퇴장', '출연', '퇴장'], 'same-name accounts were mixed');
+        assert.deepEqual(await page.evaluate(() => ['a', 'b'].map(memberId => publicSeatingIsMine({ memberId, name: '김동명' }))), [true, false]);
+        assert.deepEqual(await page.evaluate(() => {
+          const actor = currentUser, state = publicMovementPair(), results = [];
+          currentUser = null; results.push(publicMovementMemberStatus(state).label);
+          currentUser = { id: 'unlinked', name: actor.name }; results.push(publicMovementMemberStatus(state).label);
+          currentUser = actor;
+          results.push(publicMovementMemberStatus({ to: {}, fromState: {}, toState: { error: 'missing', errorCode: 'plan' }, changes: [] }).label);
+          results.push(publicMovementMemberStatus({ to: { item: { title: '다음 곡' } }, fromState: {}, toState: { positions: new Map([['id:a', null]]) }, changes: [] }).label);
+          return results;
+        }), ['로그인', '명부 연결', '확인', '확인']);
+        await page.evaluate(() => {
+          currentUser = { id: 'account-i', memberId: 'i', name: '윤연주', part: '관현악' }; renderPublicSeatingModalBody();
+        });
+        assert.deepEqual(await page.locator('.public-movement-status').allTextContents(), ['출연', '출연', '출연', '퇴장'], 'orchestra was sent out with choir');
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.screenshot({ path: path.join(root, 'tmp/program-performers', engine.name() + '-personal-movement.png') });
         assert.deepEqual(errors, []); console.log(engine.name() + ' PASS roster picker, orchestra singers, homonyms, pianist separation, save/hydration, no-selection safety, reorder/rename, small-group stage transitions and phone/tablet UI');
       } finally { await browser.close(); }
     }
