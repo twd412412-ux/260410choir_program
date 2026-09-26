@@ -2713,6 +2713,19 @@ body{font-weight:500}
 .rehearsal-order-row{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;border:0;border-bottom:1px solid #30352D;background:transparent;color:#AEB5A7;padding:9px 0;font-family:inherit;text-align:left;cursor:pointer}
 .rehearsal-order-number{font-size:10px;font-weight:850;color:#737B6E;font-variant-numeric:tabular-nums}
 .rehearsal-order-title{min-width:0;font-size:12px;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rehearsal-order-copy{display:grid;gap:3px;min-width:0}
+.rehearsal-order-kind{font-size:10px;font-weight:650;color:#AEB5A7}
+.rehearsal-order-row{border-left:3px solid transparent;padding-left:8px;padding-right:6px}
+.rehearsal-order-row.cue-song{border-left-color:#91AE74}
+.rehearsal-order-row.cue-song .rehearsal-order-title{font-size:14px;font-weight:900;color:#F6F1E6}
+.rehearsal-order-row.cue-song .rehearsal-order-kind{color:#B7C99A}
+.rehearsal-order-row.cue-video{border-left-color:#7CBACB}
+.rehearsal-order-row.cue-video .rehearsal-order-kind{color:#AFCBD0}
+.rehearsal-order-row.cue-speech{border-left-color:#9DA49A}
+.rehearsal-order-row.cue-transition{border-left-color:#C8A963}
+.rehearsal-order-row.cue-transition .rehearsal-order-kind{color:#D5BD8B}
+.rehearsal-order-row:not(.cue-song) .rehearsal-order-title{font-weight:500}
+.rehearsal-order-row.on{background:#2B3028}
 .rehearsal-order-row.done .rehearsal-order-title{color:#747C70;text-decoration:line-through}
 .rehearsal-order-row.on .rehearsal-order-number{color:#C8A963}
 .rehearsal-order-row.on .rehearsal-order-title{color:#FFF8E8;font-weight:900;text-decoration:none}
@@ -2776,6 +2789,12 @@ body{font-weight:500}
 .rehearsal-cue-modal.theme-light .rehearsal-timer-reset{border-color:#BFC8BA;background:#FFF;color:#4E574B}
 .rehearsal-cue-modal.theme-light .rehearsal-timer-toggle.running{border-color:#B9655F;background:#B9655F}
 .rehearsal-cue-modal.theme-light .rehearsal-order-row{color:#5F685B}
+.rehearsal-cue-modal.theme-light .rehearsal-order-kind{color:#687065}
+.rehearsal-cue-modal.theme-light .rehearsal-order-row.cue-song .rehearsal-order-title{color:#1B2119}
+.rehearsal-cue-modal.theme-light .rehearsal-order-row.cue-song .rehearsal-order-kind{color:#4F6532}
+.rehearsal-cue-modal.theme-light .rehearsal-order-row.cue-video .rehearsal-order-kind{color:#3B6D78}
+.rehearsal-cue-modal.theme-light .rehearsal-order-row.cue-transition .rehearsal-order-kind{color:#8A6427}
+.rehearsal-cue-modal.theme-light .rehearsal-order-row.on{background:#E1E6DD}
 .rehearsal-cue-modal.theme-light .rehearsal-order-number{color:#858D81}
 .rehearsal-cue-modal.theme-light .rehearsal-order-row.done .rehearsal-order-title{color:#92998F}
 .rehearsal-cue-modal.theme-light .rehearsal-order-row.on .rehearsal-order-number{color:#8A6427}
@@ -4961,7 +4980,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.6';
+var APP_RELEASE_VERSION='26.09.26.7';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -10573,7 +10592,9 @@ function renderRehearsalCue(){
     var section=rehearsalItemSection(item);
     if(section&&section!==lastSection)orderHtml+='<div class="rehearsal-order-section">'+escHtml(section)+'</div>';
     lastSection=section;
-    orderHtml+='<button class="rehearsal-order-row '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span class="rehearsal-order-number">'+String(index+1).padStart(2,'0')+'</span><span class="rehearsal-order-title">'+escHtml(rehearsalItemTitle(item))+'</span>'+concertCueBadge(item)+'</button>';
+    var kind=['speech','transition','video'].indexOf(item.kind)>-1?item.kind:'song';
+    var kindLabel={song:'곡',speech:'멘트',transition:'전환',video:'영상'}[kind];
+    orderHtml+='<button class="rehearsal-order-row cue-'+kind+' '+(index<rehearsalIndex?'done ':index===rehearsalIndex?'on ':'')+'" type="button" onclick="selectRehearsalCue('+index+')"><span class="rehearsal-order-number">'+String(index+1).padStart(2,'0')+'</span><span class="rehearsal-order-copy"><span class="rehearsal-order-kind">'+kindLabel+'</span><span class="rehearsal-order-title">'+escHtml(rehearsalItemTitle(item))+'</span></span>'+(kind==='song'?concertCueBadge(item):'')+'</button>';
   });
   if(title)title.textContent=schedule.title||'리허설 큐시트';
   if(scheduleBtn)scheduleBtn.classList.remove('hidden');

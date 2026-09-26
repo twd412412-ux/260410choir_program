@@ -181,6 +181,29 @@ const setup = () => {
         });
         assert.equal(await page.evaluate(() => rehearsalMetronomeItemKey()), '["첫 곡",0]', 'non-song cue changed song preset identity');
         await page.evaluate(() => {
+          const schedule = allSchedules[0];
+          schedule.rehearsalPlan.cues.push({ id: 'intro-video', title: '소개 영상', kind: 'video', before: concertSongItems(schedule)[0].cueKey, note: '' });
+          startRehearsalCue(schedule.id); selectRehearsalCue(0);
+        });
+        assert.equal(await page.locator('.rehearsal-order-row.cue-song').count(), 3);
+        for (const [kind, label] of [['speech', '멘트'], ['transition', '전환'], ['video', '영상']]) {
+          assert.equal(await page.locator('.rehearsal-order-row.cue-' + kind + ' .rehearsal-order-kind').innerText(), label);
+        }
+        for (const theme of ['dark', 'light']) {
+          await page.evaluate(theme => applyRehearsalTheme(theme), theme);
+          for (const width of [320, 820]) {
+            await page.setViewportSize({ width, height: 1180 });
+            assert(await page.locator('.rehearsal-order').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+            const weights = await page.evaluate(() => ['song', 'video'].map(kind => Number(getComputedStyle(document.querySelector('.cue-' + kind + ' .rehearsal-order-title')).fontWeight)));
+            assert(weights[0] > weights[1], 'songs should stand out from production cues');
+            await page.locator('.rehearsal-order').scrollIntoViewIfNeeded();
+            await page.screenshot({ path: path.join(root, 'tmp/concert-tools', engine.name() + '-order-' + theme + '-' + width + '.png') });
+          }
+        }
+        await page.locator('.rehearsal-order-row.cue-video').click();
+        assert.equal(await page.locator('.rehearsal-current-title').innerText(), '소개 영상');
+        assert.equal(await page.locator('.rehearsal-order-row.cue-video.on').count(), 1);
+        await page.evaluate(() => {
           history.replaceState(null, '', '?seating=' + encodeURIComponent('남성'));
           publicSeatingDeepLinkHandled = false; canViewPublishedSeating = () => false; openSeatingDeepLink();
         });
