@@ -2489,6 +2489,22 @@ body{font-weight:500}
 .schedule-program-type-section{display:block;color:var(--p);font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .schedule-program-type-name{display:block;color:var(--tx);font-size:12px;font-weight:760;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .schedule-program-type-select{width:100%;min-width:0;height:34px;border:1px solid var(--bd);border-radius:7px;background:var(--sf);color:var(--tx);padding:0 7px;font-family:inherit;font-size:11px;font-weight:800}
+.program-performers{grid-column:2/-1;min-width:0;padding-bottom:10px;font-size:12px}
+.program-performer-selected{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.program-performers button{border:1px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:6px;padding:6px 8px;font:inherit;cursor:pointer}
+.program-performers small{color:var(--ts);font-size:11px}
+.program-performer-count{color:var(--ts);font-size:11px}
+.program-performers summary{cursor:pointer;color:var(--p);padding:8px 0;font-weight:750}
+.program-performers input[type=search]{width:100%;font:inherit;font-size:16px;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:9px;box-sizing:border-box}
+.program-performer-results{max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-top:6px}
+.program-performer-result{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd)}
+.program-performer-result label{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:38px;cursor:pointer}
+.program-performer-result label span{overflow-wrap:anywhere}
+.program-performer-result input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--p)}
+.program-performer-result-count{font-size:11px;color:var(--ts);padding:5px 0}
+.program-performer-result button[aria-pressed=true]{background:var(--p);color:white}
+.program-accompanist{margin-top:5px;color:var(--ts)}
+.public-movement-front{padding:14px 10px;text-align:center;border-top:1px solid var(--bd);font-size:13px;line-height:1.6}
 .schedule-program-detail-list{display:flex;flex:1;min-width:0;flex-direction:column;gap:0}
 .schedule-program-detail-section{padding:9px 0 4px;color:var(--p);font-size:10px;font-weight:850}
 .schedule-program-detail-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:38px;border-bottom:1px solid var(--bd)}
@@ -3111,7 +3127,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 #subSeatingPlan.seating-readonly .seating-stage-card>.seating-stage-head{flex-wrap:wrap;height:auto;flex-basis:auto;min-height:40px}
 /* Touch form text stays readable without focus zoom; pinch zoom remains enabled. */
 @media(any-pointer:coarse){
-  .form-input,.form-sel,.search-box,.filter-select,.cal-view-select,.score-sort-select{font-size:16px!important}
+  .form-input,.form-sel,.search-box,.filter-select,.cal-view-select,.score-sort-select,.schedule-program-type-select{font-size:16px!important}
   .filter-select{min-width:0;flex:1 1 120px}
   .score-sort-select{min-width:164px;max-width:100%}
 }
@@ -4942,7 +4958,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.26.4';
+var APP_RELEASE_VERSION='26.09.26.5';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8825,10 +8841,28 @@ function seatingMovementPositions(plan){
   publicSeatingSpecialSeatList(plan).forEach(function(item){var label=({conductor:'지휘',accompanist:'반주',staff:'스태프'})[item.type]+(item.type==='staff'?' '+(item.index+1):'');put(item.seat,{board:'special',row:label,x:0,label:label});});return positions;
 }
 function seatingMovementDiff(from,to){
-  var a=seatingMovementPositions(from),b=seatingMovementPositions(to),keys=new Set(Array.from(a.keys()).concat(Array.from(b.keys())));
+  return seatingMovementDiffPositions(seatingMovementPositions(from),seatingMovementPositions(to));
+}
+function seatingMovementDiffPositions(a,b){
+  var keys=new Set(Array.from(a.keys()).concat(Array.from(b.keys())));
   return Array.from(keys).map(function(key){var before=a.get(key),after=b.get(key),ambiguous=(a.has(key)&&before===null)||(b.has(key)&&after===null);
     return {key:key,name:(after&&after.seat||before&&before.seat||{}).name||'중복 배치',part:(after&&after.seat||before&&before.seat||{}).part||'',from:before,to:after,status:ambiguous?'check':!before?'enter':!after?'leave':before.board===after.board&&before.row===after.row&&before.x===after.x?'stay':'move'};
   }).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+}
+function programMovementState(step,carry){
+  if(!step)return {error:'프로그램 순서 확인 필요'};
+  if(isSmallProgramItem(step.item)){
+    var refs=normalizeProgramPerformers(step.item.performers);
+    if(!step.item.performersConfigured||!refs.length)return {error:'소규모 곡 출연자를 지정해주세요'};
+    var positions=new Map();
+    // Instrumentalists and staff do not exit with the choir unless explicitly singing.
+    seatingMovementPositions(carry).forEach(function(position,key){if(position&&position.board!=='choir')positions.set(key,position);});
+    refs.forEach(function(ref){positions.set(seatingMovementIdentity(ref),{seat:ref,board:'front',row:'front',x:0,label:'앞쪽 출연'});});
+    return {positions:positions,small:true,performers:refs,plan:null};
+  }
+  if(step.status==='conflict')return {error:'공개 배치 연결이 중복되어 있습니다'};
+  if(!step.plan)return {error:'공개 배치 연결이 필요합니다'};
+  return {positions:seatingMovementPositions(step.plan),plan:step.plan,small:false};
 }
 function loadPublicMovementSchedule(){
   var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);if(!link)return Promise.resolve(null);
@@ -8844,13 +8878,17 @@ function loadPublicMovementSchedule(){
 function togglePublicMovement(){publicMovementOpen=!publicMovementOpen;if(publicMovementOpen)loadPublicMovementSchedule();renderPublicSeatingModalBody();}
 function publicMovementPair(){
   var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink),schedule=link&&publicMovementSchedules.get(link.scheduleId);if(!schedule)return null;
-  var plans=publishedSeatingPlans.filter(function(plan){var l=normalizeSeatingProgramLink(plan.programLink);return l&&l.scheduleId===schedule.id;}),steps=seatingProgramSequence(schedule,plans);
+  var plans=publishedSeatingPlans.filter(function(plan){var l=normalizeSeatingProgramLink(plan.programLink);return l&&l.scheduleId===schedule.id;}),steps=seatingProgramSequence(schedule,plans),items=new Map(concertSongItems(schedule).map(function(item){return [item.cueKey,item];}));
+  steps.forEach(function(step){step.item=Object.assign({},step.item,items.get(step.item.key)||{});});
   var index=steps.findIndex(function(step){return step.item.key===publicMovementKey;});
   if(index<0){index=steps.findIndex(function(step){return step.plan&&step.plan.publicId===publishedSeatingPlan.publicId;});if(index<0)index=0;publicMovementKey=steps[index]&&steps[index].item.key||'';}
-  return {schedule:schedule,steps:steps,index:index,from:steps[index],to:steps[index+1]};
+  var carry=steps[index]&&steps[index].plan||steps[index+1]&&steps[index+1].plan;
+  if(!carry)for(var i=index-1;i>=0;i--){if(steps[i].plan){carry=steps[i].plan;break;}}
+  var fromState=programMovementState(steps[index],carry),toState=programMovementState(steps[index+1],carry);
+  return {schedule:schedule,steps:steps,index:index,from:steps[index],to:steps[index+1],fromState:fromState,toState:toState,changes:!fromState.error&&!toState.error?seatingMovementDiffPositions(fromState.positions,toState.positions):[]};
 }
-function selectPublicMovement(key){publicMovementKey=key;publicMovementSide='from';var pair=publicMovementPair();if(pair&&pair.from&&pair.from.plan)selectPublicSeatingPlan(pair.from.plan.publicId);else renderPublicSeatingModalBody();}
-function showPublicMovementSide(side){var pair=publicMovementPair(),step=pair&&(side==='to'?pair.to:pair.from);if(!step||!step.plan)return;publicMovementSide=side;selectPublicSeatingPlan(step.plan.publicId);}
+function selectPublicMovement(key){publicMovementKey=key;publicMovementSide='from';var pair=publicMovementPair();if(pair&&pair.fromState.plan)selectPublicSeatingPlan(pair.fromState.plan.publicId);else renderPublicSeatingModalBody();}
+function showPublicMovementSide(side){var pair=publicMovementPair(),state=pair&&(side==='to'?pair.toState:pair.fromState);if(!state||state.error)return;publicMovementSide=side;if(state.plan)selectPublicSeatingPlan(state.plan.publicId);else renderPublicSeatingModalBody();}
 function publicMovementMarkup(){
   var link=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);if(!link)return '';
   var html='<section class="public-movement"><button class="public-movement-toggle" type="button" aria-expanded="'+publicMovementOpen+'" onclick="togglePublicMovement()">곡 사이 이동 '+(publicMovementOpen?'⌃':'⌄')+'</button>';
@@ -8859,10 +8897,10 @@ function publicMovementMarkup(){
   html+='<select aria-label="이동 전 곡" onchange="selectPublicMovement(this.value)">'+pair.steps.map(function(step){return '<option value="'+escAttr(step.item.key)+'" '+(step.item.key===publicMovementKey?'selected':'')+'>'+step.item.order+'. '+escHtml(step.item.title)+'</option>';}).join('')+'</select>';
   if(!pair.to)return html+'<p>마지막 곡입니다</p></section>';
   html+='<p>'+escHtml(pair.from.item.title)+' → '+escHtml(pair.to.item.title)+'</p>';
-  if(!pair.from.plan||!pair.to.plan)return html+'<p>'+(pair.from.status==='conflict'||pair.to.status==='conflict'?'공개 배치 연결이 중복되어 있습니다':'두 곡 모두 공개 배치가 연결되어야 이동을 확인할 수 있습니다')+'</p></section>';
-  var changes=seatingMovementDiff(pair.from.plan,pair.to.plan),q=publicSeatingSearch;
+  if(pair.fromState.error||pair.toState.error)return html+'<p>'+escHtml(pair.fromState.error||pair.toState.error)+'</p></section>';
+  var changes=pair.changes,q=publicSeatingSearch;
   var counts={move:0,stay:0,enter:0,leave:0,check:0};changes.forEach(function(row){counts[row.status]++;});
-  html+='<div class="public-movement-counts">이동 '+counts.move+' · 유지 '+counts.stay+' · 입장 '+counts.enter+' · 퇴장 '+counts.leave+(counts.check?' · 확인 '+counts.check:'')+'</div><div class="public-movement-actions"><button type="button" aria-pressed="'+(publicMovementSide==='from')+'" onclick="showPublicMovementSide(\'from\')">이전 배치</button><button type="button" aria-pressed="'+(publicMovementSide==='to')+'" onclick="showPublicMovementSide(\'to\')">다음 배치</button></div>';
+  html+='<div class="public-movement-counts">이동 '+counts.move+' · 유지 '+counts.stay+' · 입장 '+counts.enter+' · 퇴장 '+counts.leave+(counts.check?' · 확인 '+counts.check:'')+'</div><div class="public-movement-actions"><button type="button" aria-pressed="'+(publicMovementSide==='from')+'" onclick="showPublicMovementSide(\'from\')">이전 '+(pair.fromState.small?'출연':'배치')+'</button><button type="button" aria-pressed="'+(publicMovementSide==='to')+'" onclick="showPublicMovementSide(\'to\')">다음 '+(pair.toState.small?'출연':'배치')+'</button></div>';
   var visible=changes.filter(function(row){return q?publicSeatingMatches({name:row.name,part:row.part},q):row.status!=='stay';});
   html+='<div class="public-movement-list">'+visible.map(function(row){return '<div class="public-movement-person"><b>'+escHtml(row.name)+' <small>'+escHtml(row.part)+'</small></b><span>'+({move:'이동',stay:'유지',enter:'입장',leave:'퇴장',check:'중복 배치 확인'})[row.status]+' · '+escHtml(row.from?row.from.label:'무대 밖')+' → '+escHtml(row.to?row.to.label:'무대 밖')+'</span></div>';}).join('')+(visible.length?'':'<p>'+(q?'검색된 단원 없음':'자리 이동 없음')+'</p>')+'</div></section>';return html;
 }
@@ -8876,7 +8914,8 @@ function renderPublicSeatingModalBody(){
   if(!plan){box.innerHTML='<div class="home-empty-row">아직 공개된 자리배치가 없습니다</div>';return;}
   var q=String(publicSeatingSearch||'').trim();
   var movementPair=publicMovementOpen&&publicMovementPair(),movementChanges=new Map();
-  if(movementPair&&movementPair.from&&movementPair.to&&movementPair.from.plan&&movementPair.to.plan)seatingMovementDiff(movementPair.from.plan,movementPair.to.plan).forEach(function(row){movementChanges.set(row.key,row);});
+  var movementState=movementPair&&(publicMovementSide==='to'?movementPair.toState:movementPair.fromState);
+  if(movementPair)movementPair.changes.forEach(function(row){movementChanges.set(row.key,row);});
   var stats=publicSeatingStats(plan);
   if(publicSeatingBoardTab==='orchestra'&&!stats.boards.orchestra.placed)publicSeatingBoardTab='choir';
   if(q){
@@ -8903,6 +8942,7 @@ function renderPublicSeatingModalBody(){
   var mineNote=currentUser
     ? (mine.length?'내 자리: '+mine.map(function(x){return x.label;}).join(', '):'로그인한 이름으로 배치된 자리가 없습니다. 이름 검색으로도 확인해 주세요.')
     : '이름 검색으로 배치된 자리를 확인해 주세요.';
+  if(movementState&&movementState.small)mineNote='소규모 출연 · 배치도 없음';
   var publishedText=seatingPublishedTime(plan.publishedAt);
   var html=renderPublicSeatingPlanStack()+publicMovementMarkup()
     +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
@@ -8917,6 +8957,7 @@ function renderPublicSeatingModalBody(){
       +'<button type="button" class="public-seating-board-tab '+(publicSeatingBoardTab==='orchestra'?'on':'')+'" onclick="setPublicSeatingBoardTab(\'orchestra\')">관현악 '+stats.boards.orchestra.placed+'명</button>'
       +'</div>';
   }
+  var beforeBoardHtml=html;
   var frontHtml=publicSeatingBoardTab==='choir'&&specialCount
     ?renderPublicSeatingSpecialArea(plan,boardWidth,centerLeft,q,memberView)
     :'<div class="public-seating-front" style="width:'+boardWidth+'px"><span>'+(memberView?'앞쪽 / 지휘자 방향':'앞쪽 / 무대 아래')+'</span><span class="public-seating-conductor" style="left:'+centerLeft+'px">지휘</span></div>';
@@ -8953,6 +8994,10 @@ function renderPublicSeatingModalBody(){
   });
   if(!memberView)html+=frontHtml;
   html+='</div></div></div>';
+  if(movementState&&movementState.small){
+    var stagePerformers=movementState.performers.filter(function(ref){return !q||publicSeatingMatches(ref,q);});
+    html=beforeBoardHtml+'<div class="public-movement-front"><strong>앞쪽 출연</strong><div>'+stagePerformers.map(function(ref){return escHtml(ref.name)+' <small>'+escHtml(ref.part)+'</small>';}).join(' · ')+'</div></div>';
+  }
   box.innerHTML=html;
   if(publicSeatingAutoFit)schedulePublicSeatingAutoFit();
   else applyPublicSeatingZoom();
@@ -9894,13 +9939,15 @@ var PROGRAM_PERFORMANCE_TYPES=[
   {key:'all',label:'전체'},
   {key:'duet',label:'듀엣'},
   {key:'solo',label:'솔로'},
-  {key:'ensemble',label:'중창'}
+  {key:'ensemble',label:'중창'},
+  {key:'small',label:'소중창'}
 ];
 function normalizeProgramPerformanceType(value){
   var key=String(value||'').trim().toLowerCase();
   if(key==='duet'||key==='듀엣'||key==='이중창')return 'duet';
   if(key==='solo'||key==='솔로'||key==='독창')return 'solo';
   if(key==='ensemble'||key==='중창'||key==='앙상블')return 'ensemble';
+  if(key==='small'||key==='소중창'||/^[345삼사오](?:중창|중)$/.test(key))return 'small';
   return 'all';
 }
 function programPerformanceTypeLabel(value){
@@ -9948,14 +9995,64 @@ function parseRehearsalProgramItems(source,fallbackTitle){
 function rehearsalItemMatchKey(item){
   return (rehearsalItemSection(item)+'\u241F'+rehearsalItemTitle(item)).replace(/\s+/g,' ').trim().toLowerCase();
 }
+function isSmallProgramItem(item){return ['solo','duet','small'].indexOf(rehearsalItemPerformanceType(item))>-1;}
+function normalizeProgramPerformers(rows){
+  var seen=new Set();return (Array.isArray(rows)?rows:[]).slice(0,20).filter(function(row){var id=String(row&&row.memberId||'').trim();if(!id||seen.has(id)||!row.name)return false;seen.add(id);return true;}).map(function(row){return {memberId:String(row.memberId).trim().slice(0,200),name:String(row.name).slice(0,100),part:String(row.part||'').slice(0,50)};});
+}
+function programPerformerWarning(item){
+  if(!item.performersConfigured)return '출연자 미지정';
+  var n=normalizeProgramPerformers(item.performers).length,type=rehearsalItemPerformanceType(item);
+  if(!n)return '출연자 0명 · 확인 필요';
+  if(type==='solo'&&n!==1||type==='duet'&&n!==2||type==='small'&&(n<3||n>5))return n+'명 · 구성 인원 확인';
+  return n+'명';
+}
+var programPerformerDirectory=null,programPerformerPromise=null,programPerformerOwner='',programPerformerError='',programPerformerOpen=-1,programPerformerQueries={};
+function programPerformerEditorMarkup(item,index){
+  if(!isSmallProgramItem(item))return '';
+  var refs=normalizeProgramPerformers(item.performers);
+  return '<div class="program-performers"><div class="program-performer-selected">'+refs.map(function(ref){return '<button type="button" title="출연자 제거" onclick="removeProgramPerformer('+index+',\''+escAttr(ref.memberId)+'\')">'+escHtml(ref.name)+' <small>'+escHtml(ref.part)+'</small> ×</button>';}).join('')+'</div><span class="program-performer-count">'+programPerformerWarning(item)+'</span>'+(item.accompanist?'<div class="program-accompanist">반주 · '+escHtml(item.accompanist.name)+' <button type="button" title="반주자 제거" onclick="setProgramAccompanist('+index+',\'\')">×</button></div>':'')+'<details '+(programPerformerOpen===index?'open ':'')+'ontoggle="toggleProgramPerformerPicker('+index+',this)"><summary>출연자·반주자 선택</summary><input type="search" autocomplete="off" placeholder="이름 / 파트 검색" aria-label="'+escAttr(item.title)+' 출연자 검색" value="'+escAttr(programPerformerQueries[index]||'')+'" oninput="programPerformerQueries['+index+']=this.value;renderProgramPerformerResults('+index+')"><div class="program-performer-results" id="programPerformers'+index+'"></div></details></div>';
+}
+function toggleProgramPerformerPicker(index,details){
+  if(!details.isConnected)return;
+  if(!details.open){if(programPerformerOpen===index)programPerformerOpen=-1;return;}
+  programPerformerOpen=index;
+  var owner=currentActorId()||'local';
+  if(programPerformerOwner!==owner){programPerformerDirectory=null;programPerformerPromise=null;programPerformerOwner=owner;programPerformerError='';}
+  renderProgramPerformerResults(index);
+  if(programPerformerDirectory)return;
+  if(!programPerformerPromise){
+    programPerformerError='';
+    var load=canViewSeatingPlan()?loadSeatingMemberDirectory():loadSharedMembers(false);
+    programPerformerPromise=load.then(function(rows){if(programPerformerOwner!==owner)return;programPerformerDirectory=rows.filter(function(row){return row.id&&row.name&&row.status!=='inactive'&&row.part!=='명단제외';}).sort(function(a,b){return a.name.localeCompare(b.name,'ko')||String(a.part).localeCompare(String(b.part),'ko');});}).catch(function(){if(programPerformerOwner===owner)programPerformerError='명부를 불러오지 못했습니다. 조회 권한과 연결을 확인해주세요';}).finally(function(){if(programPerformerOwner!==owner)return;programPerformerPromise=null;document.querySelectorAll('.program-performers details[open]').forEach(function(el){var host=el.querySelector('.program-performer-results');if(host)renderProgramPerformerResults(Number(host.id.replace('programPerformers','')));});});
+  }
+}
+function retryProgramPerformerPicker(index){programPerformerError='';toggleProgramPerformerPicker(index,document.querySelector('#programPerformers'+index).closest('details'));}
+function renderProgramPerformerResults(index){
+  var host=document.getElementById('programPerformers'+index),item=scheduleProgramTypeDraft[index];if(!host||!item)return;
+  if(!programPerformerDirectory){host.innerHTML=programPerformerError?'<div role="status">'+escHtml(programPerformerError)+' <button type="button" onclick="retryProgramPerformerPicker('+index+')">다시 시도</button></div>':'<div role="status">명부 불러오는 중...</div>';return;}
+  var query=prepareGlobalSearchQuery(programPerformerQueries[index]||'');
+  var rows=programPerformerDirectory.filter(function(row){return globalSearchMatch({haystack:globalSearchText([row.name,row.part].join(' '))},query);});
+  host.innerHTML='<div class="program-performer-result-count">'+rows.length+'명'+(rows.length>40?' · 이름으로 좁혀주세요':'')+'</div>'+rows.slice(0,40).map(function(row){var selected=(item.performers||[]).some(function(ref){return ref.memberId===row.id;});return '<div class="program-performer-result"><label><input type="checkbox" '+(selected?'checked ':'')+'onchange="selectProgramPerformer('+index+',\''+escAttr(row.id)+'\',this.checked)"><span>'+escHtml(row.name)+' <small>'+escHtml(row.part)+'</small></span></label><button type="button" aria-pressed="'+!!(item.accompanist&&item.accompanist.memberId===row.id)+'" onclick="setProgramAccompanist('+index+',\''+escAttr(row.id)+'\')">반주</button></div>';}).join('')+(rows.length?'':'<div>검색된 단원 없음</div>');
+}
+function selectProgramPerformer(index,id,checked){
+  var item=scheduleProgramTypeDraft[index],member=(programPerformerDirectory||[]).find(function(row){return row.id===id;});if(!item||!member||!isSmallProgramItem(item))return;
+  var refs=normalizeProgramPerformers(item.performers).filter(function(ref){return ref.memberId!==id;});
+  if(checked){if(refs.length>=20)return showToast('출연자는 최대 20명입니다');refs.push({memberId:member.id,name:member.name,part:member.part});}
+  item.performersConfigured=true;item.performers=refs;programPerformerOpen=index;renderScheduleProgramTypeEditor();renderProgramPerformerResults(index);
+}
+function removeProgramPerformer(index,id){var item=scheduleProgramTypeDraft[index];if(!item)return;item.performersConfigured=true;item.performers=normalizeProgramPerformers(item.performers).filter(function(ref){return ref.memberId!==id;});renderScheduleProgramTypeEditor();if(programPerformerOpen>=0)renderProgramPerformerResults(programPerformerOpen);}
+function setProgramAccompanist(index,id){var item=scheduleProgramTypeDraft[index],member=(programPerformerDirectory||[]).find(function(row){return row.id===id;});if(!item)return;item.accompanist=member?{memberId:member.id,name:member.name,part:member.part}:null;programPerformerOpen=index;renderScheduleProgramTypeEditor();renderProgramPerformerResults(index);}
 function normalizeStoredProgramItems(rows){
   if(!Array.isArray(rows))return [];
   return rows.slice(0,60).map(function(item){
-    return {
+    var row={
       title:rehearsalItemTitle(item),
       section:rehearsalItemSection(item),
       performanceType:normalizeProgramPerformanceType(item&&item.performanceType)
     };
+    if(item&&item.performersConfigured===true||item&&Array.isArray(item.performers)&&item.performers.length){row.performersConfigured=true;row.performers=normalizeProgramPerformers(item.performers);}
+    if(item&&item.accompanist)row.accompanist=normalizeProgramPerformers([item.accompanist])[0]||null;
+    return row;
   }).filter(function(item){return item.title;});
 }
 function mergeProgramItemTypes(parsed,stored){
@@ -9972,6 +10069,8 @@ function mergeProgramItemTypes(parsed,stored){
         used[i]=true;
         matched[index]=true;
         item.performanceType=stored[i].performanceType;
+        if(stored[i].performersConfigured){item.performersConfigured=true;item.performers=stored[i].performers;}
+        if(stored[i].accompanist)item.accompanist=stored[i].accompanist;
         break;
       }
     }
@@ -10023,7 +10122,7 @@ function renderScheduleProgramTypeEditor(){
     var options=PROGRAM_PERFORMANCE_TYPES.map(function(type){
       return '<option value="'+type.key+'" '+(type.key===rehearsalItemPerformanceType(item)?'selected':'')+'>'+type.label+'</option>';
     }).join('');
-    return '<div class="schedule-program-type-row"><span class="schedule-program-type-order">'+String(index+1).padStart(2,'0')+'</span><span class="schedule-program-type-copy">'+(item.section?'<span class="schedule-program-type-section">'+escHtml(item.section)+'</span>':'')+'<span class="schedule-program-type-name">'+escHtml(item.title)+'</span></span><select class="schedule-program-type-select" aria-label="'+escHtml(item.title)+' 구성" onchange="setScheduleProgramType('+index+',this.value)">'+options+'</select></div>';
+    return '<div class="schedule-program-type-row"><span class="schedule-program-type-order">'+String(index+1).padStart(2,'0')+'</span><span class="schedule-program-type-copy">'+(item.section?'<span class="schedule-program-type-section">'+escHtml(item.section)+'</span>':'')+'<span class="schedule-program-type-name">'+escHtml(item.title)+'</span></span><select class="schedule-program-type-select" aria-label="'+escHtml(item.title)+' 구성" onchange="setScheduleProgramType('+index+',this.value)">'+options+'</select>'+programPerformerEditorMarkup(item,index)+'</div>';
   }).join('');
 }
 function scheduleProgramEditorChanged(){
@@ -10033,12 +10132,11 @@ function setScheduleProgramType(index,value){
   index=Number(index);
   if(index<0||index>=scheduleProgramTypeDraft.length)return;
   scheduleProgramTypeDraft[index].performanceType=normalizeProgramPerformanceType(value);
+  renderScheduleProgramTypeEditor();
 }
 function getScheduleProgramItemsFromForm(){
   scheduleProgramTypeDraft=scheduleProgramEditorItems();
-  return scheduleProgramTypeDraft.map(function(item){
-    return {title:item.title,section:item.section,performanceType:rehearsalItemPerformanceType(item)};
-  });
+  return normalizeStoredProgramItems(scheduleProgramTypeDraft);
 }
 function loadRehearsalState(scheduleId,items){
   var saved={};
@@ -10279,6 +10377,11 @@ function concertCueBadge(item){
   if(!item||!item.kind||item.kind==='song')return renderProgramPerformanceBadge(rehearsalItemPerformanceType(item));
   return '<span class="program-type-badge">'+({speech:'멘트',transition:'전환',video:'영상'})[item.kind]+'</span>';
 }
+function programPerformerDescription(item){
+  if(!isSmallProgramItem(item))return '';
+  var refs=normalizeProgramPerformers(item.performers),label=refs.length?refs.map(function(ref){return ref.name+' ('+ref.part+')';}).join(' · '):'출연자 미지정';
+  return label+(item.accompanist?' / 반주 '+item.accompanist.name:'');
+}
 function concertTimeLabel(minutes){
   if(!Number.isFinite(minutes))return '—';
   var day=Math.floor(minutes/1440);minutes=((Math.round(minutes)%1440)+1440)%1440;
@@ -10402,8 +10505,8 @@ function concertPrintMarkup(schedule,mode,qrFactory){
   var plans=publishedSeatingPlans.filter(function(plan){var link=normalizeSeatingProgramLink(plan.programLink);return link&&link.scheduleId===schedule.id;}),steps=seatingProgramSequence(schedule,plans);
   var rows=timing.rows.map(function(row,index){
     var step=steps.find(function(step){return step.item.key===row.item.cueKey;});
-    var arrangement=step&&step.plan?publicSeatingPlanTitle(step.plan):step&&step.status==='conflict'?'배치 연결 중복':'';
-    return '<tr><td>'+String(index+1).padStart(2,'0')+'</td><td><b>'+escHtml(row.item.title)+'</b>'+(director&&row.item.cueNote?'<small>'+escHtml(row.item.cueNote)+'</small>':'')+'</td><td>'+escHtml(row.item.kind==='song'?programPerformanceTypeLabel(row.item.performanceType):({speech:'멘트',transition:'전환',video:'영상'})[row.item.kind])+'</td>'+(director?'<td>'+concertDurationValue(row.item.duration)+'</td><td>'+concertTimeLabel(row.start)+'</td>':'')+'<td>'+escHtml(arrangement)+'</td></tr>';
+    var arrangement=isSmallProgramItem(row.item)?'앞쪽 출연':step&&step.plan?publicSeatingPlanTitle(step.plan):step&&step.status==='conflict'?'배치 연결 중복':'';
+    return '<tr><td>'+String(index+1).padStart(2,'0')+'</td><td><b>'+escHtml(row.item.title)+'</b>'+(programPerformerDescription(row.item)?'<small>'+escHtml(programPerformerDescription(row.item))+'</small>':'')+(director&&row.item.cueNote?'<small>'+escHtml(row.item.cueNote)+'</small>':'')+'</td><td>'+escHtml(row.item.kind==='song'?programPerformanceTypeLabel(row.item.performanceType):({speech:'멘트',transition:'전환',video:'영상'})[row.item.kind])+'</td>'+(director?'<td>'+concertDurationValue(row.item.duration)+'</td><td>'+concertTimeLabel(row.start)+'</td>':'')+'<td>'+escHtml(arrangement)+'</td></tr>';
   }).join('');
   var qr=plans.map(function(plan){var link=concertPublicUrl(plan.publicId),code='';
     if(qrFactory){var factory=qrFactory(0,'M');factory.addData(link);factory.make();code=factory.createSvgTag({cellSize:2,margin:4,scalable:true});}
@@ -10454,6 +10557,8 @@ function renderRehearsalCue(){
   var current=rehearsalItemTitle(currentItem);
   var next=nextItem?rehearsalItemTitle(nextItem):'마지막 순서입니다';
   var context=[rehearsalItemSection(currentItem),scheduleDateRangeLabel(schedule),schedule.time,schedule.location,schedule.dress?('단복 '+schedule.dress):''].filter(Boolean);
+  var performersText=programPerformerDescription(currentItem);
+  if(performersText)context.push(performersText);
   var note=String(rehearsalNotes[rehearsalIndex]||'');
   var orderHtml='', lastSection=null;
   rehearsalItems.forEach(function(item,index){
