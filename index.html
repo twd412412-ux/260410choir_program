@@ -2870,6 +2870,7 @@ body{font-weight:500}
 .live-view .rehearsal-stage{height:100%;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr)}
 .live-view .rehearsal-current{height:100%;min-height:0;align-self:stretch;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch}
 .live-view .rehearsal-current-title{font-size:44px;margin:16px 0 24px}
+.rehearsal-current-performers{font-size:20px;font-weight:650;color:var(--cue-muted);line-height:1.5}
 .live-view .rehearsal-next-title{font-size:24px;font-weight:750}
 .live-view .rehearsal-next{padding:16px 0 20px}
 .live-view .rehearsal-metronome{grid-template-columns:minmax(0,1fr);margin:-20px -24px 20px;padding:8px 24px;gap:4px}
@@ -2899,6 +2900,7 @@ body{font-weight:500}
   .live-view .rehearsal-stage{display:flex;flex-direction:column;height:auto}
   .live-view .rehearsal-current{height:auto;overflow:visible;padding:16px}
   .live-view .rehearsal-current-title{font-size:32px;margin:14px 0 18px}
+  .rehearsal-current-performers{font-size:18px}
   .live-view .rehearsal-metronome{margin:-16px -16px 16px;padding:6px 16px}
   .live-view .rehearsal-next-title{font-size:20px}
   .live-view .rehearsal-side{height:auto;overflow:visible;border-left:0}
@@ -5070,7 +5072,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.5';
+var APP_RELEASE_VERSION='26.09.27.6';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -10528,6 +10530,16 @@ function programPerformerDescription(item){
   var refs=normalizeProgramPerformers(item.performers),label=refs.length?refs.map(function(ref){return ref.name+' ('+ref.part+')';}).join(' · '):'출연자 미지정';
   return label+(item.accompanist?' / 반주 '+item.accompanist.name:'');
 }
+function rehearsalCurrentPerformersMarkup(item){
+  if(!item||(item.kind&&item.kind!=='song')||!isSmallProgramItem(item))return '';
+  var refs=normalizeProgramPerformers(item.performers);
+  if(!refs.length)return '';
+  var names=refs.map(function(ref){
+    var homonym=refs.filter(function(row){return row.name===ref.name;}).length>1;
+    return ref.name+(homonym&&ref.part?' · '+ref.part:'');
+  });
+  return ' <span class="rehearsal-current-performers">('+escHtml(names.join(', '))+')</span>';
+}
 function concertTimeLabel(minutes){
   if(!Number.isFinite(minutes))return '—';
   var day=Math.floor(minutes/1440);minutes=((Math.round(minutes)%1440)+1440)%1440;
@@ -10731,7 +10743,7 @@ function renderRehearsalCue(){
   body.classList.add('live-view');
   document.getElementById('rehearsalLiveStatus').classList.remove('hidden');
   body.innerHTML='<div class="rehearsal-stage">'
-    +'<main class="rehearsal-current">'+(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')+'<div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 · '+currentKind+'</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음'+(nextKind?'<br>'+nextKind:'')+'</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div>'
+    +'<main class="rehearsal-current">'+(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')+'<div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 · '+currentKind+'</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+rehearsalCurrentPerformersMarkup(currentItem)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음'+(nextKind?'<br>'+nextKind:'')+'</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div>'
     +'<button class="rehearsal-tools-toggle" type="button" aria-expanded="'+rehearsalToolsOpen+'" aria-controls="rehearsalToolsPanel" onclick="setRehearsalToolsOpen(!rehearsalToolsOpen)"><span>도구</span><span>'+(rehearsalToolsOpen?'접기':'펼치기')+'</span></button>'
     +'<div class="rehearsal-tools-panel" id="rehearsalToolsPanel" '+(rehearsalToolsOpen?'':'hidden')+'><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div><section class="concert-timing" id="concertTiming">'+concertTimingMarkup(schedule)+'</section>'+concertToolsMarkup(schedule)
     +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div></div></main>'

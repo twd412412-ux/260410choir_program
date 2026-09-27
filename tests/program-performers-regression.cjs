@@ -118,6 +118,21 @@ const setup = () => {
           allSchedules = [structuredClone(serverSchedule)]; document.getElementById('modalRehearsalCue').classList.add('active'); startRehearsalCue('concert'); selectRehearsalCue(1);
         });
         assert.match(await page.locator('.rehearsal-context').innerText(), /김동명.*박관현.*반주 정반주/s);
+        assert.equal(await page.locator('.rehearsal-current-performers').innerText(), '(김동명, 박관현)');
+        assert.equal(await page.locator('.rehearsal-current-performers').isVisible(), true);
+        assert.equal(await page.locator('.rehearsal-current-title').innerText(), '듀엣곡 (김동명, 박관현)');
+        await page.evaluate(() => selectRehearsalCue(2));
+        assert.equal(await page.locator('.rehearsal-current-performers').innerText(), '(김동명, 박관현, 최중창)');
+        await page.evaluate(() => selectRehearsalCue(0));
+        assert.equal(await page.locator('.rehearsal-current-performers').count(), 0);
+        assert.deepEqual(await page.evaluate(() => {
+          const performers = [{ memberId: 'a', name: '김동명', part: 'S1' }, { memberId: 'b', name: '김동명', part: 'T1' }];
+          return [rehearsalCurrentPerformersMarkup({ performanceType: 'solo', performers: [performers[0]] }).includes('(김동명)'),
+            rehearsalCurrentPerformersMarkup({ performanceType: 'duet', performers }).includes('(김동명 · S1, 김동명 · T1)'),
+            rehearsalCurrentPerformersMarkup({ performanceType: 'duet' }),
+            rehearsalCurrentPerformersMarkup({ kind: 'video', performanceType: 'duet', performers }),
+            rehearsalCurrentPerformersMarkup({ performanceType: 'solo', performers: [{ memberId: 'x', name: '<script>' }] }).includes('&lt;script&gt;')];
+        }), [true, true, '', '', true]);
         assert.match(await page.evaluate(() => concertPrintMarkup(serverSchedule, 'member', null)), /앞쪽 출연.*|김동명/);
         await page.evaluate(() => {
           const schedule = structuredClone(serverSchedule);

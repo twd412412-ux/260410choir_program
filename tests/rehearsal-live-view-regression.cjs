@@ -25,6 +25,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
           currentActorId = () => 'preview';
           allSchedules = [{ id: 'preview', title: '찬양의밤', date: '2026-10-18', time: '19:00', useBriefing: true,
             program: '내 주는 강한 성이요\n주의 손에 나의 손을 포개고\n어린아이처럼\n일어나 걸어라\n주의 용사\n하나님의 사랑은\n축복하노라\n엘샤다이\n마음이 상한 자를\n갈보리 산 위에\n나의 안에 거하라\n은혜 아니면\n주님의 솜씨\n주께로 오시오\n험한 십자가\n야곱의 축복\n오라\n주님\n모든 것 주셨네\n아 하나님의 은혜로',
+            programItems: [{ title: '주의 손에 나의 손을 포개고', performanceType: 'duet', performersConfigured: true,
+              performers: [{ memberId: 'a', name: '김하늘', part: 'S1' }, { memberId: 'b', name: '이다은', part: 'S2' }] }],
             rehearsalPlan: { startTime: '19:00', cues: [{ id: 'video', kind: 'video', title: '소개 영상', before: '', note: '영상 종료 후 다음 순서' }] } }];
           document.getElementById('modalRehearsalCue').classList.add('active'); startRehearsalCue('preview');
           rehearsalTimerSeconds = 1455; refreshRehearsalTimerUi();
@@ -67,6 +69,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
         await page.evaluate(() => { pauseRehearsalTimer(); selectRehearsalCue(rehearsalItems.length - 1); });
         assert.equal(await page.locator('#rehearsalMetronome').count(), 0);
         await page.evaluate(() => selectRehearsalCue(1));
+        assert.equal(await page.locator('.rehearsal-current-performers').innerText(), '(김하늘, 이다은)');
         await page.evaluate(() => { rehearsalTimerSeconds = 3661; refreshRehearsalTimerUi(); });
         for (const [width, height] of [[320, 740], [390, 844], [844, 390], [820, 1180], [1180, 820]]) {
           await page.setViewportSize({ width, height });
