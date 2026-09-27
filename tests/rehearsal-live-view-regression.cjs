@@ -67,7 +67,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
         });
         assert.equal(await page.locator('#rehearsalTimerValue').innerText(), '25:00');
         await page.evaluate(() => { pauseRehearsalTimer(); selectRehearsalCue(rehearsalItems.length - 1); });
-        assert.equal(await page.locator('#rehearsalMetronome').count(), 0);
+        assert.equal(await page.locator('#rehearsalMetronome').count(), 1);
         await page.evaluate(() => selectRehearsalCue(1));
         assert.equal(await page.locator('.rehearsal-current-performers').innerText(), '(김하늘, 이다은)');
         await page.evaluate(() => { rehearsalTimerSeconds = 3661; refreshRehearsalTimerUi(); });

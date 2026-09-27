@@ -77,7 +77,8 @@ const setup = () => {
         await page.evaluate(() => {
           rehearsalItems[rehearsalIndex].kind = 'video'; renderRehearsalCue();
         });
-        assert.equal(await page.locator('#rehearsalMetronome').count(), 0, 'video must hide metronome');
+        assert.equal(await page.locator('#rehearsalMetronome').count(), 1, 'video retains metronome');
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), false, 'video retains collapsed state');
         await page.evaluate(() => {
           rehearsalItems[rehearsalIndex].kind = 'song'; renderRehearsalCue();
         });
