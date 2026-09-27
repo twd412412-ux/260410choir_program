@@ -90,7 +90,7 @@ const setup = () => {
           return [during.includes('예정대로'), overdue.includes('늦음'), rehearsalTimerSeconds];
         }), [true, true, 500], 'timing reported a normal song as late or lost suspended elapsed time');
         await page.evaluate(() => selectRehearsalCue(1));
-        assert.equal(await page.locator('#rehearsalMetronome').count(), 0);
+        assert.equal(await page.locator('#rehearsalMetronome').count(), 1);
         assert.match(await page.locator('.concert-cue-instruction').innerText(), /사회자/);
         await page.evaluate(() => { allSchedules = [scheduleRowFromDoc({ id: eventRow.id, data: () => structuredClone(eventRow) })]; startRehearsalCue('concert'); });
         assert.equal(await page.evaluate(() => rehearsalItems.length), 4, 'persisted plan lost during schedule hydration');
@@ -108,8 +108,26 @@ const setup = () => {
         assert.equal(await page.evaluate(() => getRehearsalSchedule().rehearsalPlan.cues.length), 1, 'cancel altered persisted cues');
         await page.evaluate(() => { selectRehearsalCue(0); openConcertEditor(); eventRow.rehearsalPlan.startTime = '20:00'; });
         assert.equal(await page.evaluate(() => saveConcertPlan()), false);
-        assert.match(await page.locator('#concertEditorStatus').innerText(), /他|다른 사람/);
+        assert.match(await page.locator('#concertEditorStatus').innerText(), /서버 구성이 변경/);
         assert.equal(await page.evaluate(() => fixture.updates.length), 1, 'conflict overwrote newer plan');
+        await page.evaluate(() => {
+          eventRow.rehearsalPlan = JSON.parse(rehearsalPlanBase);
+          eventRow.rehearsalPlan.durations = Object.fromEntries(Object.entries(eventRow.rehearsalPlan.durations).reverse());
+        });
+        assert.equal(await page.evaluate(() => saveConcertPlan()), true, 'map key order must not cause a false conflict');
+        await page.evaluate(() => {
+          openConcertEditor();
+          eventRow.program += '\n새 곡';
+          allSchedules[0].program = eventRow.program;
+          eventRow.updatedBy = '다른 지휘자'; eventRow.updatedAt = '2026-09-27T03:00:00Z';
+        });
+        assert.equal(await page.evaluate(() => saveConcertPlan()), false, 'live schedule updates must not replace the editing baseline');
+        assert.match(await page.locator('#concertEditorStatus').innerText(), /다른 지휘자/);
+        assert.ok(await page.evaluate(() => !!rehearsalPlanDraft), 'conflict must preserve draft');
+        await page.evaluate(() => {
+          eventRow.program = allSchedules[0].program = '첫 곡\n둘째 곡\n마지막 곡';
+          eventRow.rehearsalPlan.startTime = '20:00';
+        });
         await page.evaluate(() => { cancelConcertEditor(); adminRole = 'custom'; canUseRehearsalCue = () => true; canEditScheduleItem = () => false; renderRehearsalCue(); });
         assert.equal(await page.getByRole('button', { name: '큐 구성', exact: true }).count(), 0);
         await page.evaluate(() => {

@@ -5079,8 +5079,8 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.8';
-var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
+var APP_RELEASE_VERSION='26.09.27.9';
+var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -10497,7 +10497,7 @@ function openRehearsalCue(scheduleId){
 function normalizeConcertPlan(value){
   value=value&&typeof value==='object'?value:{};
   var durations=Object.create(null);
-  Object.keys(value.durations||{}).slice(0,180).forEach(function(key){
+  Object.keys(value.durations||{}).sort().slice(0,180).forEach(function(key){
     var n=Number(value.durations[key]);
     if(key.length<=1200&&Number.isFinite(n)&&n>0&&n<=14400)durations[key]=Math.round(n);
   });
@@ -10581,7 +10581,7 @@ function concertToolsMarkup(schedule){
 function openConcertEditor(){
   var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue())return;
   setRehearsalToolsOpen(true);
-  if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(normalizeConcertPlan(schedule.rehearsalPlan));}
+  if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(rehearsalPlanDraft);rehearsalPlanSource=String(schedule.program||schedule.songs||'');}
   renderConcertEditor();
 }
 function renderConcertEditor(){
@@ -10635,14 +10635,17 @@ function cancelConcertEditor(){rehearsalPlanDraft=null;var host=document.getElem
 function saveConcertPlan(){
   var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue()||!rehearsalPlanDraft||rehearsalPlanBusy)return Promise.resolve(false);
   var invalid=document.querySelector('.concert-duration-row input:invalid,#concertStartTime:invalid');if(invalid){invalid.reportValidity();return Promise.resolve(false);}
-  var id=schedule.id,owner=currentActorId(),draft=normalizeConcertPlan(rehearsalPlanDraft),base=rehearsalPlanBase,source=String(schedule.program||schedule.songs||'');
+  var id=schedule.id,owner=currentActorId(),draft=normalizeConcertPlan(rehearsalPlanDraft),base=rehearsalPlanBase,source=rehearsalPlanSource;
   rehearsalPlanBusy=true;document.getElementById('concertSave').disabled=true;
   var ref=db.collection('schedules').doc(id);
   return withLoadDeadline(db.runTransaction(function(tx){return tx.get(ref).then(function(doc){
     if(!doc.exists)throw new Error('일정이 삭제되었습니다');
     var latest=doc.data();
     if(currentActorId()!==owner||!canEditRehearsalCue())throw new Error('수정 권한을 확인해주세요');
-    if(JSON.stringify(normalizeConcertPlan(latest.rehearsalPlan))!==base||String(latest.program||latest.songs||'')!==source)throw new Error('다른 사람이 구성을 변경했습니다. 일정을 다시 열어 확인해주세요');
+    if(JSON.stringify(normalizeConcertPlan(latest.rehearsalPlan))!==base||String(latest.program||latest.songs||'')!==source){
+      var savedAt=new Date(latest.updatedAt),savedInfo=[latest.updatedBy,Number.isFinite(savedAt.getTime())?savedAt.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):''].filter(Boolean).join(' · ');
+      throw new Error('편집을 시작한 뒤 서버 구성이 변경되어 저장하지 않았습니다.'+(savedInfo?' 마지막 일정 저장: '+savedInfo+'.':'')+' 입력 내용은 유지됩니다.');
+    }
     tx.update(ref,{rehearsalPlan:draft,updatedAt:new Date().toISOString(),updatedBy:currentActorName()});
   });}),15000).then(function(){
     var row=allSchedules.find(function(item){return item.id===id;});if(row)row.rehearsalPlan=draft;
