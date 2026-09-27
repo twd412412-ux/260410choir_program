@@ -31,6 +31,19 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
         });
         assert.equal(await page.locator('#rehearsalToolsPanel').isVisible(), false);
         assert.match(await page.locator('#rehearsalClockValue').innerText(), /^\d{2}:\d{2}:\d{2}$/);
+        await page.locator('#rehearsalTimerToggle').click();
+        assert.equal(await page.locator('#rehearsalTimerPauseIcon').isVisible(), true);
+        assert.equal(await page.locator('#rehearsalTimerReset').isEnabled(), false);
+        await page.locator('#rehearsalTimerToggle').click();
+        assert.equal(await page.locator('#rehearsalTimerPlayIcon').isVisible(), true);
+        assert.equal(await page.locator('#rehearsalTimerReset').isEnabled(), true);
+        page.once('dialog', dialog => dialog.dismiss());
+        await page.locator('#rehearsalTimerReset').click();
+        assert.ok(await page.evaluate(() => rehearsalTimerSeconds >= 1455));
+        page.once('dialog', dialog => dialog.accept());
+        await page.locator('#rehearsalTimerReset').click();
+        assert.equal(await page.locator('#rehearsalTimerValue').innerText(), '00:00');
+        assert.equal(await page.locator('#rehearsalTimerReset').isEnabled(), false);
         await page.getByRole('button', { name: '도구 펼치기', exact: true }).click();
         await page.locator('#rehearsalCueNote').fill('2절부터 반주');
         await page.getByRole('button', { name: '큐 구성', exact: true }).click();
@@ -54,11 +67,15 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
         await page.evaluate(() => { pauseRehearsalTimer(); selectRehearsalCue(rehearsalItems.length - 1); });
         assert.equal(await page.locator('#rehearsalMetronome').count(), 0);
         await page.evaluate(() => selectRehearsalCue(1));
+        await page.evaluate(() => { rehearsalTimerSeconds = 3661; refreshRehearsalTimerUi(); });
         for (const [width, height] of [[320, 740], [390, 844], [844, 390], [820, 1180], [1180, 820]]) {
           await page.setViewportSize({ width, height });
           for (const light of [false, true]) {
             await page.evaluate(light => document.getElementById('modalRehearsalCue').classList.toggle('theme-light', light), light);
             assert.equal(await page.locator('#rehearsalCueShell').evaluate(el => el.scrollWidth > el.clientWidth + 1), false, `${width}: horizontal overflow`);
+            for (const selector of ['.rehearsal-live-time', '.rehearsal-live-actions']) {
+              assert.equal(await page.locator(selector).first().evaluate(el => el.scrollWidth > el.clientWidth + 1), false, `${width}: timer controls overflow`);
+            }
             const before = await page.locator('#rehearsalLiveStatus').boundingBox();
             const footer = await page.locator('#rehearsalCueControls').boundingBox();
             assert.ok(footer.y + footer.height <= height + 1, `${width}: footer clipped`);

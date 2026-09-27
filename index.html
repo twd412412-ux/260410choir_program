@@ -2862,6 +2862,10 @@ body{font-weight:500}
 .rehearsal-cue-modal.theme-light .rehearsal-live-time.elapsed strong{color:#78551D}
 .rehearsal-live-toggle,.rehearsal-tools-toggle{min-height:44px;border:1px solid var(--cue-line);border-radius:6px;background:var(--cue-surface);color:inherit;font:inherit;font-size:14px;padding:8px 12px;cursor:pointer}
 .rehearsal-live-toggle.running{border-color:#C8A963}
+.rehearsal-live-actions{display:flex;gap:8px;align-items:center}
+.rehearsal-live-actions button{width:44px;height:44px;padding:0;display:grid;place-items:center}
+.rehearsal-live-actions svg{width:22px;height:22px}
+.rehearsal-live-actions button:disabled{opacity:.35;cursor:default}
 .rehearsal-body.live-view{overflow:hidden}
 .live-view .rehearsal-stage{height:100%;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr)}
 .live-view .rehearsal-current{height:100%;min-height:0;align-self:stretch;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch}
@@ -2907,6 +2911,9 @@ body{font-weight:500}
   .live-view .rehearsal-metronome{order:1;margin:12px -16px 0}
   .live-view .rehearsal-tools-toggle{order:2}
   .live-view .rehearsal-tools-panel{order:3}
+}
+@media(max-width:360px){
+  .rehearsal-live-time strong,.rehearsal-live-time.elapsed strong{font-size:20px}
 }
 .home-seating-list{display:grid;gap:7px;margin-top:11px}
 .home-seating-plan-button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);padding:10px 10px 10px 12px;text-align:left;font:inherit;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
@@ -4302,7 +4309,14 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
     <div class="rehearsal-live-status hidden" id="rehearsalLiveStatus">
       <div class="rehearsal-live-time"><span>현재 시각</span><strong id="rehearsalClockValue">--:--:--</strong></div>
       <div class="rehearsal-live-time elapsed"><span>전체 경과</span><strong id="rehearsalTimerValue">00:00</strong></div>
-      <button class="rehearsal-live-toggle" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">시작</button>
+      <div class="rehearsal-live-actions">
+        <!-- Lucide 0.468.0 icons; license: assets/vendor/LUCIDE-LICENSE.txt -->
+        <button class="rehearsal-live-toggle" id="rehearsalTimerToggle" type="button" title="시작" aria-label="전체 경과시간 시작" onclick="toggleRehearsalTimer()">
+          <svg id="rehearsalTimerPlayIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          <svg id="rehearsalTimerPauseIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+        </button>
+        <button class="rehearsal-live-toggle" id="rehearsalTimerReset" type="button" title="초기화" aria-label="전체 경과시간 초기화" disabled onclick="resetRehearsalTimer()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      </div>
     </div>
     <div class="rehearsal-progress"><span id="rehearsalProgressBar" style="width:0"></span></div>
     <div class="rehearsal-body" id="rehearsalCueBody"></div>
@@ -5056,7 +5070,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.4';
+var APP_RELEASE_VERSION='26.09.27.5';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -10720,7 +10734,7 @@ function renderRehearsalCue(){
     +'<main class="rehearsal-current">'+(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')+'<div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 · '+currentKind+'</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음'+(nextKind?'<br>'+nextKind:'')+'</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div>'
     +'<button class="rehearsal-tools-toggle" type="button" aria-expanded="'+rehearsalToolsOpen+'" aria-controls="rehearsalToolsPanel" onclick="setRehearsalToolsOpen(!rehearsalToolsOpen)"><span>도구</span><span>'+(rehearsalToolsOpen?'접기':'펼치기')+'</span></button>'
     +'<div class="rehearsal-tools-panel" id="rehearsalToolsPanel" '+(rehearsalToolsOpen?'':'hidden')+'><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div><section class="concert-timing" id="concertTiming">'+concertTimingMarkup(schedule)+'</section>'+concertToolsMarkup(schedule)
-    +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div><button class="rehearsal-timer-reset" type="button" onclick="resetRehearsalTimer()">경과시간 초기화</button></div></main>'
+    +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div></div></main>'
     +'<aside class="rehearsal-side"><div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+orderHtml+'</div></aside>'
     +'</div>';
   startRehearsalClock();
@@ -10776,11 +10790,15 @@ function refreshRehearsalTimerUi(){
   var button=document.getElementById('rehearsalTimerToggle');
   if(value)value.textContent=rehearsalTimerText(rehearsalTimerSeconds);
   if(button){
-    button.textContent=rehearsalTimerRunning?'정지':'시작';
+    document.getElementById('rehearsalTimerPlayIcon').classList.toggle('hidden',rehearsalTimerRunning);
+    document.getElementById('rehearsalTimerPauseIcon').classList.toggle('hidden',!rehearsalTimerRunning);
+    button.title=rehearsalTimerRunning?'일시정지':rehearsalTimerSeconds?'이어서 시작':'시작';
     button.setAttribute('aria-label',rehearsalTimerRunning?'전체 경과시간 일시정지':'전체 경과시간 시작');
     button.setAttribute('aria-pressed',String(rehearsalTimerRunning));
     button.classList.toggle('running',rehearsalTimerRunning);
   }
+  var reset=document.getElementById('rehearsalTimerReset');
+  if(reset){reset.disabled=rehearsalTimerRunning||!rehearsalTimerSeconds;reset.title=rehearsalTimerRunning?'일시정지 후 초기화':'초기화';}
   var timing=document.getElementById('concertTiming');
   if(timing){var markup=concertTimingMarkup(getRehearsalSchedule());if(timing.innerHTML!==markup)timing.innerHTML=markup;}
 }
@@ -10821,9 +10839,9 @@ function pauseRehearsalTimer(){
   refreshRehearsalTimerUi();
 }
 function resetRehearsalTimer(){
+  if(rehearsalTimerRunning)return;
   if(rehearsalTimerSeconds&&!confirm('진행 타이머를 00:00으로 초기화할까요?'))return;
   rehearsalTimerSeconds=0;
-  if(rehearsalTimerRunning)rehearsalTimerStartedAt=Date.now();
   saveRehearsalState();
   refreshRehearsalTimerUi();
 }
