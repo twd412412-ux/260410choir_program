@@ -26,6 +26,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
     await page.evaluate(() => {
       ensureScoreRealtimeSync = () => Promise.resolve([]);
       canShowHomeEventHub = () => true;
+      canUseRehearsalCue = () => true;
+      openRehearsalCue = id => { window.openedCueId = id; };
       rehearsalItemsFromSchedule = () => [];
       const host = document.createElement('div');
       host.id = 'ddayFixture';
@@ -55,10 +57,19 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
         assert.ok(style.fontSize >= 16 && style.whiteSpace === 'nowrap');
         assert.equal(style.overflow, false, 'horizontal overflow at ' + width);
         assert.notEqual(style.background, 'rgba(0, 0, 0, 0)');
+        const cueBox = await page.locator('.home-event-cue').boundingBox();
+        assert.ok(cueBox.height >= 44 && cueBox.x + cueBox.width <= box.x, 'cue left of D-day');
         fs.mkdirSync(path.join(root, 'tmp/home-event-dday'), { recursive: true });
         await page.screenshot({ path: path.join(root, `tmp/home-event-dday/${width}-${dark ? 'dark' : 'light'}.png`) });
       }
     }
+    await page.locator('.home-event-cue').click();
+    assert.equal(await page.evaluate(() => window.openedCueId), 'night');
+    await page.evaluate(() => {
+      canUseRehearsalCue = () => false;
+      document.getElementById('ddayFixture').innerHTML = renderHomeEventHubCard(window.scheduleFixture);
+    });
+    assert.equal(await page.locator('.home-event-cue').count(), 0, 'no cue shortcut without permission');
     assert.deepEqual(errors, []);
     console.log('PASS prominent gold D-day badge, light/dark contrast, 320/390/820px bounds');
   } finally {

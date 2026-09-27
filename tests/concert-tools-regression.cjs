@@ -220,13 +220,15 @@ const setup = () => {
         for (const [kind, label] of [['speech', '멘트'], ['transition', '전환'], ['video', '영상']]) {
           assert.equal(await page.locator('.rehearsal-order-row.cue-' + kind + ' .rehearsal-order-kind').innerText(), label);
         }
-        for (const theme of ['dark', 'light']) {
+        for (const theme of ['light', 'dark']) {
           await page.evaluate(theme => applyRehearsalTheme(theme), theme);
           for (const width of [320, 820]) {
             await page.setViewportSize({ width, height: 1180 });
             assert(await page.locator('.rehearsal-order').evaluate(el => el.scrollWidth <= el.clientWidth + 1));
             const weights = await page.evaluate(() => ['song', 'video'].map(kind => Number(getComputedStyle(document.querySelector('.cue-' + kind + ' .rehearsal-order-title')).fontWeight)));
             assert(weights[0] > weights[1], 'songs should stand out from production cues');
+            const sizes = await page.evaluate(() => ['song', 'video'].map(kind => parseFloat(getComputedStyle(document.querySelector('.cue-' + kind + ' .rehearsal-order-title')).fontSize)));
+            assert(sizes[0] > sizes[1], 'video title must not exceed song title');
             await page.locator('.rehearsal-order').scrollIntoViewIfNeeded();
             await page.screenshot({ path: path.join(root, 'tmp/concert-tools', engine.name() + '-order-' + theme + '-' + width + '.png') });
           }
@@ -234,6 +236,9 @@ const setup = () => {
         await page.locator('.rehearsal-order-row.cue-video').click();
         assert.equal(await page.locator('.rehearsal-current-title').innerText(), '소개 영상');
         assert.equal(await page.locator('.rehearsal-order-row.cue-video.on').count(), 1);
+        assert.equal(await page.locator('.rehearsal-current').getAttribute('data-cue-kind'), 'video');
+        const activeWeights = await page.evaluate(() => ['song', 'video'].map(kind => Number(getComputedStyle(document.querySelector('.cue-' + kind + ' .rehearsal-order-title')).fontWeight)));
+        assert(activeWeights[0] > activeWeights[1], 'active video keeps secondary hierarchy');
         await page.evaluate(() => {
           history.replaceState(null, '', '?seating=' + encodeURIComponent('남성'));
           publicSeatingDeepLinkHandled = false; canViewPublishedSeating = () => false; openSeatingDeepLink();
