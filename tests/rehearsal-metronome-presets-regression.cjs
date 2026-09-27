@@ -67,6 +67,37 @@ const setup = () => {
         fs.mkdirSync(path.join(root, 'tmp', 'cue-presets'), { recursive: true });
         await page.locator('#rehearsalMetronome').scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(root, 'tmp', 'cue-presets', engine.name() + '.png') });
+        await page.getByRole('button', { name: '메트로놈 접기', exact: true }).click();
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), false);
+        assert.equal(await page.evaluate(() => rehearsalMetro.running), false);
+        await page.evaluate(() => selectRehearsalCue(1));
+        assert.equal(await page.getByRole('button', { name: '메트로놈 펼치기', exact: true }).getAttribute('aria-expanded'), 'false');
+        await page.reload(); await page.evaluate(setup);
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), false, 'reload lost collapsed state');
+        await page.evaluate(() => {
+          rehearsalItems[rehearsalIndex].kind = 'video'; renderRehearsalCue();
+        });
+        assert.equal(await page.locator('#rehearsalMetronome').count(), 0, 'video must hide metronome');
+        await page.evaluate(() => {
+          rehearsalItems[rehearsalIndex].kind = 'song'; renderRehearsalCue();
+        });
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), false, 'video transition overwrote collapsed state');
+        await page.getByRole('button', { name: '메트로놈 펼치기', exact: true }).click();
+        await page.reload(); await page.evaluate(setup);
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), true, 'reload lost expanded state');
+        await page.locator('#rehearsalMetronome select').selectOption('4');
+        assert.equal(await page.locator('.rehearsal-metronome-beats span').count(), 4);
+        assert.ok(await page.locator('.rehearsal-metronome-beats').evaluate(el => el.getBoundingClientRect().height >= 12));
+        for (const width of [390, 820]) {
+          await page.setViewportSize({ width, height: 1180 });
+          assert.equal(await page.locator('#rehearsalMetronome').evaluate(el => el.scrollWidth > el.clientWidth), false);
+          await page.locator('#rehearsalMetronome').scrollIntoViewIfNeeded();
+          await page.screenshot({ path: path.join(root, 'tmp', 'cue-presets', engine.name() + '-fold-' + width + '.png') });
+        }
+        await page.evaluate(() => startRehearsalCue('other-concert'));
+        await page.getByRole('button', { name: '메트로놈 접기', exact: true }).click();
+        await page.evaluate(() => { testActor = 'director-b'; startRehearsalCue('other-concert'); });
+        assert.equal(await page.locator('#rehearsalMetroBpm').isVisible(), true, 'collapsed state leaked between accounts');
         await page.evaluate(() => {
           Storage.prototype.setItem = function() { throw new Error('blocked'); };
           setRehearsalMetronome('bpm', 96);

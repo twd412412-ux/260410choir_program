@@ -2644,6 +2644,10 @@ body{font-weight:500}
 .rehearsal-metronome{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(225px,1fr) minmax(180px,1fr);gap:6px 14px;align-items:center;padding:8px 16px;border-bottom:1px solid #454B3F;color:#F6F1E6;background:#242820;min-width:0}
 .rehearsal-metronome-head,.rehearsal-metronome-settings{display:flex;align-items:center;gap:8px;justify-content:space-between;min-width:0}
 .rehearsal-metronome-head strong{font-size:16px}
+.rehearsal-metronome-actions{display:flex;align-items:center;gap:8px}
+.rehearsal-metronome button.rehearsal-metronome-fold{width:44px;min-height:44px;padding:0;font-size:20px;flex-shrink:0}
+.rehearsal-metronome.is-collapsed{grid-template-columns:minmax(0,1fr)}
+.rehearsal-metronome.is-collapsed>:not(.rehearsal-metronome-head),.rehearsal-metronome.is-collapsed .rehearsal-metronome-head small,.rehearsal-metronome.is-collapsed #rehearsalMetroToggle{display:none}
 .rehearsal-metronome-head small{display:block;font-size:11px;color:inherit;opacity:.8;margin-top:2px}
 .rehearsal-metronome button,.rehearsal-metronome select,.rehearsal-metronome input[type=number]{min-height:40px;border:1px solid #6B7562;border-radius:6px;background:#1D211B;color:inherit;font:inherit;padding:6px 10px;box-sizing:border-box}
 .rehearsal-metronome button{cursor:pointer}
@@ -2656,7 +2660,7 @@ body{font-weight:500}
 .rehearsal-metronome input[type=range]{width:100%;min-width:0;height:28px;margin:0;accent-color:#C8A963}
 .rehearsal-metronome-sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
 .rehearsal-metronome-sliders label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:center;font-size:13px;min-width:0}
-.rehearsal-metronome-beats{grid-column:1/-1;height:6px;display:flex;gap:5px}
+.rehearsal-metronome-beats{grid-column:1/-1;height:12px;display:flex;gap:5px}
 .rehearsal-metronome-beats span{flex:1;border:1px solid #849078;border-radius:3px;background:transparent}
 .rehearsal-metronome-beats span.on{background:#E7C36C;border-color:#E7C36C}
 .rehearsal-cue-modal.theme-light .rehearsal-metronome{background:#F7F8F4;color:#1B2119;border-color:#D2D8CD}
@@ -2827,7 +2831,7 @@ body{font-weight:500}
   .rehearsal-stage{display:flex;flex-direction:column}
   .rehearsal-current{flex:0 0 auto;align-self:stretch;padding:18px 16px;border-right:0;border-bottom:1px solid #353A30}
   .rehearsal-current-title{font-size:32px;margin:12px 0 16px}
-  .rehearsal-metronome{grid-template-columns:minmax(0,1fr);padding:8px 12px;gap:6px}
+  .rehearsal-metronome{grid-template-columns:minmax(0,1fr);padding:6px 12px;gap:4px}
   .rehearsal-next{grid-template-columns:44px minmax(0,1fr)}
   .rehearsal-next-title{font-size:17px}
   .rehearsal-side{flex:0 0 auto;overflow:visible}
@@ -4987,7 +4991,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.2';
+var APP_RELEASE_VERSION='26.09.27.3';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -10211,6 +10215,7 @@ function loadRehearsalState(scheduleId,items){
     });
   }
   rehearsalMetro.presetKey='';
+  rehearsalMetro.collapsed=saved.metronomeCollapsed===true;
 }
 function saveRehearsalState(){
   if(!rehearsalScheduleId)return false;
@@ -10220,6 +10225,7 @@ function saveRehearsalState(){
       index:rehearsalIndex,
       notes:rehearsalNotes,
       metronome:rehearsalMetronomePresets,
+      metronomeCollapsed:rehearsalMetro.collapsed===true,
       timerSeconds:rehearsalTimerSeconds,
       savedAt:new Date().toISOString()
     }));
@@ -10788,9 +10794,19 @@ function renderRehearsalMetronome(){
   var m=rehearsalMetro;
   if(!m.loaded){m.loaded=true;try{var saved=JSON.parse(localStorage.getItem('choir_metronome_v1')||'{}');if(saved.volume!==undefined)setRehearsalMetronome('volume',saved.volume);}catch(e){}}
   loadRehearsalMetronomePreset();
-  return '<section class="rehearsal-metronome" id="rehearsalMetronome" aria-label="메트로놈"><div class="rehearsal-metronome-head"><div><strong>메트로놈</strong><small id="rehearsalMetroSaved">'+(m.presetSaved?'곡 설정 저장됨':'곡 설정')+'</small></div><button id="rehearsalMetroToggle" type="button" aria-pressed="'+m.running+'" onclick="toggleRehearsalMetronome()">'+(m.running?'■ 정지':'▶ 시작')+'</button></div>'
+  return '<section class="rehearsal-metronome'+(m.collapsed?' is-collapsed':'')+'" id="rehearsalMetronome" aria-label="메트로놈"><div class="rehearsal-metronome-head"><div><strong>메트로놈</strong><small id="rehearsalMetroSaved">'+(m.presetSaved?'곡 설정 저장됨':'곡 설정')+'</small></div><div class="rehearsal-metronome-actions"><button id="rehearsalMetroToggle" type="button" aria-pressed="'+m.running+'" onclick="toggleRehearsalMetronome()">'+(m.running?'■ 정지':'▶ 시작')+'</button><button type="button" class="rehearsal-metronome-fold" aria-expanded="'+(!m.collapsed)+'" aria-label="메트로놈 '+(m.collapsed?'펼치기':'접기')+'" title="메트로놈 '+(m.collapsed?'펼치기':'접기')+'" onclick="toggleRehearsalMetronomePanel()">'+(m.collapsed?'▾':'▴')+'</button></div></div>'
     +'<div class="rehearsal-metronome-settings"><label><input id="rehearsalMetroBpm" type="number" min="40" max="240" value="'+m.bpm+'" aria-label="메트로놈 BPM" onchange="setRehearsalMetronome(\'bpm\',this.value)"> BPM</label><select aria-label="마디당 박 수" onchange="setRehearsalMetronome(\'beats\',this.value)">'+[1,2,3,4,6,8,12].map(function(n){return '<option value="'+n+'"'+(m.beats===n?' selected':'')+'>'+n+'박</option>';}).join('')+'</select><button type="button" title="박자에 맞춰 누르기" onclick="tapRehearsalMetronome()">탭</button></div>'
     +'<div class="rehearsal-metronome-sliders"><label>템포<input id="rehearsalMetroRange" type="range" min="40" max="240" value="'+m.bpm+'" aria-label="메트로놈 템포" oninput="setRehearsalMetronome(\'bpm\',this.value)"></label><label>음량<input type="range" min="0" max="100" value="'+m.volume+'" aria-label="메트로놈 음량" oninput="setRehearsalMetronome(\'volume\',this.value)"></label></div><div class="rehearsal-metronome-beats" aria-hidden="true">'+Array.from({length:m.beats},function(){return '<span></span>';}).join('')+'</div></section>';
+}
+function toggleRehearsalMetronomePanel(){
+  if(!canUseRehearsalCue())return;
+  var host=document.getElementById('rehearsalMetronome');if(!host)return;
+  var focused=host.contains(document.activeElement);
+  rehearsalMetro.collapsed=!rehearsalMetro.collapsed;
+  if(rehearsalMetro.collapsed)stopRehearsalMetronome();
+  if(!saveRehearsalState())showToast('메트로놈 열림 설정을 기기에 저장하지 못했습니다');
+  host.outerHTML=renderRehearsalMetronome();
+  if(focused)document.querySelector('#rehearsalMetronome .rehearsal-metronome-fold').focus({preventScroll:true});
 }
 function refreshRehearsalMetronome(){
   var button=document.getElementById('rehearsalMetroToggle');
