@@ -34,6 +34,7 @@ assert.equal(vm.runInContext("accountPermissions({permissionPreset:'operations'}
           currentUser = { id: 'viewer', name: '조회 단원', part: 'S1', permissionPreset: 'custom', permissions: ['rehearsal.view'] };
           ensureScoreRealtimeSync = async () => []; resumeScoreRealtimeSync = syncPublishedSeatingLive = () => {};
           refreshPublishedSeatingOnResume = async () => null;
+          getPublishedSeatingPlan = async () => null;
           window.toasts = []; showToast = message => toasts.push(message);
           window.fixture = { reads: 0, writes: 0 };
           db = { runTransaction: async () => { fixture.writes++; throw Error('unexpected write'); } };

@@ -2849,6 +2849,65 @@ body{font-weight:500}
   .global-search-results{padding-left:10px;padding-right:10px}
 }
 .home-seating-card{cursor:default}
+.rehearsal-shell{--cue-line:#454B3F;--cue-muted:#BAC2B2;--cue-surface:#1D211B}
+.rehearsal-cue-modal.theme-light .rehearsal-shell{--cue-line:#D2D8CD;--cue-muted:#52604B;--cue-surface:#EEF2EB}
+.rehearsal-topbar{height:56px;flex-basis:56px;padding:6px 16px}
+.rehearsal-title{margin:0;font-size:18px}
+.rehearsal-icon-btn{min-width:44px;height:44px}
+.rehearsal-live-status{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:center;padding:10px 24px;border-bottom:1px solid var(--cue-line);background:var(--cue-surface);flex:0 0 auto}
+.rehearsal-live-time{min-width:0}
+.rehearsal-live-time span{display:block;color:var(--cue-muted);font-size:12px;margin-bottom:2px}
+.rehearsal-live-time strong{display:block;font-size:38px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rehearsal-live-time.elapsed strong{color:#E7C36C}
+.rehearsal-cue-modal.theme-light .rehearsal-live-time.elapsed strong{color:#78551D}
+.rehearsal-live-toggle,.rehearsal-tools-toggle{min-height:44px;border:1px solid var(--cue-line);border-radius:6px;background:var(--cue-surface);color:inherit;font:inherit;font-size:14px;padding:8px 12px;cursor:pointer}
+.rehearsal-live-toggle.running{border-color:#C8A963}
+.rehearsal-body.live-view{overflow:hidden}
+.live-view .rehearsal-stage{height:100%;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr)}
+.live-view .rehearsal-current{height:100%;min-height:0;align-self:stretch;overflow-y:auto;padding:20px 24px;-webkit-overflow-scrolling:touch}
+.live-view .rehearsal-current-title{font-size:44px;margin:16px 0 24px}
+.live-view .rehearsal-next-title{font-size:24px;font-weight:750}
+.live-view .rehearsal-next{padding:16px 0 20px}
+.live-view .rehearsal-metronome{grid-template-columns:minmax(0,1fr);margin:-20px -24px 20px;padding:8px 24px;gap:4px}
+.live-view .rehearsal-metronome-settings{justify-content:flex-start;gap:16px}
+.live-view .rehearsal-side{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border-left:1px solid var(--cue-line)}
+.live-view .rehearsal-order{padding:12px 16px 20px}
+.live-view .rehearsal-order-row{min-height:60px}
+.live-view .rehearsal-order-title{font-size:18px;line-height:1.35;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.live-view .rehearsal-order-label{position:sticky;top:-12px;z-index:1;font-size:14px;padding:12px 0;background:var(--cue-surface)}
+.rehearsal-tools-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.rehearsal-tools-panel{border-bottom:1px solid var(--cue-line)}
+.rehearsal-tools-panel .rehearsal-context{padding:12px 0}
+.rehearsal-tools-panel .rehearsal-note,.rehearsal-tools-panel .concert-tools,.rehearsal-tools-panel .concert-timing,.rehearsal-tools-panel .concert-editor{padding:12px 0}
+.rehearsal-tools-panel .rehearsal-timer-reset{width:auto;padding:8px 12px;font-size:14px;min-height:44px}
+.rehearsal-controls{height:56px;flex-basis:56px}
+.rehearsal-control{font-size:16px}
+.rehearsal-shell button:focus-visible{outline:2px solid #C8A963;outline-offset:2px}
+@media(max-width:760px),(max-height:500px){
+  .rehearsal-topbar{height:50px;flex-basis:50px;padding:3px 12px;gap:8px}
+  .rehearsal-title{font-size:15px}
+  .rehearsal-top-actions{gap:4px}
+  .rehearsal-live-status{padding:8px 12px;gap:8px}
+  .rehearsal-live-time strong{font-size:24px}
+  .rehearsal-live-time.elapsed strong{font-size:28px}
+  .rehearsal-live-toggle{padding:6px 8px;font-size:12px;min-width:44px}
+  .rehearsal-body.live-view{overflow-y:auto}
+  .live-view .rehearsal-stage{display:flex;flex-direction:column;height:auto}
+  .live-view .rehearsal-current{height:auto;overflow:visible;padding:16px}
+  .live-view .rehearsal-current-title{font-size:32px;margin:14px 0 18px}
+  .live-view .rehearsal-metronome{margin:-16px -16px 16px;padding:6px 16px}
+  .live-view .rehearsal-next-title{font-size:20px}
+  .live-view .rehearsal-side{height:auto;overflow:visible;border-left:0}
+  .live-view .rehearsal-order-label{position:static}
+  .rehearsal-controls{height:52px;flex-basis:52px}
+}
+@media(max-height:500px){
+  .live-view .rehearsal-current-title{font-size:26px;margin:10px 0}
+  .live-view .rehearsal-next{padding:8px 0}
+  .live-view .rehearsal-metronome{order:1;margin:12px -16px 0}
+  .live-view .rehearsal-tools-toggle{order:2}
+  .live-view .rehearsal-tools-panel{order:3}
+}
 .home-seating-list{display:grid;gap:7px;margin-top:11px}
 .home-seating-plan-button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);padding:10px 10px 10px 12px;text-align:left;font:inherit;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
 .home-seating-plan-button:hover{border-color:#AEBB98;background:var(--pl)}
@@ -4232,13 +4291,18 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
 <div class="modal-overlay rehearsal-cue-modal" id="modalRehearsalCue" role="dialog" aria-modal="true" aria-label="리허설 큐시트">
   <div class="rehearsal-shell" id="rehearsalCueShell">
     <div class="rehearsal-topbar">
-      <div class="rehearsal-brand"><div class="rehearsal-kicker">REHEARSAL CUE</div><div class="rehearsal-title" id="rehearsalCueTitle">리허설 큐시트</div></div>
+      <div class="rehearsal-brand"><div class="rehearsal-title" id="rehearsalCueTitle">리허설 큐시트</div></div>
       <div class="rehearsal-top-actions">
         <button class="rehearsal-icon-btn text hidden" id="rehearsalScheduleBtn" type="button" onclick="showRehearsalSchedulePicker()">일정</button>
         <button class="rehearsal-icon-btn" id="rehearsalThemeBtn" type="button" title="밝게 보기" aria-label="큐시트 밝게 보기" onclick="toggleRehearsalTheme()">☀</button>
         <button class="rehearsal-icon-btn" id="rehearsalFullscreenBtn" type="button" title="전체 화면" aria-label="전체 화면" onclick="toggleRehearsalFullscreen()">⛶</button>
         <button class="rehearsal-icon-btn" type="button" title="닫기" aria-label="큐시트 닫기" onclick="closeModal('modalRehearsalCue')">×</button>
       </div>
+    </div>
+    <div class="rehearsal-live-status hidden" id="rehearsalLiveStatus">
+      <div class="rehearsal-live-time"><span>현재 시각</span><strong id="rehearsalClockValue">--:--:--</strong></div>
+      <div class="rehearsal-live-time elapsed"><span>전체 경과</span><strong id="rehearsalTimerValue">00:00</strong></div>
+      <button class="rehearsal-live-toggle" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">시작</button>
     </div>
     <div class="rehearsal-progress"><span id="rehearsalProgressBar" style="width:0"></span></div>
     <div class="rehearsal-body" id="rehearsalCueBody"></div>
@@ -4990,6 +5054,7 @@ var globalSearchTab='all', globalSearchRenderTimer=null, globalSearchMemberRows=
 var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalIndex=0, rehearsalNotes={}, rehearsalTimerSeconds=0, rehearsalTimerRunning=false, rehearsalTimerId=null, rehearsalWakeLock=null;
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
+var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
 var APP_RELEASE_VERSION='26.09.27.3';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
@@ -10363,6 +10428,9 @@ function renderRehearsalSchedulePicker(){
   var title=document.getElementById('rehearsalCueTitle');
   var progress=document.getElementById('rehearsalProgressBar');
   if(!body)return;
+  stopRehearsalClock();
+  body.classList.remove('live-view');
+  document.getElementById('rehearsalLiveStatus').classList.add('hidden');
   if(controls)controls.classList.add('hidden');
   if(scheduleBtn)scheduleBtn.classList.add('hidden');
   if(title)title.textContent='리허설 큐시트';
@@ -10482,6 +10550,7 @@ function concertToolsMarkup(schedule){
 }
 function openConcertEditor(){
   var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue())return;
+  setRehearsalToolsOpen(true);
   if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(normalizeConcertPlan(schedule.rehearsalPlan));}
   renderConcertEditor();
 }
@@ -10603,6 +10672,7 @@ function startRehearsalCue(scheduleId){
   rehearsalScheduleId=schedule.id;
   rehearsalItems=concertCueItems(schedule);
   rehearsalPlanDraft=null;
+  rehearsalToolsOpen=false;
   loadRehearsalState(schedule.id,rehearsalItems);
   renderRehearsalCue();
 }
@@ -10642,14 +10712,19 @@ function renderRehearsalCue(){
   if(title)title.textContent=schedule.title||'리허설 큐시트';
   if(scheduleBtn)scheduleBtn.classList.remove('hidden');
   if(progress)progress.style.width=Math.round((rehearsalIndex+1)/rehearsalItems.length*100)+'%';
-  body.innerHTML=(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')+'<div class="rehearsal-stage">'
-    +'<main class="rehearsal-current"><div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 순서</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div></main>'
-    +'<aside class="rehearsal-side"><div class="rehearsal-timer"><div class="rehearsal-timer-label">진행 시간</div><div class="rehearsal-timer-value" id="rehearsalTimerValue">'+rehearsalTimerText(rehearsalTimerSeconds)+'</div><div class="rehearsal-timer-actions"><button class="rehearsal-timer-toggle '+(rehearsalTimerRunning?'running':'')+'" id="rehearsalTimerToggle" type="button" onclick="toggleRehearsalTimer()">'+(rehearsalTimerRunning?'일시정지':'타이머 시작')+'</button><button class="rehearsal-timer-reset" type="button" title="타이머 초기화" aria-label="타이머 초기화" onclick="resetRehearsalTimer()">↻</button></div></div>'
-    +'<section class="concert-timing" id="concertTiming">'+concertTimingMarkup(schedule)+'</section>'
-    +concertToolsMarkup(schedule)
-    +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div>'
-    +'<div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+orderHtml+'</div></aside>'
+  var currentKind={song:'곡',speech:'멘트',transition:'전환',video:'영상'}[currentItem.kind||'song']||'곡';
+  var nextKind=nextItem?({song:'곡',speech:'멘트',transition:'전환',video:'영상'}[nextItem.kind||'song']||'곡'):'';
+  body.classList.add('live-view');
+  document.getElementById('rehearsalLiveStatus').classList.remove('hidden');
+  body.innerHTML='<div class="rehearsal-stage">'
+    +'<main class="rehearsal-current">'+(!currentItem.kind||currentItem.kind==='song'?renderRehearsalMetronome():'')+'<div class="rehearsal-current-label"><span class="rehearsal-current-label-main"><span>현재 · '+currentKind+'</span>'+concertCueBadge(currentItem)+'</span><span class="rehearsal-current-progress">'+String(rehearsalIndex+1).padStart(2,'0')+' / '+String(rehearsalItems.length).padStart(2,'0')+'</span></div><div class="rehearsal-current-title">'+escHtml(current)+'</div>'+(currentItem.cueNote?'<div class="concert-cue-instruction">'+escHtml(currentItem.cueNote)+'</div>':'')+'<div class="rehearsal-next"><span class="rehearsal-next-label">다음'+(nextKind?'<br>'+nextKind:'')+'</span><span class="rehearsal-next-title">'+escHtml(next)+'</span></div>'
+    +'<button class="rehearsal-tools-toggle" type="button" aria-expanded="'+rehearsalToolsOpen+'" aria-controls="rehearsalToolsPanel" onclick="setRehearsalToolsOpen(!rehearsalToolsOpen)"><span>도구</span><span>'+(rehearsalToolsOpen?'접기':'펼치기')+'</span></button>'
+    +'<div class="rehearsal-tools-panel" id="rehearsalToolsPanel" '+(rehearsalToolsOpen?'':'hidden')+'><div class="rehearsal-context">'+context.map(function(value){return '<span>'+escHtml(value)+'</span>';}).join('')+'</div><section class="concert-timing" id="concertTiming">'+concertTimingMarkup(schedule)+'</section>'+concertToolsMarkup(schedule)
+    +'<div class="rehearsal-note"><label for="rehearsalCueNote">현장 메모</label><textarea id="rehearsalCueNote" maxlength="500" placeholder="이 순서의 메모" oninput="updateRehearsalNote(this.value)">'+escHtml(note)+'</textarea></div><button class="rehearsal-timer-reset" type="button" onclick="resetRehearsalTimer()">경과시간 초기화</button></div></main>'
+    +'<aside class="rehearsal-side"><div class="rehearsal-order"><div class="rehearsal-order-label">전체 순서</div>'+orderHtml+'</div></aside>'
     +'</div>';
+  startRehearsalClock();
+  if(rehearsalPlanDraft&&canEditRehearsalCue()){setRehearsalToolsOpen(true);renderConcertEditor();}
   if(controls)controls.classList.remove('hidden');
   var prev=document.getElementById('rehearsalPrevBtn');
   var nextBtn=document.getElementById('rehearsalNextBtn');
@@ -10666,6 +10741,28 @@ function selectRehearsalCue(index){
   var body=document.getElementById('rehearsalCueBody');
   if(body)body.scrollTop=0;
 }
+function setRehearsalToolsOpen(open){
+  rehearsalToolsOpen=!!open;
+  var panel=document.getElementById('rehearsalToolsPanel'),button=document.querySelector('.rehearsal-tools-toggle');
+  if(panel)panel.hidden=!rehearsalToolsOpen;
+  if(button){button.setAttribute('aria-expanded',String(rehearsalToolsOpen));button.lastElementChild.textContent=rehearsalToolsOpen?'접기':'펼치기';}
+}
+function refreshRehearsalClock(){
+  var clock=document.getElementById('rehearsalClockValue');
+  if(clock)clock.textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());
+  refreshRehearsalTimerUi();
+}
+function startRehearsalClock(){
+  if(rehearsalClockId===null){
+    rehearsalClockId=setInterval(refreshRehearsalClock,1000);
+    document.addEventListener('visibilitychange',refreshRehearsalClock);
+  }
+  refreshRehearsalClock();
+}
+function stopRehearsalClock(){
+  clearInterval(rehearsalClockId);rehearsalClockId=null;
+  document.removeEventListener('visibilitychange',refreshRehearsalClock);
+}
 function moveRehearsalCue(direction){
   selectRehearsalCue(rehearsalIndex+Number(direction||0));
 }
@@ -10679,11 +10776,13 @@ function refreshRehearsalTimerUi(){
   var button=document.getElementById('rehearsalTimerToggle');
   if(value)value.textContent=rehearsalTimerText(rehearsalTimerSeconds);
   if(button){
-    button.textContent=rehearsalTimerRunning?'일시정지':'타이머 시작';
+    button.textContent=rehearsalTimerRunning?'정지':'시작';
+    button.setAttribute('aria-label',rehearsalTimerRunning?'전체 경과시간 일시정지':'전체 경과시간 시작');
+    button.setAttribute('aria-pressed',String(rehearsalTimerRunning));
     button.classList.toggle('running',rehearsalTimerRunning);
   }
   var timing=document.getElementById('concertTiming');
-  if(timing)timing.innerHTML=concertTimingMarkup(getRehearsalSchedule());
+  if(timing){var markup=concertTimingMarkup(getRehearsalSchedule());if(timing.innerHTML!==markup)timing.innerHTML=markup;}
 }
 function requestRehearsalWakeLock(){
   if(!rehearsalTimerRunning||!navigator.wakeLock||!navigator.wakeLock.request)return;
@@ -10738,6 +10837,7 @@ function toggleRehearsalFullscreen(){
   if(shell.requestFullscreen)shell.requestFullscreen().catch(function(){});
 }
 function teardownRehearsalCue(){
+  stopRehearsalClock();
   stopRehearsalMetronome();
   pauseRehearsalTimer();
   rehearsalOwnerId='';

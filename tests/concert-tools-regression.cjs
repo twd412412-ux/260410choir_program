@@ -35,15 +35,16 @@ const setup = () => {
           await page.setViewportSize({ width, height: width === 1180 ? 820 : 844 });
           const layout = await page.evaluate(() => {
             const metro = document.getElementById('rehearsalMetronome'), body = document.getElementById('rehearsalCueBody');
-            return [body.firstElementChild === metro, metro.getBoundingClientRect().height,
-              metro.scrollWidth <= metro.clientWidth + 1, document.querySelector('.rehearsal-current').getBoundingClientRect().height];
+            return [document.querySelector('.rehearsal-current').contains(metro), metro.getBoundingClientRect().height,
+              metro.scrollWidth <= metro.clientWidth + 1, document.querySelector('.rehearsal-current-title').getBoundingClientRect().height];
           });
           assert(layout[0] && layout[2], 'top metronome overflowed');
-          assert(layout[1] <= (width <= 760 ? 160 : 100), 'metronome too tall');
-          assert(layout[3] < 320, 'current song has forced empty space');
+          assert(layout[1] <= 160, 'metronome too tall');
+          assert(layout[3] < 320, 'current song title has forced empty space');
           await page.screenshot({ path: path.join(root, 'tmp/concert-tools', engine.name() + '-compact-' + width + '.png') });
         }
         await page.setViewportSize({ width: 820, height: 1180 });
+        await page.getByRole('button', { name: '도구 펼치기', exact: true }).click();
         await page.getByRole('button', { name: '큐 구성', exact: true }).click();
         const durationRows = page.locator('.concert-duration-row');
         for (let i = 0; i < 3; i++) { await durationRows.nth(i).locator('[data-duration-unit=minutes]').fill('4'); await durationRows.nth(i).locator('[data-duration-unit=seconds]').fill('30'); }
@@ -171,6 +172,7 @@ const setup = () => {
           document.getElementById('modalRehearsalCue').classList.add('active'); startRehearsalCue('concert');
         });
         await page.setViewportSize({ width: 820, height: 1180 });
+        await page.evaluate(() => setRehearsalToolsOpen(true));
         const popupPromise = page.waitForEvent('popup'); await page.getByRole('button', { name: '인쇄', exact: true }).click();
         const popup = await popupPromise; await popup.waitForSelector('table');
         assert.equal(await popup.locator('tbody tr').count(), 4);
