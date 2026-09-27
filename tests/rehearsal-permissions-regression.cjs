@@ -15,6 +15,8 @@ for (const name of ['cleanString', 'uniqueAllowed', 'accountPermissions']) {
 }
 assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("accountPermissions({permissionPreset:'custom',permissions:['rehearsal.view','rehearsal.view','not.allowed']})", serverContext))), ['rehearsal.view']);
 assert.equal(vm.runInContext("accountPermissions({permissionPreset:'partLeader'}).includes('rehearsal.view')", serverContext), false);
+assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("accountPermissions({permissions:['rehearsal.view','rehearsal.edit']})", serverContext))), ['rehearsal.view', 'rehearsal.edit']);
+assert.equal(vm.runInContext("accountPermissions({permissionPreset:'operations'}).includes('rehearsal.edit')", serverContext), false);
 
 (async () => {
   const server = http.createServer((req, res) => { if (require('./serve-firebase-sdk.cjs')(req, res)) return; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); });
@@ -55,14 +57,42 @@ assert.equal(vm.runInContext("accountPermissions({permissionPreset:'partLeader'}
           currentUser.permissions.push('schedule.editAny');
           return [other, own, canEditScheduleItem(schedule)];
         }), [false, true, true]);
+        assert.equal(await page.evaluate(() => { openConcertEditor(); return canEditRehearsalCue() || rehearsalPlanDraft !== null; }), false, 'schedule edit rights must not grant cue editing');
+        assert.deepEqual(await page.evaluate(() => {
+          currentUser.permissions = ['rehearsal.edit'];
+          const editOnly = [canUseRehearsalCue(), canEditRehearsalCue(), canOpenAdminArea()];
+          currentUser.permissions = ['rehearsal.view', 'rehearsal.edit'];
+          renderRehearsalCue(); openConcertEditor();
+          return [...editOnly, canEditRehearsalCue(), canEditScheduleItem(allSchedules[0]), rehearsalPlanDraft !== null];
+        }), [false, false, false, true, false, true]);
+        assert.equal(await page.getByRole('button', { name: '큐 구성', exact: true }).count(), 1);
         await page.evaluate(() => {
+          db = { collection: () => ({ doc: id => ({ id }) }), runTransaction: async fn => fn({
+            get: async () => ({ exists: true, data: () => allSchedules[0] }),
+            update: () => { fixture.writes++; }
+          }) };
+        });
+        assert.equal(await page.evaluate(() => saveConcertPlan()), true, 'cue editors must save without schedule rights');
+        assert.equal(await page.evaluate(() => fixture.writes), 1);
+        await page.evaluate(() => {
+          fixture.writes = 0;
           openConcertEditor();
           db = { collection: () => ({ doc: id => ({ id }) }), runTransaction: async fn => fn({
-            get: async () => { fixture.reads++; currentUser.permissions = ['schedule.editAny']; return { exists: true, data: () => allSchedules[0] }; },
+            get: async () => { fixture.reads++; currentUser.permissions = ['rehearsal.edit']; return { exists: true, data: () => allSchedules[0] }; },
             update: () => { fixture.writes++; }
           }) };
         });
         assert.equal(await page.evaluate(() => saveConcertPlan()), false, 'revoked view access must stop an in-flight save');
+        assert.equal(await page.evaluate(() => fixture.writes), 0);
+        await page.evaluate(() => {
+          currentUser.permissions = ['rehearsal.view', 'rehearsal.edit'];
+          cancelConcertEditor(); openConcertEditor();
+          db.runTransaction = async fn => fn({
+            get: async () => { currentUser.permissions = ['rehearsal.view']; return { exists: true, data: () => allSchedules[0] }; },
+            update: () => { fixture.writes++; }
+          });
+        });
+        assert.equal(await page.evaluate(() => saveConcertPlan()), false, 'revoked edit access must stop an in-flight save');
         assert.equal(await page.evaluate(() => fixture.writes), 0);
         assert.deepEqual(await page.evaluate(() => {
           cancelConcertEditor(); currentUser.permissions = []; openRehearsalCue('concert');

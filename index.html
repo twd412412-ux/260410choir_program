@@ -4987,7 +4987,7 @@ var rehearsalScheduleId='', rehearsalOwnerId='', rehearsalItems=[], rehearsalInd
 var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting:false,epoch:0,context:null,timer:null,next:0,beat:0,nodes:[],flashes:[],taps:[]};
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.1';
+var APP_RELEASE_VERSION='26.09.27.2';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -5027,7 +5027,8 @@ var PERMISSION_GROUPS=[
   {title:'관리 도구',items:[
     {key:'notice.manage',label:'공지 관리',desc:'상단 공지 저장/삭제'},
     {key:'song.recommend',label:'선곡 도우미',desc:'기록 기반 선곡 추천'},
-    {key:'rehearsal.view',label:'리허설 큐시트 보기',desc:'큐시트 조회·진행 도구 이용, 구성 수정은 일정 수정 권한 필요'},
+    {key:'rehearsal.view',label:'리허설 큐시트 보기',desc:'큐시트 조회·메트로놈·타이머 이용'},
+    {key:'rehearsal.edit',label:'리허설 큐시트 수정·저장',desc:'큐 구성 수정·저장, 큐시트 보기 권한도 필요'},
     {key:'seating.manage',label:'자리배치 조회',desc:'공개 전 배치도와 참석 명단 보기'},
     {key:'seating.edit',label:'자리배치 수정·저장',desc:'조회 포함, 참석 변경·배치 편집·저장·공개·삭제'}
   ]}
@@ -5727,7 +5728,7 @@ function currentActorId(){
   return adminRole||'';
 }
 function canOpenAdminArea(){
-  return adminRole==='admin'||adminRole==='chongmu'||getUserPermissions().some(function(key){return key!=='rehearsal.view';});
+  return adminRole==='admin'||adminRole==='chongmu'||getUserPermissions().some(function(key){return key!=='rehearsal.view'&&key!=='rehearsal.edit';});
 }
 function canUseStats(){
   return adminRole==='admin'||adminRole==='chongmu'||hasPermission('song.manage');
@@ -5746,6 +5747,9 @@ function canUseGlobalSearch(){
 }
 function canUseRehearsalCue(){
   return adminRole==='admin'||(isMemberLoggedIn()&&(isUserConductor(currentUser)||hasPermission('rehearsal.view')));
+}
+function canEditRehearsalCue(){
+  return adminRole==='admin'||(isMemberLoggedIn()&&hasPermission('rehearsal.view')&&hasPermission('rehearsal.edit'));
 }
 function canViewScores(){
   return adminRole==='admin'||canManageScores()||getScoreAccessModes().length>0;
@@ -10466,17 +10470,17 @@ function parseConcertDuration(value){
   if(!m)return null;var seconds=Number(m[1])*60+Number(m[2]);return seconds<=14400?seconds:null;
 }
 function concertToolsMarkup(schedule){
-  var editable=canEditScheduleItem(schedule);
+  var editable=canEditRehearsalCue();
   return '<div class="concert-tools"><select id="concertPrintMode" aria-label="인쇄 형식"><option value="director">지휘자용</option><option value="member">단원용</option></select><button type="button" onclick="openConcertPrint()">인쇄</button>'+(editable?'<button type="button" onclick="openConcertEditor()">큐 구성</button>':'')+'</div>'
     +'<div id="concertEditor" class="concert-editor" hidden></div>';
 }
 function openConcertEditor(){
-  var schedule=getRehearsalSchedule();if(!schedule||!canUseRehearsalCue()||!canEditScheduleItem(schedule))return;
+  var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue())return;
   if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(normalizeConcertPlan(schedule.rehearsalPlan));}
   renderConcertEditor();
 }
 function renderConcertEditor(){
-  var host=document.getElementById('concertEditor'),schedule=getRehearsalSchedule();if(!host||!schedule||!rehearsalPlanDraft)return;
+  var host=document.getElementById('concertEditor'),schedule=getRehearsalSchedule();if(!host||!schedule||!rehearsalPlanDraft||!canEditRehearsalCue())return;
   var items=concertCueItems(schedule,rehearsalPlanDraft),songs=concertSongItems(schedule);
   host.hidden=false;
   host.innerHTML='<label>시작 시각<input id="concertStartTime" type="time" value="'+escAttr(rehearsalPlanDraft.startTime||schedule.time||'')+'" onchange="rehearsalPlanDraft.startTime=this.value"></label>'
@@ -10486,7 +10490,7 @@ function renderConcertEditor(){
     +'<div class="concert-editor-actions"><span id="concertEditorStatus" role="status"></span><button type="button" onclick="cancelConcertEditor()">취소</button><button type="button" id="concertSave" onclick="saveConcertPlan()" '+(rehearsalPlanBusy?'disabled':'')+'>구성 저장</button></div>';
 }
 function setConcertDuration(index,input){
-  if(!rehearsalPlanDraft)return;
+  if(!rehearsalPlanDraft||!canEditRehearsalCue())return;
   var row=input.closest('.concert-duration-row'),minutes=row.querySelector('[data-duration-unit=minutes]'),secs=row.querySelector('[data-duration-unit=seconds]');
   var m=minutes.value.trim(),s=secs.value.trim(),validMinutes=/^\d{0,3}$/.test(m)&&Number(m)<=240,validSeconds=/^\d{0,2}$/.test(s)&&Number(s)<=59;
   minutes.setCustomValidity(validMinutes?'':'분은 0~240 사이의 정수로 입력해주세요');
@@ -10498,6 +10502,7 @@ function setConcertDuration(index,input){
   if(item)rehearsalPlanDraft.durations[item.cueKey]=seconds;
 }
 function editConcertExtra(index){
+  if(!canEditRehearsalCue())return;
   var cue=rehearsalPlanDraft&&rehearsalPlanDraft.cues[index];if(!cue)return;
   var form=document.getElementById('concertExtraForm');form.dataset.editId=cue.id;
   document.getElementById('concertExtraKind').value=cue.kind;
@@ -10508,11 +10513,11 @@ function editConcertExtra(index){
   form.scrollIntoView({block:'nearest'});
 }
 function removeConcertExtra(index){
-  if(!rehearsalPlanDraft||!confirm('이 큐를 삭제할까요?'))return;
+  if(!rehearsalPlanDraft||!canEditRehearsalCue()||!confirm('이 큐를 삭제할까요?'))return;
   var cue=rehearsalPlanDraft.cues.splice(index,1)[0];if(cue)delete rehearsalPlanDraft.durations['cue:'+cue.id];renderConcertEditor();
 }
 function addConcertExtra(event){
-  event.preventDefault();if(!rehearsalPlanDraft)return;
+  event.preventDefault();if(!rehearsalPlanDraft||!canEditRehearsalCue())return;
   var form=document.getElementById('concertExtraForm'),id=form.dataset.editId;
   if(!id&&rehearsalPlanDraft.cues.length>=60)return showToast('추가 큐는 최대 60개입니다');
   var cue={id:id||'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,9),kind:document.getElementById('concertExtraKind').value,title:document.getElementById('concertExtraTitle').value.trim(),before:document.getElementById('concertExtraBefore').value,note:document.getElementById('concertExtraNote').value};
@@ -10523,7 +10528,7 @@ function addConcertExtra(event){
 }
 function cancelConcertEditor(){rehearsalPlanDraft=null;var host=document.getElementById('concertEditor');if(host)host.hidden=true;}
 function saveConcertPlan(){
-  var schedule=getRehearsalSchedule();if(!schedule||!canUseRehearsalCue()||!canEditScheduleItem(schedule)||!rehearsalPlanDraft||rehearsalPlanBusy)return Promise.resolve(false);
+  var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue()||!rehearsalPlanDraft||rehearsalPlanBusy)return Promise.resolve(false);
   var invalid=document.querySelector('.concert-duration-row input:invalid,#concertStartTime:invalid');if(invalid){invalid.reportValidity();return Promise.resolve(false);}
   var id=schedule.id,owner=currentActorId(),draft=normalizeConcertPlan(rehearsalPlanDraft),base=rehearsalPlanBase,source=String(schedule.program||schedule.songs||'');
   rehearsalPlanBusy=true;document.getElementById('concertSave').disabled=true;
@@ -10531,7 +10536,7 @@ function saveConcertPlan(){
   return withLoadDeadline(db.runTransaction(function(tx){return tx.get(ref).then(function(doc){
     if(!doc.exists)throw new Error('일정이 삭제되었습니다');
     var latest=doc.data();
-    if(currentActorId()!==owner||!canUseRehearsalCue()||!canEditScheduleItem(Object.assign({id:id},latest)))throw new Error('수정 권한을 확인해주세요');
+    if(currentActorId()!==owner||!canEditRehearsalCue())throw new Error('수정 권한을 확인해주세요');
     if(JSON.stringify(normalizeConcertPlan(latest.rehearsalPlan))!==base||String(latest.program||latest.songs||'')!==source)throw new Error('다른 사람이 구성을 변경했습니다. 일정을 다시 열어 확인해주세요');
     tx.update(ref,{rehearsalPlan:draft,updatedAt:new Date().toISOString(),updatedBy:currentActorName()});
   });}),15000).then(function(){

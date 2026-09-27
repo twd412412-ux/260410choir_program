@@ -84,10 +84,16 @@ service cloud.firestore {
 
     match /schedules/{scheduleId} {
       allow read: if true;
-      allow create: if hasPermission('schedule.manage');
+      allow create: if hasPermission('schedule.manage')
+        && (isAdmin() || !request.resource.data.keys().hasAny(['rehearsalPlan']));
       allow update: if isAdmin()
-        || hasPermission('schedule.editAny')
-        || (hasPermission('schedule.manage') && ownsCreatedDoc(resource.data));
+        || ((hasPermission('schedule.editAny')
+            || (hasPermission('schedule.manage') && ownsCreatedDoc(resource.data)))
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rehearsalPlan']))
+        || (hasPermission('rehearsal.view') && hasPermission('rehearsal.edit')
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['rehearsalPlan', 'updatedAt', 'updatedBy'])
+          && request.resource.data.rehearsalPlan is map);
       allow delete: if isAdmin()
         || (hasPermission('schedule.manage') && ownsCreatedDoc(resource.data));
     }

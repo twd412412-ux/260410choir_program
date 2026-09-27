@@ -52,7 +52,7 @@ const ALLOWED_PERMISSIONS = new Set([
   "attendance.delete", "member.view", "member.history", "member.manage",
   "member.delete", "account.manage", "account.pin", "archive.upload",
   "archive.manageMine", "archive.organize", "notice.manage", "song.recommend",
-  "seating.manage", "seating.edit", "rehearsal.view",
+  "seating.manage", "seating.edit", "rehearsal.view", "rehearsal.edit",
 ]);
 const PRESET_PERMISSIONS = {
   none: [],
