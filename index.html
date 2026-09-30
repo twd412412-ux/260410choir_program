@@ -403,6 +403,10 @@ button.account-summary-item.active.ok,button.account-summary-item.active.warn,bu
 .seating-highlight-colors button:focus-visible{outline:2px solid var(--tx);outline-offset:-2px}
 .seating-seat.selected{outline:3px solid var(--p);outline-offset:1px}
 .seating-seat.multi-selected{outline:3px solid #2563EB;outline-offset:1px}
+.seating-seat.member-source{outline:2px dashed var(--p);outline-offset:2px}
+.seating-seat.seat-found{animation:seatingSeatFound 1.6s ease-out}
+@keyframes seatingSeatFound{0%,40%{box-shadow:0 0 0 6px rgba(217,169,56,.85)}100%{box-shadow:0 0 0 0 rgba(217,169,56,0)}}
+@media(prefers-reduced-motion:reduce){.seating-seat.seat-found{animation:none;box-shadow:0 0 0 4px rgba(217,169,56,.85)}}
 .seating-seat.multi-selected::before{content:'✓';position:absolute;top:1px;left:2px;color:#1D4ED8;font-size:9px;font-weight:950;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.9)}
 .seating-highlight-action[aria-pressed=true]{background:#875A08!important;border-color:#875A08!important;color:#fff!important}
 .seating-inline-picker{position:absolute;z-index:6;width:190px;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:8px;box-shadow:0 12px 28px rgba(47,41,31,.18)}
@@ -5079,7 +5083,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.30.1';
+var APP_RELEASE_VERSION='26.09.30.2';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -21648,6 +21652,31 @@ function selectSeatingMember(id){
   if(seatingUsesStackedWorkspace())seatingMemberPanelCollapsed=true;
   renderSeatingMemberList();
   renderSeatingBoard();
+  revealSeatingMemberSeat(id);
+}
+// Scrolls only the board so an already placed member's seat is visible, and flashes it briefly.
+function revealSeatingMemberSeat(id){
+  var found=null;
+  [['choir',seatingRows],['orchestra',seatingOrchestraRows]].some(function(pair){
+    return (pair[1]||[]).some(function(row,r){
+      var c=(row.seats||[]).findIndex(function(seat){return seat&&seat.memberId===id;});
+      if(c>-1)found={tab:pair[0],row:r,col:c,label:row.label||''};
+      return c>-1;
+    });
+  });
+  if(!found)return false;
+  if(found.tab!==seatingBoardTab){showToast((found.tab==='orchestra'?'관현악':'합창')+' 배치도 '+found.label+'에 있습니다');return true;}
+  var rowEl=document.querySelectorAll('#seatingBoard .seating-row')[found.row];
+  var button=rowEl&&rowEl.querySelectorAll('.seating-seat')[found.col];
+  var scroller=document.querySelector('#subSeatingPlan .seating-board-scroll');
+  if(!button||!scroller)return true;
+  var box=scroller.getBoundingClientRect(),rect=button.getBoundingClientRect();
+  scroller.scrollLeft+=rect.left-box.left-(scroller.clientWidth-rect.width)/2;
+  scroller.scrollTop+=rect.top-box.top-(scroller.clientHeight-rect.height)/2;
+  rect=button.getBoundingClientRect();
+  if(rect.bottom<0||rect.top>window.innerHeight)button.scrollIntoView({block:'nearest',inline:'nearest'});
+  button.classList.remove('seat-found');void button.offsetWidth;button.classList.add('seat-found');
+  return true;
 }
 function renderSeatingMemberList(){
   var list=document.getElementById('seatingMemberList');if(!list)return;
@@ -22058,7 +22087,8 @@ function renderSeatingBoard(){
       var dragging=seatingDragSeat&&seatingDragSeat.row===r&&seatingDragSeat.col===c;
       var multiSelected=!!(seat&&(seatingPlacementQueueSelecting||seatingPlacementQueueActive)&&seatingPlacementQueue.indexOf(seat.memberId)>-1);
       var ready=!seat&&seatingSelectedMemberId?'ready ':'';
-      var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+(multiSelected?'multi-selected ':'')+(seat&&seat.highlight?'highlighted ':'')+ready;
+      var source=seat&&seatingSelectedMemberId&&seat.memberId===seatingSelectedMemberId?'member-source ':'';
+      var stateClass=(selected?'selected ':'')+(dragging?'dragging ':'')+(multiSelected?'multi-selected ':'')+(seat&&seat.highlight?'highlighted ':'')+ready+source;
       var dropAttrs=' ondragover="handleSeatingDragOver(event)" ondrop="handleSeatingDrop(event,'+r+','+c+')"';
       if(seat){
         html+='<button class="seating-seat '+partClass(seat.part)+' '+stateClass+'"'+seatingHighlightStyle(seat)+' draggable="true" ondragstart="handleSeatingDragStart(event,'+r+','+c+')" ondragend="handleSeatingDragEnd(event)"'+dropAttrs+' onclick="handleSeatingSeatClick('+r+','+c+')" title="'+escHtml(seat.name+(seat.highlight?' · 강조':''))+'">'+seatingSeatNameHtml(seat.name)+'</button>';
