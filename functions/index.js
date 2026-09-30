@@ -555,34 +555,36 @@ function requestIp(request) {
   return (forwarded.split(",")[0] || cleanString(request.rawRequest && request.rawRequest.ip, 100) || "unknown").trim();
 }
 
-async function assertRateAllowed(keys) {
-  const refs = keys.map((key) => db.collection("securityRateLimits").doc(key));
-  const snaps = await db.getAll(...refs);
-  const now = Date.now();
-  snaps.forEach((snap) => {
-    const data = snap.exists ? snap.data() : {};
-    if (Number(data.lockedUntil || 0) > now) throw new HttpsError("resource-exhausted", "잠시 후 다시 시도해주세요.");
-  });
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LOCK_MEMORY_MS = 24 * 60 * 60 * 1000;
+
+function nextRateLimitState(old, rule, now) {
+  const windowStart = Number(old.windowStart || 0);
+  const inWindow = now - windowStart < RATE_WINDOW_MS;
+  const failures = (inWindow ? Number(old.failures || 0) : 0) + 1;
+  const lastLockedAt = Number(old.lastLockedAt || 0);
+  const priorLocks = now - lastLockedAt < RATE_LOCK_MEMORY_MS ? Math.max(0, Number(old.lockCount || 0)) : 0;
+  if (failures < rule.limit) {
+    return {failures, windowStart: inWindow ? windowStart : now, lockedUntil: 0, lockCount: priorLocks, lastLockedAt, updatedAt: nowIso()};
+  }
+  // Repeated lockouts double up to maxLockMs so a 4-digit secret cannot be walked through in days.
+  const lockMs = Math.min(rule.lockMs * Math.pow(2, priorLocks), rule.maxLockMs || rule.lockMs);
+  return {failures: 0, windowStart: now, lockedUntil: now + lockMs, lockCount: priorLocks + 1, lastLockedAt: now, updatedAt: nowIso()};
 }
 
-async function recordRateFailure(keys, limit, lockMs) {
+// Counts the attempt before the secret is checked, in one transaction, so parallel requests cannot all pass a stale lock check.
+async function reserveRateAttempt(rules) {
   const now = Date.now();
-  await Promise.all(keys.map((key) => {
-    const ref = db.collection("securityRateLimits").doc(key);
-    return db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const old = snap.exists ? snap.data() : {};
-      const windowStart = Number(old.windowStart || 0);
-      const inWindow = now - windowStart < 10 * 60 * 1000;
-      const failures = (inWindow ? Number(old.failures || 0) : 0) + 1;
-      tx.set(ref, {
-        failures,
-        windowStart: inWindow ? windowStart : now,
-        lockedUntil: failures >= limit ? now + lockMs : 0,
-        updatedAt: nowIso(),
-      });
+  const refs = rules.map((rule) => db.collection("securityRateLimits").doc(rule.key));
+  await db.runTransaction(async (tx) => {
+    const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+    const states = snaps.map((snap, index) => {
+      const old = snap.exists ? snap.data() || {} : {};
+      if (Number(old.lockedUntil || 0) > now) throw new HttpsError("resource-exhausted", "잠시 후 다시 시도해주세요.");
+      return nextRateLimitState(old, rules[index], now);
     });
-  }));
+    states.forEach((state, index) => tx.set(refs[index], state));
+  });
 }
 
 async function clearRateFailures(keys) {
@@ -671,15 +673,16 @@ async function loginWithPin(request) {
   if (!name || !ACCOUNT_PIN_PATTERN.test(pin)) throw new HttpsError("invalid-argument", "이름과 PIN 4자리를 확인해주세요.");
   const found = await accountForName(name);
   const rateKeys = [rateKey("account", found.nameKey), rateKey("ip", requestIp(request))];
-  await assertRateAllowed(rateKeys);
+  await reserveRateAttempt([
+    {key: rateKeys[0], limit: 8, lockMs: 10 * 60 * 1000, maxLockMs: 60 * 60 * 1000},
+    {key: rateKeys[1], limit: 20, lockMs: 10 * 60 * 1000},
+  ]);
   if (!found.rows.length) {
-    await recordRateFailure(rateKeys, 8, 10 * 60 * 1000);
     throw new HttpsError("invalid-argument", "이름 또는 PIN을 확인해주세요.");
   }
   const checks = await mapLimit(found.rows, 4, (doc) => accountPinMatch(doc, pin));
   const matched = checks.filter((check) => check.valid);
   if (matched.length !== 1) {
-    await recordRateFailure(rateKeys, 8, 10 * 60 * 1000);
     const message = matched.length > 1
       ? "계정을 구분할 수 없습니다. 관리자에게 PIN 변경을 요청해주세요."
       : "이름 또는 PIN을 확인해주세요.";
@@ -733,11 +736,13 @@ async function loginLegacyRole(request) {
   if (!password || !["admin", "chongmu"].includes(role)) throw new HttpsError("invalid-argument", "로그인 정보를 확인해주세요.");
   if (role === "admin" && !/^\d{4}$/.test(password)) throw new HttpsError("invalid-argument", "관리자 비밀번호는 숫자 4자리입니다.");
   const rateKeys = [rateKey("legacy", role), rateKey("ip", requestIp(request))];
-  await assertRateAllowed(rateKeys);
+  await reserveRateAttempt([
+    {key: rateKeys[0], limit: 5, lockMs: 15 * 60 * 1000, maxLockMs: 6 * 60 * 60 * 1000},
+    {key: rateKeys[1], limit: 20, lockMs: 15 * 60 * 1000},
+  ]);
   const stored = await legacySecret(role);
   let valid = stored.secret ? await verifyPassword(password, stored.secret) : stored.legacyPassword === password;
   if (!valid) {
-    await recordRateFailure(rateKeys, 5, 15 * 60 * 1000);
     throw new HttpsError("invalid-argument", "비밀번호를 확인해주세요.");
   }
   if (!stored.secret || stored.secret.hashVersion !== HASH_VERSION) {
@@ -2142,13 +2147,19 @@ async function deleteStoredScore(request) {
       updatedById: actor.id,
       updatedByName: actor.name,
     });
-    const legacyItems = Object.assign({}, scoreItemsById(legacySnap.exists ? legacySnap.data() || {} : {}));
-    delete legacyItems[scoreId];
-    if (Buffer.byteLength(JSON.stringify(legacyItems), "utf8") <= SCORE_LEGACY_MIRROR_MAX_BYTES) {
-      tx.set(legacyRef, {items: legacyItems, catalogVersion: SCORE_CATALOG_VERSION, updatedAt: now, updatedById: actor.id, updatedByName: actor.name}, {merge: true});
-    } else {
-      tx.set(legacyRef, {catalogVersion: SCORE_CATALOG_VERSION, legacyMirrorStoppedAt: now, updatedById: actor.id, updatedByName: actor.name}, {merge: true});
+    // merge:true deep-merges the items map, so omitting the id would leave the deleted score in the mirror.
+    const legacyPatch = {catalogVersion: SCORE_CATALOG_VERSION, updatedAt: now, updatedById: actor.id, updatedByName: actor.name};
+    const legacyItems = legacySnap.exists ? (legacySnap.data() || {}).items : null;
+    if (Array.isArray(legacyItems)) {
+      // An array field is replaced wholesale by a map, so the old rewrite still removes the row there.
+      const rows = Object.assign({}, scoreItemsById({items: legacyItems}));
+      delete rows[scoreId];
+      if (Buffer.byteLength(JSON.stringify(rows), "utf8") <= SCORE_LEGACY_MIRROR_MAX_BYTES) legacyPatch.items = rows;
+      else legacyPatch.legacyMirrorStoppedAt = now;
+    } else if (legacyItems && typeof legacyItems === "object" && Object.prototype.hasOwnProperty.call(legacyItems, scoreId)) {
+      legacyPatch.items = {[scoreId]: FieldValue.delete()};
     }
+    tx.set(legacyRef, legacyPatch, {merge: true});
   });
   await getStorage().bucket().deleteFiles({prefix: `scores/${scoreId}/`}).catch((error) => {
     console.error("score_folder_cleanup_failed", {scoreId, code: error && error.code});
@@ -2373,6 +2384,18 @@ async function syncArchiveReaction(event) {
   return null;
 }
 
+// path is client-written, so only trust it when it sits in the uploader's own folder.
+// Legacy archive/{part}/{file} objects predate per-owner folders and can no longer be created by non-admins.
+function archiveFileOwnedBy(rawPath, rawOwnerId) {
+  const path = cleanString(rawPath, 1500);
+  const ownerId = cleanString(rawOwnerId, 200);
+  const segments = path.split("/");
+  if (segments[0] !== "archive" || segments.some((segment) => !segment || segment === "." || segment === "..")) return "";
+  if (segments.length === 4) return segments[1] === ownerId ? path : "";
+  if (segments.length === 3) return path;
+  return "";
+}
+
 async function cleanupDeletedArchive(event) {
   if (!event.data || event.data.after.exists || !event.data.before.exists) return null;
   const archiveId = event.params.archiveId;
@@ -2386,8 +2409,8 @@ async function cleanupDeletedArchive(event) {
     await batch.commit();
     if (snap.size < 400) break;
   }
-  const path = cleanString(before.path, 1500);
-  if (path && path.startsWith("archive/") && !path.includes("..")) {
+  const path = archiveFileOwnedBy(before.path, before.uploadedById);
+  if (path) {
     await getStorage().bucket().file(path).delete({ignoreNotFound: true}).catch((error) => {
       console.error("archive_file_cleanup_failed", {archiveId, code: error && error.code});
     });

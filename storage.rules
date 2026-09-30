@@ -59,9 +59,10 @@ service firebase.storage {
         || (hasPermission('archive.manageMine') && request.auth.uid == ownerId);
     }
 
+    // Legacy layout without an owner folder: uploads now go to archive/{ownerId}/{part}/{fileName}.
     match /archive/{legacyPart}/{legacyFile} {
       allow read: if isAppUser();
-      allow create, update: if validImage() && (isAdmin() || hasPermission('archive.upload'));
+      allow create, update: if validImage() && isAdmin();
       allow delete: if isAdmin();
     }
 

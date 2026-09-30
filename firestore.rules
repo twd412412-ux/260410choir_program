@@ -273,6 +273,8 @@ service cloud.firestore {
       allow create: if isAdmin()
         || (hasPermission('archive.upload')
           && request.resource.data.uploadedById == request.auth.uid
+          && request.resource.data.path is string
+          && request.resource.data.path.matches('archive/' + request.auth.uid + '/[^/]+/[^/]+')
           && request.resource.data.keys().hasOnly([
             'title', 'description', 'date', 'part', 'type', 'url', 'path',
             'fileSize', 'uploadedAt', 'uploadedById', 'albumId', 'albumTitle',
