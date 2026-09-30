@@ -34,6 +34,11 @@ const c = vm.createContext({
   db: { collection: name => {
     assert.equal(name, 'settings');
     return { doc: id => {
+      // No version doc yet: the app must fall back to watching the publication itself.
+      if (id === 'publishedSeatingMeta') return {
+        onSnapshot: (options, next) => { next({ exists: false, metadata: {} }); return () => {}; },
+        get: () => Promise.resolve({ exists: false })
+      };
       assert.equal(id, 'publishedSeatingPlan');
       return {
         onSnapshot: (options, next, error) => {
@@ -47,10 +52,12 @@ const c = vm.createContext({
     } };
   } }
 });
+vm.runInContext("var publishedSeatingVersion='';", c);
+const tick = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 for (const name of [
-  'setPublishedSeatingState', 'savePublishedSeatingCache', 'publishedSeatingCacheTtl',
+  'setPublishedSeatingState', 'savePublishedSeatingCache', 'fetchPublishedSeatingDocument', 'publishedSeatingCacheTtl',
   'invalidatePublishedSeatingCache', 'getPublishedSeatingPlan', 'isPublicSeatingModalOpen',
-  'shouldWatchPublishedSeating', 'stopPublishedSeatingLive', 'syncPublishedSeatingLive',
+  'shouldWatchPublishedSeating', 'stopPublishedSeatingLive', 'applyPublishedSeatingSnapshot', 'syncPublishedSeatingLive',
   'refreshPublishedSeatingOnResume'
 ]) {
   const match = html.match(new RegExp('^function ' + name + '\\([^]*?^}', 'm'));
@@ -114,6 +121,7 @@ const b = { publicId: 'b', rows: [{ seats: ['other'] }] };
 
   // A slow one-shot fetch must not overwrite a newer server notification.
   const staleGet = c.getPublishedSeatingPlan(true);
+  await tick();
   listeners[2].next(snapshot(next));
   resolveGet(snapshot([a]));
   await staleGet;
@@ -133,6 +141,7 @@ const b = { publicId: 'b', rows: [{ seats: ['other'] }] };
   c.refreshPublishedSeatingOnResume();
   assert.equal(listeners.length, 5, 'resume can recover terminated listener');
   listeners[4].next(snapshot([]));
+  await tick();
   resolveGet(snapshot([]));
   await Promise.resolve();
   assert.equal(c.publishedSeatingLoaded, true);

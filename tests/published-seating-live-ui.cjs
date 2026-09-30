@@ -34,10 +34,12 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
             requestHomeRender = () => {
               document.getElementById('pageHome').innerHTML = renderPublicSeatingHomeCard(publishedSeatingPlan, false);
             };
-            db = { collection: () => ({ doc: () => ({ onSnapshot: (options, next) => {
-              window.deliverPublication = next;
-              return () => {};
-            } }) }) };
+            db = { collection: () => ({ doc: id => id === 'publishedSeatingMeta'
+              ? { onSnapshot: (options, next) => { next({ exists: false, metadata: {} }); return () => {}; } }
+              : { onSnapshot: (options, next) => {
+                window.deliverPublication = next;
+                return () => {};
+              } } }) };
             const rows = createSeatingRows(4, 10);
             rows[0].seats[0] = { memberId: 'member', name: 'BEFORE', part: 'S1' };
             window.livePlan = { publicId: 'plan:live', sourcePlanId: 'live', name: 'LIVE PLAN', rows, publishedAt: '2026-09-20T01:00:00Z' };

@@ -5083,7 +5083,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.30.3';
+var APP_RELEASE_VERSION='26.10.01.1';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8543,8 +8543,18 @@ function setPublishedSeatingState(plans,preferredId){
   renderSeatingPlanSelect();
   return publishedSeatingPlan;
 }
+var publishedSeatingVersion='';
 function savePublishedSeatingCache(){
-  saveCache(PUBLISHED_SEATING_CACHE_KEY,{schemaVersion:2,plans:publishedSeatingPlans});
+  saveCache(PUBLISHED_SEATING_CACHE_KEY,{schemaVersion:2,plans:publishedSeatingPlans,version:publishedSeatingVersion||''});
+}
+// settings/publishedSeatingMeta is bumped by a server trigger on every publication write.
+// Reading it first lets devices skip the ~160KB publication document when nothing changed.
+function fetchPublishedSeatingDocument(){
+  return db.collection('settings').doc('publishedSeatingMeta').get().then(function(meta){
+    return meta.exists?String((meta.data()||{}).version||''):'';
+  },function(){return '';}).then(function(version){
+    return db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){return {doc:doc,version:version};});
+  });
 }
 function publishedSeatingCacheTtl(){
   return publishedSeatingPlans.length?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
@@ -8584,6 +8594,7 @@ function getPublishedSeatingPlan(force){
       var cachedTtl=cachedHasPlan?PUBLISHED_SEATING_ACTIVE_TTL_MS:PUBLISHED_SEATING_EMPTY_TTL_MS;
       if(cached.age<cachedTtl){
         setPublishedSeatingState(cachedPlans);
+        publishedSeatingVersion=String(cached.data&&cached.data.version||'');
         publishedSeatingLoaded=true;
         publishedSeatingLastCheckedAt=cached.ts;
         syncPublishedSeatingLive();
@@ -8591,15 +8602,26 @@ function getPublishedSeatingPlan(force){
       }
     }
   }
+  // An older cache with a known version only needs the tiny meta read when nothing was republished.
+  var stale=force?{hit:false}:loadCacheEntry(PUBLISHED_SEATING_CACHE_KEY,7*86400000);
+  var staleVersion=stale.hit&&stale.data&&stale.data.version?String(stale.data.version):'';
   var requestId=++publishedSeatingRequestId;
-  publishedSeatingPromise=db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){
+  var lookup=staleVersion
+    ? db.collection('settings').doc('publishedSeatingMeta').get().then(function(meta){
+        var version=meta.exists?String((meta.data()||{}).version||''):'';
+        if(version&&version===staleVersion)return {cachedPlans:normalizePublishedSeatingPlans(stale.data),version:version};
+        return fetchPublishedSeatingDocument();
+      },function(){return fetchPublishedSeatingDocument();})
+    : fetchPublishedSeatingDocument();
+  publishedSeatingPromise=lookup.then(function(result){
     if(requestId!==publishedSeatingRequestId)return null;
     if(!canViewPublishedSeating()){
       publishedSeatingPromise=null;
       return null;
     }
-    var data=doc.exists?(doc.data()||{}):null;
-    setPublishedSeatingState(normalizePublishedSeatingPlans(data));
+    var doc=result.doc,data=doc?(doc.exists?(doc.data()||{}):null):null;
+    setPublishedSeatingState(result.cachedPlans||normalizePublishedSeatingPlans(data));
+    publishedSeatingVersion=result.version||'';
     publishedSeatingLoaded=true;
     publishedSeatingLastCheckedAt=Date.now();
     publishedSeatingPromise=null;
@@ -8625,35 +8647,67 @@ function stopPublishedSeatingLive(){
   if(publishedSeatingUnsubscribe)publishedSeatingUnsubscribe();
   publishedSeatingUnsubscribe=null;
 }
+function applyPublishedSeatingSnapshot(doc,version){
+  var plans=normalizePublishedSeatingPlans(doc.exists?doc.data():null);
+  var changed=!publishedSeatingLoaded||JSON.stringify(plans)!==JSON.stringify(publishedSeatingPlans);
+  publishedSeatingRequestId++;
+  publishedSeatingPromise=null;
+  setPublishedSeatingState(plans);
+  publishedSeatingVersion=version||'';
+  publishedSeatingLoaded=true;
+  publishedSeatingLastCheckedAt=Date.now();
+  savePublishedSeatingCache();
+  if(!changed)return;
+  if(currentTab==='home')requestHomeRender();
+  if(isPublicSeatingModalOpen()){
+    var oldScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
+    var top=oldScroll?oldScroll.scrollTop:0,left=oldScroll?oldScroll.scrollLeft:0;
+    renderPublicSeatingModalBody();
+    var newScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
+    if(newScroll){newScroll.scrollTop=top;newScroll.scrollLeft=left;}
+  }
+}
+// Watches only the small version doc and fetches the publication when its version changes.
+// Without a version doc (trigger not deployed yet) or on a meta error it watches the publication itself, as before.
 function syncPublishedSeatingLive(){
   if(!shouldWatchPublishedSeating()){stopPublishedSeatingLive();return;}
   if(publishedSeatingUnsubscribe)return;
   var generation=++publishedSeatingLiveGeneration;
-  publishedSeatingUnsubscribe=db.collection('settings').doc('publishedSeatingPlan').onSnapshot({includeMetadataChanges:true},function(doc){
-    if(generation!==publishedSeatingLiveGeneration||!shouldWatchPublishedSeating())return;
-    // Keep the last confirmed publication until the server confirms this snapshot.
-    if(doc.metadata&&(doc.metadata.fromCache||doc.metadata.hasPendingWrites))return;
-    var plans=normalizePublishedSeatingPlans(doc.exists?doc.data():null);
-    var changed=!publishedSeatingLoaded||JSON.stringify(plans)!==JSON.stringify(publishedSeatingPlans);
-    publishedSeatingRequestId++;
-    publishedSeatingPromise=null;
-    setPublishedSeatingState(plans);
-    publishedSeatingLoaded=true;
-    publishedSeatingLastCheckedAt=Date.now();
-    savePublishedSeatingCache();
-    if(!changed)return;
-    if(currentTab==='home')requestHomeRender();
-    if(isPublicSeatingModalOpen()){
-      var oldScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
-      var top=oldScroll?oldScroll.scrollTop:0,left=oldScroll?oldScroll.scrollLeft:0;
-      renderPublicSeatingModalBody();
-      var newScroll=document.querySelector('#modalPublicSeating .public-seating-board-scroll');
-      if(newScroll){newScroll.scrollTop=top;newScroll.scrollLeft=left;}
-    }
-  },function(error){
+  var metaStop=null,documentStop=null,watchingDocument=false,fetchingVersion='';
+  var current=function(){return generation===publishedSeatingLiveGeneration&&shouldWatchPublishedSeating();};
+  var failed=function(error){
     if(generation!==publishedSeatingLiveGeneration)return;
     stopPublishedSeatingLive();
     console.warn('published_seating_live_failed',error);
+  };
+  var watchDocument=function(){
+    if(watchingDocument)return;
+    watchingDocument=true;
+    documentStop=db.collection('settings').doc('publishedSeatingPlan').onSnapshot({includeMetadataChanges:true},function(doc){
+      if(!current())return;
+      // Keep the last confirmed publication until the server confirms this snapshot.
+      if(doc.metadata&&(doc.metadata.fromCache||doc.metadata.hasPendingWrites))return;
+      applyPublishedSeatingSnapshot(doc,'');
+    },failed);
+  };
+  publishedSeatingUnsubscribe=function(){if(metaStop)metaStop();if(documentStop)documentStop();};
+  metaStop=db.collection('settings').doc('publishedSeatingMeta').onSnapshot({includeMetadataChanges:true},function(meta){
+    if(!current()||watchingDocument)return;
+    if(meta.metadata&&(meta.metadata.fromCache||meta.metadata.hasPendingWrites))return;
+    var version=meta.exists?String((meta.data()||{}).version||''):'';
+    if(!version)return watchDocument();
+    if(publishedSeatingLoaded&&version===publishedSeatingVersion){publishedSeatingLastCheckedAt=Date.now();return;}
+    if(fetchingVersion===version)return;
+    fetchingVersion=version;
+    db.collection('settings').doc('publishedSeatingPlan').get().then(function(doc){
+      if(!current()||fetchingVersion!==version)return;
+      fetchingVersion='';
+      applyPublishedSeatingSnapshot(doc,version);
+    },function(error){if(fetchingVersion===version)fetchingVersion='';failed(error);});
+  },function(error){
+    if(!current())return;
+    console.warn('published_seating_meta_unavailable',error);
+    watchDocument();
   });
 }
 function refreshPublishedSeatingOnResume(){

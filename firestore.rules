@@ -108,6 +108,12 @@ service cloud.firestore {
       allow write: if hasPermission('seating.edit');
     }
 
+    // Version bumped by the syncPublishedSeatingMeta trigger only.
+    match /settings/publishedSeatingMeta {
+      allow read: if isAppUser();
+      allow write: if false;
+    }
+
     match /specialPerformancePlans/{planId} {
       allow read, create, update, delete: if isAdmin();
     }

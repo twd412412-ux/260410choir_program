@@ -2430,6 +2430,37 @@ async function cleanupDeletedArchive(event) {
   return null;
 }
 
+// Fixed-width seconds.nanos so string comparison orders writes, even two in the same millisecond.
+function firestoreTimeStamp(value) {
+  if (value && typeof value.seconds === "number") {
+    return String(value.seconds).padStart(12, "0") + "." + String(value.nanoseconds || 0).padStart(9, "0");
+  }
+  const millis = Date.parse(value || "") || Date.now();
+  return String(Math.floor(millis / 1000)).padStart(12, "0") + "." + String((millis % 1000) * 1000000).padStart(9, "0");
+}
+
+// Clients watch this small doc instead of the ~160KB publication and re-read it only when the version changes.
+// It is written here, not by clients, so publications from any app version keep it current.
+async function syncPublishedSeatingMeta(event) {
+  const after = event.data && event.data.after;
+  const exists = Boolean(after && after.exists);
+  const stamp = firestoreTimeStamp(exists ? after.updateTime : event.time);
+  const metaRef = db.collection("settings").doc("publishedSeatingMeta");
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(metaRef);
+    const old = snap.exists ? snap.data() || {} : {};
+    // Redelivered or out-of-order events must not roll the version back.
+    if (old.sourceStamp && old.sourceStamp >= stamp) return;
+    tx.set(metaRef, {
+      version: stamp + "#" + crypto.randomBytes(3).toString("hex"),
+      sourceStamp: stamp,
+      exists,
+      updatedAt: nowIso(),
+    });
+  });
+  return null;
+}
+
 async function ensureScheduleMonthIndex(event) {
   if (!event.data || !event.data.after.exists) return null;
   const data = event.data.after.data() || {};
@@ -2526,6 +2557,11 @@ exports.cleanupDeletedArchive = onDocumentWritten({
   document: "mediaArchive/{archiveId}",
   retry: false,
 }, cleanupDeletedArchive);
+
+exports.syncPublishedSeatingMeta = onDocumentWritten({
+  document: "settings/publishedSeatingPlan",
+  retry: true,
+}, syncPublishedSeatingMeta);
 
 exports.ensureScheduleMonthIndex = onDocumentWritten({
   document: "schedules/{scheduleId}",
