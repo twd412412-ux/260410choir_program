@@ -2300,6 +2300,11 @@ function songIndexShardId(songId) {
   return "shard_" + String(digest.readUInt16BE(0) % SONG_INDEX_SHARDS).padStart(2, "0");
 }
 
+// Clients compare these tokens for equality to re-read only changed shards, so every write gets a fresh one.
+function songIndexShardVersion(updatedAt) {
+  return updatedAt + "#" + crypto.randomBytes(4).toString("hex");
+}
+
 async function syncSongIndexWrite(event) {
   if (!event.data) return null;
   const songId = event.params.songId;
@@ -2317,11 +2322,14 @@ async function syncSongIndexWrite(event) {
     if (songSnap.exists) items[songId] = latest;
     else delete items[songId];
     if (Buffer.byteLength(JSON.stringify(items), "utf8") > 850000) throw new Error("song_index_shard_too_large");
-    const oldCount = Number(metaSnap.exists ? (metaSnap.data() || {}).count : 0);
+    const metaData = metaSnap.exists ? metaSnap.data() || {} : {};
+    const oldCount = Number(metaData.count || 0);
     const delta = Number(songSnap.exists) - Number(wasIndexed);
     const updatedAt = nowIso();
+    const shardVersions = Object.assign({}, metaData.shardVersions && typeof metaData.shardVersions === "object" ? metaData.shardVersions : {});
+    shardVersions[shardRef.id] = songIndexShardVersion(updatedAt);
     tx.set(shardRef, {items, updatedAt});
-    tx.set(metaRef, {count: Math.max(0, oldCount + delta), shardCount: SONG_INDEX_SHARDS, version: 1, updatedAt});
+    tx.set(metaRef, {count: Math.max(0, oldCount + delta), shardCount: SONG_INDEX_SHARDS, version: 1, updatedAt, shardVersions});
     return null;
   });
 }
@@ -2338,14 +2346,18 @@ async function rebuildSongIndex(request) {
   const oversized = shardBytes.find((row) => row.bytes > 850000);
   if (oversized) throw new HttpsError("resource-exhausted", "곡 색인 묶음 크기가 안전 한도를 넘었습니다.");
   const batch = db.batch();
+  const updatedAt = nowIso();
+  const shardVersions = {};
   Object.keys(shards).forEach((id) => {
-    batch.set(db.collection("songIndex").doc(id), {items: shards[id], updatedAt: nowIso()});
+    batch.set(db.collection("songIndex").doc(id), {items: shards[id], updatedAt});
+    shardVersions[id] = songIndexShardVersion(updatedAt);
   });
   batch.set(db.collection("songIndex").doc("_meta"), {
     count: songsSnap.size,
     shardCount: SONG_INDEX_SHARDS,
     version: 1,
-    updatedAt: nowIso(),
+    updatedAt,
+    shardVersions,
   });
   await batch.commit();
   return {

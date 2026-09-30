@@ -5083,7 +5083,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.30.2';
+var APP_RELEASE_VERSION='26.09.30.3';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8143,6 +8143,7 @@ function logoutUser(){
     songsLoaded=false;
     songsLoadPromise=null;
     appStorageRemove('choir_songs');
+    appStorageRemove('choir_song_shards_v1');
   }
   if(currentTab==='archive'||currentTab==='scores'||currentTab==='songs'||currentTab==='favorites')switchTab('home');
   renderSongList();
@@ -11089,23 +11090,84 @@ function loadCacheEntry(key,maxAge){
 }
 
 // ==================== Firestore: 곡 로드 (get + 캐시) ====================
-function loadSongIndexRows(){
+// _meta.shardVersions lets a returning device read one small doc and re-read only changed shards.
+// The shard state is tied to the cached rows by a token, so any other rewrite of choir_songs forces a full load.
+function songShardIdsFromMeta(meta){
+  var versions=meta&&meta.shardVersions;
+  if(!versions||typeof versions!=='object')return null;
+  var ids=Object.keys(versions).filter(function(id){return /^shard_\d{2}$/.test(id)&&typeof versions[id]==='string'&&versions[id];}).sort();
+  return ids.length&&ids.length===Number(meta.shardCount)?ids:null;
+}
+function withSongShardState(rows,state){
+  Object.defineProperty(rows,'songShardState',{value:state,enumerable:false});
+  return rows;
+}
+function readSongShardState(){
+  try{
+    var cached=JSON.parse(localStorage.getItem('choir_songs'));
+    var state=JSON.parse(localStorage.getItem('choir_song_shards_v1'));
+    if(cached&&state&&state.token&&cached.shardToken===state.token&&Array.isArray(cached.data)&&state.versions&&state.ids)return {rows:cached.data,versions:state.versions,ids:state.ids};
+  }catch(e){}
+  return null;
+}
+function saveSongRowsCache(rows,state){
+  var token=state?Date.now().toString(36)+Math.random().toString(36).slice(2,8):'';
+  try{localStorage.setItem('choir_songs',JSON.stringify(token?{ts:Date.now(),data:rows,shardToken:token}:{ts:Date.now(),data:rows}));}
+  catch(e){try{localStorage.removeItem('choir_song_shards_v1');}catch(ignore){}return;}
+  try{
+    if(state)localStorage.setItem('choir_song_shards_v1',JSON.stringify({token:token,versions:state.versions,ids:state.ids}));
+    else localStorage.removeItem('choir_song_shards_v1');
+  }catch(e){}
+}
+function loadAllSongIndexRows(){
   return db.collection('songIndex').get().then(function(snap){
-    var rows=[];
-    var expected=-1;
+    var rows=[],expected=-1,meta=null,ids={};
     snap.forEach(function(doc){
       var data=doc.data()||{};
       if(doc.id==='_meta'){
+        meta=data;
         expected=Number(data.count||0);
         return;
       }
       var items=data.items||{};
-      Object.keys(items).forEach(function(id){
+      ids[doc.id]=Object.keys(items);
+      ids[doc.id].forEach(function(id){
         rows.push(songRowFromDoc({id:id,data:function(){return items[id]||{};}}));
       });
     });
     if(expected<0||rows.length!==expected)throw new Error('song_index_incomplete');
-    return rows;
+    var shardIds=songShardIdsFromMeta(meta),state=null;
+    if(shardIds&&shardIds.every(function(id){return Array.isArray(ids[id]);})){
+      state={versions:{},ids:{}};
+      shardIds.forEach(function(id){state.versions[id]=meta.shardVersions[id];state.ids[id]=ids[id];});
+    }
+    return withSongShardState(rows,state);
+  });
+}
+function loadSongIndexRows(full){
+  var known=full?null:readSongShardState();
+  if(!known)return loadAllSongIndexRows();
+  return db.collection('songIndex').doc('_meta').get().then(function(metaDoc){
+    var meta=metaDoc.exists?metaDoc.data()||{}:null,shardIds=songShardIdsFromMeta(meta),expected=Number(meta&&meta.count);
+    if(!shardIds||!Number.isFinite(expected)||shardIds.some(function(id){return !Array.isArray(known.ids[id]);}))return loadAllSongIndexRows();
+    var changed=shardIds.filter(function(id){return known.versions[id]!==meta.shardVersions[id];});
+    return Promise.all(changed.map(function(id){return db.collection('songIndex').doc(id).get();})).then(function(docs){
+      var state={versions:{},ids:{}},drop=Object.create(null),fresh=[];
+      shardIds.forEach(function(id){state.versions[id]=known.versions[id];state.ids[id]=known.ids[id];});
+      docs.forEach(function(doc,index){
+        var id=changed[index],items=(doc.exists&&(doc.data()||{}).items)||{};
+        known.ids[id].forEach(function(songId){drop[songId]=true;});
+        state.ids[id]=Object.keys(items);
+        state.versions[id]=meta.shardVersions[id];
+        state.ids[id].forEach(function(songId){
+          drop[songId]=true;
+          fresh.push(songRowFromDoc({id:songId,data:function(){return items[songId]||{};}}));
+        });
+      });
+      var rows=known.rows.filter(function(row){return row&&!drop[row.id];}).concat(fresh);
+      if(rows.length!==expected)return loadAllSongIndexRows();
+      return withSongShardState(rows,state);
+    });
   });
 }
 function loadSongsFromCollection(){
@@ -11146,7 +11208,7 @@ function initSongs(force){
   }
   if(!songsLoaded)document.getElementById('songList').innerHTML='<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
   var settled=false;
-  var request=withLoadDeadline(loadSongIndexRows().catch(function(error){
+  var request=withLoadDeadline(loadSongIndexRows(force).catch(function(error){
     if(settled||songsLoadPromise!==request||!canViewSongList())throw error;
     console.warn('곡 색인을 사용할 수 없어 원본 목록으로 전환합니다',error);
     return loadSongsFromCollection();
@@ -11154,7 +11216,7 @@ function initSongs(force){
     settled=true;
     if(songsLoadPromise!==request)return allSongs;
     if(!canViewSongList()){songsLoadPromise=null;return allSongs;}
-    saveCache('choir_songs',rows);
+    saveSongRowsCache(rows,rows.songShardState||null);
     applyLoadedSongs(rows);
     songsLoadPromise=null;
     return allSongs;
@@ -14283,6 +14345,7 @@ function refreshData(){
       filteredSongs=[];
       songsLoaded=false;
       localStorage.removeItem('choir_songs');
+      localStorage.removeItem('choir_song_shards_v1');
       renderSongLoginRequired();
       return [];
     });

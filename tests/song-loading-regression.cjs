@@ -18,7 +18,7 @@ function fixture() {
     songRowFromDoc: doc => ({id: doc.id, ...doc.data()}),
     db: {collection: name => ({get: () => {reads.push(name); return response(name);}})}
   });
-  for (const name of ['saveCache', 'loadCacheEntry', 'withLoadDeadline', 'loadSongIndexRows', 'loadSongsFromCollection', 'applyLoadedSongs', 'setSongLoadStatus', 'initSongs']) {
+  for (const name of ['saveCache', 'loadCacheEntry', 'withLoadDeadline', 'songShardIdsFromMeta', 'withSongShardState', 'readSongShardState', 'saveSongRowsCache', 'loadAllSongIndexRows', 'loadSongIndexRows', 'loadSongsFromCollection', 'applyLoadedSongs', 'setSongLoadStatus', 'initSongs']) {
     const match = html.match(new RegExp('^function ' + name + '\\([^]*?^}', 'm'));
     assert.ok(match, name); vm.runInContext(match[0], ctx);
   }

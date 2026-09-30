@@ -7,7 +7,7 @@ const clone = x => x === undefined ? x : JSON.parse(JSON.stringify(x));
 const docs = new Map([['songIndex/_meta', {count: 0}]]);
 let commits = 0, fail = false, beforeCommit;
 const db = {
-  collection: name => ({doc: id => ({key: name + '/' + id})}),
+  collection: name => ({doc: id => ({key: name + '/' + id, id})}),
   runTransaction: async callback => {
     for (;;) {
       const reads = new Map(), writes = [];
@@ -28,20 +28,28 @@ const db = {
     }
   }
 };
-const ctx = vm.createContext({db, Buffer, songIndexShardId: () => 'shard_00', SONG_INDEX_SHARDS: 16, nowIso: () => '2026-09-08T00:00:00Z'});
+const ctx = vm.createContext({db, Buffer, crypto: require('node:crypto'), songIndexShardId: () => 'shard_00', SONG_INDEX_SHARDS: 16, nowIso: () => '2026-09-08T00:00:00Z'});
 vm.runInContext(source.match(/^async function syncSongIndexWrite\([^]*?^}/m)[0], ctx);
+vm.runInContext(source.match(/^function songIndexShardVersion\([^]*?^}/m)[0], ctx);
+const version = shard => (docs.get('songIndex/_meta').shardVersions || {})[shard];
 const send = (id, stale = {}) => ctx.syncSongIndexWrite({params: {songId: id}, data: stale});
 const count = () => docs.get('songIndex/_meta').count;
 const item = id => docs.get('songIndex/shard_00').items[id];
 (async () => {
+  docs.set('songIndex/_meta', {count: 0, shardVersions: {shard_07: 'kept#1'}});
   docs.set('songs/a', {songName: 'new'});
   await send('a');
+  const firstVersion = version('shard_00');
   await send('a');
   assert.equal(count(), 1);
   assert.equal(commits, 1, 'duplicate delivery must not write again');
+  assert.match(firstVersion, /^2026-09-08T00:00:00Z#[0-9a-f]{8}$/);
+  assert.equal(version('shard_00'), firstVersion, 'a no-op delivery keeps the shard version');
+  assert.equal(version('shard_07'), 'kept#1', 'other shard versions survive a write');
   docs.set('songs/a', {songName: 'newest'});
   await send('a', {after: {songName: 'old'}});
   assert.equal(item('a').songName, 'newest', 'ignore stale event contents');
+  assert.notEqual(version('shard_00'), firstVersion, 'same-millisecond rewrites still get a new version');
   beforeCommit = () => docs.set('songs/a', {songName: 'concurrent'});
   await send('a');
   assert.equal(item('a').songName, 'concurrent', 'retry when original changes');
