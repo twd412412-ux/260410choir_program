@@ -106,17 +106,25 @@ const setup = () => {
         assert.equal(await page.evaluate(() => rehearsalPlanDraft.cues.length), 0);
         await page.evaluate(() => cancelConcertEditor());
         assert.equal(await page.evaluate(() => getRehearsalSchedule().rehearsalPlan.cues.length), 1, 'cancel altered persisted cues');
-        await page.evaluate(() => { selectRehearsalCue(0); openConcertEditor(); eventRow.rehearsalPlan.startTime = '20:00'; });
+        assert.deepEqual(await page.evaluate(async () => {
+          selectRehearsalCue(0); eventRow.rehearsalPlan.startTime = '21:00';
+          await openConcertEditor();
+          return [rehearsalPlanDraft.startTime, JSON.parse(rehearsalPlanBase).startTime, document.getElementById('concertEditorStatus').textContent];
+        }), ['21:00', '21:00', '서버의 최신 구성으로 갱신했습니다.'], 'an untouched editor must adopt a newer server plan instead of a stale cache');
+        await page.evaluate(() => { cancelConcertEditor(); eventRow.rehearsalPlan.startTime = '19:00'; allSchedules[0].rehearsalPlan.startTime = '19:00'; });
+        await page.evaluate(async () => { await openConcertEditor(); rehearsalPlanDraft.startTime = '19:30'; eventRow.rehearsalPlan.startTime = '20:00'; });
         assert.equal(await page.evaluate(() => saveConcertPlan()), false);
         assert.match(await page.locator('#concertEditorStatus').innerText(), /서버 구성이 변경/);
+        assert.equal(await page.locator('#concertEditorStatus button').count(), 2, 'conflict must offer reload and overwrite');
         assert.equal(await page.evaluate(() => fixture.updates.length), 1, 'conflict overwrote newer plan');
         await page.evaluate(() => {
           eventRow.rehearsalPlan = JSON.parse(rehearsalPlanBase);
           eventRow.rehearsalPlan.durations = Object.fromEntries(Object.entries(eventRow.rehearsalPlan.durations).reverse());
         });
         assert.equal(await page.evaluate(() => saveConcertPlan()), true, 'map key order must not cause a false conflict');
-        await page.evaluate(() => {
-          openConcertEditor();
+        await page.evaluate(async () => {
+          await openConcertEditor();
+          rehearsalPlanDraft.startTime = '19:45';
           eventRow.program += '\n새 곡';
           allSchedules[0].program = eventRow.program;
           eventRow.updatedBy = '다른 지휘자'; eventRow.updatedAt = '2026-09-27T03:00:00Z';
@@ -124,6 +132,10 @@ const setup = () => {
         assert.equal(await page.evaluate(() => saveConcertPlan()), false, 'live schedule updates must not replace the editing baseline');
         assert.match(await page.locator('#concertEditorStatus').innerText(), /다른 지휘자/);
         assert.ok(await page.evaluate(() => !!rehearsalPlanDraft), 'conflict must preserve draft');
+        assert.deepEqual(await page.evaluate(async () => {
+          discardConcertDraftForLatest(); await new Promise(resolve => setTimeout(resolve, 50));
+          return [rehearsalPlanDraft.startTime, rehearsalPlanSource.endsWith('새 곡')];
+        }), ['19:30', true], 'reload must replace the draft with the server plan');
         await page.evaluate(() => {
           eventRow.program = allSchedules[0].program = '첫 곡\n둘째 곡\n마지막 곡';
           eventRow.rehearsalPlan.startTime = '20:00';

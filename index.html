@@ -5079,8 +5079,8 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.09.27.9';
-var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
+var APP_RELEASE_VERSION='26.09.30.1';
+var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
 var APP_UPDATE_RELOAD_KEY='choir_auto_update_target';
@@ -9580,7 +9580,7 @@ function renderHome(){
       function partSession(label,st,icon){
         var text=st.state==='done'?'완료':(st.state==='progress'?st.rate+'%':(st.state==='excluded'?'제외':'체크 전'));
         var detail=canSeeHomeAttendanceDetail()&&st.total&&typeof st.rate==='number'?' <span style="font-weight:650;color:#606554">('+st.attended+'/'+st.total+')</span>':'';
-        return '<div class="home-part-session '+st.state+'"><span>'+icon+'</span><span>'+label+'</span> <span class="pct">'+text+'</span>'+detail+'</div>';
+        return '<div class="home-part-session '+st.state+'"><span>'+icon+'</span><span>'+escHtml(label)+'</span> <span class="pct">'+text+'</span>'+detail+'</div>';
       }
       partHtml=parts.map(function(p){
         var scoped=members.filter(function(m){return m.part===p||m.subPart===p});
@@ -10578,11 +10578,62 @@ function concertToolsMarkup(schedule){
   return '<div class="concert-tools"><select id="concertPrintMode" aria-label="인쇄 형식"><option value="director">지휘자용</option><option value="member">단원용</option></select><button type="button" onclick="openConcertPrint()">인쇄</button>'+(editable?'<button type="button" onclick="openConcertEditor()">큐 구성</button>':'')+'</div>'
     +'<div id="concertEditor" class="concert-editor" hidden></div>';
 }
+// allSchedules is a one-shot cache, so the editor re-reads the schedule before using it as the conflict baseline.
+function refreshRehearsalScheduleFromServer(id){
+  return Promise.resolve().then(function(){return withLoadDeadline(db.collection('schedules').doc(id).get({source:'server'}),12000);}).then(function(doc){
+    if(!doc.exists)throw new Error('일정이 삭제되었습니다');
+    var row=scheduleRowFromDoc(doc);mergeRehearsalSchedules([row]);return row;
+  });
+}
+function rebuildRehearsalCueItems(row){
+  var current=rehearsalItems[rehearsalIndex],notes=new Map();rehearsalItems.forEach(function(item,index){notes.set(item.cueKey,rehearsalNotes[index]);});
+  rehearsalItems=concertCueItems(row);rehearsalIndex=Math.max(0,rehearsalItems.findIndex(function(item){return current&&item.cueKey===current.cueKey;}));
+  rehearsalNotes={};rehearsalItems.forEach(function(item,index){if(notes.has(item.cueKey))rehearsalNotes[index]=notes.get(item.cueKey);});
+}
+function setConcertPlanBaseline(schedule){
+  rehearsalPlanBase=JSON.stringify(normalizeConcertPlan(schedule.rehearsalPlan));
+  rehearsalPlanSource=String(schedule.program||schedule.songs||'');
+}
+function concertBaselineOf(schedule){
+  return JSON.stringify([normalizeConcertPlan(schedule.rehearsalPlan),String(schedule.program||schedule.songs||'')]);
+}
+function showConcertConflictActions(message){
+  var status=document.getElementById('concertEditorStatus');if(!status)return;
+  status.textContent=message;
+  status.insertAdjacentHTML('beforeend',' <button type="button" onclick="discardConcertDraftForLatest()">최신 구성 불러오기</button> <button type="button" onclick="overwriteConcertPlanWithDraft()">내 입력으로 저장</button>');
+}
+// Opens instantly from the cached schedule (stage Wi-Fi can be slow), then checks the server in the background.
 function openConcertEditor(){
   var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue())return;
   setRehearsalToolsOpen(true);
-  if(!rehearsalPlanDraft){rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);rehearsalPlanBase=JSON.stringify(rehearsalPlanDraft);rehearsalPlanSource=String(schedule.program||schedule.songs||'');}
+  if(rehearsalPlanDraft)return renderConcertEditor();
+  rehearsalPlanDraft=normalizeConcertPlan(schedule.rehearsalPlan);setConcertPlanBaseline(schedule);
   renderConcertEditor();
+  var id=schedule.id,cached=concertBaselineOf(schedule),token=++rehearsalPlanLoadToken;
+  return refreshRehearsalScheduleFromServer(id).then(function(row){
+    if(token!==rehearsalPlanLoadToken||rehearsalScheduleId!==id||!rehearsalPlanDraft||rehearsalPlanBusy||!canEditRehearsalCue())return;
+    if(concertBaselineOf(row)===cached)return;
+    var untouched=JSON.stringify(normalizeConcertPlan(rehearsalPlanDraft))===rehearsalPlanBase;
+    if(!untouched)return showConcertConflictActions('편집 중에 다른 곳에서 큐 구성이 바뀌었습니다. 입력 내용은 유지됩니다.');
+    rebuildRehearsalCueItems(row);saveRehearsalState();renderRehearsalCue();setRehearsalToolsOpen(true);
+    rehearsalPlanDraft=normalizeConcertPlan(row.rehearsalPlan);setConcertPlanBaseline(row);
+    renderConcertEditor();
+    var status=document.getElementById('concertEditorStatus');if(status)status.textContent='서버의 최신 구성으로 갱신했습니다.';
+  },function(){});
+}
+function discardConcertDraftForLatest(){
+  if(!canEditRehearsalCue())return;
+  rehearsalPlanDraft=null;openConcertEditor();
+}
+function overwriteConcertPlanWithDraft(){
+  var schedule=getRehearsalSchedule();if(!schedule||!rehearsalPlanDraft||!canEditRehearsalCue()||rehearsalPlanBusy)return;
+  if(!confirm('다른 곳에서 바뀐 큐 구성을 내 입력으로 덮어씁니다.\n계속할까요?'))return;
+  var id=schedule.id,status=document.getElementById('concertEditorStatus');
+  if(status)status.textContent='최신 구성을 확인하는 중...';
+  refreshRehearsalScheduleFromServer(id).then(function(row){
+    if(rehearsalScheduleId!==id||!rehearsalPlanDraft)return;
+    setConcertPlanBaseline(row);return saveConcertPlan();
+  }).catch(function(error){var current=document.getElementById('concertEditorStatus');if(current)current.textContent=(error&&error.message)||'최신 구성을 확인하지 못했습니다. 입력은 유지됩니다';});
 }
 function renderConcertEditor(){
   var host=document.getElementById('concertEditor'),schedule=getRehearsalSchedule();if(!host||!schedule||!rehearsalPlanDraft||!canEditRehearsalCue())return;
@@ -10631,7 +10682,7 @@ function addConcertExtra(event){
   if(index>=0)rehearsalPlanDraft.cues[index]=cue;else rehearsalPlanDraft.cues.push(cue);
   renderConcertEditor();
 }
-function cancelConcertEditor(){rehearsalPlanDraft=null;var host=document.getElementById('concertEditor');if(host)host.hidden=true;}
+function cancelConcertEditor(){rehearsalPlanLoadToken++;rehearsalPlanDraft=null;var host=document.getElementById('concertEditor');if(host)host.hidden=true;}
 function saveConcertPlan(){
   var schedule=getRehearsalSchedule();if(!schedule||!canEditRehearsalCue()||!rehearsalPlanDraft||rehearsalPlanBusy)return Promise.resolve(false);
   var invalid=document.querySelector('.concert-duration-row input:invalid,#concertStartTime:invalid');if(invalid){invalid.reportValidity();return Promise.resolve(false);}
@@ -10644,19 +10695,22 @@ function saveConcertPlan(){
     if(currentActorId()!==owner||!canEditRehearsalCue())throw new Error('수정 권한을 확인해주세요');
     if(JSON.stringify(normalizeConcertPlan(latest.rehearsalPlan))!==base||String(latest.program||latest.songs||'')!==source){
       var savedAt=new Date(latest.updatedAt),savedInfo=[latest.updatedBy,Number.isFinite(savedAt.getTime())?savedAt.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):''].filter(Boolean).join(' · ');
-      throw new Error('편집을 시작한 뒤 서버 구성이 변경되어 저장하지 않았습니다.'+(savedInfo?' 마지막 일정 저장: '+savedInfo+'.':'')+' 입력 내용은 유지됩니다.');
+      var conflict=new Error('편집을 시작한 뒤 서버 구성이 변경되어 저장하지 않았습니다.'+(savedInfo?' 마지막 일정 저장: '+savedInfo+'.':'')+' 입력 내용은 유지됩니다.');
+      conflict.concertConflict=true;throw conflict;
     }
     tx.update(ref,{rehearsalPlan:draft,updatedAt:new Date().toISOString(),updatedBy:currentActorName()});
   });}),15000).then(function(){
     var row=allSchedules.find(function(item){return item.id===id;});if(row)row.rehearsalPlan=draft;
     if(rehearsalScheduleId===id&&currentActorId()===owner){
-      var current=rehearsalItems[rehearsalIndex],notes=new Map();rehearsalItems.forEach(function(item,index){notes.set(item.cueKey,rehearsalNotes[index]);});
-      rehearsalItems=concertCueItems(row||schedule);rehearsalIndex=Math.max(0,rehearsalItems.findIndex(function(item){return current&&item.cueKey===current.cueKey;}));
-      rehearsalNotes={};rehearsalItems.forEach(function(item,index){if(notes.has(item.cueKey))rehearsalNotes[index]=notes.get(item.cueKey);});
+      rebuildRehearsalCueItems(row||schedule);
       rehearsalPlanDraft=null;saveRehearsalState();stopRehearsalMetronome();renderRehearsalCue();
     }
     showToast('큐 구성을 저장했습니다');return true;
-  }).catch(function(error){var status=document.getElementById('concertEditorStatus');if(status)status.textContent=error.message||'저장하지 못했습니다. 입력은 유지됩니다';return false;}).finally(function(){rehearsalPlanBusy=false;var button=document.getElementById('concertSave');if(button)button.disabled=false;});
+  }).catch(function(error){
+    if(error.concertConflict)showConcertConflictActions(error.message);
+    else{var status=document.getElementById('concertEditorStatus');if(status)status.textContent=error.message||'저장하지 못했습니다. 입력은 유지됩니다';}
+    return false;
+  }).finally(function(){rehearsalPlanBusy=false;var button=document.getElementById('concertSave');if(button)button.disabled=false;});
 }
 var concertQrPromise=null;
 function loadConcertQr(){
@@ -23355,7 +23409,7 @@ function barChart(id,data,unit){
   var mx=Math.max.apply(null,data.map(function(d){return d.value}));
   el.innerHTML=data.map(function(d){
     var pct=mx>0?(d.value/mx*100):0;
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:70px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.label+'">'+d.label+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:var(--p);height:100%;border-radius:4px;transition:width .5s;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:45px;font-size:11px;font-weight:700;color:var(--p)">'+d.value+unit+'</span></div>';
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:70px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escHtml(d.label)+'">'+escHtml(d.label)+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:var(--p);height:100%;border-radius:4px;transition:width .5s;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:45px;font-size:11px;font-weight:700;color:var(--p)">'+d.value+unit+'</span></div>';
   }).join('');
 }
 
@@ -25943,7 +25997,7 @@ function renderAttList(){
     displayMembers=members.filter(function(m){return isAttMemberMatchingStatus(m,attStatusFilter)});
     countHtml+='<div style="font-size:11px;color:var(--p);margin-top:4px;line-height:1.6">🔎 '+getAttStatusFilterLabel(attStatusFilter)+' '+displayMembers.length+'명 표시 중</div>';
   }
-  if(uncheckedNames.length>0&&uncheckedNames.length<=30){countHtml+='<div style="font-size:11px;color:#DC2626;margin-top:4px;line-height:1.6">🔔 미체크 '+uncheckedNames.length+'명: '+uncheckedNames.join(', ')+'</div>'}
+  if(uncheckedNames.length>0&&uncheckedNames.length<=30){countHtml+='<div style="font-size:11px;color:#DC2626;margin-top:4px;line-height:1.6">🔔 미체크 '+uncheckedNames.length+'명: '+escHtml(uncheckedNames.join(', '))+'</div>'}
   document.getElementById('attCount').innerHTML=countHtml;
 
 
@@ -25952,7 +26006,7 @@ function renderAttList(){
 
   function renderAttRow(m){
     var st=attData[m.id]||'';
-    var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<div class="att-reason">사유: '+attReasons[m.id]+'</div>':'';
+    var reasonText=(st==='사유결석'&&attReasons&&attReasons[m.id])?'<div class="att-reason">사유: '+escHtml(attReasons[m.id])+'</div>':'';
     var amSt=attAmData&&attAmData.records&&attAmData.records[m.id];
     var pmSt=attPmData&&attPmData.records&&attPmData.records[m.id];
     
@@ -25965,10 +26019,10 @@ function renderAttList(){
       : '<span class="att-state-badge no">오후✖</span>';
     
     var statusBar=amBadge+'<span class="att-state-sep">|</span>'+pmBadge;
-    var partLabel=m.part+(m.subPart?'·'+m.subPart:'');
-    
-    var actions=canCheckAttendance()?'<div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+m.id+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+m.id+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+m.id+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+m.id+'\',\'무단결석\')">무단</button></div>':'';
-    return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+m.name+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div>'+actions+'</div>';
+    var partLabel=escHtml(m.part+(m.subPart?'·'+m.subPart:''));
+    var memberId=escAttr(m.id);
+    var actions=canCheckAttendance()?'<div class="att-actions"><button class="att-btn'+(st==='출석'?' present':'')+'" onclick="setAtt(\''+memberId+'\',\'출석\')">출석</button><button class="att-btn'+(st==='지각'?' late':'')+'" onclick="setAtt(\''+memberId+'\',\'지각\')">지각</button><button class="att-btn'+(st==='사유결석'?' excused':'')+'" onclick="setAtt(\''+memberId+'\',\'사유결석\')">사유</button><button class="att-btn'+(st==='무단결석'?' absent':'')+'" onclick="setAtt(\''+memberId+'\',\'무단결석\')">무단</button></div>':'';
+    return '<div class="att-row"><span class="att-part-tag">'+partLabel+'</span><div class="att-info"><div class="att-mainline"><span class="att-name">'+escHtml(m.name)+'</span><span class="att-statusbar">'+statusBar+'</span></div>'+reasonText+'</div>'+actions+'</div>';
   }
   c.innerHTML='<div style="font-size:12px;color:var(--ts);padding:10px 12px">목록을 표시하는 중...</div>';
   var i=0,chunkSize=35,firstChunk=true;
@@ -26661,7 +26715,7 @@ function renderLateAttendanceStats(records,from,to){
   h+='<div style="font-size:13px;font-weight:800;margin:12px 0 6px">최근 지각 기록</div>';
   h+='<div style="display:flex;flex-direction:column;gap:6px">';
   lateRows.sort(function(a,b){return (b.date+b.session).localeCompare(a.date+a.session)}).slice(0,20).forEach(function(r){
-    h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px"><span style="font-weight:800">'+r.name+' <span style="color:var(--ts);font-weight:600">('+r.part+')</span></span><span style="color:var(--ts)">'+r.date+' '+r.session+'</span></div>';
+    h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px"><span style="font-weight:800">'+escHtml(r.name)+' <span style="color:var(--ts);font-weight:600">('+escHtml(r.part)+')</span></span><span style="color:var(--ts)">'+escHtml(r.date+' '+r.session)+'</span></div>';
   });
   h+='</div>';
   el.innerHTML=h;
@@ -26672,7 +26726,7 @@ function renderMiniBarRows(data,unit){
   var mx=Math.max.apply(null,data.map(function(d){return d.value}));
   return data.map(function(d){
     var pct=mx>0?(d.value/mx*100):0;
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:92px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.label+'">'+d.label+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:#F59E0B;height:100%;border-radius:4px;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:38px;font-size:11px;font-weight:700;color:#D97706">'+d.value+unit+'</span></div>';
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:92px;font-size:11px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escHtml(d.label)+'">'+escHtml(d.label)+'</span><div style="flex:1;background:var(--bd);border-radius:4px;height:18px;overflow:hidden"><div style="width:'+pct+'%;background:#F59E0B;height:100%;border-radius:4px;min-width:'+(d.value>0?'2px':'0')+'"></div></div><span style="width:38px;font-size:11px;font-weight:700;color:#D97706">'+d.value+unit+'</span></div>';
   }).join('');
 }
 
