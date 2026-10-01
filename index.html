@@ -5083,7 +5083,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.01.1';
+var APP_RELEASE_VERSION='26.10.01.2';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -5162,11 +5162,6 @@ var SCORE_ACCESS_SCOPE_OPTIONS=[
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2500)}
 
 function isValidAppBuildSha(value){return /^[0-9a-f]{40}$/i.test(String(value||''))}
-function appReleaseDateText(value){
-  var date=new Date(value||'');
-  if(Number.isNaN(date.getTime()))return '';
-  return String(date.getFullYear()).slice(-2)+'.'+String(date.getMonth()+1).padStart(2,'0')+'.'+String(date.getDate()).padStart(2,'0');
-}
 function renderAppReleaseVersion(version){
   var release=String(version||APP_RELEASE_VERSION).trim()||APP_RELEASE_VERSION;
   document.querySelectorAll('[data-app-release-version]').forEach(function(el){
@@ -5230,8 +5225,7 @@ function checkForAppUpdate(force){
     if(!response.ok)throw new Error('app_update_check_failed');
     return response.json();
   }).then(function(info){
-    var deployedDate=appReleaseDateText(info&&info.deployed_at);
-    if(deployedDate)renderAppReleaseVersion(deployedDate);
+    // The label stays APP_RELEASE_VERSION; deployed_at is UTC and would show the wrong day and drop the build number.
     var latest=String(info&&info.sha||'').trim();
     if(!isValidAppBuildSha(latest))return null;
     if(latest===APP_BUILD_SHA){
