@@ -2953,11 +2953,17 @@ body{font-weight:500}
 .public-seating-plan-switch-meta{margin-top:2px;color:var(--ts);font-size:9.5px;font-weight:750}
 .public-seating-mine-note{font-size:12px;font-weight:760;color:var(--ts);line-height:1.45;margin-bottom:10px}
 .public-seating-neighbors{margin:0 0 10px;padding:10px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
-.public-seating-neighbors header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:12px;font-weight:850}
-.public-seating-neighbors header button{border:1px solid var(--bd);border-radius:6px;background:var(--pl);color:var(--pd);min-height:36px;padding:6px 12px;font:inherit;cursor:pointer}
-.public-seating-neighbor-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px}
-.public-seating-neighbor-grid span{min-width:0;display:flex;flex-wrap:wrap;gap:4px 8px;font-size:12px;line-height:1.5;color:var(--ts)}
-.public-seating-neighbor-grid b{font-size:14px;font-weight:850;color:var(--tx);overflow-wrap:anywhere}
+.public-seating-neighbor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;align-items:end;max-width:480px}
+.public-seating-neighbor{display:flex;flex-direction:column;min-width:0;gap:4px;text-align:center}
+.public-seating-neighbor span{font-size:11px;line-height:1.4;color:var(--ts)}
+.public-seating-neighbor b{display:flex;align-items:center;justify-content:center;min-height:40px;padding:6px 4px;border:1px solid var(--bd);border-radius:6px;background:var(--sf);font-size:15px;line-height:1.3;font-weight:850;color:var(--tx);overflow-wrap:anywhere}
+.public-seating-neighbor.empty b{color:var(--ts);font-weight:650}
+.public-seating-neighbor.front-left{grid-column:1;grid-row:1}
+.public-seating-neighbor.front-right{grid-column:3;grid-row:1}
+.public-seating-neighbor.side-left{grid-column:1;grid-row:2}
+.public-seating-neighbor.side-right{grid-column:3;grid-row:2}
+.public-seating-neighbor-self{grid-column:2;grid-row:2;min-height:40px;padding:6px 4px;border:2px solid #2563EB;border-radius:6px;background:var(--sf);color:var(--tx);font:inherit;font-size:14px;font-weight:850;cursor:pointer}
+.public-seating-neighbor-grid.frontless .side-left,.public-seating-neighbor-grid.frontless .side-right,.public-seating-neighbor-grid.frontless .public-seating-neighbor-self{grid-row:1}
 .public-seating-board-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
 .public-seating-board-tab{border:0;border-radius:7px;background:transparent;color:var(--ts);padding:9px 10px;font-size:12px;font-weight:900;cursor:pointer}
 .public-seating-board-tab.on{background:var(--p);color:#fff}
@@ -5091,7 +5097,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.02.1';
+var APP_RELEASE_VERSION='26.10.02.2';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -8888,10 +8894,11 @@ function publicSeatingNeighbors(plan,mine){
   });
   function name(seat,fallback){return seat?String(seat.name||'이름 없음'):fallback;}
   return {
-    frontLeft:name(left&&left.seat,front?(left?'빈자리':'자리 없음'):'앞줄 없음'),
-    frontRight:name(right&&right.seat,front?(right?'빈자리':'자리 없음'):'앞줄 없음'),
-    left:name(row.seats[mine.col+1],mine.col+1<row.seats.length?'빈자리':'자리 없음'),
-    right:name(row.seats[mine.col-1],mine.col>0?'빈자리':'자리 없음')
+    hasFront:!!front,
+    frontLeft:name(left&&left.seat,'없음'),
+    frontRight:name(right&&right.seat,'없음'),
+    left:name(row.seats[mine.col+1],'없음'),
+    right:name(row.seats[mine.col-1],'없음')
   };
 }
 function publicSeatingNeighborsMarkup(plan){
@@ -8899,9 +8906,11 @@ function publicSeatingNeighborsMarkup(plan){
   var mine=findPublicSeatingMine(plan).filter(function(item){return item.board===publicSeatingBoardTab;});
   if(mine.length!==1)return '';
   var neighbors=publicSeatingNeighbors(plan,mine[0]);
-  var html='<section class="public-seating-neighbors" aria-label="내 자리 주변"><header><span>'+escHtml(mine[0].seat.name)+' · 내 자리</span><button type="button" onclick="focusPublicSeatingMine()">내 자리로</button></header>';
-  if(neighbors)html+='<div class="public-seating-neighbor-grid">'+[['내 왼쪽 앞',neighbors.frontLeft],['내 오른쪽 앞',neighbors.frontRight],['내 왼쪽',neighbors.left],['내 오른쪽',neighbors.right]].map(function(pair){return '<span>'+pair[0]+'<b>'+escHtml(pair[1])+'</b></span>';}).join('')+'</div>';
-  return html+'</section>';
+  if(!neighbors)return '';
+  function tile(label,name,position){return '<div class="public-seating-neighbor '+position+(name==='없음'?' empty':'')+'"><span>'+label+'</span><b>'+escHtml(name)+'</b></div>';}
+  var html='<section class="public-seating-neighbors" aria-label="내 자리 주변"><div class="public-seating-neighbor-grid'+(!neighbors.hasFront?' frontless':'')+'">';
+  if(neighbors.hasFront)html+=tile('왼쪽 앞',neighbors.frontLeft,'front-left')+tile('오른쪽 앞',neighbors.frontRight,'front-right');
+  return html+tile('왼쪽',neighbors.left,'side-left')+'<button type="button" class="public-seating-neighbor-self" aria-label="내 자리로" title="내 자리로 이동" onclick="focusPublicSeatingMine()">내 자리</button>'+tile('오른쪽',neighbors.right,'side-right')+'</div></section>';
 }
 window.addEventListener('resize',function(){
   if(publicSeatingAutoFit)schedulePublicSeatingAutoFit();
@@ -9047,7 +9056,7 @@ function openPublicSeatingModal(publicId){
     if(!plan)return showToast('아직 공개된 자리배치가 없습니다');
     var target=publicId||publishedSeatingPlans[0].publicId;
     publicMovementOpen=false;publicMovementKey='';publicMovementSide='from';
-    publicSeatingView=canViewSeatingPlan()?'audience':'member';
+    publicSeatingView=canUseSeatingPlan()?'audience':'member';
     selectPublicSeatingPlan(target);
     var movementLink=normalizeSeatingProgramLink(publishedSeatingPlan&&publishedSeatingPlan.programLink);
     if(movementLink)publicMovementSchedules.delete(movementLink.scheduleId);

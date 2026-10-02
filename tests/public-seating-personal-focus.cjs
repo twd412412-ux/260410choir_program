@@ -45,6 +45,13 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
           assert.equal(result.zoom, 1); assert.equal(result.bodyOverflow, false);
           assert.equal(result.neighbors.left, '단원2-19'); assert.equal(result.neighbors.right, '단원2-17');
           assert.equal(result.neighbors.frontLeft, '단원3-19'); assert.equal(result.neighbors.frontRight, '단원3-18');
+          assert.equal(await page.locator('.public-seating-neighbors header').count(), 0);
+          const positions=await page.evaluate(() => {
+            const rect=c=>document.querySelector(c).getBoundingClientRect();
+            const left=rect('.side-left'),self=rect('.public-seating-neighbor-self'),right=rect('.side-right'),front=rect('.front-left');
+            return [left.right<=self.left,self.right<=right.left,front.bottom<=left.top];
+          });
+          assert.deepEqual(positions,[true,true,true],'neighbor map must follow actual seat directions');
           await page.locator('.public-seating-board-scroll').scrollIntoViewIfNeeded();
           fs.mkdirSync(path.join(root, 'tmp/personal-focus'), { recursive: true });
           await page.screenshot({ path: path.join(root, 'tmp/personal-focus', engine.name() + '-' + viewport.width + '.png'), fullPage: false });
@@ -56,11 +63,18 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
             const rows = publishedSeatingPlan.rows;
             rows[2].seats[19] = null;
             const neighbors = publicSeatingNeighbors(publishedSeatingPlan, findPublicSeatingMine(publishedSeatingPlan)[0]);
-            if (neighbors.left !== '빈자리') throw Error('empty neighbor skipped');
+            if (neighbors.left !== '없음') throw Error('empty neighbor skipped');
             currentUser.memberId = 'm4-0'; publicSeatingAutoFit = true; renderPublicSeatingModalBody();
           });
           await page.waitForTimeout(100);
-          assert.equal(await page.evaluate(() => publicSeatingNeighbors(publishedSeatingPlan, findPublicSeatingMine(publishedSeatingPlan)[0]).frontLeft), '앞줄 없음');
+          assert.equal(await page.locator('.public-seating-neighbor.front-left').count(),0,'front row hides forward neighbors');
+          assert.equal(await page.locator('.side-right b').textContent(),'없음');
+          await page.evaluate(async () => {
+            canViewPublishedSeating=()=>true;canViewSeatingPlan=()=>true;canUseSeatingPlan=()=>false;
+            getPublishedSeatingPlan=()=>Promise.resolve(publishedSeatingPlan);
+            publicSeatingView='audience';openPublicSeatingModal('fixture');
+          });
+          await page.waitForFunction(()=>publicSeatingView==='member');
           await page.evaluate(() => { currentUser = null; renderPublicSeatingModalBody(); });
           await page.waitForFunction(() => publicSeatingZoom < 0.5);
           assert.equal(await page.locator('.public-seating-neighbors').count(), 0);
