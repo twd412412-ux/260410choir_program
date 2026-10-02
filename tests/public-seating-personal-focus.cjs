@@ -48,10 +48,13 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
           assert.equal(await page.locator('.public-seating-neighbors header').count(), 0);
           const positions=await page.evaluate(() => {
             const rect=c=>document.querySelector(c).getBoundingClientRect();
-            const left=rect('.side-left'),self=rect('.public-seating-neighbor-self'),right=rect('.side-right'),front=rect('.front-left');
-            return [left.right<=self.left,self.right<=right.left,front.bottom<=left.top];
+            const left=rect('.side-left'),self=rect('.public-seating-neighbor-self'),right=rect('.side-right'),front=rect('.front-left'),frontRight=rect('.front-right');
+            const center=r=>r.left+r.width/2;
+            return [left.right<=self.left,self.right<=right.left,front.bottom<=left.top,
+              Math.abs(center(front)-(center(left)+center(self))/2)<1,
+              Math.abs(center(frontRight)-(center(self)+center(right))/2)<1];
           });
-          assert.deepEqual(positions,[true,true,true],'neighbor map must follow actual seat directions');
+          assert.deepEqual(positions,[true,true,true,true,true],'forward neighbors must be staggered half a seat between the side and own seats');
           await page.locator('.public-seating-board-scroll').scrollIntoViewIfNeeded();
           fs.mkdirSync(path.join(root, 'tmp/personal-focus'), { recursive: true });
           await page.screenshot({ path: path.join(root, 'tmp/personal-focus', engine.name() + '-' + viewport.width + '.png'), fullPage: false });
