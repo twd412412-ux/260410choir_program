@@ -4162,7 +4162,7 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
       <button class="btn btn-p" onclick="generateReport()">보고서 생성</button>
     </div>
     <div id="reportCanvas" style="background:var(--sf); border:1.5px solid var(--bd); border-radius:8px; padding:16px; min-height:200px; display:none;"></div>
-    <button id="btnPrintReport" class="btn btn-sm btn-bl" style="margin-top:12px; background:var(--dg); color:#fff; display:none;" onclick="printReport()">🖨️ 이 보고서 인쇄 / PDF 저장</button>
+    <button id="btnPrintReport" class="btn btn-sm btn-bl" style="margin-top:12px; background:var(--dg); color:#fff; display:none;" onclick="saveReportPdf()">PDF 저장</button>
   </div> <div class="admin-sub hidden" id="subAttendance">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📋 단원 전자출결부</h3>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -5091,7 +5091,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.01.2';
+var APP_RELEASE_VERSION='26.10.02.1';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -27567,6 +27567,7 @@ function downloadViewerPhoto(){
 
 
 // ==================== [신규] 월간 결산 보고서 ====================
+var reportPdfBusy=false,reportGenerationToken=0;
 function generateReport() {
   if(!canUseReport())return showToast('결산 보고서는 관리자만 생성할 수 있습니다.');
   var monthVal = document.getElementById('reportMonthSel').value;
@@ -27578,6 +27579,8 @@ function generateReport() {
   
   var canvas = document.getElementById('reportCanvas');
   var printBtn = document.getElementById('btnPrintReport');
+  var generationToken=++reportGenerationToken;
+  delete canvas.dataset.reportMonth;
   
   canvas.style.display = 'block';
   printBtn.style.display = 'none';
@@ -27589,6 +27592,7 @@ function generateReport() {
     db.collection('attendance').where('date', '>=', prefix + '-01').where('date', '<=', prefix + '-31').get(),
     loadSharedMembers(false)
   ]).then(function(res) {
+    if(generationToken!==reportGenerationToken||!canUseReport())return;
     
     // --- 데이터 가공 준비 ---
     var songs = [];
@@ -27971,10 +27975,12 @@ function generateReport() {
     h += `</div>`; // 보고서 전체 div 끝
 
     canvas.innerHTML = h;
+    canvas.dataset.reportMonth=monthVal;
     printBtn.style.display = 'block'; // 인쇄 버튼 보이기
     writeLog('결산 보고서 생성',year+'년 '+month+'월 보고서 생성\n곡 '+songs.length+'건 / 출석 회차 '+rawAttDocs.length+'건 / 단원 '+reportMembers.length+'명 기준');
     
   }).catch(function(err) {
+    if(generationToken!==reportGenerationToken)return;
     console.error(err);
     canvas.innerHTML = '<div style="color:#DC2626; text-align:center; padding:20px;">데이터를 불러오는 중 오류가 발생했습니다.</div>';
   });
@@ -27986,63 +27992,52 @@ function buildReportPrintDocument(reportHtml,title){
     +'@page{margin:12mm}@media print{html,body{background:#fff!important}.report-print-sheet{width:100%;margin:0;padding:0;border:0;box-shadow:none}}'
     +'</style></head><body><main class="report-print-sheet">'+reportHtml+'</main></body></html>';
 }
-function printReportDocument(reportHtml,title){
-  var old=document.getElementById('reportPrintFrame');
-  if(old&&old.parentNode)old.parentNode.removeChild(old);
-  var frame=document.createElement('iframe');
-  frame.id='reportPrintFrame';
-  frame.setAttribute('title','결산 보고서 인쇄');
-  frame.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none;';
-  document.body.appendChild(frame);
-  try{
-    var win=frame.contentWindow;
-    var doc=win&&win.document;
-    if(!win||!doc)throw new Error('print_frame_unavailable');
-    doc.open();
-    doc.write(buildReportPrintDocument(reportHtml,title));
-    doc.close();
-    void doc.body.offsetHeight;
-    win.focus();
-    win.print();
-    showToast('보고서 인쇄 창을 요청했습니다');
-    setTimeout(function(){
-      if(frame&&frame.parentNode)frame.parentNode.removeChild(frame);
-    },2500);
-    return true;
-  }catch(e){
-    console.error(e);
-    if(frame&&frame.parentNode)frame.parentNode.removeChild(frame);
-    return false;
-  }
+function saveReportPdf(){
+  if(!canUseReport()){showToast('결산 보고서는 관리자만 저장할 수 있습니다.');return Promise.resolve(false);}
+  var canvas=document.getElementById('reportCanvas'),month=canvas&&canvas.dataset.reportMonth;
+  if(!canvas||!/^\d{4}-\d{2}$/.test(month||'')){showToast('먼저 보고서를 생성해주세요');return Promise.resolve(false);}
+  if(reportPdfBusy)return Promise.resolve(false);
+  var html=canvas.innerHTML,button=document.getElementById('btnPrintReport'),frame;
+  var filename='광주교회_찬양대_결산보고서_'+month+'.pdf';
+  reportPdfBusy=true;
+  if(button){button.disabled=true;button.textContent='PDF 만드는 중…';}
+  return withLoadDeadline(loadScriptOnce('reportPdfLibrary','assets/vendor/html2pdf-0.14.0.bundle.min.js'),15000).then(function(){
+    if(!canUseReport())throw new Error('report_permission_changed');
+    if(typeof window.html2pdf!=='function')throw new Error('pdf_library_unavailable');
+    // Isolate the export from dark mode and narrow mobile layouts.
+    frame=document.createElement('iframe');frame.title='결산 보고서 PDF';
+    frame.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;pointer-events:none';
+    document.body.appendChild(frame);
+    var doc=frame.contentDocument;
+    doc.open();doc.write(buildReportPrintDocument(html,month+' 광주교회 찬양대 결산 보고서'));doc.close();
+    return withLoadDeadline(new Promise(function(resolve,reject){
+      var script=doc.createElement('script');script.src='assets/vendor/html2pdf-0.14.0.bundle.min.js';
+      script.onload=resolve;script.onerror=function(){reject(new Error('pdf_frame_library_failed'));};doc.head.appendChild(script);
+    }).then(function(){return doc.fonts&&doc.fonts.ready;}).then(function(){
+      return frame.contentWindow.html2pdf().set({filename:filename,margin:12,image:{type:'jpeg',quality:0.95},
+        html2canvas:{scale:1.5,backgroundColor:'#ffffff',windowWidth:794,scrollX:0,scrollY:0},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','h2','h3','p','li']}
+      }).from(doc.querySelector('.report-print-sheet')).outputPdf('blob');
+    }),60000);
+  }).then(function(blob){
+    if(!canUseReport())throw new Error('report_permission_changed');
+    if(!blob||blob.size<100)throw new Error('pdf_empty');
+    var url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+    writeLog('결산 보고서 PDF 저장',month+' 보고서 PDF 내려받기 요청');
+    showToast('PDF 저장을 요청했습니다');return true;
+  }).catch(function(error){
+    console.error('report_pdf_failed',error);
+    var script=document.getElementById('reportPdfLibrary');
+    if(script&&script.dataset.loaded!=='true')script.remove();
+    showToast('PDF를 만들지 못했습니다. 보고서는 유지됩니다. 다시 시도해주세요');return false;
+  }).finally(function(){
+    if(frame)frame.remove();reportPdfBusy=false;
+    if(button){button.disabled=false;button.textContent='PDF 저장';}
+  });
 }
-function printReport() {
-  if(!canUseReport())return showToast('결산 보고서는 관리자만 출력할 수 있습니다.');
-  var canvas = document.getElementById('reportCanvas');
-  if(!canvas||!canvas.innerHTML.trim())return showToast('먼저 보고서를 생성해주세요');
-  var monthVal=document.getElementById('reportMonthSel')?document.getElementById('reportMonthSel').value:'';
-  writeLog('결산 보고서 인쇄',monthVal?monthVal+' 보고서 인쇄/PDF 저장 실행':'보고서 인쇄/PDF 저장 실행');
-  if(printReportDocument(canvas.innerHTML,monthVal?monthVal+' 광주교회 찬양대 결산 보고서':'광주교회 찬양대 결산 보고서'))return;
-
-  document.body.classList.add('print-report-mode');
-  function cleanup(){
-    document.body.classList.remove('print-report-mode');
-    window.removeEventListener('afterprint',cleanup);
-  }
-  window.addEventListener('afterprint',cleanup);
-  try{
-    if(typeof window.print!=='function'){
-      cleanup();
-      return showToast('이 브라우저에서는 인쇄 기능을 열 수 없습니다');
-    }
-    void document.body.offsetHeight;
-    window.print();
-    setTimeout(cleanup,1500);
-  }catch(e){
-    cleanup();
-    console.error(e);
-    showToast('인쇄 창을 여는 중 오류가 발생했습니다');
-  }
-}
+function printReport(){return saveReportPdf();}
 </script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
   <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
