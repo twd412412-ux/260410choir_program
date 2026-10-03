@@ -78,8 +78,12 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
           assert.deepEqual(await page.evaluate(()=>testSaves[1].changes),[{id:'m4-10',status:'출석',baselineStatus:''}]);
           await page.locator('.ra-summary summary').click();
           // 9/20 was never checked: it is reported as unchecked, not as an absence in the rate.
-          const rateRow=await page.locator('.ra-summary tbody tr',{hasText:'단원4-10'}).locator('td').allTextContents();
-          assert.deepEqual(rateRow.slice(2),['1일','1일','100%'],'rate uses checked days only and future dates are excluded');
+          const rateRow=await page.locator('.ra-member-table tbody tr',{hasText:'단원4-10'}).locator('td').allTextContents();
+          assert.deepEqual(rateRow.slice(1),['·','✓','1/1','1','100%'],'per-date marks, rate over checked days only, future dates excluded');
+          assert.equal(await page.locator('.ra-member-table thead th').count(),6,'name, two elapsed dates, present, unchecked, rate');
+          const overview=await page.locator('.ra-part-overview tbody tr',{hasText:'S1'}).locator('td').allTextContents();
+          assert.equal(overview[0],'미체크','a session nobody checked is flagged per part');
+          assert.match(overview[1],/^1\/30 미체크 29$/);
           // A failed save can reload the latest server records while keeping the unsaved checks.
           await page.locator('[data-member-id="m2-0"]').click();
           await page.evaluate(()=>testFail=true);
@@ -128,6 +132,32 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
             assert(parts.slice(0,30).every(t=>t.startsWith('S1'))&&parts.slice(30).every(t=>t.startsWith('T1')),'part groups before name ordering');
             assert.equal(await page.locator('#raPart option[value="관현악"]').count(),0);
             assert.equal(await page.locator('.ra-summary summary').textContent(),'리허설 출석 현황');
+            // Attendance board: low-rate first by default, header toggles, part tabs, under-50% filter, details, remembered choices.
+            await page.evaluate(()=>{const ids=testData.members.map(m=>m.id);testData.sessions={'2026-09-20':{records:{'m0-0':'결석','m0-2':'출석','m0-4':'출석','m0-1':'결석','m0-3':'출석'},memberIds:ids,updatedAt:'2026-09-20T10:00:00Z',updatedBy:'S1 파트장'}};RehearsalAttendance.reload();});
+            await page.waitForSelector('.ra-summary');await page.locator('.ra-summary summary').click();
+            const names=()=>page.locator('.ra-member-table .ra-name').allTextContents();
+            const s1=(await names()).filter(n=>/^단원\d+-(0|2|4|6|8|10)$/.test(n));
+            assert.deepEqual(s1.slice(0,3),['단원0-0','단원0-2','단원0-4'],'lowest rate first, then unrated members by name');
+            assert.equal(await page.locator('.ra-sort[data-key="rate"]').textContent(),'출석률 ▲');
+            await page.locator('.ra-sort[data-key="rate"]').click();
+            assert.equal(await page.locator('.ra-sort[data-key="rate"]').textContent(),'출석률 ▼');
+            assert.deepEqual((await names()).slice(0,3),['단원0-2','단원0-4','단원0-0'],'highest first inside the S1 group; unrated stay last');
+            assert.equal(await page.locator('.ra-part-row').count(),2,'all tab keeps part groups');
+            await page.locator('.ra-low-filter input').check();
+            assert.deepEqual(await names(),['단원0-0','단원0-1'],'under 50% only');
+            await page.locator('.ra-summary-tabs button',{hasText:'T1'}).click();
+            assert.deepEqual(await names(),['단원0-1']);
+            assert.equal(await page.locator('.ra-part-row').count(),0);
+            await page.locator('.ra-name',{hasText:'단원0-1'}).click();
+            assert.match(await page.locator('.ra-detail-row').textContent(),/09\/20 \(일\) 결석.*S1 파트장 저장/);
+            await page.evaluate(()=>RehearsalAttendance.reload());
+            await page.waitForSelector('.ra-summary');await page.locator('.ra-summary summary').click();
+            assert.equal(await page.locator('.ra-summary-tabs button[aria-selected="true"]').textContent(),'T1','tab is remembered');
+            assert(await page.locator('.ra-low-filter input').isChecked(),'filter is remembered');
+            assert.equal(await page.locator('.ra-sort[data-key="rate"]').textContent(),'출석률 ▼','sort is remembered');
+            assert.equal(await page.evaluate(()=>document.querySelector('.ra-member-table').scrollWidth<=document.querySelector('#modalRehearsalAttendance .modal-content').clientWidth+400),true);
+            await page.screenshot({path:path.join(root,'tmp/rehearsal-attendance',engine.name()+'-390-summary.png'),fullPage:false});
+            await page.evaluate(()=>{localStorage.removeItem('choir_ra_summary_v1');testData.sessions={};});
             await page.getByRole('button',{name:'자리표',exact:true}).click();
             await page.evaluate(()=>{testData.plan=null;testData.config.planId='';RehearsalAttendance.reload();});
             await page.waitForFunction(()=>document.getElementById('raPlan')&&document.getElementById('raPlan').value==='');

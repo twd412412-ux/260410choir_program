@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=3">
+<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=5">
 <title>광주교회 찬양대</title>
 <style>
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
@@ -5110,7 +5110,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.03.7';
+var APP_RELEASE_VERSION='26.10.03.8';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -28158,7 +28158,7 @@ function saveReportPdf(){
 }
 function printReport(){return saveReportPdf();}
 </script>
-<script src="assets/rehearsal-attendance.js?v=4"></script>
+<script src="assets/rehearsal-attendance.js?v=5"></script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
   <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
     <button onclick="event.stopPropagation();zoomPhoto(-1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">−</button>

@@ -38,6 +38,7 @@
       state.members=state.members.filter(function(member){return member.part!=='관현악';});
       if(state.part==='관현악')state.part='all';
       state.memberMap={};state.members.forEach(function(m){state.memberMap[m.id]=m;});
+      applySummaryPrefs();
       if(kept){
         state.part=kept.part;state.view=kept.view;state.query=kept.query;state.zoom=kept.zoom;
         var dropped=0;
@@ -74,15 +75,97 @@
     });
     return html+'</div></div></div>';
   }
+  var SUMMARY_PREF_KEY='choir_ra_summary_v1',LOW_RATE=50;
+  function summaryPrefs(){try{var value=JSON.parse(localStorage.getItem(SUMMARY_PREF_KEY)||'{}');return value&&typeof value==='object'?value:{};}catch(e){return {};}}
+  function saveSummaryPrefs(){try{localStorage.setItem(SUMMARY_PREF_KEY,JSON.stringify({part:state.summaryPart,key:state.summaryKey,dir:state.summaryDir,low:state.summaryLow}));}catch(e){}}
+  function applySummaryPrefs(){
+    var prefs=summaryPrefs();
+    state.summaryPart=typeof prefs.part==='string'?prefs.part:'all';
+    state.summaryKey=['rate','name','present'].indexOf(prefs.key)!==-1?prefs.key:'rate';
+    state.summaryDir=prefs.dir==='desc'?'desc':'asc';
+    state.summaryLow=prefs.low===true;
+    state.summaryDetail='';
+  }
+  // A member is a target on a date when eligible and, once the session exists, listed in its memberIds.
+  function targetOn(m,date){var session=state.sessions[date];return eligible(m,date)&&(!session||!Array.isArray(session.memberIds)||session.memberIds.indexOf(m.id)!==-1);}
+  function recordOn(m,date){return ((state.sessions[date]||{}).records||{})[m.id]||'';}
+  function summaryParts(){
+    var parts=[];
+    state.members.forEach(function(m){if(inScope(m)&&parts.indexOf(m.part)===-1)parts.push(m.part);});
+    return parts.sort(function(a,b){return partNameOrder({part:a,name:''},{part:b,name:''});});
+  }
+  // Unchecked days are shown separately and must not count as absences in the rate.
+  function memberStats(m,dates){
+    var total=0,present=0,checked=0;
+    dates.forEach(function(date){if(!targetOn(m,date))return;total++;var value=recordOn(m,date);if(value)checked++;if(value==='출석')present++;});
+    return {member:m,total:total,present:present,checked:checked,unchecked:total-checked,rate:checked?Math.round(present/checked*100):null};
+  }
+  function compareStats(a,b){
+    var dir=state.summaryDir==='desc'?-1:1,diff=0;
+    if(state.summaryKey==='rate'){
+      // Members with no checked day have no rate yet and stay at the end in both directions.
+      if((a.rate===null)!==(b.rate===null))return a.rate===null?1:-1;
+      diff=(a.rate||0)-(b.rate||0);
+    }else if(state.summaryKey==='present')diff=a.present-b.present;
+    else diff=a.member.name.localeCompare(b.member.name,'ko');
+    return diff*dir||a.member.name.localeCompare(b.member.name,'ko');
+  }
+  function partOverviewHtml(dates,parts){
+    var rows=parts.map(function(part){
+      var group=state.members.filter(function(m){return inScope(m)&&m.part===part;}),allPresent=0,allChecked=0;
+      var cells=dates.map(function(date){
+        var target=group.filter(function(m){return targetOn(m,date);}),present=0,checked=0;
+        target.forEach(function(m){var value=recordOn(m,date);if(value)checked++;if(value==='출석')present++;});
+        allPresent+=present;allChecked+=checked;
+        if(!target.length)return '<td>-</td>';
+        if(!checked)return '<td class="ra-unchecked-cell">미체크</td>';
+        return '<td>'+present+'/'+target.length+(checked<target.length?' <small class="ra-unchecked-note">미체크 '+(target.length-checked)+'</small>':'')+'</td>';
+      });
+      return '<tr><th scope="row">'+escHtml(part)+'</th>'+cells.join('')+'<td><b>'+(allChecked?Math.round(allPresent/allChecked*100)+'%':'-')+'</b></td></tr>';
+    });
+    return '<div class="ra-table-scroll ra-part-overview"><table><thead><tr><th>파트</th>'+dates.map(function(date){return '<th>'+dateLabel(date)+'</th>';}).join('')+'<th>출석률</th></tr></thead><tbody>'+(rows.join('')||'<tr><td>담당 단원이 없습니다</td></tr>')+'</tbody></table></div>';
+  }
+  function memberTableHtml(dates,parts){
+    var shownParts=state.summaryPart==='all'?parts:[state.summaryPart],columns=dates.length+4,body='';
+    var head=function(key,label){
+      var on=state.summaryKey===key,arrow=on?(state.summaryDir==='asc'?' ▲':' ▼'):'';
+      return '<th aria-sort="'+(on?(state.summaryDir==='asc'?'ascending':'descending'):'none')+'"><button type="button" class="ra-sort" data-key="'+key+'" onclick="RehearsalAttendance.sortBy(this.dataset.key)">'+label+arrow+'</button></th>';
+    };
+    shownParts.forEach(function(part){
+      var stats=state.members.filter(function(m){return inScope(m)&&m.part===part;}).map(function(m){return memberStats(m,dates);});
+      if(state.summaryLow)stats=stats.filter(function(s){return s.rate!==null&&s.rate<LOW_RATE;});
+      if(!stats.length)return;
+      stats.sort(compareStats);
+      if(shownParts.length>1)body+='<tr class="ra-part-row"><th colspan="'+columns+'">'+escHtml(part)+' · '+stats.length+'명</th></tr>';
+      stats.forEach(function(s){
+        var m=s.member,open=state.summaryDetail===m.id;
+        body+='<tr class="ra-member-row'+(s.rate!==null&&s.rate<LOW_RATE?' ra-low':'')+'"><td><button type="button" class="ra-name" aria-expanded="'+open+'" data-detail-id="'+escAttr(m.id)+'" onclick="RehearsalAttendance.detail(this.dataset.detailId)">'+escHtml(m.name)+'</button></td>'
+          +dates.map(function(date){
+            if(!targetOn(m,date))return '<td class="ra-mark ra-mark-none" title="'+dateLabel(date)+' 대상 아님">–</td>';
+            var value=recordOn(m,date);
+            return '<td class="ra-mark '+(value==='출석'?'ra-mark-present':value==='결석'?'ra-mark-absent':'ra-mark-unchecked')+'" title="'+dateLabel(date)+' '+(value||'미체크')+'">'+(value==='출석'?'✓':value==='결석'?'✗':'·')+'</td>';
+          }).join('')
+          +'<td title="체크 '+s.checked+'일 중 출석">'+s.present+'/'+s.checked+'</td><td>'+s.unchecked+'</td><td><b>'+(s.rate===null?'-':s.rate+'%')+'</b></td></tr>';
+        if(open)body+='<tr class="ra-detail-row"><td colspan="'+columns+'">'+(dates.map(function(date){
+          var session=state.sessions[date]||{},value=targetOn(m,date)?(recordOn(m,date)||'미체크'):'대상 아님';
+          return '<span>'+dateLabel(date)+' <b>'+value+'</b>'+(session.updatedAt?' <small>('+escHtml(seatingPublishedTime(session.updatedAt))+' '+escHtml(session.updatedBy||'')+' 저장)</small>':'')+'</span>';
+        }).join('')||'지난 리허설이 없습니다')+'</td></tr>';
+      });
+    });
+    return '<div class="ra-table-scroll ra-member-table"><table><thead><tr>'+head('name','단원')+dates.map(function(date){return '<th>'+dateLabel(date)+'</th>';}).join('')+head('present','참석')+'<th>미체크</th>'+head('rate','출석률')+'</tr></thead><tbody>'
+      +(body||'<tr><td colspan="'+columns+'">'+(state.summaryLow?'출석률 '+LOW_RATE+'% 미만 단원이 없습니다':'해당 단원이 없습니다')+'</td></tr>')+'</tbody></table></div>';
+  }
   function summaryHtml(){
-    var dates=state.config.dates.filter(function(date){return date<=state.today;});
-    var list=state.members.filter(function(m){return visible(m)&&inScope(m);}).map(function(m){
-      var expected=dates.filter(function(date){var session=state.sessions[date];return eligible(m,date)&&(!session||!Array.isArray(session.memberIds)||session.memberIds.indexOf(m.id)!==-1);});
-      var present=0,checked=0;expected.forEach(function(date){var value=((state.sessions[date]||{}).records||{})[m.id];if(value)checked++;if(value==='출석')present++;});
-      // Unchecked days are shown separately and must not count as absences in the rate.
-      return {member:m,total:expected.length,checked:checked,present:present,unchecked:expected.length-checked,rate:checked?Math.round(present/checked*100):null};
-    }).sort(function(a,b){return partNameOrder(a.member,b.member);});
-    return '<details class="ra-summary"><summary>리허설 출석 현황</summary><p class="ra-status">집계 날짜 · '+(dates.map(dateLabel).join(' · ')||'아직 없음')+' · 출석률은 체크한 날 기준</p><div class="ra-table-scroll"><table><thead><tr><th>파트</th><th>단원</th><th>참석</th><th>미체크</th><th>출석률</th></tr></thead><tbody>'+list.map(function(row){return '<tr><td>'+escHtml(row.member.part)+'</td><td>'+escHtml(row.member.name)+'</td><td title="체크 '+row.checked+'일 중">'+row.present+'일</td><td>'+row.unchecked+'일</td><td>'+(row.rate===null?'-':row.rate+'%')+'</td></tr>';}).join('')+'</tbody></table></div></details>';
+    var dates=state.config.dates.filter(function(date){return date<=state.today;}),parts=summaryParts();
+    if(state.summaryPart!=='all'&&parts.indexOf(state.summaryPart)===-1)state.summaryPart='all';
+    var tabs='<div class="ra-summary-tabs" role="tablist" aria-label="파트 선택">'+['all'].concat(parts).map(function(part){
+      return '<button type="button" role="tab" aria-selected="'+(state.summaryPart===part)+'" data-part="'+escAttr(part)+'" onclick="RehearsalAttendance.summaryPart(this.dataset.part)">'+(part==='all'?'전체':escHtml(part))+'</button>';
+    }).join('')+'</div>';
+    var low='<label class="ra-low-filter"><input type="checkbox" '+(state.summaryLow?'checked ':'')+'onchange="RehearsalAttendance.lowOnly(this.checked)"> 출석률 '+LOW_RATE+'% 미만만</label>';
+    return '<details class="ra-summary"><summary>리허설 출석 현황</summary><p class="ra-status">집계 날짜 · '+(dates.map(dateLabel).join(' · ')||'아직 없음')+' · 출석률은 체크한 날 기준</p>'
+      +'<h4 class="ra-summary-title">파트별 회차</h4>'+partOverviewHtml(dates,parts)
+      +'<h4 class="ra-summary-title">단원별 참석표</h4><div class="ra-summary-controls">'+tabs+low+'</div>'+memberTableHtml(dates,parts)
+      +'<p class="ra-status">✓ 출석 · ✗ 결석 · · 미체크 · – 대상 아님 · 이름을 누르면 회차별 기록</p></details>';
   }
   function configHtml(){
     if(!state.canManage)return '';
@@ -148,6 +231,16 @@
       return withLoadDeadline(attendanceAdminCall('rehearsalSave',{date:state.date,planId:state.config.planId,changes:changes}),20000).then(function(result){if(state!==target)return;state.sessions[state.date]=result.session;state.changes={};state.saveFailed=false;writeLog('리허설 출석 저장',state.date+' 변경 '+changes.length+'명');}).catch(function(e){if(state===target){state.error=errorText(e)+' 입력한 체크는 유지됩니다.';state.saveFailed=true;}}).finally(function(){if(state===target){state.busy=false;render();}});
     },
     refreshKeep:function(){if(!state||state.busy)return;return load(true);},
+    summaryPart:function(part){if(!state)return;state.summaryPart=part||'all';state.summaryDetail='';saveSummaryPrefs();render();},
+    // Same column toggles direction; a new column starts low-first (participation starts high-first).
+    sortBy:function(key){
+      if(!state||['rate','name','present'].indexOf(key)===-1)return;
+      if(state.summaryKey===key)state.summaryDir=state.summaryDir==='asc'?'desc':'asc';
+      else{state.summaryKey=key;state.summaryDir=key==='present'?'desc':'asc';}
+      saveSummaryPrefs();render();
+    },
+    lowOnly:function(on){if(!state)return;state.summaryLow=!!on;state.summaryDetail='';saveSummaryPrefs();render();},
+    detail:function(id){if(!state)return;state.summaryDetail=state.summaryDetail===id?'':id;render();},
     addDate:function(){var date=document.getElementById('raAddDate').value;if(!date)return;if(state.configDates.indexOf(date)===-1)state.configDates.push(date);state.configDates.sort();var plan=document.getElementById('raPlan').value;render();document.getElementById('raPlan').value=plan;box().querySelector('.ra-config').open=true;},
     removeDate:function(date){var plan=document.getElementById('raPlan').value;state.configDates=state.configDates.filter(function(d){return d!==date;});render();document.getElementById('raPlan').value=plan;box().querySelector('.ra-config').open=true;},
     configure:function(){
