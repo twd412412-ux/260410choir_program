@@ -29,6 +29,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
             resumeScoreRealtimeSync = () => {};
             canViewPublishedSeating = () => true;
             canViewSeatingPlan = () => false;
+            // Rehearsal attendance is entered from the home event program only, never from the seating viewer.
+            canViewAttendance = () => true; canCheckAttendance = () => true;
             currentTab = 'home';
             currentUser = { id: 'viewer', name: 'viewer' };
             requestHomeRender = () => {
@@ -54,6 +56,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
           });
           await page.locator('#modalPublicSeating.active').waitFor();
           assert.ok((await page.locator('#publicSeatingBody').innerText()).includes('BEFORE'));
+          assert.equal(await page.locator('#publicSeatingBody').getByRole('button', { name: /리허설 출/ }).count(), 0, 'no rehearsal attendance button inside the seating viewer');
           await page.evaluate(() => {
             publicSeatingAutoFit = false;
             publicSeatingZoom = 1.5;

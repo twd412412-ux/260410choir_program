@@ -9245,7 +9245,6 @@ function renderPublicSeatingModalBody(){
   if(movementState&&movementState.small)mineNote='소규모 출연 · 배치도 없음';
   var publishedText=seatingPublishedTime(plan.publishedAt);
   var html=renderPublicSeatingPlanStack()+publicMovementMarkup()
-    +((canViewAttendance()||canCheckAttendance())?'<button type="button" class="btn" onclick="openRehearsalAttendance()">리허설 출석</button>':'')
     +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
     +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
     +'<div class="public-seating-view-toggle" aria-label="배치도 보는 방향">'
