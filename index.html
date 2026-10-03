@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=1">
 <title>광주교회 찬양대</title>
 <style>
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
@@ -4484,6 +4485,14 @@ button.seating-row-label{padding:0;border:0;background:transparent;color:inherit
   </div>
 </div>
 
+<!-- MODAL: 리허설 출석 -->
+<div class="modal-overlay modal-center rehearsal-attendance-modal" id="modalRehearsalAttendance">
+  <div class="modal-content">
+    <div class="modal-header"><span class="modal-title">리허설 출석</span><button class="modal-close" aria-label="리허설 출석 닫기" onclick="RehearsalAttendance.close()">✕</button></div>
+    <div id="rehearsalAttendanceBody"></div>
+  </div>
+</div>
+
 <!-- MODAL: 자리배치 공개 확인 -->
 <div class="modal-overlay modal-center seating-confirm-modal" id="modalSeatingPublishConfirm">
   <div class="modal-content">
@@ -5097,7 +5106,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.02.3';
+var APP_RELEASE_VERSION='26.10.03.1';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -5671,6 +5680,7 @@ function openModal(id){
 function closeModal(id){
   var modal=document.getElementById(id);
   if(!modal)return;
+  if(id==='modalRehearsalAttendance'&&window.RehearsalAttendance&&!window.RehearsalAttendance.canClose())return;
   if(id==='modalSeatingExcel'&&window.SeatingExcel)window.SeatingExcel.cancel();
   if(id==='modalProfilePhotoGuide'){
     profilePhotoGuide.handled=true;
@@ -6047,6 +6057,7 @@ function isMemberInAttendanceScope(member){
   return allowed.indexOf(member.part)!==-1||allowed.indexOf(member.subPart)!==-1;
 }
 function syncAccessShell(){
+  if(window.RehearsalAttendance)window.RehearsalAttendance.syncAccess();
   if(!canRevealAccountPins()&&(accountPinsVisible||accountPinsLoading||accountPinsLoaded||Object.keys(revealedAccountPins).length))clearRevealedAccountPins(true);
   if(!canManageLoginAccounts()&&!canManageAccountPins()&&!canManageAccountPermissions()&&(accountMembersLoaded||accountMembersLoadPromise))clearAccountManagementSession(true);
   var body=document.body;
@@ -9230,6 +9241,7 @@ function renderPublicSeatingModalBody(){
   if(movementState&&movementState.small)mineNote='소규모 출연 · 배치도 없음';
   var publishedText=seatingPublishedTime(plan.publishedAt);
   var html=renderPublicSeatingPlanStack()+publicMovementMarkup()
+    +((canViewAttendance()||canCheckAttendance())?'<button type="button" class="btn" onclick="openRehearsalAttendance()">리허설 출석</button>':'')
     +(publishedText?'<div class="public-seating-published"><span>공개 일시 · '+escHtml(publishedText)+'</span>'+(canUseSeatingPlan()?'<button type="button" class="public-seating-unpublish" onclick="unpublishSeatingPlan(\''+escAttr(plan.publicId)+'\')">이 공개본 취소</button>':'')+'</div>':'')
     +'<div class="public-seating-mine-note">'+escHtml(mineNote)+'</div>'
     +'<div class="public-seating-view-toggle" aria-label="배치도 보는 방향">'
@@ -9653,6 +9665,9 @@ function renderHome(){
   }
   function homeAdminTools(hymnSongs,state){
     var shortcuts='';
+    if(canViewAttendance()||canCheckAttendance()){
+      shortcuts+='<button class="home-shortcut-btn" onclick="openRehearsalAttendance()"><span>리허설 출석</span><span class="home-chevron">›</span></button>';
+    }
     if(canUseMemberHandbook()){
       shortcuts+='<button class="home-shortcut-btn" onclick="openHomeMemberSearch()"><span><span>🔎</span><span>단원 검색</span></span><span class="home-chevron">›</span></button>';
     }
@@ -28048,6 +28063,7 @@ function saveReportPdf(){
 }
 function printReport(){return saveReportPdf();}
 </script>
+<script src="assets/rehearsal-attendance.js?v=1"></script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
   <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
     <button onclick="event.stopPropagation();zoomPhoto(-1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">−</button>

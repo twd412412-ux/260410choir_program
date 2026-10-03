@@ -394,6 +394,10 @@ async function saveScopedAttendance(request, mode) {
 
 async function handleAttendanceAdmin(request) {
   const action = cleanString(request.data && request.data.action, 40);
+  if (["rehearsalLoad", "rehearsalConfigure", "rehearsalSave"].includes(action)) {
+    return require("./rehearsal-attendance").createHandler({db, HttpsError, requireAdmin, requirePermission, hasPermission,
+      attendanceScopeForRequest, memberInAttendanceScope, assertAttendanceScope, cleanString, isValidDocumentId, nowIso, isAdminRequest})(request);
+  }
   if (action === "save") return saveScopedAttendance(request, "save");
   if (action === "clear") return saveScopedAttendance(request, "clear");
   if (action === "delete") {
