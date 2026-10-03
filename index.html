@@ -5107,7 +5107,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.03.2';
+var APP_RELEASE_VERSION='26.10.03.3';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -14083,6 +14083,31 @@ function setScoreUploadRowState(index,status,progress,error){
   if(state)state.textContent=row.progress+'%';
   if(bar)bar.style.width=row.progress+'%';
 }
+function scoreUploadErrorMessage(error){
+  var code=String(error&&error.code||'');
+  if(code==='score/admin-expired')return '관리자 인증이 만료됐습니다. 관리자 로그인 후 다시 저장해주세요. 선택한 파일은 유지됩니다';
+  if(code==='storage/unauthenticated'||code.indexOf('auth/user-token')===0||code==='auth/invalid-user-token')return '로그인 인증이 만료됐습니다. 다시 로그인 후 저장해주세요. 선택한 파일은 유지됩니다';
+  if(code==='storage/unauthorized')return '서버에서 업로드 권한을 거부했습니다. 관리자 로그인 상태를 확인해주세요';
+  if(code==='auth/network-request-failed'||code==='storage/retry-limit-exceeded')return '네트워크 연결이 불안정합니다. 연결 확인 후 다시 저장해주세요';
+  if(code==='storage/quota-exceeded')return '파일 저장소 사용 한도를 초과했습니다. 관리자 확인이 필요합니다';
+  if(code==='storage/canceled')return '업로드가 취소됐습니다. 다시 저장할 수 있습니다';
+  return '파일 업로드 실패'+(code?' ('+code+')':'')+' · 다시 저장할 수 있습니다';
+}
+function prepareScoreFileUpload(){
+  var epoch=secureAuthSessionEpoch;
+  return ensureFirebaseAuth().then(function(auth){
+    var user=auth.currentUser;
+    if(!user)throw Object.assign(new Error('missing_upload_auth'),{code:'storage/unauthenticated'});
+    return user.getIdTokenResult(true).then(function(result){
+      if(epoch!==secureAuthSessionEpoch||auth.currentUser!==user)throw Object.assign(new Error('changed_upload_auth'),{code:'storage/unauthenticated'});
+      var claims=result.claims||{},elevated=Number(claims.elevatedUntil||0)>Date.now();
+      if(claims.admin===true&&elevated)return;
+      var account=claims.account===true||(claims.legacyRole==='chongmu'&&elevated);
+      if(account&&normalizePermissionArray(claims.permissions).indexOf('score.manage')!==-1)return;
+      throw Object.assign(new Error('upload_permission_denied'),{code:claims.admin===true&&!elevated?'score/admin-expired':'storage/unauthorized'});
+    });
+  });
+}
 function saveScoreUpload(){
   if(!canManageScores())return showToast('악보 관리 권한이 필요합니다');
   var title=(document.getElementById('scoreTitle').value||'').trim();
@@ -14274,7 +14299,7 @@ function saveScoreUpload(){
           setScoreUploadRowState(targetIndex,'uploading',Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100),'');
         }
       },function(error){
-        if(reviewActive)setScoreUploadRowState(targetIndex,'error',0,'업로드 실패 · 다시 시도 가능');
+        if(reviewActive)setScoreUploadRowState(targetIndex,'error',0,scoreUploadErrorMessage(error));
         reject(error);
       },function(){
         var info={path:filePath,name:file.name,size:file.size};
@@ -14326,7 +14351,10 @@ function saveScoreUpload(){
   var uploadTargetIds={};
   targets.forEach(function(target){uploadTargetIds[target.id]=true;});
   var loggedLinkedSongIds=linkedSongIds.length?linkedSongIds.slice():(!scoreLinkSelectionTouched&&targetGroupBase?scoreLinkedIdsFromScore(targetGroupBase):[]);
-  return uploadTargetsWithLimit().then(function(items){
+  return (files.length?prepareScoreFileUpload():Promise.resolve()).catch(function(error){
+    if(reviewActive)targets.forEach(function(target,index){if(scoreUploadReviewRows[index]&&scoreUploadReviewRows[index].status!=='done')setScoreUploadRowState(index,'error',0,scoreUploadErrorMessage(error));});
+    throw error;
+  }).then(uploadTargetsWithLimit).then(function(items){
     var mismatchedItem=items.find(function(item){
       var path=String(item&&item.currentFilePath||'');
       return path&&path.indexOf('scores/'+item.id+'/')!==0;
@@ -14388,8 +14416,8 @@ function saveScoreUpload(){
         :(replacementTargetCount?'새 버전으로 교체했습니다':'악보를 등록했습니다')));
   }).catch(function(e){
     console.error(e);
-    if(e&&e.code==='storage/unauthorized')showToast('악보 업로드 권한이 없습니다');
-    else if(reviewActive&&scoreUploadReviewRows.some(function(row){return row.status==='error';}))showToast('실패한 파일을 확인한 뒤 다시 시도해주세요');
+    if(e&&/^(storage\/|auth\/|score\/admin-expired)/.test(String(e.code||'')))showToast(scoreUploadErrorMessage(e));
+    else if(reviewActive&&scoreUploadReviewRows.some(function(row){return row.status==='error';}))showToast('실패한 파일의 사유를 확인한 뒤 다시 저장해주세요');
     else if(e&&e.message==='score_file_path_mismatch_before_save')showToast('악보 연결을 다시 맞췄습니다. 파일을 다시 선택해 저장해주세요');
     else showToast(securityErrorMessage(e,'악보 저장 중 오류가 발생했습니다'));
   }).finally(function(){
