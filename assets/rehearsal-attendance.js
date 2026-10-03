@@ -26,17 +26,34 @@
     openModal('modalRehearsalAttendance');
     return load();
   };
-  function load(){
+  // keep=true reloads after a failed save without discarding the unsaved checks.
+  function load(keep){
     var token=++loadToken,previous=state&&state.date,actor=(currentUser&&currentUser.id||'')+'|'+adminRole;
-    box().innerHTML='<p role="status">리허설 출석 불러오는 중...</p>';
+    var kept=keep&&state?{date:state.date,changes:Object.assign({},state.changes),part:state.part,view:state.view,query:state.query,zoom:state.zoom}:null;
+    if(kept){state.busy=true;state.error='';state.saveFailed=false;render();}
+    else box().innerHTML='<p role="status">리허설 출석 불러오는 중...</p>';
     return withLoadDeadline(attendanceAdminCall('rehearsalLoad',{}),20000).then(function(data){
       if(token!==loadToken||!permitted()||actor!==((currentUser&&currentUser.id||'')+'|'+adminRole))return;
       state=Object.assign({},data,{actor:actor,date:selectedDate(data,previous),part:data.scope.length===1&&['S1','S2','T1','T2','관현악'].indexOf(data.scope[0])!==-1?data.scope[0]:'all',board:'choir',view:'board',query:'',zoom:innerWidth<=600?1.1:1,busy:false,changes:{},error:'',configDates:data.config.dates.slice()});
       state.members=state.members.filter(function(member){return member.part!=='관현악';});
       if(state.part==='관현악')state.part='all';
       state.memberMap={};state.members.forEach(function(m){state.memberMap[m.id]=m;});
+      if(kept){
+        state.part=kept.part;state.view=kept.view;state.query=kept.query;state.zoom=kept.zoom;
+        var dropped=0;
+        Object.keys(kept.changes).forEach(function(id){
+          var member=state.memberMap[id];
+          if(state.date===kept.date&&member&&eligible(member,state.date)&&inScope(member))change(id,kept.changes[id]);
+          else dropped++;
+        });
+        if(dropped)state.error=dropped+'명은 배치도나 담당 범위에서 빠져 체크를 반영하지 못했습니다.';
+      }
       render();
-    }).catch(function(e){if(token===loadToken)box().innerHTML='<p class="ra-error" role="alert">'+escHtml(errorText(e))+'</p><button class="btn" onclick="RehearsalAttendance.reload()">다시 시도</button>';});
+    }).catch(function(e){
+      if(token!==loadToken)return;
+      if(kept&&state){state.busy=false;state.saveFailed=true;state.error=errorText(e)+' 입력한 체크는 유지됩니다.';render();return;}
+      box().innerHTML='<p class="ra-error" role="alert">'+escHtml(errorText(e))+'</p><button class="btn" onclick="RehearsalAttendance.reload()">다시 시도</button>';
+    });
   }
   function seatHtml(seat){
     if(!seat||seat.part==='관현악')return '<div class="public-seating-seat empty"><b>빈칸</b></div>';
@@ -62,9 +79,10 @@
     var list=state.members.filter(function(m){return visible(m)&&inScope(m);}).map(function(m){
       var expected=dates.filter(function(date){var session=state.sessions[date];return eligible(m,date)&&(!session||!Array.isArray(session.memberIds)||session.memberIds.indexOf(m.id)!==-1);});
       var present=0,checked=0;expected.forEach(function(date){var value=((state.sessions[date]||{}).records||{})[m.id];if(value)checked++;if(value==='출석')present++;});
-      return {member:m,total:expected.length,present:present,unchecked:expected.length-checked,rate:expected.length?Math.round(present/expected.length*100):null};
+      // Unchecked days are shown separately and must not count as absences in the rate.
+      return {member:m,total:expected.length,checked:checked,present:present,unchecked:expected.length-checked,rate:checked?Math.round(present/checked*100):null};
     }).sort(function(a,b){return partNameOrder(a.member,b.member);});
-    return '<details class="ra-summary"><summary>리허설 출석 현황</summary><p class="ra-status">집계 날짜 · '+(dates.map(dateLabel).join(' · ')||'아직 없음')+'</p><div class="ra-table-scroll"><table><thead><tr><th>파트</th><th>단원</th><th>참석</th><th>미체크</th><th>출석률</th></tr></thead><tbody>'+list.map(function(row){return '<tr><td>'+escHtml(row.member.part)+'</td><td>'+escHtml(row.member.name)+'</td><td title="대상 '+row.total+'일">'+row.present+'일</td><td>'+row.unchecked+'일</td><td>'+(row.rate===null?'-':row.rate+'%')+'</td></tr>';}).join('')+'</tbody></table></div></details>';
+    return '<details class="ra-summary"><summary>리허설 출석 현황</summary><p class="ra-status">집계 날짜 · '+(dates.map(dateLabel).join(' · ')||'아직 없음')+' · 출석률은 체크한 날 기준</p><div class="ra-table-scroll"><table><thead><tr><th>파트</th><th>단원</th><th>참석</th><th>미체크</th><th>출석률</th></tr></thead><tbody>'+list.map(function(row){return '<tr><td>'+escHtml(row.member.part)+'</td><td>'+escHtml(row.member.name)+'</td><td title="체크 '+row.checked+'일 중">'+row.present+'일</td><td>'+row.unchecked+'일</td><td>'+(row.rate===null?'-':row.rate+'%')+'</td></tr>';}).join('')+'</tbody></table></div></details>';
   }
   function configHtml(){
     if(!state.canManage)return '';
@@ -81,7 +99,7 @@
     var html='<div class="ra-controls"><div class="ra-toolbar"><label>날짜<select id="raDate" '+(state.busy?'disabled':'')+' onchange="RehearsalAttendance.changeDate(this.value)">'+state.config.dates.map(function(date){return '<option value="'+date+'" '+(date===state.date?'selected':'')+'>'+dateLabel(date)+'</option>';}).join('')+'</select></label><label>파트<select id="raPart" onchange="RehearsalAttendance.part(this.value)">'+parts.filter(function(part){return part==='all'||state.members.some(function(m){return inScope(m)&&(m.part===part||m.subPart===part);});}).map(function(part){var count=state.members.filter(function(m){return eligible(m,state.date)&&inScope(m)&&(part==='all'||m.part===part||m.subPart===part);}).length;return '<option value="'+part+'" '+(state.part===part?'selected':'')+'>'+(part==='all'?'담당 전체':part)+' '+count+'</option>';}).join('')+'</select></label><button class="btn ra-refresh" title="최신 출석 불러오기" '+(state.busy?'disabled':'')+' onclick="RehearsalAttendance.reload()">새로고침</button></div>';
     html+='<div class="ra-toolbar ra-view-row"><input type="search" aria-label="단원 검색" placeholder="단원 검색" value="'+escAttr(state.query)+'" oninput="RehearsalAttendance.search(this.value)"><div class="ra-view-toggle"><button type="button" aria-pressed="'+(state.view==='board')+'" onclick="RehearsalAttendance.view(\'board\')">자리표</button><button type="button" aria-pressed="'+(state.view==='list')+'" onclick="RehearsalAttendance.view(\'list\')">명단</button></div></div>';
     html+='<div class="ra-counts" role="status"><span>출석 <b>'+present+'</b></span><span>결석 <b>'+absent+'</b></span><span>미체크 <b>'+(list.length-present-absent)+'</b></span><span>'+list.length+'명</span></div>'+(state.date>state.today?'<p class="ra-status">예정 회차 · 날짜를 바꾸면 지난 리허설을 체크할 수 있습니다.</p>':'')+'</div><div class="ra-content">';
-    if(state.error)html+='<p class="ra-error" role="alert">'+escHtml(state.error)+'</p>';
+    if(state.error)html+='<p class="ra-error" role="alert">'+escHtml(state.error)+(state.saveFailed&&dirty()?' <button type="button" class="btn" '+(state.busy?'disabled ':'')+'onclick="RehearsalAttendance.refreshKeep()">최신 불러오기 (내 체크 유지)</button>':'')+'</p>';
     if(state.plan){
       html+='<div class="ra-board-heading"><strong>'+escHtml(state.plan.name||state.plan.title||'전체 배치도')+'</strong>'+(state.view==='board'?'<label class="ra-zoom">확대 <input type="range" min="50" max="150" step="10" value="'+Math.round(state.zoom*100)+'" aria-label="배치도 확대" oninput="RehearsalAttendance.zoom(this.value)"></label>':'')+'</div>';
       html+=state.view==='list'?listHtml():boardHtml();
@@ -114,14 +132,22 @@
     configPlan:function(id){state.configPlan=id;},
     search:function(query){state.query=query;var input=box().querySelector('input[type=search]'),start=input&&input.selectionStart;render();input=box().querySelector('input[type=search]');input.focus();if(start!==null)try{input.setSelectionRange(start,start);}catch(e){}},
     zoom:function(value){state.zoom=Math.max(.5,Math.min(1.5,Number(value)/100));var board=box().querySelector('.ra-board'),scale=box().querySelector('.ra-scale');if(board){board.style.transform='scale('+state.zoom+')';scale.style.width=parseFloat(board.style.width)*state.zoom+'px';scale.style.height=parseFloat(board.style.height)*state.zoom+'px';}},
-    markRemaining:function(){if(!state.canEdit||!canCheckAttendance()||state.busy||state.date>state.today)return;var list=members().filter(function(m){return !status(m.id);});if(!list.length)return showToast('미체크 단원이 없습니다');if(!confirm('현재 담당 필터의 미체크 '+list.length+'명을 결석으로 표시할까요?'))return;list.forEach(function(m){change(m.id,'결석');});render();},
+    // Applies to the selected part filter only; the name search must not silently narrow a bulk absence.
+    markRemaining:function(){
+      if(!state.canEdit||!canCheckAttendance()||state.busy||state.date>state.today)return;
+      var list=state.members.filter(function(m){return eligible(m,state.date)&&inScope(m)&&(state.part==='all'||m.part===state.part||m.subPart===state.part)&&!status(m.id);});
+      if(!list.length)return showToast('미체크 단원이 없습니다');
+      if(!confirm((state.part==='all'?'담당 전체':state.part)+' 미체크 '+list.length+'명을 결석으로 표시할까요?'+(state.query?'\n검색어와 관계없이 적용됩니다.':'')))return;
+      list.forEach(function(m){change(m.id,'결석');});render();
+    },
     save:function(){
       if(!state||state.busy||!dirty()||!state.canEdit||!canCheckAttendance())return;
       var changes=Object.keys(state.changes).map(function(id){return {id:id,status:state.changes[id],baselineStatus:((state.sessions[state.date]||{}).records||{})[id]||''};});
       var target=state;
       state.busy=true;state.error='';render();
-      return withLoadDeadline(attendanceAdminCall('rehearsalSave',{date:state.date,planId:state.config.planId,changes:changes}),20000).then(function(result){if(state!==target)return;state.sessions[state.date]=result.session;state.changes={};writeLog('리허설 출석 저장',state.date+' 변경 '+changes.length+'명');}).catch(function(e){if(state===target)state.error=errorText(e)+' 입력한 체크는 유지됩니다.';}).finally(function(){if(state===target){state.busy=false;render();}});
+      return withLoadDeadline(attendanceAdminCall('rehearsalSave',{date:state.date,planId:state.config.planId,changes:changes}),20000).then(function(result){if(state!==target)return;state.sessions[state.date]=result.session;state.changes={};state.saveFailed=false;writeLog('리허설 출석 저장',state.date+' 변경 '+changes.length+'명');}).catch(function(e){if(state===target){state.error=errorText(e)+' 입력한 체크는 유지됩니다.';state.saveFailed=true;}}).finally(function(){if(state===target){state.busy=false;render();}});
     },
+    refreshKeep:function(){if(!state||state.busy)return;return load(true);},
     addDate:function(){var date=document.getElementById('raAddDate').value;if(!date)return;if(state.configDates.indexOf(date)===-1)state.configDates.push(date);state.configDates.sort();var plan=document.getElementById('raPlan').value;render();document.getElementById('raPlan').value=plan;box().querySelector('.ra-config').open=true;},
     removeDate:function(date){var plan=document.getElementById('raPlan').value;state.configDates=state.configDates.filter(function(d){return d!==date;});render();document.getElementById('raPlan').value=plan;box().querySelector('.ra-config').open=true;},
     configure:function(){

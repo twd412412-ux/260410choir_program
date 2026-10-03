@@ -77,7 +77,21 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
           await page.locator('#raSave').click();await page.waitForFunction(()=>document.getElementById('raSaveStatus').textContent.startsWith('저장'));
           assert.deepEqual(await page.evaluate(()=>testSaves[1].changes),[{id:'m4-10',status:'출석',baselineStatus:''}]);
           await page.locator('.ra-summary summary').click();
-          assert((await page.locator('.ra-summary tbody').textContent()).includes('50%'),'only elapsed configured dates count');
+          // 9/20 was never checked: it is reported as unchecked, not as an absence in the rate.
+          const rateRow=await page.locator('.ra-summary tbody tr',{hasText:'단원4-10'}).locator('td').allTextContents();
+          assert.deepEqual(rateRow.slice(2),['1일','1일','100%'],'rate uses checked days only and future dates are excluded');
+          // A failed save can reload the latest server records while keeping the unsaved checks.
+          await page.locator('[data-member-id="m2-0"]').click();
+          await page.evaluate(()=>testFail=true);
+          await page.locator('#raSave').click();
+          await page.getByRole('button',{name:'최신 불러오기 (내 체크 유지)',exact:true}).waitFor();
+          await page.evaluate(()=>{testFail=false;testData.sessions={'2026-10-04':{records:{'m4-10':'출석','m3-0':'출석'},memberIds:testData.members.map(m=>m.id),updatedAt:'2026-10-04T00:00:00Z',updatedBy:'다른 파트장'}};});
+          await page.getByRole('button',{name:'최신 불러오기 (내 체크 유지)',exact:true}).click();
+          await page.waitForFunction(()=>document.getElementById('raSaveStatus').textContent==='미저장 1명');
+          assert.equal(await page.locator('[data-member-id="m3-0"] small').textContent(),'출석','latest server checks are loaded');
+          assert.equal(await page.locator('[data-member-id="m2-0"] small').textContent(),'출석','unsaved check is kept');
+          await page.locator('#raSave').click();await page.waitForFunction(()=>document.getElementById('raSaveStatus').textContent.startsWith('저장'));
+          assert.deepEqual(await page.evaluate(()=>testSaves.at(-1).changes),[{id:'m2-0',status:'출석',baselineStatus:''}]);
           await page.locator('#raDate').selectOption('2026-10-11');
           assert(await page.locator('[data-member-id="m4-10"]').isDisabled(),'future dates read-only');
           await page.locator('#raDate').selectOption('2026-10-04');
@@ -85,6 +99,15 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
           page.once('dialog',d=>d.dismiss());
           await page.evaluate(()=>closeModal('modalRehearsalAttendance'));
           assert(await page.locator('#modalRehearsalAttendance').evaluate(el=>el.classList.contains('active')),'dirty close protected');
+          await page.locator('#raSave').click();await page.waitForFunction(()=>document.getElementById('raSaveStatus').textContent.startsWith('저장'));
+          // Bulk absence follows the part filter, not the name search.
+          await page.locator('.ra-view-row input[type=search]').fill('단원0-0');
+          let bulkMessage='';page.once('dialog',d=>{bulkMessage=d.message();d.accept();});
+          await page.getByRole('button',{name:'미체크 결석',exact:true}).click();
+          assert.match(bulkMessage,/^S1 미체크 \d+명을 결석으로 표시할까요\?\n검색어와 관계없이 적용됩니다\.$/);
+          const bulkCount=Number(bulkMessage.match(/미체크 (\d+)명/)[1]);
+          assert(bulkCount>1,'search must not narrow the bulk absence to one member');
+          assert.equal(await page.locator('#raSaveStatus').textContent(),'미저장 '+bulkCount+'명');
           await page.locator('#raSave').click();await page.waitForFunction(()=>document.getElementById('raSaveStatus').textContent.startsWith('저장'));
           fs.mkdirSync(path.join(root,'tmp/rehearsal-attendance'),{recursive:true});
           await page.screenshot({path:path.join(root,'tmp/rehearsal-attendance',engine.name()+'-'+viewport.width+'.png')});
