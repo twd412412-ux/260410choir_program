@@ -8,26 +8,26 @@ service firebase.storage {
 
     function elevationValid() {
       return signedIn()
-        && request.auth.token.elevatedUntil is int
-        && request.auth.token.elevatedUntil > request.time.toMillis();
+        && request.auth.token.get('elevatedUntil', 0) is number
+        && request.auth.token.get('elevatedUntil', 0) > request.time.toMillis();
     }
 
     function isAdmin() {
-      return elevationValid() && request.auth.token.admin == true;
+      return elevationValid() && request.auth.token.get('admin', false) == true;
     }
 
     function isAppUser() {
       return signedIn()
-        && (request.auth.token.account == true
+        && (request.auth.token.get('account', false) == true
           || (elevationValid()
-            && (request.auth.token.admin == true || request.auth.token.legacyRole == 'chongmu')));
+            && (request.auth.token.get('admin', false) == true || request.auth.token.get('legacyRole', '') == 'chongmu')));
     }
 
     function hasPermission(permission) {
       return isAdmin()
         || (isAppUser()
-          && request.auth.token.permissions is list
-          && request.auth.token.permissions.hasAny([permission]));
+          && request.auth.token.get('permissions', []) is list
+          && request.auth.token.get('permissions', []).hasAny([permission]));
     }
 
     function validImage() {
