@@ -5107,7 +5107,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.03.3';
+var APP_RELEASE_VERSION='26.10.03.4';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -11432,7 +11432,9 @@ var ORCHESTRA_SCORE_INSTRUMENTS=[
   {key:'viola',label:'비올라'},
   {key:'cello',label:'첼로'},
   {key:'bass',label:'콘트라베이스'},
-  {key:'etc',label:'기타'}
+  {key:'guitar',label:'기타'},
+  {key:'bassguitar',label:'베이스 기타'},
+  {key:'etc',label:'그 외 악기'}
 ];
 var DEFAULT_ORCHESTRA_REVIEW_PARTS=['fullscore','synthscore','flute','oboe','clarinet','bassoon','saxophone','horn','trumpet','trombone','tuba','timpani','percussion','violin1','violin2','viola','cello','bass'];
 var scoreUploadReviewRows=[];
@@ -11469,7 +11471,7 @@ function normalizeScoreInstrument(key){
   if(!lookup)return '';
   if(lookup==='auto'||lookup==='__custom__')return '';
   var labelKey=scoreSearchKey(raw);
-  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===lookup||scoreSearchKey(item.label)===labelKey});
+  var found=ORCHESTRA_SCORE_INSTRUMENTS.find(function(item){return item.key===lookup||scoreSearchKey(item.key)===labelKey||scoreSearchKey(item.label)===labelKey});
   return found&&found.key!=='auto'?found.key:raw;
 }
 function scoreInstrumentLabel(key){
@@ -11507,6 +11509,8 @@ function guessScoreInstrumentFromFileName(name){
   if(/oboe|오보에/.test(stem)||hasNumberedToken(['ob']))return 'oboe';
   if(/clarinet|클라리넷/.test(stem)||hasNumberedToken(['cl']))return 'clarinet';
   if(/bassoon|basoon|바순/.test(stem)||hasNumberedToken(['bn']))return 'bassoon';
+  if(/bass[\s._-]*guitars?|베이스[\s._-]*기타/.test(stem))return 'bassguitar';
+  if(/(^|[^a-z])guitars?([0-9]|[^a-z]|$)|기타/.test(stem))return 'guitar';
   if(/contrabass|double[\s._-]*bass|콘트라베이스|더블베이스/.test(stem)||hasNumberedToken(['cb']))return 'bass';
   if(/saxophone|sax|색소폰/.test(stem))return 'saxophone';
   if(/trumpet|트럼펫/.test(stem)||hasNumberedToken(['tp']))return 'trumpet';

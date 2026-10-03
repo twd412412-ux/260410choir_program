@@ -48,6 +48,15 @@ const root=path.resolve(__dirname,'..');
       {name:'violin.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test-one')},
       {name:'flute.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test-two')}
     ]);
+    const guitar=await page.evaluate(()=>{
+      const guesses=['여호와의유월절-Guitar.pdf','여호와의유월절-Bass Guitar.pdf','곡-기타.pdf','곡-베이스기타.pdf','곡-Double Bass.pdf','곡-Bassoon.pdf'].map(guessScoreInstrumentFromFileName);
+      populateScoreInstrumentSelect();
+      return {guesses,labels:scoreUploadReviewOptionLabels(),review:scoreUploadReviewInstrument('기타'),other:scoreInstrumentLabel('etc'),defaultParts:getScoreUploadExpectedParts()};
+    });
+    assert.deepEqual(guitar.guesses,['guitar','bassguitar','guitar','bassguitar','bass','bassoon']);
+    assert(guitar.labels.includes('기타')&&guitar.labels.includes('베이스 기타')&&guitar.labels.includes('그 외 악기'));
+    assert.equal(guitar.review,'guitar');assert.equal(guitar.other,'그 외 악기');
+    assert.equal(guitar.defaultParts.includes('guitar'),false,'do not silently expand existing missing-part checklist');
     async function save(){await page.evaluate(async()=>{syncScoreUploadReviewRows(Array.from(document.getElementById('scoreFile').files));scoreUploadReviewConfirmed=true;scoreBatchReplacementConfirmed=true;await saveScoreUpload();});}
     await page.evaluate(()=>{claims={admin:true,elevatedUntil:1};});
     await save();
