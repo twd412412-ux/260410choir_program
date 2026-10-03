@@ -42,16 +42,31 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
           assert.equal(await page.locator('#raDate').inputValue(),'2026-10-04');
           assert.equal(await page.locator('#raDate option').count(),5);
           assert.equal(await page.locator('.ra-config').count(),0);
+          if(viewport.width===390||viewport.height===390){
+            const modal=await page.locator('#modalRehearsalAttendance .modal-content').boundingBox();
+            assert(modal.height>=viewport.height-2,'phone fills viewport instead of legacy 70vh modal');
+            const save=await page.locator('#raSave').boundingBox();
+            assert(save.y+save.height<=viewport.height,'save button remains visible without scrolling');
+          }
           assert(await page.locator('[data-member-id="m0-1"]').isDisabled(),'other part cannot check');
           const layout=await page.evaluate(()=>{
             const rect=id=>document.querySelector('[data-member-id="'+id+'"]').getBoundingClientRect();
-            const a=rect('m0-0'),b=rect('m0-1'),next=rect('m1-0'),scroll=document.querySelector('.ra-scroll');
+            const a=rect('m0-0'),b=rect('m0-1'),next=rect('m1-0'),scroll=document.querySelector('.ra-scroll'),content=document.querySelector('.ra-content');
             return {mirror:a.left>b.left,stagger:Math.abs(a.left-next.left)>20,pageOverflow:document.body.scrollWidth>innerWidth+1,
-              scrollX:scroll.scrollWidth>scroll.clientWidth,scrollY:scroll.scrollHeight>scroll.clientHeight};
+              scrollX:scroll.scrollWidth>scroll.clientWidth,scrollY:content.scrollHeight>content.clientHeight};
           });
           assert.equal(layout.mirror,true,JSON.stringify(layout));assert.equal(layout.stagger,true,JSON.stringify(layout));assert.equal(layout.pageOverflow,false,JSON.stringify(layout));
           if(viewport.width===390)assert.equal(layout.scrollX,true,JSON.stringify(layout));
           if(viewport.height===390)assert.equal(layout.scrollY,true);
+          fs.mkdirSync(path.join(root,'tmp/rehearsal-attendance'),{recursive:true});
+          await page.screenshot({path:path.join(root,'tmp/rehearsal-attendance',engine.name()+'-'+viewport.width+'-board.png')});
+          await page.getByRole('button',{name:'명단',exact:true}).click();
+          assert.equal(await page.locator('.ra-member').count(),30,'list respects assigned part');
+          await page.locator('[data-member-id="m0-0"]').check();
+          await page.screenshot({path:path.join(root,'tmp/rehearsal-attendance',engine.name()+'-'+viewport.width+'-list.png')});
+          await page.getByRole('button',{name:'자리표',exact:true}).click();
+          assert.equal(await page.locator('[data-member-id="m0-0"] small').textContent(),'출석','both views share edits');
+          await page.locator('[data-member-id="m0-0"]').click();
           await page.locator('[data-member-id="m4-10"]').click();
           assert.equal(await page.locator('#raSaveStatus').textContent(),'미저장 1명');
           assert.equal(await page.locator('[data-member-id="m4-10"] small').textContent(),'출석');
@@ -81,6 +96,10 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
           await page.waitForFunction(()=>testConfig.length===1&&document.querySelectorAll('#raDate option').length===6);
           assert((await page.evaluate(()=>testConfig[0].dates)).includes('2026-10-10'));
           if(viewport.width===390){
+            await page.evaluate(()=>{testData.today='2026-10-03';testData.scope=['ALL'];testData.canEdit=true;closeModal('modalRehearsalAttendance');});
+            await page.evaluate(()=>openRehearsalAttendance());
+            assert.equal(await page.locator('#raDate').inputValue(),'2026-09-20','defaults to last elapsed date instead of disabled future');
+            assert(!(await page.locator('[data-member-id="m0-1"]').isDisabled()),'administrator checks all parts');
             await page.evaluate(()=>{testData.plan=null;testData.config.planId='';RehearsalAttendance.reload();});
             await page.waitForFunction(()=>document.getElementById('raPlan')&&document.getElementById('raPlan').value==='');
             assert.equal(await page.locator('.ra-board').count(),0,'unconfigured plan must not guess a target');

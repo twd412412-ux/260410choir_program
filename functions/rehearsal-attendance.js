@@ -68,12 +68,43 @@ function createHandler(deps) {
     const plans = await planData();
     const plan = plans.find(item => item.publicId === config.planId) || null;
     const members = await roster(plan);
+    if (plan && config.dates.includes("2026-09-20") && isAdminRequest(request)) {
+      await importSeptemberAttendance(config, members);
+    }
     const docs = config.dates.length ? await db.getAll(...config.dates.map(date => records.doc(date))) : [];
     const sessions = {};
     docs.forEach(doc => {if (doc.exists) sessions[doc.id] = doc.data();});
     return {config, plan, plans: plans.map(item => ({id: item.publicId, name: item.name || item.title || "자리배치"})),
       members, sessions, today: koreanToday(), scope: attendanceScopeForRequest(request),
       canEdit: hasPermission(request, "attendance.check"), canManage: isAdminRequest(request)};
+  }
+
+  // One-way, one-time import. Existing rehearsal decisions always win.
+  async function importSeptemberAttendance(config, members) {
+    const target = records.doc("2026-09-20");
+    await db.runTransaction(async tx => {
+      const currentConfig = configValue(await tx.get(configRef));
+      if (currentConfig.planId !== config.planId || !currentConfig.dates.includes("2026-09-20")) return;
+      const snap = await tx.get(target);
+      const latest = snap.exists ? snap.data() || {} : {};
+      if (latest.afternoonImportedAt) return;
+      const source = await tx.get(db.collection("attendance").doc("2026-09-20_오후"));
+      if (!source.exists) return;
+      const sourceRecords = (source.data() || {}).records || {};
+      const next = Object.assign({}, latest.records || {});
+      const eligible = members.filter(m => !validDate(m.startDate) || m.startDate <= "2026-09-20");
+      let imported = 0;
+      eligible.forEach(m => {
+        if (!Object.prototype.hasOwnProperty.call(next, m.id) && ["출석", "지각"].includes(sourceRecords[m.id])) {
+          next[m.id] = "출석";
+          imported++;
+        }
+      });
+      tx.set(target, Object.assign({}, latest, {date: "2026-09-20", planId: config.planId, records: next,
+        memberIds: [...new Set((latest.memberIds || []).concat(eligible.map(m => m.id)))],
+        afternoonImportedAt: nowIso(), afternoonImportedCount: imported, importSource: "2026-09-20_오후",
+        updatedAt: latest.updatedAt || nowIso(), updatedBy: latest.updatedBy || "9/20 오후 출결 반영"}));
+    });
   }
 
   async function configure(request) {

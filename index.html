@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=1">
+<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=2">
 <title>광주교회 찬양대</title>
 <style>
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
@@ -2433,6 +2433,7 @@ body{font-weight:500}
 .home-event-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;padding:15px 16px 12px}
 .home-event-heading{min-width:0}
 .home-event-actions{display:flex;align-items:flex-start;gap:8px}
+@media(max-width:600px){.home-event-head{grid-template-columns:minmax(0,1fr)}.home-event-actions{justify-content:flex-end;flex-wrap:wrap}}
 .home-event-cue{min-width:60px;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--pl);color:var(--pd);font-family:inherit;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
 .home-event-eyebrow{display:flex;align-items:center;gap:6px;margin-bottom:5px;color:#6B6F60;font-size:10px;font-weight:900}
 .home-event-title{margin:0;color:#191A15;font-size:18px;font-weight:900;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
@@ -5106,7 +5107,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.03.1';
+var APP_RELEASE_VERSION='26.10.03.2';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -9516,7 +9517,7 @@ function renderHomeEventHubCard(schedule){
     {key:'program',label:'순서'}
   ];
   return '<section class="home-card home-event-card" id="homeEventHub">'
-    +'<div class="home-event-head"><div class="home-event-heading"><div class="home-event-eyebrow"><span aria-hidden="true">🎼</span><span>행사 프로그램</span></div><h2 class="home-event-title">'+escHtml(schedule.title)+'</h2><div class="home-event-date">'+escHtml(scheduleDateRangeLabel(schedule))+(schedule.time?' · '+escHtml(schedule.time):'')+'</div></div><div class="home-event-actions">'+(canUseRehearsalCue()?'<button type="button" class="home-event-cue" onclick="openRehearsalCue(\''+escAttr(schedule.id)+'\')">큐시트</button>':'')+'<div class="home-event-dday">'+homeEventDdayLabel(schedule)+'</div></div></div>'
+    +'<div class="home-event-head"><div class="home-event-heading"><div class="home-event-eyebrow"><span aria-hidden="true">🎼</span><span>행사 프로그램</span></div><h2 class="home-event-title">'+escHtml(schedule.title)+'</h2><div class="home-event-date">'+escHtml(scheduleDateRangeLabel(schedule))+(schedule.time?' · '+escHtml(schedule.time):'')+'</div></div><div class="home-event-actions">'+((canViewAttendance()||canCheckAttendance())?'<button type="button" class="home-event-cue" onclick="openRehearsalAttendance()">리허설 출첵</button>':'')+(canUseRehearsalCue()?'<button type="button" class="home-event-cue" onclick="openRehearsalCue(\''+escAttr(schedule.id)+'\')">큐시트</button>':'')+'<div class="home-event-dday">'+homeEventDdayLabel(schedule)+'</div></div></div>'
     +'<div class="home-event-tabs" role="tablist" aria-label="'+escAttr(schedule.title)+' 행사 정보">'+tabs.map(function(tab){
       return '<button type="button" class="home-event-tab '+(homeEventHubTab===tab.key?'on':'')+'" role="tab" aria-selected="'+(homeEventHubTab===tab.key?'true':'false')+'" onclick="setHomeEventHubTab(\''+tab.key+'\')">'+tab.label+'</button>';
     }).join('')+'</div>'
@@ -9665,9 +9666,6 @@ function renderHome(){
   }
   function homeAdminTools(hymnSongs,state){
     var shortcuts='';
-    if(canViewAttendance()||canCheckAttendance()){
-      shortcuts+='<button class="home-shortcut-btn" onclick="openRehearsalAttendance()"><span>리허설 출석</span><span class="home-chevron">›</span></button>';
-    }
     if(canUseMemberHandbook()){
       shortcuts+='<button class="home-shortcut-btn" onclick="openHomeMemberSearch()"><span><span>🔎</span><span>단원 검색</span></span><span class="home-chevron">›</span></button>';
     }
@@ -28063,7 +28061,7 @@ function saveReportPdf(){
 }
 function printReport(){return saveReportPdf();}
 </script>
-<script src="assets/rehearsal-attendance.js?v=1"></script>
+<script src="assets/rehearsal-attendance.js?v=2"></script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
   <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
     <button onclick="event.stopPropagation();zoomPhoto(-1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">−</button>

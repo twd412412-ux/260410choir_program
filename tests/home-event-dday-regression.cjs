@@ -70,6 +70,29 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
       document.getElementById('ddayFixture').innerHTML = renderHomeEventHubCard(window.scheduleFixture);
     });
     assert.equal(await page.locator('.home-event-cue').count(), 0, 'no cue shortcut without permission');
+    await page.evaluate(() => {
+      canViewAttendance = () => true;
+      canCheckAttendance = () => true;
+      canUseRehearsalCue = () => true;
+      openRehearsalAttendance = () => { window.openedAttendance = true; };
+      document.documentElement.classList.remove('dark');
+      document.getElementById('ddayFixture').innerHTML = renderHomeEventHubCard(window.scheduleFixture);
+    });
+    for (const width of [320, 390, 820]) {
+      await page.setViewportSize({width, height:844});
+      const attendance = await page.getByRole('button', {name:'리허설 출첵', exact:true}).boundingBox();
+      const cue = await page.getByRole('button', {name:'큐시트', exact:true}).boundingBox();
+      assert(attendance.x + attendance.width <= cue.x, 'attendance button left of cue');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.screenshot({path:path.join(root, `tmp/home-event-dday/${width}-attendance-light.png`)});
+    }
+    await page.getByRole('button', {name:'리허설 출첵', exact:true}).click();
+    assert.equal(await page.evaluate(() => window.openedAttendance), true);
+    await page.evaluate(() => {
+      canViewAttendance = () => false;canCheckAttendance = () => false;
+      document.getElementById('ddayFixture').innerHTML = renderHomeEventHubCard(window.scheduleFixture);
+    });
+    assert.equal(await page.getByRole('button', {name:'리허설 출첵', exact:true}).count(), 0, 'ordinary member has no attendance shortcut');
     assert.deepEqual(errors, []);
     console.log('PASS prominent gold D-day badge, light/dark contrast, 320/390/820px bounds');
   } finally {

@@ -9,11 +9,11 @@
   function inScope(member){return state.scope.indexOf('ALL')!==-1||state.scope.indexOf(member.part)!==-1||state.scope.indexOf(member.subPart)!==-1;}
   function visible(member){return member&&(state.part==='all'||member.part===state.part||member.subPart===state.part)&&(!state.query||publicSeatingMatches(member,state.query));}
   function status(id){return Object.prototype.hasOwnProperty.call(state.changes,id)?state.changes[id]:((state.sessions[state.date]||{}).records||{})[id]||'';}
-  function editable(member){return !!(member&&state.canEdit&&!state.busy&&state.date<=state.today&&eligible(member,state.date)&&inScope(member)&&visible(member));}
+  function editable(member){return !!(member&&state.canEdit&&canCheckAttendance()&&!state.busy&&state.date<=state.today&&eligible(member,state.date)&&inScope(member)&&visible(member));}
   function members(){return state.members.filter(function(m){return eligible(m,state.date)&&visible(m)&&inScope(m);});}
   function dateLabel(date){return date.slice(5).replace('-','/')+' ('+['일','월','화','수','목','금','토'][new Date(date+'T00:00:00Z').getUTCDay()]+')';}
   function errorText(e){return e&&e.message||'요청을 처리하지 못했습니다. 다시 시도해주세요.';}
-  function selectedDate(data,previous){return data.config.dates.indexOf(previous)!==-1?previous:data.config.dates.find(function(d){return d>=data.today;})||data.config.dates[data.config.dates.length-1]||'';}
+  function selectedDate(data,previous){return data.config.dates.indexOf(previous)!==-1?previous:data.config.dates.filter(function(d){return d<=data.today;}).slice(-1)[0]||data.config.dates[0]||'';}
 
   window.openRehearsalAttendance=function(){
     if(!permitted())return showToast('출결 권한이 필요합니다');
@@ -26,7 +26,7 @@
     box().innerHTML='<p role="status">리허설 출석 불러오는 중...</p>';
     return withLoadDeadline(attendanceAdminCall('rehearsalLoad',{}),20000).then(function(data){
       if(token!==loadToken||!permitted()||actor!==((currentUser&&currentUser.id||'')+'|'+adminRole))return;
-      state=Object.assign({},data,{actor:actor,date:selectedDate(data,previous),part:'all',board:'choir',query:'',zoom:1,busy:false,changes:{},error:'',configDates:data.config.dates.slice()});
+      state=Object.assign({},data,{actor:actor,date:selectedDate(data,previous),part:data.scope.length===1&&['S1','S2','T1','T2','관현악'].indexOf(data.scope[0])!==-1?data.scope[0]:'all',board:'choir',view:'board',query:'',zoom:innerWidth<=600?1.1:1,busy:false,changes:{},error:'',configDates:data.config.dates.slice()});
       state.memberMap={};state.members.forEach(function(m){state.memberMap[m.id]=m;});
       render();
     }).catch(function(e){if(token===loadToken)box().innerHTML='<p class="ra-error" role="alert">'+escHtml(errorText(e))+'</p><button class="btn" onclick="RehearsalAttendance.reload()">다시 시도</button>';});
@@ -63,25 +63,36 @@
     if(!state.canManage)return '';
     return '<details class="ra-config" '+(!state.plan?'open':'')+'><summary>관리자 날짜·배치도 설정</summary><label for="raPlan">전체 기준 배치도</label><select id="raPlan" onchange="RehearsalAttendance.configPlan(this.value)">'+(!state.config.planId?'<option value="">공개된 전체 배치도 선택</option>':'')+state.plans.map(function(plan){return '<option value="'+escAttr(plan.id)+'" '+(plan.id===(state.configPlan||state.config.planId)?'selected':'')+'>'+escHtml(plan.name)+'</option>';}).join('')+'</select><div class="ra-dates">'+state.configDates.map(function(date){return '<span class="ra-date">'+dateLabel(date)+'<button type="button" data-date="'+date+'" onclick="RehearsalAttendance.removeDate(this.dataset.date)" aria-label="'+date+' 제외">×</button></span>';}).join('')+'</div><div class="ra-config-row"><input type="date" id="raAddDate" aria-label="리허설 날짜 추가"><button class="btn" onclick="RehearsalAttendance.addDate()">날짜 추가</button><button class="btn btn-primary" id="raConfigSave" '+(state.busy?'disabled':'')+' onclick="RehearsalAttendance.configure()">설정 저장</button></div><p class="ra-status">날짜를 제외해도 기존 출석 기록은 삭제되지 않습니다.</p></details>';
   }
+  function listHtml(){
+    var list=members().sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+    return '<div class="ra-member-list">'+list.map(function(member){var value=status(member.id);return '<label class="ra-member '+(value==='출석'?'ra-present':value==='결석'?'ra-absent':'')+'"><input type="checkbox" '+(value==='출석'?'checked ':'')+(!editable(member)?'disabled ':'')+'data-member-id="'+escAttr(member.id)+'" onchange="RehearsalAttendance.toggle(this.dataset.memberId)"><span><b>'+escHtml(member.name)+'</b><small>'+escHtml(member.part)+' · '+(value||'미체크')+'</small></span></label>';}).join('')+(list.length?'':'<p class="ra-status">해당 단원이 없습니다.</p>')+'</div>';
+  }
   function render(){
     if(!state||!permitted())return;
     var list=members(),present=list.filter(function(m){return status(m.id)==='출석';}).length,absent=list.filter(function(m){return status(m.id)==='결석';}).length;
     var session=state.sessions[state.date]||{},parts=['all','S1','S2','T1','T2','관현악'];
-    var html=(state.plan?'<p class="ra-status"><strong>'+escHtml(state.plan.name||state.plan.title||'전체 배치도')+'</strong></p>':'')+'<div class="ra-toolbar"><label>날짜<select id="raDate" '+(state.busy?'disabled':'')+' onchange="RehearsalAttendance.changeDate(this.value)">'+state.config.dates.map(function(date){return '<option value="'+date+'" '+(date===state.date?'selected':'')+'>'+dateLabel(date)+'</option>';}).join('')+'</select></label><input type="search" aria-label="단원 검색" placeholder="이름/파트 검색" value="'+escAttr(state.query)+'" oninput="RehearsalAttendance.search(this.value)"><label>확대<input type="range" min="50" max="150" step="10" value="'+Math.round(state.zoom*100)+'" aria-label="배치도 확대" oninput="RehearsalAttendance.zoom(this.value)"></label><button class="btn" '+(state.busy?'disabled':'')+' onclick="RehearsalAttendance.reload()">새로고침</button></div>';
-    html+='<div class="ra-filters">'+parts.map(function(part){var count=state.members.filter(function(m){return eligible(m,state.date)&&inScope(m)&&(part==='all'||m.part===part||m.subPart===part);}).length;return '<button type="button" aria-pressed="'+(state.part===part)+'" data-part="'+part+'" onclick="RehearsalAttendance.part(this.dataset.part)">'+(part==='all'?'담당 전체':part)+' '+count+'</button>';}).join('')+'</div>';
-    html+='<p class="ra-status" role="status">출석 '+present+' · 결석 '+absent+' · 미체크 '+(list.length-present-absent)+' / 담당 '+list.length+'명'+(state.date>state.today?' · 예정 회차':'')+'</p>';
+    var html='<div class="ra-controls"><div class="ra-toolbar"><label>날짜<select id="raDate" '+(state.busy?'disabled':'')+' onchange="RehearsalAttendance.changeDate(this.value)">'+state.config.dates.map(function(date){return '<option value="'+date+'" '+(date===state.date?'selected':'')+'>'+dateLabel(date)+'</option>';}).join('')+'</select></label><label>파트<select id="raPart" onchange="RehearsalAttendance.part(this.value)">'+parts.filter(function(part){return part==='all'||state.members.some(function(m){return inScope(m)&&(m.part===part||m.subPart===part);});}).map(function(part){var count=state.members.filter(function(m){return eligible(m,state.date)&&inScope(m)&&(part==='all'||m.part===part||m.subPart===part);}).length;return '<option value="'+part+'" '+(state.part===part?'selected':'')+'>'+(part==='all'?'담당 전체':part)+' '+count+'</option>';}).join('')+'</select></label><button class="btn ra-refresh" title="최신 출석 불러오기" '+(state.busy?'disabled':'')+' onclick="RehearsalAttendance.reload()">새로고침</button></div>';
+    html+='<div class="ra-toolbar ra-view-row"><input type="search" aria-label="단원 검색" placeholder="단원 검색" value="'+escAttr(state.query)+'" oninput="RehearsalAttendance.search(this.value)"><div class="ra-view-toggle"><button type="button" aria-pressed="'+(state.view==='board')+'" onclick="RehearsalAttendance.view(\'board\')">자리표</button><button type="button" aria-pressed="'+(state.view==='list')+'" onclick="RehearsalAttendance.view(\'list\')">명단</button></div></div>';
+    html+='<div class="ra-counts" role="status"><span>출석 <b>'+present+'</b></span><span>결석 <b>'+absent+'</b></span><span>미체크 <b>'+(list.length-present-absent)+'</b></span><span>'+list.length+'명</span></div>'+(state.date>state.today?'<p class="ra-status">예정 회차 · 날짜를 바꾸면 지난 리허설을 체크할 수 있습니다.</p>':'')+'</div><div class="ra-content">';
     if(state.error)html+='<p class="ra-error" role="alert">'+escHtml(state.error)+'</p>';
     if(state.plan){
-      html+='<div class="ra-filters" aria-label="배치 선택"><button aria-pressed="'+(state.board==='choir')+'" onclick="RehearsalAttendance.board(\'choir\')">합창</button>'+(state.plan.orchestraRows&&state.plan.orchestraRows.length?'<button aria-pressed="'+(state.board==='orchestra')+'" onclick="RehearsalAttendance.board(\'orchestra\')">관현악</button>':'')+'</div>'+boardHtml();
+      html+='<div class="ra-board-heading"><strong>'+escHtml(state.plan.name||state.plan.title||'전체 배치도')+'</strong>'+(state.view==='board'?'<label class="ra-zoom">확대 <input type="range" min="50" max="150" step="10" value="'+Math.round(state.zoom*100)+'" aria-label="배치도 확대" oninput="RehearsalAttendance.zoom(this.value)"></label>':'')+'</div>';
+      if(state.view==='board'&&state.plan.orchestraRows&&state.plan.orchestraRows.length)html+='<div class="ra-filters" aria-label="배치 선택"><button aria-pressed="'+(state.board==='choir')+'" onclick="RehearsalAttendance.board(\'choir\')">합창</button><button aria-pressed="'+(state.board==='orchestra')+'" onclick="RehearsalAttendance.board(\'orchestra\')">관현악</button></div>';
+      html+=state.view==='list'?listHtml():boardHtml();
       var seatIds=new Set([].concat(state.plan.rows||[],state.plan.orchestraRows||[]).flatMap(function(row){return row.seats||[];}).filter(Boolean).map(function(seat){return seat.memberId;}));
       var extra=state.members.filter(function(m){return !seatIds.has(m.id);});
-      if(extra.length)html+='<div class="ra-filters">'+extra.map(function(m){return seatHtml({memberId:m.id,name:m.name,part:m.part});}).join('')+'</div>';
+      if(extra.length&&state.view==='board')html+='<div class="ra-filters">'+extra.map(function(m){return seatHtml({memberId:m.id,name:m.name,part:m.part});}).join('')+'</div>';
+      if(session.afternoonImportedAt)html+='<p class="ra-status">9/20 오후 출결 반영 · '+Number(session.afternoonImportedCount||0)+'명</p>';
       html+=summaryHtml();
     }else html+='<p class="ra-status">관리자가 전체 기준 배치도를 지정하면 출석 체크를 시작할 수 있습니다.</p>';
-    html+=configHtml();
-    html+='<div class="ra-footer"><span id="raSaveStatus" role="status">'+(state.busy?'저장 중...':dirty()?'미저장 '+Object.keys(state.changes).length+'명':session.updatedAt?'저장 · '+escHtml(seatingPublishedTime(session.updatedAt))+' · '+escHtml(session.updatedBy||''):'체크 내역 없음')+'</span><div class="ra-filters"><button class="btn" '+(!state.canEdit||state.busy||!state.plan||state.date>state.today?'disabled':'')+' onclick="RehearsalAttendance.markRemaining()">미체크 결석</button><button class="btn btn-primary" id="raSave" '+(!dirty()||state.busy?'disabled':'')+' onclick="RehearsalAttendance.save()">출석 저장</button></div></div>';
+    html+=configHtml()+'</div>';
+    html+='<div class="ra-footer"><span id="raSaveStatus" role="status">'+(state.busy?'저장 중...':dirty()?'미저장 '+Object.keys(state.changes).length+'명':session.updatedAt?'저장 · '+escHtml(seatingPublishedTime(session.updatedAt))+' · '+escHtml(session.updatedBy||''):'체크 내역 없음')+'</span><div class="ra-save-actions"><button class="btn" '+(!state.canEdit||!canCheckAttendance()||state.busy||!state.plan||state.date>state.today?'disabled':'')+' onclick="RehearsalAttendance.markRemaining()">미체크 결석</button><button class="btn btn-primary" id="raSave" '+(!state.canEdit||!canCheckAttendance()||!dirty()||state.busy?'disabled':'')+' onclick="RehearsalAttendance.save()">출석 저장</button></div></div>';
+    var content=box().querySelector('.ra-content'),contentTop=content?content.scrollTop:0,summary=box().querySelector('.ra-summary'),config=box().querySelector('.ra-config');
     var old=box().querySelector('.ra-scroll'),scroll=old?{x:old.scrollLeft,y:old.scrollTop}:null;
     box().innerHTML=html;
+    content=box().querySelector('.ra-content');if(content)content.scrollTop=contentTop;
+    if(summary&&summary.open&&box().querySelector('.ra-summary'))box().querySelector('.ra-summary').open=true;
+    if(config&&config.open&&box().querySelector('.ra-config'))box().querySelector('.ra-config').open=true;
     var next=box().querySelector('.ra-scroll');if(next&&scroll){next.scrollLeft=scroll.x;next.scrollTop=scroll.y;}
   }
   function change(id,value){var baseline=((state.sessions[state.date]||{}).records||{})[id]||'';if(value===baseline)delete state.changes[id];else state.changes[id]=value;}
@@ -93,12 +104,13 @@
     changeDate:function(date){if(state.busy||!discard()){render();return;}if(state.config.dates.indexOf(date)===-1)return;state.date=date;state.changes={};state.error='';render();},
     toggle:function(id){var member=state.memberMap[id];if(!editable(member))return;change(id,status(id)==='출석'?'':'출석');render();},
     part:function(part){state.part=part;render();},board:function(board){state.board=board;render();},
+    view:function(view){state.view=view==='list'?'list':'board';render();},
     configPlan:function(id){state.configPlan=id;},
     search:function(query){state.query=query;var input=box().querySelector('input[type=search]'),start=input&&input.selectionStart;render();input=box().querySelector('input[type=search]');input.focus();if(start!==null)try{input.setSelectionRange(start,start);}catch(e){}},
     zoom:function(value){state.zoom=Math.max(.5,Math.min(1.5,Number(value)/100));var board=box().querySelector('.ra-board'),scale=box().querySelector('.ra-scale');if(board){board.style.transform='scale('+state.zoom+')';scale.style.width=parseFloat(board.style.width)*state.zoom+'px';scale.style.height=parseFloat(board.style.height)*state.zoom+'px';}},
-    markRemaining:function(){if(!state.canEdit||state.busy||state.date>state.today)return;var list=members().filter(function(m){return !status(m.id);});if(!list.length)return showToast('미체크 단원이 없습니다');if(!confirm('현재 담당 필터의 미체크 '+list.length+'명을 결석으로 표시할까요?'))return;list.forEach(function(m){change(m.id,'결석');});render();},
+    markRemaining:function(){if(!state.canEdit||!canCheckAttendance()||state.busy||state.date>state.today)return;var list=members().filter(function(m){return !status(m.id);});if(!list.length)return showToast('미체크 단원이 없습니다');if(!confirm('현재 담당 필터의 미체크 '+list.length+'명을 결석으로 표시할까요?'))return;list.forEach(function(m){change(m.id,'결석');});render();},
     save:function(){
-      if(!state||state.busy||!dirty()||!state.canEdit)return;
+      if(!state||state.busy||!dirty()||!state.canEdit||!canCheckAttendance())return;
       var changes=Object.keys(state.changes).map(function(id){return {id:id,status:state.changes[id],baselineStatus:((state.sessions[state.date]||{}).records||{})[id]||''};});
       var target=state;
       state.busy=true;state.error='';render();
