@@ -22,7 +22,7 @@ function publishedPlans(data) {
 
 function planSeats(plan) {
   if (!plan) return [];
-  const seats = [].concat(plan.rows || [], plan.orchestraRows || []).flatMap(row => row.seats || []).filter(Boolean);
+  const seats = (plan.rows || []).flatMap(row => row.seats || []).filter(Boolean);
   const slots = plan.specialSlots || {};
   return seats.concat([slots.conductor, slots.accompanist], slots.staff || []).filter(Boolean);
 }
@@ -50,7 +50,7 @@ function createHandler(deps) {
     return publishedPlans(snap.exists ? snap.data() || {} : {});
   }
 
-  async function roster(plan) {
+  async function roster(plan, excluded) {
     const ids = [...new Set(planSeats(plan).map(seat => String(seat.memberId || "")).filter(isValidDocumentId))];
     if (ids.length > 400) throw new HttpsError("failed-precondition", "출석 대상이 400명을 초과했습니다.");
     const snaps = ids.length ? await db.getAll(...ids.map(id => db.collection("members").doc(id))) : [];
@@ -59,7 +59,10 @@ function createHandler(deps) {
       return {id: snap.id, name: cleanString(m.name, 60), part: cleanString(m.part, 30),
         subPart: cleanString(m.subPart, 30), status: m.status || "active", noAtt: !!m.noAtt,
         startDate: cleanString(m.attendanceStartDate || m.createdAt, 40).slice(0, 10)};
-    }).filter(m => m.status === "active" && m.part !== "명단제외" && !m.noAtt);
+    }).filter(m => {
+      if (m.part === "관현악") {if (excluded) excluded.add(m.id); return false;}
+      return m.status === "active" && m.part !== "명단제외" && !m.noAtt;
+    });
   }
 
   async function load(request) {
@@ -67,14 +70,17 @@ function createHandler(deps) {
     const config = configValue(await configRef.get());
     const plans = await planData();
     const plan = plans.find(item => item.publicId === config.planId) || null;
-    const members = await roster(plan);
+    const excluded = new Set();
+    const members = await roster(plan, excluded);
     if (plan && config.dates.includes("2026-09-20") && isAdminRequest(request)) {
       await importSeptemberAttendance(config, members);
     }
     const docs = config.dates.length ? await db.getAll(...config.dates.map(date => records.doc(date))) : [];
     const sessions = {};
     docs.forEach(doc => {if (doc.exists) sessions[doc.id] = doc.data();});
-    return {config, plan, plans: plans.map(item => ({id: item.publicId, name: item.name || item.title || "자리배치"})),
+    const attendancePlan = plan ? Object.assign({}, plan, {orchestraRows: [],
+      rows: plan.rows.map(row => Object.assign({}, row, {seats: (row.seats || []).map(seat => seat && excluded.has(seat.memberId) ? null : seat)}))}) : null;
+    return {config, plan: attendancePlan, plans: plans.map(item => ({id: item.publicId, name: item.name || item.title || "자리배치"})),
       members, sessions, today: koreanToday(), scope: attendanceScopeForRequest(request),
       canEdit: hasPermission(request, "attendance.check"), canManage: isAdminRequest(request)};
   }

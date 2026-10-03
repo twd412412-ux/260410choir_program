@@ -100,6 +100,12 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8').replace(/^init\(
             await page.evaluate(()=>openRehearsalAttendance());
             assert.equal(await page.locator('#raDate').inputValue(),'2026-09-20','defaults to last elapsed date instead of disabled future');
             assert(!(await page.locator('[data-member-id="m0-1"]').isDisabled()),'administrator checks all parts');
+            await page.getByRole('button',{name:'명단',exact:true}).click();
+            const parts=await page.locator('.ra-member small').allTextContents();
+            assert(parts.slice(0,30).every(t=>t.startsWith('S1'))&&parts.slice(30).every(t=>t.startsWith('T1')),'part groups before name ordering');
+            assert.equal(await page.locator('#raPart option[value="관현악"]').count(),0);
+            assert.equal(await page.locator('.ra-summary summary').textContent(),'리허설 출석 현황');
+            await page.getByRole('button',{name:'자리표',exact:true}).click();
             await page.evaluate(()=>{testData.plan=null;testData.config.planId='';RehearsalAttendance.reload();});
             await page.waitForFunction(()=>document.getElementById('raPlan')&&document.getElementById('raPlan').value==='');
             assert.equal(await page.locator('.ra-board').count(),0,'unconfigured plan must not guess a target');

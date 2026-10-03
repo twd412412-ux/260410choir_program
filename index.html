@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=2">
+<link rel="stylesheet" href="assets/rehearsal-attendance.css?v=3">
 <title>광주교회 찬양대</title>
 <style>
 :root{--p:#526E53;--pd:#354B36;--pl:#E5EFE1;--bg:#F4F0E6;--sf:#FFFDF8;--tx:#1C211B;--ts:#596354;--bd:#D4CBB9;--dg:#B85F5F;--sc:#4F7657;--wn:#B37B2B;--sh:0 10px 30px rgba(47,41,31,.08);--r:12px;--accent:#8D5E2F;--soft:#EDE7D9;--line:#DED5C2}
@@ -2492,6 +2492,9 @@ body{font-weight:500}
 .schedule-program-types-empty{padding:12px 0;color:var(--ts);font-size:12px;font-weight:650}
 .schedule-program-type-row{display:grid;grid-template-columns:26px minmax(0,1fr) 92px;gap:8px;align-items:center;min-height:43px;border-bottom:1px solid var(--bd)}
 .schedule-program-type-row:last-child{border-bottom:0}
+.program-score-choice{grid-column:2/-1;display:flex;align-items:center;gap:8px;min-width:0;padding-bottom:8px;font-size:12px;color:var(--ts)}
+.program-score-choice select{flex:1;min-width:0;max-width:100%;min-height:40px;font:inherit;font-size:16px;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px 8px}
+.score-match-warning{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;color:var(--wn);font-size:13px}
 .schedule-program-type-order{color:var(--ts);font-size:10px;font-weight:850;font-variant-numeric:tabular-nums}
 .schedule-program-type-copy{min-width:0}
 .schedule-program-type-section{display:block;color:var(--p);font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5107,7 +5110,7 @@ var rehearsalMetro={bpm:80,beats:4,volume:60,loaded:false,running:false,starting
 var rehearsalMetronomePresets={}, seatingPublicationStatusCache={}, seatingPublicationRetries={};
 var rehearsalClockId=null,rehearsalToolsOpen=false;
 var rehearsalUpcomingLoaded=false, rehearsalUpcomingPromise=null, rehearsalPastSchedules=[], rehearsalPastLoaded=false, rehearsalPastPromise=null, rehearsalPastSearchOpen=false, rehearsalPastSearchQuery='', rehearsalPastSearchLoading=false, rehearsalPastSearchError='';
-var APP_RELEASE_VERSION='26.10.03.5';
+var APP_RELEASE_VERSION='26.10.03.6';
 var rehearsalPlanDraft=null,rehearsalPlanBase='',rehearsalPlanSource='',rehearsalPlanBusy=false,rehearsalPlanLoadToken=0,publicMovementOpen=false,publicMovementKey='',publicMovementSide='from',publicSeatingDeepLinkHandled=false,rehearsalTimerStartedAt=0;
 var APP_BUILD_SHA=String((document.querySelector('meta[name="choir-build-sha"]')||{}).content||'').trim();
 var APP_UPDATE_CHECK_INTERVAL_MS=30*60*1000;
@@ -9447,12 +9450,16 @@ function homeEventSections(schedule){
     return true;
   });
 }
-function homeEventMatchedScoreRow(schedule,title,rows){
+function homeEventMatchedScoreRow(schedule,title,rows,item){
   var titleKey=scoreSearchKey(scheduleScoreTitle(title));
   if(!titleKey)return null;
   rows=Array.isArray(rows)?rows:scheduleMatchedScoreRows(schedule);
+  var selected=item?programScoreSelection(item,rows).scores:null;
+  if(selected&&!selected.length)return null;
   for(var i=0;i<rows.length;i++){
     var row=rows[i];
+    if(selected&&(!row.score||!selected.some(function(score){return score.id===row.score.id;})))continue;
+    if(row.programTitle&&scoreTitlesMatch(scheduleScoreTitle(title),row.programTitle))return row;
     var names=[row.song&&row.song.songName,row.matchedSong&&row.matchedSong.songName,row.score&&row.score.title].filter(Boolean);
     for(var j=0;j<names.length;j++){
       if(scoreTitlesMatch(scheduleScoreTitle(title),names[j]))return row;
@@ -9498,7 +9505,7 @@ function renderHomeEventProgram(schedule){
   var availableScoreRows=scheduleMatchedScoreRows(schedule);
   var rows=visible.map(function(item,index){
     var title=rehearsalItemTitle(item);
-    var scoreRow=homeEventMatchedScoreRow(schedule,title,availableScoreRows);
+    var scoreRow=homeEventMatchedScoreRow(schedule,title,availableScoreRows,item);
     return '<div class="home-event-row" role="listitem"><div class="home-event-order">'+String(index+1).padStart(2,'0')+'</div><div class="home-event-row-copy"><div class="home-event-row-title">'+escHtml(title)+'</div><div class="home-event-row-meta">'+programPerformanceTypeLabel(rehearsalItemPerformanceType(item))+'</div></div>'+homeEventScoreAction(scoreRow,title+' 악보 보기')+'</div>';
   }).join('');
   return dayHtml+'<div class="home-event-panel"><div class="home-event-program-list" role="list" aria-label="행사 순서">'+rows+'</div></div>';
@@ -10348,6 +10355,7 @@ function normalizeStoredProgramItems(rows){
     };
     if(item&&item.performersConfigured===true||item&&Array.isArray(item.performers)&&item.performers.length){row.performersConfigured=true;row.performers=normalizeProgramPerformers(item.performers);}
     if(item&&item.accompanist)row.accompanist=normalizeProgramPerformers([item.accompanist])[0]||null;
+    if(item&&item.scoreTitle)row.scoreTitle=String(item.scoreTitle).trim().slice(0,200);
     return row;
   }).filter(function(item){return item.title;});
 }
@@ -10367,6 +10375,7 @@ function mergeProgramItemTypes(parsed,stored){
         item.performanceType=stored[i].performanceType;
         if(stored[i].performersConfigured){item.performersConfigured=true;item.performers=stored[i].performers;}
         if(stored[i].accompanist)item.accompanist=stored[i].accompanist;
+        if(stored[i].scoreTitle)item.scoreTitle=stored[i].scoreTitle;
         break;
       }
     }
@@ -10418,7 +10427,7 @@ function renderScheduleProgramTypeEditor(){
     var options=PROGRAM_PERFORMANCE_TYPES.map(function(type){
       return '<option value="'+type.key+'" '+(type.key===rehearsalItemPerformanceType(item)?'selected':'')+'>'+type.label+'</option>';
     }).join('');
-    return '<div class="schedule-program-type-row"><span class="schedule-program-type-order">'+String(index+1).padStart(2,'0')+'</span><span class="schedule-program-type-copy">'+(item.section?'<span class="schedule-program-type-section">'+escHtml(item.section)+'</span>':'')+'<span class="schedule-program-type-name">'+escHtml(item.title)+'</span></span><select class="schedule-program-type-select" aria-label="'+escHtml(item.title)+' 구성" onchange="setScheduleProgramType('+index+',this.value)">'+options+'</select>'+programPerformerEditorMarkup(item,index)+'</div>';
+    return '<div class="schedule-program-type-row"><span class="schedule-program-type-order">'+String(index+1).padStart(2,'0')+'</span><span class="schedule-program-type-copy">'+(item.section?'<span class="schedule-program-type-section">'+escHtml(item.section)+'</span>':'')+'<span class="schedule-program-type-name">'+escHtml(item.title)+'</span></span><select class="schedule-program-type-select" aria-label="'+escHtml(item.title)+' 구성" onchange="setScheduleProgramType('+index+',this.value)">'+options+'</select>'+programScoreChoiceMarkup(item,index)+programPerformerEditorMarkup(item,index)+'</div>';
   }).join('');
 }
 function scheduleProgramEditorChanged(){
@@ -18467,7 +18476,7 @@ function scheduleMatchedSongs(schedule){
   });
   return selected;
 }
-function scheduleMatchedScoreRows(schedule){
+function scheduleExactScoreRows(schedule){
   var rows=[], seenScores={};
   scheduleMatchedSongs(schedule).forEach(function(song){
     var contextualSong=scheduleSongInRange(song,schedule)?song:null;
@@ -18492,6 +18501,61 @@ function scheduleMatchedScoreRows(schedule){
   }
   return rows;
 }
+function programScoreTitleInfo(value){
+  var title=String(value||'').trim(),pair=title.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  var labels={'남성합창':'male-choir','여성합창':'female-choir','혼성합창':'mixed-choir','전체합창':'mixed-choir','남성중창':'male-ensemble','여성중창':'female-ensemble','소중창':'small','독창':'solo','솔로':'solo','듀엣':'duet','이중창':'duet','malechoir':'male-choir','femalechoir':'female-choir','mixedchoir':'mixed-choir'};
+  var arrangement=pair&&labels[scoreSearchKey(pair[2])]||'';
+  return {title:arrangement?pair[1].trim():title,arrangement:arrangement};
+}
+function programScoreCandidates(title,exactRows){
+  var base=programScoreTitleInfo(scheduleScoreTitle(title)).title,seen={};
+  var candidates=allScores.filter(function(score){return canViewScoreItem(score)&&scoreTitlesMatch(programScoreTitleInfo(score.title).title,base);});
+  (exactRows||[]).forEach(function(row){
+    var name=row.matchedSong&&row.matchedSong.songName;
+    if(row.score&&name&&scoreTitlesMatch(name,base))candidates.push(row.score);
+  });
+  return sortScores(candidates).filter(function(score){if(seen[score.id])return false;seen[score.id]=true;return true;});
+}
+function programScoreSelection(item,exactRows){
+  var title=scheduleScoreTitle(rehearsalItemTitle(item)),info=programScoreTitleInfo(title);
+  var candidates=programScoreCandidates(title,exactRows),selection=item&&item.scoreTitle||'';
+  if(selection==='__none__')return {scores:[],candidates:candidates};
+  if(selection)return {scores:candidates.filter(function(score){return scoreSearchKey(score.title)===scoreSearchKey(selection);}),candidates:candidates};
+  if(info.arrangement)return {scores:candidates.filter(function(score){return programScoreTitleInfo(score.title).arrangement===info.arrangement;}),candidates:candidates};
+  var variants=new Set(candidates.map(function(score){return programScoreTitleInfo(score.title).arrangement;}));
+  return {scores:variants.size>1?[]:candidates,candidates:candidates,ambiguous:variants.size>1};
+}
+function programScoreChoiceMarkup(item,index){
+  var exact=scheduleExactScoreRows({program:item.title}),result=programScoreSelection(item,exact),titles=[],seen={};
+  result.candidates.forEach(function(score){var key=scoreSearchKey(score.title);if(!seen[key]){seen[key]=true;titles.push(score.title);}});
+  if(item.scoreTitle&&item.scoreTitle!=='__none__'&&!titles.includes(item.scoreTitle))titles.push(item.scoreTitle);
+  if(!titles.length&&!item.scoreTitle)return '';
+  return '<label class="program-score-choice">악보 연결<select aria-label="'+escAttr(item.title)+' 악보 연결" onchange="setProgramScoreTitle('+index+',this.value)"><option value="">'+(result.ambiguous?'자동 · 버전 선택 필요':'자동 연결')+'</option><option value="__none__" '+(item.scoreTitle==='__none__'?'selected':'')+'>연결 안 함</option>'+titles.map(function(title){return '<option value="'+escAttr(title)+'" '+(item.scoreTitle===title?'selected':'')+'>'+escHtml(title)+'</option>';}).join('')+'</select></label>';
+}
+function setProgramScoreTitle(index,title){
+  if(!scheduleProgramTypeDraft[index])return;
+  if(title)scheduleProgramTypeDraft[index].scoreTitle=title;else delete scheduleProgramTypeDraft[index].scoreTitle;
+  renderScheduleProgramTypeEditor();
+}
+function scheduleMatchedScoreRows(schedule){
+  var exact=scheduleExactScoreRows(schedule),rows=[],seen={},items=rehearsalItemsFromSchedule(schedule),warnings=[];
+  if(!String(schedule&&schedule.program||'').trim()){exact.warnings=[];return exact;}
+  var entries=items.slice();
+  scheduleScoreTitles(schedule).forEach(function(title){if(!items.some(function(item){return scoreSearchKey(scheduleScoreTitle(item.title))===scoreSearchKey(title);}))entries.push({title:title});});
+  entries.forEach(function(item){
+    var title=scheduleScoreTitle(item.title);
+    var result=programScoreSelection(item,exact);
+    if(result.ambiguous)warnings.push(title);
+    result.scores.forEach(function(score){
+      if(seen[score.id])return;seen[score.id]=true;
+      var original=exact.find(function(row){return row.score&&row.score.id===score.id;});
+      rows.push(Object.assign({},original||{song:null},{score:score,programTitle:title,song:item.scoreTitle?null:original&&original.song||null}));
+    });
+    if(!result.scores.length&&!result.ambiguous&&!item.scoreTitle)exact.filter(function(row){return !row.score&&row.matchedSong&&scoreTitlesMatch(row.matchedSong.songName,title);}).forEach(function(row){rows.push(row);});
+  });
+  rows.warnings=warnings;
+  return rows;
+}
 function refreshScheduleScoreSection(scheduleId){
   var wrap=document.getElementById('schScheduleScoreSection');
   var schedule=allSchedules.find(function(x){return x.id===scheduleId});
@@ -18514,8 +18578,9 @@ function renderScheduleScoreSection(schedule,allowLoad){
     return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">악보 연결을 확인하는 중입니다.</div></div>';
   }
   var rows=scheduleMatchedScoreRows(schedule);
+  var warning=rows.warnings.length?'<div class="score-match-warning" role="status">악보 버전 선택 필요 · '+rows.warnings.map(escHtml).join(', ')+(canEditScheduleItem(schedule)?'<button type="button" class="btn" onclick="openScheduleEditorFromCalendar(\''+escAttr(schedule.id)+'\')">악보 연결 선택</button>':'')+'</div>':'';
   if(!rows.length){
-    return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div><div class="score-empty" style="padding:12px">연습곡 또는 프로그램 순서에서 기존 곡/악보와 일치하는 항목을 찾지 못했습니다.</div></div>';
+    return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div>'+(warning||'<div class="score-empty" style="padding:12px">연습곡 또는 프로그램 순서에서 기존 곡/악보와 일치하는 항목을 찾지 못했습니다.</div>')+'</div>';
   }
   var orchestraRows=rows.map(function(row){return row.score;}).filter(function(score){
     return score&&normalizeScoreKind(score.scoreKind)==='orchestra';
@@ -18541,7 +18606,7 @@ function renderScheduleScoreSection(schedule,allowLoad){
   var orchestraSection=orchestraRows.length?'<div class="score-picker-section">관현악 악보</div>'+scoreFolderGroups(orchestraRows).map(function(group){
     return renderScorePickerRows(group.scores,{scheduleGroup:true,hideHeading:true,folderTitle:group.title});
   }).join(''):'';
-  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div>'+singerSection+orchestraSection+'</div>';
+  return '<div id="'+id+'" class="score-song-link"><div class="score-song-link-title">📄 이 일정 악보</div>'+warning+singerSection+orchestraSection+'</div>';
 }
 
 function renderScheduleProgramDetail(schedule){
@@ -28093,7 +28158,7 @@ function saveReportPdf(){
 }
 function printReport(){return saveReportPdf();}
 </script>
-<script src="assets/rehearsal-attendance.js?v=2"></script>
+<script src="assets/rehearsal-attendance.js?v=3"></script>
 <div id="photoViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;flex-direction:column;align-items:center;justify-content:center;touch-action:none" onclick="closePhotoViewer(event)">
   <div style="position:absolute;top:12px;right:16px;display:flex;gap:12px;z-index:10001">
     <button onclick="event.stopPropagation();zoomPhoto(-1)" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer">−</button>

@@ -116,6 +116,57 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/^in
     assert.deepEqual(matching.explicitLink, ['long', 'manual']);
     assert.deepEqual(matching.permissionFiltered, []);
     assert.equal(matching.largeCount, 60);
+    const versions=await page.evaluate(()=>{
+      window.allowed=['singer','orchestra'];allSongs=[];
+      allScores=[{id:'male',title:'주를 봐요(남성합창)',scoreKind:'singer',public:true},{id:'male-part',title:'주를 봐요(남성합창)',scoreKind:'orchestra',public:true}];
+      const event={program:'12. 주를봐요'};
+      const ids=schedule=>scheduleMatchedScoreRows(schedule).map(row=>row.score.id).sort();
+      const unique=ids(event),home=!!homeEventMatchedScoreRow(event,'주를봐요');
+      const nonProgram=ids({songs:'주를봐요'});
+      allScores.push({id:'female',title:'주를 봐요(여성합창)',scoreKind:'singer',public:true});
+      const ambiguous=ids(event),warnings=scheduleMatchedScoreRows(event).warnings;
+      document.getElementById('schProgram').value=event.program;
+      scheduleProgramTypeDraft=[{title:'주를봐요',performanceType:'all'}];
+      renderScheduleProgramTypeEditor();
+      const picker=document.querySelector('.program-score-choice select');
+      const options=Array.from(picker.options).map(o=>o.textContent);
+      picker.value='주를 봐요(남성합창)';picker.dispatchEvent(new Event('change'));
+      const stored=getScheduleProgramItemsFromForm();
+      const selected=ids({...event,programItems:stored});
+      const repeated={program:'1. 주를봐요\n2. 주를봐요',programItems:[{title:'주를봐요',scoreTitle:'주를 봐요(남성합창)'},{title:'주를봐요'}]};
+      const repeatedRows=scheduleMatchedScoreRows(repeated);
+      const unresolvedRepeat=homeEventMatchedScoreRow(repeated,'주를봐요',repeatedRows,{title:'주를봐요'})===null;
+      const pickedRepeat=!!homeEventMatchedScoreRow(repeated,'주를봐요',repeatedRows,repeated.programItems[0]);
+      const female=ids({program:'주를 봐요(여성합창)'});
+      const none=ids({...event,programItems:[{title:'주를봐요',scoreTitle:'__none__'}]});
+      const strict=scoreTitlesMatch('주를봐요','주를 봐요(남성합창)');
+      allScores=[{id:'unknown',title:'주를봐요(다른 편곡)',public:true,scoreKind:'singer'},{id:'partial',title:'주를봐요 다시',public:true,scoreKind:'singer'}];
+      const unknown=ids(event);
+      return {unique,home,nonProgram,ambiguous,warnings,options,stored,selected,unresolvedRepeat,pickedRepeat,female,none,strict,unknown};
+    });
+    assert.deepEqual(versions.unique,['male','male-part']);assert.equal(versions.home,true);
+    assert.deepEqual(versions.nonProgram,[],'ordinary song schedules retain strict matching');
+    assert.deepEqual(versions.ambiguous,[]);assert.deepEqual(versions.warnings,['주를봐요']);
+    assert(versions.options.includes('주를 봐요(남성합창)')&&versions.options.includes('주를 봐요(여성합창)'));
+    assert.equal(versions.stored[0].scoreTitle,'주를 봐요(남성합창)');assert.deepEqual(versions.selected,['male','male-part']);
+    assert.equal(versions.unresolvedRepeat,true);assert.equal(versions.pickedRepeat,true);
+    assert.deepEqual(versions.female,['female']);assert.deepEqual(versions.none,[]);
+    assert.equal(versions.strict,false,'upload replacement and general song matching stay strict');
+    assert.deepEqual(versions.unknown,[],'unknown parenthetical versions and partial titles never auto-match');
+    await page.evaluate(()=>{
+      allScores=[{id:'male',title:'주를 봐요(남성합창)',scoreKind:'singer',public:true},{id:'female',title:'주를 봐요(여성합창)',scoreKind:'singer',public:true}];
+      allSchedules=[{id:'night',title:'찬양의 밤',date:'2026-10-17',useBriefing:true,program:'12. 주를봐요'}];
+      canEditScheduleItem=()=>true;
+      openScheduleEditorFromCalendar('night');
+    });
+    for(const width of [320,820]){
+      await page.setViewportSize({width,height:1000});
+      await page.locator('.program-score-choice').scrollIntoViewIfNeeded();
+      assert(await page.locator('.program-score-choice select').isVisible());
+      assert(await page.locator('.program-score-choice').evaluate(el=>el.scrollWidth<=el.clientWidth));
+      await page.screenshot({path:path.join(root,`tmp/schedule-score-folders/versions-${width}.png`)});
+    }
+    await page.evaluate(()=>closeModal('modalScheduleEditor'));
     console.log('Matching benchmark (1,916 songs, 300 scores, 60 program entries): ' + matching.matchingMs + 'ms');
     await page.evaluate(() => {
       closeModal('modalSchDetail');
